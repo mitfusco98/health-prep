@@ -290,10 +290,20 @@ def validate_patient_fields(data):
 def api_create_patient():
     """Create a new patient via API"""
     try:
+        # Check content length before parsing JSON
+        content_length = request.content_length
+        if content_length and content_length > 1024 * 1024:  # 1MB limit
+            return jsonify({'error': 'Request too large. Maximum size is 1MB.'}), 413
+
         data = request.get_json()
 
         if not data:
             return jsonify({'error': 'No data provided'}), 400
+
+        # Check for extremely large field values that would indicate a potential attack
+        for field, value in data.items():
+            if isinstance(value, str) and len(value) > 1000:
+                return jsonify({'error': 'Request too large. Field values exceed maximum length.'}), 413
 
         # Validate data size limits first
         errors = []
@@ -400,10 +410,9 @@ def api_appointments():
                 return jsonify({'error': 'Date must be in YYYY-MM-DD format'}), 400
             try:
                 selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-                # Validate reasonable date range (not too far in past or future)
-                # Validate reasonable date range (1900 to 2100)
-                if selected_date.year < 1900 or selected_date.year > 2100:
-                    return jsonify({'error': 'Date must be within reasonable range'}), 400
+                # Validate reasonable date range (1950 to 2050 for medical appointments)
+                if selected_date.year < 1950 or selected_date.year > 2050:
+                    return jsonify({'error': 'Date must be within reasonable range (1950-2050)'}), 400
             except ValueError:
                 return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
         else:
