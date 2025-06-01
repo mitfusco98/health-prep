@@ -2877,8 +2877,8 @@ def edit_appointment(appointment_id):
             # Use our parsed date string for the redirect
             appointment_date_str = appointment_date.strftime('%Y-%m-%d')
             
-            # Construct redirect URL
-            redirect_url = f"/date/{appointment_date_str}?refresh={timestamp}"
+            # Construct redirect URL to home page with date parameter
+            redirect_url = f"/home/date/{appointment_date_str}?refresh={timestamp}"
             print(f"FINAL EDIT REDIRECT URL: {redirect_url}")
             
             # For AJAX requests
