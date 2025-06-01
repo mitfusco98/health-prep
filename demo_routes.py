@@ -119,37 +119,25 @@ def index(date_str=None):
     date_str_param = request.args.get('date_str')  # Legacy parameter
     
     # The refresh parameter is used as a cache-busting mechanism
-    # Note its presence for debugging purposes
     refresh_param = request.args.get('refresh')
-    if refresh_param:
-        print(f"Cache-busting refresh param: {refresh_param}")
-    
-    print(f"URL date_str parameter: {date_str}")
-    print(f"Query param selected_date: {selected_date_param}")
-    print(f"Query param date_str: {date_str_param}")
     
     # Give priority to the selected_date in query params, then date_str in query params, then URL param, then default to today
     if selected_date_param:
         try:
-            print(f"Using date from selected_date param: {selected_date_param}")
             selected_date = datetime.strptime(selected_date_param, '%Y-%m-%d').date()
         except ValueError:
             selected_date = today
-            print(f"Invalid date in query param, using today: {today}")
             flash('Invalid date format. Showing today\'s appointments.', 'warning')
     elif date_str:
         try:
             # Parse the date string (format: YYYY-MM-DD)
-            print(f"Using date from URL path: {date_str}")
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
             # If date is invalid, default to today
             selected_date = today
-            print(f"Invalid date in URL path, using today: {today}")
             flash('Invalid date format. Showing today\'s appointments.', 'warning')
     else:
         selected_date = today
-        print(f"No date specified, using today: {today}")
     
     # Get previous and next day for navigation
     prev_date = selected_date - timedelta(days=1)
@@ -159,56 +147,18 @@ def index(date_str=None):
     timestamp = int(time_module.time())
     
     # Get appointments for the selected date
-    print(f"Fetching appointments for date: {selected_date}")
-    print(f"Selected date type: {type(selected_date)}")
-    
     try:
-        from sqlalchemy import text
-        # Try with an explicit SQL query to see exactly what's happening
-        sql_query = text(f"SELECT * FROM appointment WHERE DATE(appointment_date) = DATE('{selected_date}')")
-        print(f"Executing SQL query: {sql_query}")
-        result = db.session.execute(sql_query)
-        sql_appointments = [row for row in result]
-        print(f"SQL query found {len(sql_appointments)} appointments")
-        
-        # Also try with SQLAlchemy ORM
-        appointments = Appointment.query.filter(
-            Appointment.appointment_date == selected_date
-        ).order_by(Appointment.appointment_time).all()
-        print(f"SQLAlchemy ORM query found {len(appointments)} appointments")
-        
-        # Also try with func.date
         from sqlalchemy import func
-        func_appointments = Appointment.query.filter(
+        appointments = Appointment.query.filter(
             func.date(Appointment.appointment_date) == func.date(selected_date)
         ).order_by(Appointment.appointment_time).all()
-        print(f"func.date query found {len(func_appointments)} appointments")
-        
-        # Use the func.date query results
-        appointments = func_appointments
     except Exception as e:
-        print(f"Error in appointment query: {str(e)}")
         # Fallback to original query
         appointments = Appointment.query.filter(
             Appointment.appointment_date == selected_date
         ).order_by(Appointment.appointment_time).all()
     
-    # Log all today's appointments for debugging
-    if selected_date == today:
-        print(f"Today's appointments (exact date match: {selected_date}):")
-        today_appts_debug = Appointment.query.filter(
-            func.date(Appointment.appointment_date) == func.date(today)
-        ).all()
-        print(f"Found {len(today_appts_debug)} appointments with func.date match")
-        for appt in today_appts_debug:
-            print(f"  ID: {appt.id}, Date: {appt.appointment_date}, Patient: {appt.patient.full_name}, Time: {appt.appointment_time}")
-    print(f"Found {len(appointments)} appointments for selected date")
-    
-    # For debugging: show all appointments in the database
-    all_appointments = Appointment.query.all()
-    print(f"Total appointments in database: {len(all_appointments)}")
-    for appt in all_appointments:
-        print(f"Appointment ID: {appt.id}, Date: {appt.appointment_date}, Patient: {appt.patient.full_name}")
+    # Remove excessive debug logging that was cluttering console output
     
     return render_template('index.html', 
                           patient_count=patient_count,
