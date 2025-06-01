@@ -1,0 +1,148 @@
+🔍 Quick API Health Check
+==============================
+✅ Server accessible: 200
+✅ Auth endpoint exists: 400
+✅ Patients endpoint protected: 401 Unauthorized
+✅ Appointments endpoint protected: 401 Unauthorized
+
+🏁 Quick test complete!
+Run 'python test_api_external.py' for comprehensive testing
+~/workspace$ python test_api_external.py
+
+    Healthcare API Testing Suite
+    ===========================
+    This script tests the API as an external developer would.
+    
+    Usage: python test_api_external.py [BASE_URL]
+    Default URL: http://localhost:5000
+    
+    Testing URL: http://localhost:5000
+    
+[INFO] 🚀 Starting API Test Suite
+[INFO] Testing API at: http://localhost:5000
+[INFO] ✅ Server is accessible - Status: 200
+[INFO] 
+=== TESTING AUTHENTICATION FLOW ===
+[INFO] Testing POST /api/auth/register - Register new user
+[INFO] Response: 400 - BAD REQUEST
+[ERROR] ❌ FAIL - Expected 201, got 400
+[INFO] Response: <!doctype html>
+<html lang=en>
+<title>400 Bad Request</title>
+<h1>Bad Request</h1>
+<p>The CSRF token is missing.</p>
+
+[INFO] Registration failed, trying to login with existing user
+[INFO] Testing POST /api/auth/login - User login
+[INFO] Response: 400 - BAD REQUEST
+[ERROR] ❌ FAIL - Expected 200, got 400
+[INFO] Response: <!doctype html>
+<html lang=en>
+<title>400 Bad Request</title>
+<h1>Bad Request</h1>
+<p>The CSRF token is missing.</p>
+
+[INFO] Testing GET /api/auth/verify - Verify authentication token
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing POST /api/auth/refresh - Refresh authentication token
+[INFO] Response: 400 - BAD REQUEST
+[ERROR] ❌ FAIL - Expected 200, got 400
+[INFO] Response: <!doctype html>
+<html lang=en>
+<title>400 Bad Request</title>
+<h1>Bad Request</h1>
+<p>The CSRF token is missing.</p>
+
+[INFO] Testing POST /api/auth/logout - User logout
+[INFO] Response: 400 - BAD REQUEST
+[ERROR] ❌ FAIL - Expected 200, got 400
+[INFO] Response: <!doctype html>
+<html lang=en>
+<title>400 Bad Request</title>
+<h1>Bad Request</h1>
+<p>The CSRF token is missing.</p>
+
+[INFO] 
+=== TESTING PATIENTS API ===
+[INFO] Testing GET /api/patients - Get patients list
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing GET /api/patients?page=1&per_page=5 - Get patients with pagination
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing GET /api/patients?search=John - Search patients by name
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing GET /api/patients?sort=name&order=asc - Get patients sorted by name
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing POST /api/patients - Create new patient
+[INFO] Response: 400 - BAD REQUEST
+[ERROR] ❌ FAIL - Expected 201, got 400
+[INFO] Response: <!doctype html>
+<html lang=en>
+<title>400 Bad Request</title>
+<h1>Bad Request</h1>
+<p>The CSRF token is missing.</p>
+
+[INFO] Testing GET /api/patients/1 - Get specific patient details
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] 
+=== TESTING APPOINTMENTS API ===
+[INFO] Testing GET /api/appointments - Get today's appointments
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing GET /api/appointments?date=2025-06-01 - Get appointments for 2025-06-01
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] 
+=== TESTING ERROR HANDLING ===
+[INFO] Testing GET /api/patients - Access protected endpoint without auth
+[INFO] Response: 401 - UNAUTHORIZED
+[SUCCESS] ✅ PASS
+[INFO] Response data: {
+  "error": "Authorization token is required"
+}...
+[INFO] Testing GET /api/nonexistent - Access non-existent endpoint
+[INFO] Response: 404 - NOT FOUND
+[SUCCESS] ✅ PASS
+[INFO] Response text: <!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Cache control -->
+    <meta ...
+[SUCCESS] ✅ PASS - Malformed JSON handled correctly
+[INFO] Testing POST /api/patients - Create patient with invalid data
+[INFO] Response: 400 - BAD REQUEST
+[SUCCESS] ✅ PASS
+[INFO] Response text: <!doctype html>
+<html lang=en>
+<title>400 Bad Request</title>
+<h1>Bad Request</h1>
+<p>The CSRF token is missing.</p>
+...
+[INFO] 
+=== TESTING RATE LIMITING ===
+[WARNING] ⚠️  WARNING - No rate limiting detected after 10 rapid requests
+[INFO] 
+🏁 API Test Suite Complete!
