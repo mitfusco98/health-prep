@@ -52,7 +52,7 @@
 {% if patients %}
 <div class="card border-0">
     <div class="card-body p-0">
-        <form method="POST" action="{{ url_for('delete_patient', patient_id=1) }}" id="deleteForm">
+        <form method="POST" action="{{ url_for('delete_patient', patient_id=0) }}" id="deleteForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
             <div class="mb-3 p-3 border-bottom">
