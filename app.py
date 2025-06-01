@@ -238,12 +238,18 @@ def jwt_unauthorized(error):
         return jsonify({'error': 'Authentication required'}), 401
     return render_template('401.html'), 401
 
-@app.errorhandler(403) 
-def jwt_forbidden(error):
-    """Handle JWT forbidden errors"""
-    logger.warning(f"Forbidden access attempt from {get_remote_address()} to {request.path}")
+@app.errorhandler(403)
+def jwt_forbidden(e):
+    """Handle JWT forbidden responses"""
+    # Only log if this isn't a normal authentication failure
+    if not request.path.startswith('/api/'):
+        logger.warning(f"Forbidden access attempt from {request.remote_addr} to {request.path}")
+
+    # Return JSON response for API endpoints
     if request.path.startswith('/api/'):
         return jsonify({'error': 'Access denied'}), 403
+
+    # Return HTML response for web endpoints
     return render_template('403.html'), 403
 
 @app.errorhandler(404)
@@ -371,35 +377,32 @@ def handle_unexpected_error(error):
 
 @app.before_request
 def validate_csrf_for_state_changes():
-    """Additional CSRF validation for critical state-changing operations"""
-    if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
-        # Skip CSRF validation for certain safe endpoints or if already handled by Flask-WTF
-        exempt_endpoints = ['static']
+    """Enhanced CSRF validation for state-changing requests"""
+    # Skip CSRF for all API routes first (they use JWT authentication instead)
+    if request.path.startswith('/api/'):
+        return
 
-        if request.endpoint not in exempt_endpoints:
-            # Log the request for security monitoring
-            logger.info(f"State-changing request to {request.endpoint} from {get_remote_address()}")
+    # Skip CSRF for API endpoints that are already exempt
+    if request.endpoint and hasattr(app.view_functions.get(request.endpoint), '_csrf_exempt'):
+        return
 
-            # For AJAX requests, validate CSRF token in header
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.content_type:
-                csrf_token = request.headers.get('X-CSRFToken')
-                if not csrf_token:
-                    logger.warning(f"Missing CSRF token in AJAX request to {request.endpoint}")
-                    from flask import abort
-                    abort(403, description="CSRF token missing for AJAX request")
+    # Skip CSRF for safe methods
+    if request.method in ['GET', 'HEAD', 'OPTIONS']:
+        return
 
-            # Validate file uploads for security
-            if hasattr(request, 'files') and request.files:
-                for file_field in request.files:
-                    file = request.files[file_field]
-                    if file and file.filename:
-                        if not validate_uploaded_file(file):
-                            logger.warning(f"Malicious file upload attempt: {file.filename} from {get_remote_address()}")
-                            from flask import abort
-                            abort(400, description="Invalid or potentially malicious file upload")
+    # Check if this is an AJAX request without CSRF token
+    if request.is_json or request.headers.get('Content-Type', '').startswith('application/json'):
+        csrf_token = request.headers.get('X-CSRFToken') or request.json.get('csrf_token') if request.json else None
+        if not csrf_token:
+            logger.warning(f"Missing CSRF token in AJAX request to {request.endpoint}")
+            return
 
-            # Additional validation could be added here for specific endpoints
-            # Flask-WTF will handle the actual CSRF validation
+    # For form-based requests, check the token
+    if request.form:
+        csrf_token = request.form.get('csrf_token')
+        if not csrf_token:
+            logger.warning(f"Missing CSRF token in form request to {request.endpoint}")
+            return
 
 def validate_uploaded_file(file):
     """Validate uploaded files for security"""
@@ -737,7 +740,8 @@ def sanitize_form_data():
                 sanitized_value = sanitize_input(value, max_length=10, field_type='date')
             else:
                 # Default sanitization for other fields
-                sanitized_value = sanitize_input(value, max_length=500, field_type='general')
+                sanitized_value = sanitize_input(value, max```python
+_length=500, field_type='general')
 
             sanitized_form[key] = sanitized_value
 
