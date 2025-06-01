@@ -1,0 +1,334 @@
+{% extends "base_demo.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Screening Types Management</h1>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScreeningTypeModal">
+            <i class="fas fa-plus me-1"></i> Add New Screening Type
+        </button>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Available Screening Types</h5>
+        </div>
+        <div class="card-body">
+            {% if screening_types %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Frequency</th>
+                                <th>Gender Specific</th>
+                                <th>Age Range</th>
+                                <th>Status</th>
+                                <th width="150">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for screening_type in screening_types %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ screening_type.name }}</strong>
+                                        {% if screening_type.description %}
+                                            <br>
+                                            <small class="text-muted">{{ screening_type.description }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ screening_type.default_frequency }}</td>
+                                    <td>
+                                        {% if screening_type.gender_specific %}
+                                            {{ screening_type.gender_specific }}
+                                        {% else %}
+                                            All Genders
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if screening_type.min_age and screening_type.max_age %}
+                                            Ages {{ screening_type.min_age }} to {{ screening_type.max_age }}
+                                        {% elif screening_type.min_age %}
+                                            Age {{ screening_type.min_age }}+
+                                        {% elif screening_type.max_age %}
+                                            Up to age {{ screening_type.max_age }}
+                                        {% else %}
+                                            All Ages
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if screening_type.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-outline-primary edit-screening-btn" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editScreeningTypeModal"
+                                                data-id="{{ screening_type.id }}"
+                                                data-name="{{ screening_type.name }}"
+                                                data-description="{{ screening_type.description or '' }}"
+                                                data-frequency="{{ screening_type.default_frequency or '' }}"
+                                                data-gender="{{ screening_type.gender_specific or '' }}"
+                                                data-min-age="{{ screening_type.min_age or '' }}"
+                                                data-max-age="{{ screening_type.max_age or '' }}"
+                                                data-active="{{ 'checked' if screening_type.is_active else '' }}">
+                                            Edit
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-screening-btn"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteScreeningTypeModal"
+                                                data-id="{{ screening_type.id }}"
+                                                data-name="{{ screening_type.name }}">
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> No screening types have been defined yet. Use the "Add New Screening Type" button to create one.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">About Screening Types</h5>
+        </div>
+        <div class="card-body">
+            <p>Screening types define the preventive health screenings that will appear on patient prep sheets. 
+               You can customize which screenings appear based on patient age, gender, and other factors.</p>
+            
+            <h6>Important Notes:</h6>
+            <ul>
+                <li>Screenings will only appear for patients matching the specified criteria.</li>
+                <li>Inactive screenings will not appear on prep sheets but are preserved in the database.</li>
+                <li>If a screening is used by existing patients, it cannot be completely deleted, only deactivated.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Add Screening Type Modal -->
+<div class="modal fade" id="addScreeningTypeModal" tabindex="-1" aria-labelledby="addScreeningTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addScreeningTypeModalLabel">Add New Screening Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_screening_type') }}">
+                <div class="modal-body">
+                    {{ add_form.hidden_tag() }}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                {{ add_form.name.label(class="form-label") }}
+                                {{ add_form.name(class="form-control") }}
+                                <small class="form-text text-muted">{{ add_form.name.description }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ add_form.default_frequency.label(class="form-label") }}
+                                {{ add_form.default_frequency(class="form-control") }}
+                                <small class="form-text text-muted">{{ add_form.default_frequency.description }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        {{ add_form.description.label(class="form-label") }}
+                        {{ add_form.description(class="form-control", rows=3) }}
+                        <small class="form-text text-muted">{{ add_form.description.description }}</small>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ add_form.gender_specific.label(class="form-label") }}
+                                {{ add_form.gender_specific(class="form-select") }}
+                                <small class="form-text text-muted">{{ add_form.gender_specific.description }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ add_form.min_age.label(class="form-label") }}
+                                {{ add_form.min_age(class="form-control") }}
+                                <small class="form-text text-muted">{{ add_form.min_age.description }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ add_form.max_age.label(class="form-label") }}
+                                {{ add_form.max_age(class="form-control") }}
+                                <small class="form-text text-muted">{{ add_form.max_age.description }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        {{ add_form.is_active(class="form-check-input") }}
+                        {{ add_form.is_active.label(class="form-check-label") }}
+                        <div><small class="form-text text-muted">{{ add_form.is_active.description }}</small></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    {{ add_form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Screening Type Modal -->
+<div class="modal fade" id="editScreeningTypeModal" tabindex="-1" aria-labelledby="editScreeningTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editScreeningTypeModalLabel">Edit Screening Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('edit_screening_type', screening_type_id=0) }}" id="editScreeningForm">
+                <div class="modal-body">
+                    {{ edit_form.hidden_tag() }}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                {{ edit_form.name.label(class="form-label") }}
+                                {{ edit_form.name(class="form-control") }}
+                                <small class="form-text text-muted">{{ edit_form.name.description }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ edit_form.default_frequency.label(class="form-label") }}
+                                {{ edit_form.default_frequency(class="form-control") }}
+                                <small class="form-text text-muted">{{ edit_form.default_frequency.description }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        {{ edit_form.description.label(class="form-label") }}
+                        {{ edit_form.description(class="form-control", rows=3) }}
+                        <small class="form-text text-muted">{{ edit_form.description.description }}</small>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ edit_form.gender_specific.label(class="form-label") }}
+                                {{ edit_form.gender_specific(class="form-select") }}
+                                <small class="form-text text-muted">{{ edit_form.gender_specific.description }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ edit_form.min_age.label(class="form-label") }}
+                                {{ edit_form.min_age(class="form-control") }}
+                                <small class="form-text text-muted">{{ edit_form.min_age.description }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ edit_form.max_age.label(class="form-label") }}
+                                {{ edit_form.max_age(class="form-control") }}
+                                <small class="form-text text-muted">{{ edit_form.max_age.description }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        {{ edit_form.is_active(class="form-check-input") }}
+                        {{ edit_form.is_active.label(class="form-check-label") }}
+                        <div><small class="form-text text-muted">{{ edit_form.is_active.description }}</small></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    {{ edit_form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Screening Type Modal -->
+<div class="modal fade" id="deleteScreeningTypeModal" tabindex="-1" aria-labelledby="deleteScreeningTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteScreeningTypeModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the screening type <strong id="deleteScreeningName"></strong>?</p>
+                <p class="text-danger">This action cannot be undone. If this screening is used by any patients, it will be marked as inactive instead of being deleted.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('delete_screening_type', screening_type_id=0) }}" id="deleteScreeningForm">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle edit button clicks
+    document.querySelectorAll('.edit-screening-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const name = this.getAttribute('data-name');
+            const description = this.getAttribute('data-description');
+            const frequency = this.getAttribute('data-frequency');
+            const gender = this.getAttribute('data-gender');
+            const minAge = this.getAttribute('data-min-age');
+            const maxAge = this.getAttribute('data-max-age');
+            const active = this.getAttribute('data-active');
+            
+            // Update form action URL
+            document.getElementById('editScreeningForm').action = "{{ url_for('edit_screening_type', screening_type_id=0) }}".replace("0", id);
+            
+            // Populate form fields
+            document.querySelector('#editScreeningForm #name').value = name;
+            document.querySelector('#editScreeningForm #description').value = description;
+            document.querySelector('#editScreeningForm #default_frequency').value = frequency;
+            document.querySelector('#editScreeningForm #gender_specific').value = gender;
+            document.querySelector('#editScreeningForm #min_age').value = minAge;
+            document.querySelector('#editScreeningForm #max_age').value = maxAge;
+            document.querySelector('#editScreeningForm #is_active').checked = active === "checked";
+        });
+    });
+    
+    // Handle delete button clicks
+    document.querySelectorAll('.delete-screening-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const name = this.getAttribute('data-name');
+            
+            // Update form action URL
+            document.getElementById('deleteScreeningForm').action = "{{ url_for('delete_screening_type', screening_type_id=0) }}".replace("0", id);
+            
+            // Update modal text
+            document.getElementById('deleteScreeningName').textContent = name;
+        });
+    });
+});
+</script>
+{% endblock %}

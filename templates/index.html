@@ -1,0 +1,269 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}HealthPrep - Patient Visit Preparation System{% endblock %}
+
+{% block head %}
+{{ super() }}
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+{% endblock %}
+
+{% block content %}
+
+<!-- Dashboard Content -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1>Welcome to HealthPrep</h1>
+        <p class="lead">Patient visit preparation system for healthcare professionals</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Stats Cards in a single row -->
+    <div class="col-md-3 mb-4">
+        <div class="card h-100 border-0">
+            <div class="card-body text-center">
+                <h5 class="card-title">
+                    <div>Total</div>
+                    <div>Patients</div>
+                </h5>
+                <div class="display-4 mb-2">{{ patient_count }}</div>
+                <p class="card-text text-muted">Registered patients</p>
+            </div>
+            <div class="card-footer border-0 bg-transparent">
+                <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary btn-sm w-100">
+                    <div>View</div>
+                    <div>Patients</div>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card h-100 border-0">
+            <div class="card-body text-center">
+                <h5 class="card-title">Screening List</h5>
+                <div class="display-4 mb-2">
+                    {{ patients_needing_screenings|length if patients_needing_screenings else 0 }}
+                </div>
+                <p class="card-text text-muted">Patients with screenings due</p>
+            </div>
+            <div class="card-footer border-0 bg-transparent">
+                <a href="{{ url_for('screening_list') }}" class="btn btn-outline-secondary btn-sm w-100">
+                    View Screenings
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card h-100 border-0">
+            <div class="card-body text-center">
+                <h5 class="card-title">Upcoming Visits</h5>
+                <div class="display-4 mb-2">
+                    {{ upcoming_visits|length if upcoming_visits else 0 }}
+                </div>
+                <p class="card-text text-muted">Scheduled visits</p>
+            </div>
+            <div class="card-footer border-0 bg-transparent">
+                <a href="{{ url_for('all_visits') }}" class="btn btn-outline-secondary btn-sm w-100">
+                    <div>View</div>
+                    <div>Visits</div>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card h-100 border-0">
+            <div class="card-body text-center">
+                <h5 class="card-title">Recent Documents</h5>
+                <div class="display-4 mb-2">
+                    {{ recent_documents|length if recent_documents else 0 }}
+                </div>
+                <p class="card-text text-muted">New medical documents</p>
+            </div>
+            <div class="card-footer border-0 bg-transparent">
+                <a href="{{ url_for('document_repository') }}" class="btn btn-outline-secondary btn-sm w-100">
+                    View Documents
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Access Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 mb-3 mb-md-0">
+                        <a href="{{ url_for('patient_list') }}" class="btn btn-outline-primary w-100 py-3" style="height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                            <i class="fas fa-users d-block mb-2 fs-2"></i>
+                            Patient List
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3 mb-md-0">
+                        <a href="{{ url_for('add_patient') }}" class="btn btn-outline-primary w-100 py-3" style="height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                            <i class="fas fa-user-plus d-block mb-2 fs-2"></i>
+                            Add Patient
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3 mb-md-0">
+                        <a href="{{ url_for('screening_list') }}" class="btn btn-outline-primary w-100 py-3" style="height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                            <span class="d-block mb-2 fs-2">
+                                <i class="fas fa-clipboard-check"></i>
+                                <i class="fas fa-cog"></i>
+                            </span>
+                            Screening List
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('ehr_integration') }}" class="btn btn-outline-primary w-100 py-3" style="height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                            <i class="fas fa-exchange-alt d-block mb-2 fs-2"></i>
+                            EHR Integration
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Appointments Section with Date Navigation -->
+<div class="row">
+    <div class="col-12 mb-4" id="dailyAppointments">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-day me-2"></i>Appointments
+                        {% if selected_date == today_date %}
+                            <span class="badge bg-primary">Today</span>
+                        {% endif %}
+                    </h5>
+                    <div class="btn-group">
+                        <a href="{{ url_for('add_appointment') }}?date={{ selected_date.strftime('%Y-%m-%d') }}&refresh={{ timestamp }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus me-1"></i> Add Appointment
+                        </a>
+
+                    </div>
+                </div>
+                
+                <!-- Date Navigation -->
+                <div class="mt-2 d-flex justify-content-between align-items-center">
+                    <div class="btn-group">
+                        <a href="{{ url_for('index', date_str=prev_date.strftime('%Y-%m-%d')) }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-chevron-left"></i> Previous Day
+                        </a>
+                        <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-primary">
+                            Today
+                        </a>
+                        <a href="{{ url_for('index', date_str=next_date.strftime('%Y-%m-%d')) }}" class="btn btn-sm btn-outline-secondary">
+                            Next Day <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </div>
+                    
+                    <div class="d-flex align-items-center">
+                        <span class="me-2">{{ selected_date.strftime('%A, %B %d, %Y') }}</span>
+                        <form action="{{ url_for('index') }}" method="get" class="d-flex align-items-center ms-2">
+                            <input type="date" class="form-control form-control-sm" name="selected_date" value="{{ selected_date.strftime('%Y-%m-%d') }}" onchange="this.form.submit()">
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Appointment summary -->
+                <div class="alert alert-info mb-3">
+                    {% if todays_appointments %}
+                        <div><strong>{{ todays_appointments|length }}</strong> appointment{{ 's' if todays_appointments|length != 1 }} for {{ selected_date.strftime('%A, %B %d, %Y') }}</div>
+                    {% endif %}
+                </div>
+
+                {% if todays_appointments %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 8%;">Time</th>
+                                <th style="width: 18%;">Patient Name</th>
+                                <th style="width: 10%;">DOB</th>
+                                <th style="width: 10%;">MRN</th>
+                                <th style="width: 12%;">Status</th>
+                                <th style="width: 10%;">Actions</th>
+                                <th style="width: 40%;">Note</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for appointment in todays_appointments %}
+                            <tr>
+                                <td>{{ appointment.appointment_time.strftime('%I:%M %p') }}</td>
+                                <td>
+                                    <a href="{{ url_for('patient_detail', patient_id=appointment.patient.id) }}">
+                                        {{ appointment.patient.full_name }}
+                                    </a>
+                                </td>
+                                <td>{{ appointment.patient.date_of_birth|dob }}</td>
+                                <td>{{ appointment.patient.mrn }}</td>
+                                <td>
+                                    <form action="{{ url_for('update_appointment_status', appointment_id=appointment.id) }}" method="post" class="m-0 p-0">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <select name="status" class="form-select form-select-sm status-select" style="width: 80px; height: 31px; padding: 2px 4px; font-size: 0.8rem;" onchange="this.form.submit()">
+                                            <option value="OOO" {% if appointment.status == 'OOO' or not appointment.status %}selected{% endif %}>OOO</option>
+                                            <option value="waiting" {% if appointment.status == 'waiting' %}selected{% endif %}>Wait</option>
+                                            <option value="provider" {% if appointment.status == 'provider' %}selected{% endif %}>Prov</option>
+                                            <option value="seen" {% if appointment.status == 'seen' %}selected{% endif %}>Seen</option>
+                                        </select>
+                                    </form>
+                                </td>
+                                <td style="width: 10%;">
+                                    <table style="width: 100%;">
+                                        <tr>
+                                            <td style="padding-bottom: 3px;">
+                                                <a href="{{ url_for('edit_appointment', appointment_id=appointment.id) }}" class="btn btn-sm btn-outline-secondary w-100 py-0">
+                                                    Edit
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <a href="{{ url_for('generate_patient_prep_sheet', patient_id=appointment.patient.id, v=timestamp) }}" class="btn btn-sm btn-outline-primary w-100 py-0">
+                                                    Prep
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                                <td style="width: 40%; white-space: normal; word-wrap: break-word;">{{ appointment.note }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-muted mb-0">
+                        {% if selected_date == today_date %}
+                            No appointments scheduled for today
+                        {% else %}
+                            No appointments scheduled for {{ selected_date.strftime('%B %d, %Y') }}
+                        {% endif %}
+                    </p>
+                    <div class="btn-group mt-2">
+                        <a href="{{ url_for('add_appointment') }}?date={{ selected_date.strftime('%Y-%m-%d') }}&refresh={{ timestamp }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Add New Appointment
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

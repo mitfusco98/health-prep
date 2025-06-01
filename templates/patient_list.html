@@ -1,0 +1,238 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}HealthPrep - Patient List{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h1>
+        <i class="fas fa-users me-2"></i> Patient List
+    </h1>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4 border-0">
+    <div class="card-body">
+        <form action="{{ url_for('patient_list') }}" method="GET" class="row g-3">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control" placeholder="Search by name or MRN" name="search" value="{{ search_query }}">
+                    {% if search_query %}
+                    <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select name="sort" class="form-select">
+                    <option value="last_name" {% if request.args.get('sort') == 'last_name' %}selected{% endif %}>Last Name</option>
+                    <option value="first_name" {% if request.args.get('sort') == 'first_name' %}selected{% endif %}>First Name</option>
+                    <option value="dob" {% if request.args.get('sort') == 'dob' %}selected{% endif %}>Date of Birth</option>
+                    <option value="mrn" {% if request.args.get('sort') == 'mrn' %}selected{% endif %}>MRN</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="order" class="form-select">
+                    <option value="asc" {% if request.args.get('order') == 'asc' %}selected{% endif %}>A-Z</option>
+                    <option value="desc" {% if request.args.get('order') == 'desc' %}selected{% endif %}>Z-A</option>
+                </select>
+            </div>
+            <div class="col-12 text-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-2"></i>Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if patients %}
+<div class="card border-0">
+    <div class="card-body p-0">
+        <form method="POST" action="{{ url_for('delete_patient', patient_id=0) }}" id="deleteForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            
+            <div class="mb-3 p-3 border-bottom">
+                <button type="submit" id="deleteButton" class="btn btn-sm btn-danger" disabled>
+                    <i class="fas fa-trash me-2"></i> Delete Selected Patients
+                </button>
+                <span id="selectedCount" class="badge bg-secondary ms-2">0 selected</span>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th width="5%">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="selectAllPatients">
+                                </div>
+                            </th>
+                            <th>MRN</th>
+                            <th>Name</th>
+                            <th>Date of Birth</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for patient in patients %}
+                        <tr>
+                            <td>
+                                <div class="form-check">
+                                    <input class="form-check-input patient-checkbox" type="checkbox" 
+                                           name="selected_patients[]" 
+                                           value="{{ patient.id }}" 
+                                           id="patientCheckbox{{ patient.id }}">
+                                </div>
+                            </td>
+                            <td>{{ patient.mrn }}</td>
+                            <td>
+                                <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="text-decoration-none">
+                                    {{ patient.last_name }}, {{ patient.first_name }}
+                                </a>
+                            </td>
+                            <td>{{ patient.date_of_birth|dob }}</td>
+                            <td>
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-primary btn-sm" title="Patient Data">
+                                        <i class="fas fa-database"></i> Medical Data
+                                    </a>
+                                    <a href="{{ url_for('edit_patient', patient_id=patient.id) }}" class="btn btn-outline-secondary btn-sm" title="Edit Patient Demographics">
+                                        <i class="fas fa-user-edit"></i> Demographics
+                                    </a>
+                                    <a href="{{ url_for('generate_patient_prep_sheet', patient_id=patient.id) }}" class="btn btn-outline-info btn-sm" title="Generate Prep">
+                                        <i class="fas fa-file-medical"></i> Generate Prep
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </form>
+    </div>
+</div>
+{% else %}
+<div class="card border-0">
+    <div class="card-body text-center py-5">
+        {% if search_query %}
+        <h4>No patients found matching "{{ search_query }}"</h4>
+        <p class="text-muted">Try a different search term or <a href="{{ url_for('patient_list') }}">view all patients</a>.</p>
+        {% else %}
+        <h4>No patients in the system</h4>
+        <p class="text-muted">Get started by adding your first patient.</p>
+        <a href="{{ url_for('add_patient') }}" class="btn btn-primary mt-3">
+            <i class="fas fa-user-plus me-2"></i>Add Patient
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Patient Confirmation Modals -->
+{% for patient in patients %}
+<div class="modal fade" id="deletePatientModal{{ patient.id }}" tabindex="-1" aria-labelledby="deletePatientModalLabel{{ patient.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deletePatientModalLabel{{ patient.id }}">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Patient Deletion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="fw-bold">Are you sure you want to delete {{ patient.full_name }}?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle me-2"></i>This action will permanently delete this patient and ALL associated medical records, including:
+                    <ul class="mt-2 mb-0">
+                        <li>Medical conditions</li>
+                        <li>Vital signs</li>
+                        <li>Lab results</li>
+                        <li>Imaging studies</li>
+                        <li>Consultation reports</li>
+                        <li>Hospital records</li>
+                        <li>Appointment history</li>
+                        <li>Medical documents</li>
+                    </ul>
+                </div>
+                <p class="text-danger fw-bold mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_patient', patient_id=patient.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Delete Patient
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- JavaScript for patient deletion -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("DOM content loaded, initializing patient list JavaScript");
+        
+        const selectAllCheckbox = document.getElementById('selectAllPatients');
+        const patientCheckboxes = document.querySelectorAll('.patient-checkbox');
+        const deleteButton = document.getElementById('deleteButton');
+        const selectedCountBadge = document.getElementById('selectedCount');
+        
+        // Function to update form with selected patient IDs before submission
+        function updateSelectedPatientIds() {
+            const selectedIds = [];
+            const checkedBoxes = document.querySelectorAll('.patient-checkbox:checked');
+            
+            // Count selected patients and update badge
+            const checkedCount = checkedBoxes.length;
+            if (selectedCountBadge) {
+                selectedCountBadge.textContent = `${checkedCount} selected`;
+            }
+            
+            // Enable/disable delete button
+            if (deleteButton) {
+                deleteButton.disabled = (checkedCount === 0);
+            }
+            
+            // Gather patient IDs
+            checkedBoxes.forEach(checkbox => {
+                selectedIds.push(checkbox.value);
+            });
+            
+            // Now using form submission with checkboxes directly
+            console.log("Selected patient IDs:", selectedIds);
+        }
+        
+        // Add event listeners to checkboxes
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                patientCheckboxes.forEach(checkbox => {
+                    checkbox.checked = selectAllCheckbox.checked;
+                });
+                updateSelectedPatientIds();
+            });
+        }
+        
+        patientCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateSelectedPatientIds();
+                
+                // Update select all checkbox state
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = (document.querySelectorAll('.patient-checkbox:checked').length === patientCheckboxes.length);
+                }
+            });
+        });
+        
+        // Initialize the form
+        updateSelectedPatientIds();
+    });
+</script>
+{% endblock %}

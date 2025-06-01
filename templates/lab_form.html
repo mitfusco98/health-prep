@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}HealthPrep - Add Lab Result{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-flask me-2"></i>Add Lab Result
+    </h1>
+    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Patient
+    </a>
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i>Adding lab result for <strong>{{ patient.full_name }}</strong> (MRN: {{ patient.mrn }})
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Lab Result Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="row g-3">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="col-md-6">
+                        <label for="test_name" class="form-label">Test Name</label>
+                        {{ form.test_name(class="form-control") }}
+                        {% if form.test_name.errors %}
+                            {% for error in form.test_name.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="test_date" class="form-label">Test Date</label>
+                        {{ form.test_date(class="form-control", type="date") }}
+                        {% if form.test_date.errors %}
+                            {% for error in form.test_date.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="result_value" class="form-label">Result Value</label>
+                        {{ form.result_value(class="form-control") }}
+                        {% if form.result_value.errors %}
+                            {% for error in form.result_value.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="unit" class="form-label">Unit</label>
+                        {{ form.unit(class="form-control") }}
+                        {% if form.unit.errors %}
+                            {% for error in form.unit.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="reference_range" class="form-label">Reference Range</label>
+                        {{ form.reference_range(class="form-control") }}
+                        {% if form.reference_range.errors %}
+                            {% for error in form.reference_range.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        <div class="form-check">
+                            {{ form.is_abnormal(class="form-check-input") }}
+                            <label class="form-check-label" for="is_abnormal">
+                                Abnormal Result
+                            </label>
+                        </div>
+                        {% if form.is_abnormal.errors %}
+                            {% for error in form.is_abnormal.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-12">
+                        <label for="notes" class="form-label">Notes</label>
+                        {{ form.notes(class="form-control", rows=3) }}
+                        {% if form.notes.errors %}
+                            {% for error in form.notes.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-12 text-center mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Lab Result
+                        </button>
+                        <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

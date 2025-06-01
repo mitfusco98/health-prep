@@ -1,0 +1,146 @@
+{% extends 'base_demo.html' %}
+{# Cache-busting timestamp: {{ cache_timestamp }} #}
+
+{% block title %}HealthPrep - Document Repository{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+    <div class="d-flex flex-column align-items-start">
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="mb-4">
+    <h1>
+        <i class="fas fa-file-medical me-2"></i>Document Repository
+    </h1>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-folder-open me-2"></i>All Medical Documents
+                    </h5>
+                    <div class="d-flex align-items-center">
+                        <form class="me-2" method="get" action="{{ url_for('document_repository') }}">
+                            <div class="d-flex">
+                                <div class="input-group me-2">
+                                    <span class="input-group-text input-group-text-sm">Patient</span>
+                                    <select class="form-select form-select-sm" name="patient_id" id="patient-filter">
+                                        <option value="">All Patients</option>
+                                        {% for patient in all_patients %}
+                                            <option value="{{ patient.id }}" {% if selected_patient_id == patient.id %}selected{% endif %}>
+                                                {{ patient.full_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-control-sm" name="search" 
+                                           placeholder="Search documents..." value="{{ search_query if search_query else '' }}">
+                                    <button class="btn btn-outline-secondary btn-sm" type="submit">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if all_documents %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Document Name</th>
+                                <th>Type</th>
+                                <th>Patient</th>
+                                <th>Date</th>
+                                <th>Source</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for document in all_documents %}
+                            <tr>
+                                <td>{{ document.document_name }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if document.document_type == 'LAB_REPORT' %}
+                                            bg-info
+                                        {% elif document.document_type == 'RADIOLOGY_REPORT' %}
+                                            bg-success
+                                        {% elif document.document_type == 'CONSULTATION' %}
+                                            bg-warning
+                                        {% elif document.document_type == 'DISCHARGE_SUMMARY' %}
+                                            bg-danger
+                                        {% elif document.document_type == 'CLINICAL_NOTE' %}
+                                            bg-primary
+                                        {% elif document.document_type == 'prep_sheet' %}
+                                            bg-info
+                                        {% else %}
+                                            bg-secondary
+                                        {% endif %}
+                                    ">
+                                        {% if document.document_type == 'prep_sheet' %}
+                                            Quality Checklist
+                                        {% else %}
+                                            {{ document.document_type.replace('_', ' ') }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('patient_detail', patient_id=document.patient.id) }}">
+                                        {{ document.patient.full_name }}
+                                    </a>
+                                </td>
+                                <td>{{ document.document_date|datetime }}</td>
+                                <td>{{ document.source_system }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('view_document', document_id=document.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-file-alt me-1"></i> View
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <p class="text-muted mb-3">No documents found</p>
+                    <div class="btn-group">
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-submit form when patient dropdown changes
+        const patientFilter = document.getElementById('patient-filter');
+        if (patientFilter) {
+            patientFilter.addEventListener('change', function() {
+                // Get the parent form and submit it
+                this.closest('form').submit();
+            });
+        }
+    });
+</script>
+{% endblock %}

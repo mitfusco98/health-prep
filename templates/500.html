@@ -1,0 +1,29 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}HealthPrep - Server Error{% endblock %}
+
+{% block content %}
+<div class="container text-center py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h1 class="display-1">500</h1>
+            <h2 class="mb-4">Server Error</h2>
+            <p class="lead">We're sorry, but something went wrong. Our technical team has been notified and is working to resolve the issue.</p>
+            {% if error_id %}
+            <div class="alert alert-secondary mt-3">
+                <small><strong>Error ID:</strong> {{ error_id }} (for support reference)</small>
+            </div>
+            {% endif %}
+            <hr class="my-4">
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i class="fas fa-home me-2"></i>Return to Home
+                </a>
+                <button onclick="window.location.reload()" class="btn btn-outline-secondary">
+                    <i class="fas fa-sync-alt me-2"></i>Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}HealthPrep - View Document{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+    <div class="d-flex flex-column align-items-start">
+        <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary mb-2">
+            <i class="fas fa-arrow-left me-2"></i>Return to Patient List
+        </a>
+        <a href="{{ url_for('patient_detail', patient_id=document.patient_id) }}#medical-data" class="btn btn-outline-secondary mb-2">
+            <i class="fas fa-arrow-left me-2"></i>Back to Medical Data
+        </a>
+        <a href="{{ url_for('patient_detail', patient_id=document.patient_id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-user-circle me-2"></i>Back to Patient Profile
+        </a>
+    </div>
+</div>
+
+<div class="mb-4">
+    <h1>
+        <i class="fas fa-file-medical-alt me-2"></i>
+        {% if document.document_name %}
+            {{ document.document_name }}
+        {% elif document.document_type == 'prep_sheet' %}
+            Quality Checklist
+        {% else %}
+            {{ document.document_type }}
+        {% endif %}
+    </h1>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Document Details</h5>
+            </div>
+            <div class="card-body">
+                <dl>
+                    <dt>Patient</dt>
+                    <dd>
+                        <a href="{{ url_for('patient_detail', patient_id=document.patient_id) }}">
+                            {{ patient.full_name }}
+                        </a>
+                    </dd>
+                    
+                    <dt>Document Name</dt>
+                    <dd>{{ document.document_name }}</dd>
+                    
+                    <dt>Document Type</dt>
+                    <dd>
+                        {% if document.document_type == 'visit_prep_sheet' %}
+                            Quality Checklist
+                        {% else %}
+                            {{ document.document_type }}
+                        {% endif %}
+                    </dd>
+                    
+                    <dt>Filename</dt>
+                    <dd>{{ document.filename }}</dd>
+                    
+                    <dt>Date</dt>
+                    <dd>{{ document.document_date|datetime }}</dd>
+                    
+                    <dt>Source System</dt>
+                    <dd>{{ document.source_system }}</dd>
+                    
+                    {% if document.provider %}
+                    <dt>Provider</dt>
+                    <dd>{{ document.provider }}</dd>
+                    {% endif %}
+                </dl>
+                
+                {% if metadata %}
+                <h6 class="mt-4 mb-2">Extracted Information</h6>
+                <dl>
+                    {% if metadata.diagnoses %}
+                    <dt>Diagnoses</dt>
+                    <dd>
+                        <ul class="mb-0 ps-3">
+                            {% for diagnosis in metadata.diagnoses %}
+                            <li>{{ diagnosis }}</li>
+                            {% endfor %}
+                        </ul>
+                    </dd>
+                    {% endif %}
+                    
+                    {% if metadata.hospital %}
+                    <dt>Hospital</dt>
+                    <dd>{{ metadata.hospital }}</dd>
+                    {% endif %}
+                    
+                    {% if metadata.results %}
+                    <dt>Lab Results</dt>
+                    <dd>
+                        <ul class="mb-0 ps-3">
+                            {% for result in metadata.results %}
+                            <li>{{ result.test }}: {{ result.value }} {{ result.unit }}</li>
+                            {% endfor %}
+                        </ul>
+                    </dd>
+                    {% endif %}
+                    
+                    {% if metadata.test_names %}
+                    <dt>Tests</dt>
+                    <dd>
+                        <ul class="mb-0 ps-3">
+                            {% for test in metadata.test_names %}
+                            <li>{{ test }}</li>
+                            {% endfor %}
+                        </ul>
+                    </dd>
+                    {% endif %}
+                </dl>
+                {% endif %}
+                
+                <div class="mt-4">
+                    {% if document.document_type == 'Lab Report' %}
+                    <a href="#" class="btn btn-success w-100 mb-2" onclick="alert('Feature coming soon')">
+                        <i class="fas fa-plus me-2"></i>Add to Lab Results
+                    </a>
+                    {% endif %}
+                    
+                    {% if document.document_type == 'Discharge Summary' %}
+                    <a href="#" class="btn btn-success w-100 mb-2" onclick="alert('Feature coming soon')">
+                        <i class="fas fa-plus me-2"></i>Add to Hospital Summaries
+                    </a>
+                    {% endif %}
+                    
+                    {% if document.document_type == 'Consultation' %}
+                    <a href="#" class="btn btn-success w-100 mb-2" onclick="alert('Feature coming soon')">
+                        <i class="fas fa-plus me-2"></i>Add to Consultations
+                    </a>
+                    {% endif %}
+                    
+                    {% if document.document_type == 'Radiology Report' %}
+                    <a href="#" class="btn btn-success w-100 mb-2" onclick="alert('Feature coming soon')">
+                        <i class="fas fa-plus me-2"></i>Add to Imaging Studies
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Document Content</h5>
+            </div>
+            <div class="card-body">
+                <div class="bg-dark p-4 rounded document-content">
+                    {% if document.is_binary %}
+                        <div class="text-center">
+                            <img src="{{ url_for('document_image', document_id=document.id) }}" alt="{{ document.document_name }}" class="img-fluid" style="max-height: 80vh;">
+                        </div>
+                    {% else %}
+                        <pre class="text-light mb-0" style="white-space: pre-wrap; font-family: 'Courier New', monospace;">{{ document.content }}</pre>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

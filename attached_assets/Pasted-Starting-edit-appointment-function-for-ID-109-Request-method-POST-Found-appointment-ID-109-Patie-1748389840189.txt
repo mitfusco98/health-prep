@@ -1,0 +1,41 @@
+Starting edit_appointment function for ID: 109
+Request method: POST
+Found appointment: ID=109, Patient=Olivia Garcia, Date=2025-05-27
+Database error in edit_appointment: 'dict' object has no attribute 'getlist'
+ERROR:app:Exception on /appointments/109/edit [POST]
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/db_utils.py", line 49, in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/demo_routes.py", line 2432, in edit_appointment
+    form = AppointmentForm(request.form)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/wtforms/form.py", line 209, in __call__
+    return type.__call__(cls, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/forms.py", line 205, in __init__
+    super(AppointmentForm, self).__init__(*args, **kwargs)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_wtf/form.py", line 73, in __init__
+    super().__init__(formdata=formdata, **kwargs)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/wtforms/form.py", line 287, in __init__
+    self.process(formdata, obj, data=data, **kwargs)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/wtforms/form.py", line 128, in process
+    field.process(formdata, data, extra_filters=field_extra_filters)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/wtforms/fields/core.py", line 315, in process
+    self.raw_data = formdata.getlist(self.name)
+                    ^^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'getlist'
+INFO:app:Failed request: {'timestamp': 1748389788.5280666, 'ip_address': '10.82.8.58', 'method': 'POST', 'path': '/appointments/109/edit', 'user_agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36', 'status_code': 500, 'session_id': 'X5tshYqJbDdbGq_Vjl0aW3e9RQ56Pv12CcuO24pShdk'}
+ERROR:app:Rolling back due to exception: 'dict' object has no attribute 'getlist

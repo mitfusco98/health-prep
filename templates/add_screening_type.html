@@ -1,0 +1,92 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}HealthPrep - Add Screening Type{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-9">
+        <h1>Add Screening Type</h1>
+        <p class="lead">Add a new screening type definition</p>
+    </div>
+    <div class="col-md-3 text-md-end">
+        <a href="{{ url_for('screening_list', tab='types') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Types
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <h5 class="mb-0">
+            <i class="fas fa-cog me-2"></i>Screening Type Details
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('add_screening_type', ts=cache_timestamp) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label class="form-label">Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="name" required>
+                <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy')</small>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea class="form-control" name="description" rows="3"></textarea>
+                <small class="text-muted">Detailed description of this screening test</small>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Default Frequency</label>
+                        <input type="text" class="form-control" name="default_frequency">
+                        <small class="text-muted">How often this screening should be done (e.g., 'Annual', 'Every 5 years')</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Gender Specific</label>
+                        <select class="form-select" name="gender_specific">
+                            <option value="">All Genders</option>
+                            <option value="Male">Male Only</option>
+                            <option value="Female">Female Only</option>
+                        </select>
+                        <small class="text-muted">Is this screening specific to a particular gender?</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Minimum Age</label>
+                        <input type="number" class="form-control" name="min_age" min="0" max="120">
+                        <small class="text-muted">Minimum age to start this screening</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Maximum Age</label>
+                        <input type="number" class="form-control" name="max_age" min="0" max="120">
+                        <small class="text-muted">Maximum age for this screening (leave blank if no upper limit)</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="is_active" id="isActive" checked>
+                <label class="form-check-label" for="isActive">
+                    Active
+                </label>
+                <div class="form-text">Whether this screening should appear in checklists</div>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{{ url_for('screening_list', tab='types') }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save Screening Type</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

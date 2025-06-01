@@ -1,0 +1,177 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}HealthPrep - {{ title | default('Upload Document') }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+        <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Return to Patient List
+        </a>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-file-medical me-2"></i>{{ title | default('Upload Medical Document') }}
+    </h1>
+    <div>
+        <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Patient
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Upload Document for {{ patient.full_name }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="file" class="form-label">{{ form.file.label }}</label>
+                        {{ form.file(class="form-control") }}
+                        {% if form.file.errors %}
+                            {% for error in form.file.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                        <div class="form-text">
+                            Optional: Upload text documents from EMR systems. You can create document entries without attaching files if needed.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="document_name" class="form-label">{{ form.document_name.label }}</label>
+                        {{ form.document_name(class="form-control") }}
+                        {% if form.document_name.errors %}
+                            {% for error in form.document_name.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                        {% if form.document_name.description %}
+                            <div class="form-text">{{ form.document_name.description }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="document_type" class="form-label">{{ form.document_type.label }}</label>
+                        {{ form.document_type(class="form-select") }}
+                        {% if form.document_type.errors %}
+                            {% for error in form.document_type.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                        {% if form.document_type.description %}
+                            <div class="form-text">{{ form.document_type.description }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="source_system" class="form-label">{{ form.source_system.label }}</label>
+                                {{ form.source_system(class="form-control") }}
+                                {% if form.source_system.errors %}
+                                    {% for error in form.source_system.errors %}
+                                    <div class="text-danger mt-1">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                                {% if form.source_system.description %}
+                                    <div class="form-text">{{ form.source_system.description }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="document_date" class="form-label">{{ form.document_date.label }}</label>
+                                {{ form.document_date(class="form-control") }}
+                                {% if form.document_date.errors %}
+                                    {% for error in form.document_date.errors %}
+                                    <div class="text-danger mt-1">{{ error }}</div>
+                                    {% endfor %}
+                                {% endif %}
+                                {% if form.document_date.description %}
+                                    <div class="form-text">{{ form.document_date.description }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">{{ form.notes.label }}</label>
+                        {{ form.notes(class="form-control", rows=3) }}
+                        {% if form.notes.errors %}
+                            {% for error in form.notes.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                        {% if form.notes.description %}
+                            <div class="form-text">{{ form.notes.description }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-5">
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Supported Document Types</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <div class="list-group-item list-group-item-action {% if doc_type == 'CLINICAL_NOTE' %}active{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Clinical Notes</h6>
+                            <small>.txt, .docx, .html</small>
+                        </div>
+                        <p class="mb-1">Notes from clinical encounters</p>
+                    </div>
+                    <div class="list-group-item list-group-item-action {% if doc_type == 'DISCHARGE_SUMMARY' %}active{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Discharge Summaries</h6>
+                            <small>.txt, .pdf, .docx</small>
+                        </div>
+                        <p class="mb-1">Hospital discharge documentation</p>
+                    </div>
+                    <div class="list-group-item list-group-item-action {% if doc_type == 'LAB_REPORT' %}active{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Lab Reports</h6>
+                            <small>.txt, .pdf, .html</small>
+                        </div>
+                        <p class="mb-1">Laboratory test results</p>
+                    </div>
+                    <div class="list-group-item list-group-item-action {% if doc_type == 'RADIOLOGY_REPORT' %}active{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Radiology Reports</h6>
+                            <small>.txt, .pdf, .docx</small>
+                        </div>
+                        <p class="mb-1">Imaging study findings</p>
+                    </div>
+                    <div class="list-group-item list-group-item-action {% if doc_type == 'CONSULTATION' %}active{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">Consultation Reports</h6>
+                            <small>.txt, .pdf, .docx</small>
+                        </div>
+                        <p class="mb-1">Specialist consultation documentation</p>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <strong>Note:</strong> Documents will be automatically classified based on content and filename patterns.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

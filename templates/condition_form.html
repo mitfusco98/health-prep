@@ -1,0 +1,124 @@
+{% extends 'base_simple.html' %}
+
+{% block title %}HealthPrep - Add Condition{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+    <div class="d-flex flex-column align-items-start">
+        <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary mb-2">
+            <i class="fas fa-arrow-left me-2"></i>Return to Patient List
+        </a>
+        <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary mb-2">
+            <i class="fas fa-arrow-left me-2"></i>Back to Patient Profile
+        </a>
+    </div>
+</div>
+
+<div class="mb-4">
+    <h1>
+        <i class="fas fa-clipboard-list me-2"></i>Add Medical Condition
+    </h1>
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i>Adding condition for <strong>{{ patient.full_name }}</strong> (MRN: {{ patient.mrn }})
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Condition Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="row g-3">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="col-md-6">
+                        <label for="name" class="form-label">Condition Name</label>
+                        {{ form.name(class="form-control", id="conditionName", list="commonConditions", placeholder="Type or select a condition") }}
+                        <datalist id="commonConditions">
+                            <option value="Hypertension (High Blood Pressure)">
+                            <option value="Hyperlipidemia (High Cholesterol)">
+                            <option value="Type 2 Diabetes">
+                            <option value="Back Pain">
+                            <option value="Anxiety">
+                            <option value="Obesity">
+                            <option value="Allergic Rhinitis">
+                            <option value="Osteoarthritis">
+                            <option value="Hypothyroidism">
+                            <option value="GERD (Gastroesophageal Reflux Disease)">
+                            <option value="Migraine">
+                            <option value="Major Depressive Disorder">
+                            <option value="Asthma">
+                            <option value="COPD (Chronic Obstructive Pulmonary Disease)">
+                            <option value="Coronary Artery Disease">
+                            <option value="Chronic Kidney Disease">
+                            <option value="Osteoporosis">
+                            <option value="Fibromyalgia">
+                            <option value="Sleep Apnea">
+                            <option value="Atrial Fibrillation">
+                        </datalist>
+                        {% if form.name.errors %}
+                            {% for error in form.name.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                        <small class="form-text text-muted">Start typing to see suggestions or enter a custom condition</small>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="diagnosed_date" class="form-label">Date Diagnosed</label>
+                        {{ form.diagnosed_date(class="form-control", type="date") }}
+                        {% if form.diagnosed_date.errors %}
+                            {% for error in form.diagnosed_date.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        <div class="form-check">
+                            {{ form.is_active(class="form-check-input") }}
+                            <label class="form-check-label" for="is_active">
+                                Active Condition
+                            </label>
+                        </div>
+                        {% if form.is_active.errors %}
+                            {% for error in form.is_active.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-12">
+                        <label for="notes" class="form-label">Notes</label>
+                        {{ form.notes(class="form-control", rows=3) }}
+                        {% if form.notes.errors %}
+                            {% for error in form.notes.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex flex-column align-items-start mt-4">
+                        <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary mb-3">
+                            <i class="fas fa-times me-2"></i>Back to Patient Profile
+                        </a>
+                        <div class="d-flex justify-content-end w-100">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Condition
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- No additional scripts needed for the autocomplete functionality -->
+{% endblock %}

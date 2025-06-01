@@ -1,0 +1,161 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}
+{% if appointment %}Edit Appointment{% else %}New Appointment{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Set global appointment ID for JavaScript
+    {% if appointment %}
+    window.APPOINTMENT_ID = {{ appointment.id }};
+    window.CURRENT_APPOINTMENT_TIME = "{{ appointment.appointment_time.strftime('%H:%M') }}";
+    {% else %}
+    window.APPOINTMENT_ID = null;
+    window.CURRENT_APPOINTMENT_TIME = null;
+    {% endif %}
+</script>
+<script src="{{ url_for('static', filename='js/appointment.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>{% if appointment %}Edit Appointment{% else %}New Appointment{% endif %}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="appointment-form" action="{{ request.path }}" {% if appointment %}data-appointment-id="{{ appointment.id }}"{% endif %}>
+                        {{ form.hidden_tag() }}
+                        <!-- Add hidden fallback date if it exists in the form -->
+                        {% if request.args.get('date') %}
+                        <input type="hidden" name="fallback_date" value="{{ request.args.get('date') }}">
+                        {% endif %}
+                        <!-- Add debugging info -->
+                        <input type="hidden" name="_form_debug" value="direct_post_submission">
+                        <!-- Add any previous validation errors as hidden fields for debugging -->
+                        {% if form.errors %}
+                        <input type="hidden" name="_form_has_errors" value="true">
+                        {% endif %}
+                        
+                        {% if debug_mode %}
+                        <div class="alert alert-warning mb-3">
+                            <strong>Debug Mode:</strong> Using simplified form processing for troubleshooting appointment submission.
+                        </div>
+                        {% endif %}
+
+                        {% if appointment %}
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Current Appointment:</strong> 
+                            {{ appointment.patient.full_name }} scheduled for 
+                            <strong>{{ appointment.appointment_time.strftime('%I:%M %p') }}</strong> 
+                            on {{ appointment.appointment_date.strftime('%B %d, %Y') }}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            {{ form.patient_id.label(class="form-label") }}
+                            {{ form.patient_id(class="form-select") }}
+                            {% for error in form.patient_id.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.appointment_date.label(class="form-label") }}
+                                    {{ form.appointment_date(class="form-control", type="date") }}
+                                    {% for error in form.appointment_date.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    {{ form.appointment_time.label(class="form-label") }}
+                                    <div class="input-group">
+                                        {{ form.appointment_time(class="form-select") }}
+                                        <span class="input-group-text">
+                                            <i class="fas fa-clock"></i>
+                                        </span>
+                                    </div>
+                                    <small class="text-muted">15-minute slots available between 8:00 AM and 4:00 PM</small>
+                                    {% if appointment %}
+                                    <div class="mt-2">
+                                        <small class="text-success">
+                                            <i class="fas fa-check-circle me-1"></i>
+                                            Current time slot ({{ appointment.appointment_time.strftime('%I:%M %p') }}) is available for editing
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                    {% if booked_slots %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">Other booked times: {{ booked_slots|join(', ') }}</small>
+                                    </div>
+                                    {% endif %}
+                                    {% for error in form.appointment_time.errors %}
+                                    <div class="text-danger">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.note.label(class="form-label") }}
+                            {{ form.note(class="form-control") }}
+                            {% for error in form.note.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if conflicts %}
+                        <div class="alert alert-warning mb-3">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <strong>Scheduling Conflict:</strong> {{ conflict_message }}
+                            <div class="mt-2">
+                                <strong>Conflicting appointments:</strong>
+                                <ul class="mb-0 ms-3">
+                                {% for conflict in conflicts %}
+                                    <li>{{ conflict.patient.full_name }} at {{ conflict.appointment_time.strftime('%I:%M %p') }}</li>
+                                {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="mt-3">
+                                <a href="{% if editing %}{{ url_for('edit_appointment', appointment_id=form.data.get('id', request.view_args.get('appointment_id')), force_save=1) }}{% else %}{{ url_for('add_appointment', force_save=1) }}?date={{ form.appointment_date.data.strftime('%Y-%m-%d') }}{% endif %}" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-exclamation-triangle me-1"></i> Save Anyway
+                                </a>
+                                <small class="text-muted ms-2">This will schedule overlapping appointments.</small>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex flex-column align-items-start">
+                            <a href="{{ url_for('index') }}" class="btn btn-secondary mb-3" style="min-width: 170px;">
+                                <i class="fas fa-arrow-left me-1"></i> Return to Schedule
+                            </a>
+                            
+                            <div class="d-flex justify-content-end w-100">
+                                {% if appointment %}
+                                <a href="{{ url_for('delete_appointment', appointment_id=appointment.id) }}" class="btn btn-danger me-2" style="min-width: 140px;">
+                                    <i class="fas fa-trash-alt me-1"></i> Delete
+                                </a>
+                                {% endif %}
+                                <!-- Use a normal button for direct form submission -->
+                                <button type="submit" class="btn btn-primary" style="min-width: 140px;" id="submit-appointment">
+                                    Save Appointment
+                                </button>
+                            </div>
+                        </div>
+                        
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

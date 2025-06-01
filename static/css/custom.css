@@ -1,0 +1,115 @@
+/* 
+ * Custom CSS for HealthPrep
+ * Contains styling for specialized components
+ */
+
+/* Override screening list table backgrounds - updated May 17, 2025 */
+#screening-list-table tr {
+    background-color: inherit !important;
+}
+
+#screening-list-table tr.table-danger,
+#screening-list-table tr.table-warning {
+    background-color: inherit !important;
+}
+
+/* Screening Checklist Styles - Updated 2025-05-16 */
+.screening-container {
+    display: table;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+.screening-row {
+    display: table-row;
+}
+
+.screening-header {
+    display: table-row;
+    font-weight: bold;
+}
+
+.screening-header > div {
+    display: table-cell;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.screening-cell {
+    display: table-cell;
+    vertical-align: middle;
+    padding: 3px 10px 3px 0;
+}
+
+.screening-status-cell {
+    display: table-cell;
+    width: 180px;
+    vertical-align: middle;
+}
+
+.screening-note-cell {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+/* Set fixed width for status dropdowns */
+.screening-status-select {
+    width: 100%;
+}
+
+/* Status dropdown styling to match buttons */
+.status-select {
+    border-color: #17a2b8;
+    background-color: transparent;
+    color: #17a2b8;
+    border-radius: 0.25rem;
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    text-align: center;
+    text-align-last: center;
+    padding-right: 28px !important;
+    cursor: pointer;
+    vertical-align: middle;
+    line-height: 1.5;
+}
+
+.status-select:hover, .status-select:focus {
+    background-color: #17a2b8;
+    color: #fff;
+}
+
+.status-select option {
+    background-color: #fff;
+    color: #333;
+    text-align: left;
+}
+
+/* Appointment action buttons */
+.appointment-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+/* Alignment for action buttons container - vertical stack */
+.appointment-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+/* Vertical action buttons for appointments */
+.vertical-action-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}

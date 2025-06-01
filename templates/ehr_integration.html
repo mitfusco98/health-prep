@@ -1,0 +1,333 @@
+{% extends "base_demo.html" %}
+
+{% block title %}EHR Integration - HealthPrep{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas fa-hospital me-2"></i>EHR Integration</h4>
+    </div>
+    <div class="card-body">
+        <p>Connect to external Electronic Health Record (EHR) systems to import patient data directly into HealthPrep.</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-plug me-2"></i>EHR Connections</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Vendor</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if connections %}
+                                    {% for conn in connections %}
+                                    <tr>
+                                        <td>{{ conn.name }}</td>
+                                        <td>{{ conn.vendor }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <form method="post" action="{{ url_for('test_ehr_connection') }}" class="d-inline">
+                                                    <input type="hidden" name="connection_name" value="{{ conn.name }}">
+                                                    <button type="submit" class="btn btn-outline-info" title="Test connection">
+                                                        <i class="fas fa-vial"></i>
+                                                    </button>
+                                                </form>
+                                                <form method="post" action="{{ url_for('remove_ehr_connection') }}" class="d-inline ms-1">
+                                                    <input type="hidden" name="connection_name" value="{{ conn.name }}">
+                                                    <button type="submit" class="btn btn-outline-danger" title="Remove connection" onclick="return confirm('Are you sure you want to remove this connection?')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="3" class="text-center">No connections configured</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                        
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addConnectionModal">
+                            <i class="fas fa-plus me-1"></i> Add Connection
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Import History</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Connection</th>
+                                    <th>Patient</th>
+                                    <th>Items</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if import_history %}
+                                    {% for history in import_history %}
+                                    <tr>
+                                        <td>{{ history.import_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>{{ history.connection.name }}</td>
+                                        <td>
+                                            {% if history.patient %}
+                                                <a href="{{ url_for('patient_detail', patient_id=history.patient_id) }}">
+                                                    {{ history.patient.full_name }}
+                                                </a>
+                                            {% else %}
+                                                {{ history.patient_name }}
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ history.imported_items }}</td>
+                                        <td>
+                                            {% if history.success %}
+                                                <span class="badge bg-success">Success</span>
+                                            {% else %}
+                                                <span class="badge bg-danger" title="{{ history.error_message }}">Failed</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center">No import history</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-search me-2"></i>Search EHR Patients</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{{ url_for('search_ehr_patients') }}">
+                            <div class="mb-3">
+                                <label for="connection_name" class="form-label">EHR Connection</label>
+                                <select class="form-select" id="connection_name" name="connection_name" required>
+                                    <option value="">Select a connection</option>
+                                    {% if connections %}
+                                        {% for conn in connections %}
+                                            <option value="{{ conn.name }}">{{ conn.name }}</option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="family_name" class="form-label">Last Name</label>
+                                        <input type="text" class="form-control" id="family_name" name="family_name">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="given_name" class="form-label">First Name</label>
+                                        <input type="text" class="form-control" id="given_name" name="given_name">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="birthdate" class="form-label">Birth Date</label>
+                                        <input type="date" class="form-control" id="birthdate" name="birthdate">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="identifier" class="form-label">Identifier (MRN)</label>
+                                        <input type="text" class="form-control" id="identifier" name="identifier">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i> Search
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>About FHIR Integration</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>This feature allows integration with any EHR system that supports the FHIR (Fast Healthcare Interoperability Resources) standard.</p>
+                        
+                        <h6>Supported data types:</h6>
+                        <ul>
+                            <li>Patient demographics</li>
+                            <li>Medical conditions</li>
+                            <li>Vital signs</li>
+                            <li>Clinical documents</li>
+                        </ul>
+                        
+                        <h6>Supported EHR vendors:</h6>
+                        <ul>
+                            <li>Epic</li>
+                            <li>Cerner</li>
+                            <li>Allscripts</li>
+                            <li>AthenaHealth</li>
+                            <li>eClinicalWorks</li>
+                            <li>NextGen</li>
+                            <li>Any Generic FHIR-compatible system</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Connection Modal -->
+<div class="modal fade" id="addConnectionModal" tabindex="-1" aria-labelledby="addConnectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addConnectionModalLabel">Add EHR Connection</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{{ url_for('add_ehr_connection') }}" id="addConnectionForm">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Connection Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required 
+                               placeholder="e.g., Hospital System FHIR API">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="vendor" class="form-label">EHR Vendor</label>
+                        <select class="form-select" id="vendor" name="vendor" required>
+                            <option value="Generic FHIR">Generic FHIR</option>
+                            <option value="Epic">Epic</option>
+                            <option value="Cerner">Cerner</option>
+                            <option value="Allscripts">Allscripts</option>
+                            <option value="AthenaHealth">AthenaHealth</option>
+                            <option value="eClinicalWorks">eClinicalWorks</option>
+                            <option value="NextGen">NextGen</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="base_url" class="form-label">Base URL</label>
+                        <input type="url" class="form-control" id="base_url" name="base_url" required
+                               placeholder="https://fhir.example.org/R4">
+                        <div class="form-text">The base URL of the FHIR API, typically ending with /FHIR or /R4</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="auth_type" class="form-label">Authentication Type</label>
+                        <select class="form-select" id="auth_type" name="auth_type" required>
+                            <option value="none">None</option>
+                            <option value="api_key">API Key</option>
+                            <option value="oauth">OAuth 2.0</option>
+                        </select>
+                    </div>
+                    
+                    <!-- API Key Auth Fields -->
+                    <div id="api_key_fields" class="d-none">
+                        <div class="mb-3">
+                            <label for="api_key" class="form-label">API Key</label>
+                            <input type="password" class="form-control" id="api_key" name="api_key"
+                                   placeholder="Public/Anonymous API Key Only">
+                            <div class="form-text text-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Security Notice:</strong> Only use public or anonymous API keys. 
+                                Never enter service-level, admin, or secret keys.
+                            </div>
+                            <div class="form-text text-muted">
+                                Safe key patterns: "anon_", "public_", "readonly_"<br>
+                                Avoid: "service_", "admin_", "secret_", "sk_", "rk_"
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="use_auth_header" name="use_auth_header" value="true" checked>
+                            <label class="form-check-label" for="use_auth_header">Use Authorization Header</label>
+                            <div class="form-text">If checked, the API key will be sent in the Authorization header. 
+                                Otherwise, it will be sent as a query parameter.</div>
+                        </div>
+                    </div>
+                    
+                    <!-- OAuth Auth Fields -->
+                    <div id="oauth_fields" class="d-none">
+                        <div class="mb-3">
+                            <label for="client_id" class="form-label">Client ID</label>
+                            <input type="text" class="form-control" id="client_id" name="client_id"
+                                   placeholder="Public OAuth Client ID">
+                            <div class="form-text text-info">
+                                Use public OAuth client credentials only. This will be stored on the server.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="client_secret" class="form-label">Client Secret</label>
+                            <input type="password" class="form-control" id="client_secret" name="client_secret"
+                                   placeholder="OAuth Client Secret">
+                            <div class="form-text text-warning">
+                                <i class="fas fa-shield-alt"></i>
+                                Client secrets are encrypted and stored securely on the server.
+                                Never use confidential or service-level OAuth applications.
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" form="addConnectionForm" class="btn btn-primary">Add Connection</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const authTypeSelect = document.getElementById('auth_type');
+        const apiKeyFields = document.getElementById('api_key_fields');
+        const oauthFields = document.getElementById('oauth_fields');
+        
+        // Toggle auth fields based on selection
+        authTypeSelect.addEventListener('change', function() {
+            const authType = this.value;
+            
+            // Hide all auth fields
+            apiKeyFields.classList.add('d-none');
+            oauthFields.classList.add('d-none');
+            
+            // Show relevant fields based on selection
+            if (authType === 'api_key') {
+                apiKeyFields.classList.remove('d-none');
+            } else if (authType === 'oauth') {
+                oauthFields.classList.remove('d-none');
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}HealthPrep - Add Screening Recommendation{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-9">
+        <h1>Add Screening Recommendation</h1>
+        <p class="lead">Add a new screening recommendation for a patient</p>
+    </div>
+    <div class="col-md-3 text-md-end">
+        <a href="{{ url_for('screening_list') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Screenings
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <h5 class="mb-0">
+            <i class="fas fa-clipboard-check me-2"></i>Screening Recommendation Details
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('add_screening_recommendation', ts=cache_timestamp) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label class="form-label">Patient <span class="text-danger">*</span></label>
+                <select class="form-select" name="patient_id" id="patient" required>
+                    <option value="">Select a patient</option>
+                    {% for patient in patients %}
+                        <option value="{{ patient.id }}">{{ patient.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Screening Type <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="screening_type" id="screening_type" required list="screening-types-list">
+                <datalist id="screening-types-list">
+                    {% for type in all_screening_types %}
+                        <option value="{{ type.name }}">
+                    {% endfor %}
+                </datalist>
+                <small class="text-muted">Type or select from available screening types</small>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Due Date</label>
+                        <input type="date" class="form-control" name="due_date">
+                        <small class="text-muted">When should this screening be completed</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Last Completed</label>
+                        <input type="date" class="form-control" name="last_completed">
+                        <small class="text-muted">When was this screening last done</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Frequency</label>
+                        <input type="text" class="form-control" name="frequency" placeholder="e.g. Annual, Every 5 years">
+                        <small class="text-muted">How often this screening should be done</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Priority</label>
+                        <select class="form-select" name="priority">
+                            <option value="">Select priority</option>
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Notes</label>
+                <textarea class="form-control" name="notes" rows="3"></textarea>
+                <small class="text-muted">Any additional information about this screening recommendation</small>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{{ url_for('screening_list') }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save Recommendation</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

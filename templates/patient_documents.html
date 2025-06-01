@@ -1,0 +1,247 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}HealthPrep - {{ patient.full_name }}'s Documents{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+        <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Return to Patient List
+        </a>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-folder-open me-2"></i>Medical Documents
+    </h1>
+    <div>
+        <a href="{{ url_for('add_document', patient_id=patient.id) }}" class="btn btn-primary me-2">
+            <i class="fas fa-file-upload me-2"></i>Upload Document
+        </a>
+        <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Patient
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ patient.full_name }}'s Documents</h5>
+                <span class="badge bg-primary">{{ document_count }} Documents</span>
+            </div>
+            <div class="card-body">
+                {% if document_count == 0 %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>No documents have been uploaded for this patient.
+                </div>
+                {% else %}
+                <div class="accordion" id="documentsAccordion">
+                    {% for doc_type, docs in documents.items() %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading{{ loop.index }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" aria-controls="collapse{{ loop.index }}">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <span>{{ doc_type }} ({{ docs|length }})</span>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading{{ loop.index }}" data-bs-parent="#documentsAccordion">
+                            <div class="accordion-body p-0">
+                                <div class="list-group list-group-flush">
+                                    {% for doc in docs %}
+                                    <div class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">
+                                                {% if doc.is_binary %}
+                                                <i class="fas fa-image text-info me-1" title="Image document"></i>
+                                                {% endif %}
+                                                {{ doc.document_name if doc.document_name else doc.filename }}
+                                            </h6>
+                                            <small>{{ doc.document_date|default(now(), true)|datetime }}</small>
+                                        </div>
+                                        
+                                        <p class="mb-1 text-muted">
+                                            <span class="badge bg-secondary me-1">{{ doc_type }}</span>
+                                            <span>Source: {{ doc.source }}</span>
+                                            {% if doc.provider %}
+                                            | Provider: {{ doc.provider }}
+                                            {% endif %}
+                                            {% if doc.hospital %}
+                                            | Hospital: {{ doc.hospital }}
+                                            {% endif %}
+                                        </p>
+                                        
+                                        {% if doc.diagnoses and doc.diagnoses|length > 0 %}
+                                        <div class="small mb-2">
+                                            <strong>Diagnoses:</strong> 
+                                            {{ doc.diagnoses|join(', ') }}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if doc.results and doc.results|length > 0 %}
+                                        <div class="small mb-2">
+                                            <strong>Results:</strong> 
+                                            <ul class="mb-0">
+                                                {% for result in doc.results %}
+                                                <li>{{ result.test }}: {{ result.value }} {{ result.unit }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="mt-2">
+                                            <a href="{{ url_for('view_document', document_id=doc.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye me-1"></i>View Document
+                                            </a>
+                                            
+                                            {% if doc_type == 'Lab Report' %}
+                                            <a href="#" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-plus me-1"></i>Add to Lab Results
+                                            </a>
+                                            {% endif %}
+                                            
+                                            {% if doc_type == 'Hospital Discharge' %}
+                                            <a href="#" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-plus me-1"></i>Add to Hospital Summaries
+                                            </a>
+                                            {% endif %}
+                                            
+                                            {% if doc_type == 'Imaging Study' %}
+                                            <a href="#" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-plus me-1"></i>Add to Imaging Studies
+                                            </a>
+                                            {% endif %}
+                                            
+                                            {% if doc_type == 'Consult/Referral Report' %}
+                                            <a href="#" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-plus me-1"></i>Add to Consult Reports
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if document_count > 0 %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Recent Documents</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for doc in recent_documents %}
+                    <a href="{{ url_for('view_document', document_id=doc.id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                {% if doc.is_binary %}
+                                <i class="fas fa-image text-info me-1" title="Image document"></i>
+                                {% endif %}
+                                {{ doc.document_name if doc.document_name else doc.filename }}
+                            </h6>
+                            <small>{{ doc.document_date|datetime }}</small>
+                        </div>
+                        <p class="mb-1">
+                            {% if doc.document_type == 'visit_prep_sheet' %}
+                                Quality Checklist
+                            {% else %}
+                                {{ doc.document_type }}
+                            {% endif %}
+                        </p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Document Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="documentTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Create document type chart if there are documents
+    {% if document_count > 0 %}
+    const docTypeCanvas = document.getElementById('documentTypeChart');
+    if (docTypeCanvas) {
+        const docTypes = [];
+        const docCounts = [];
+        
+        {% for doc_type, docs in documents.items() %}
+        docTypes.push('{{ doc_type }}');
+        docCounts.push({{ docs|length }});
+        {% endfor %}
+        
+        new Chart(docTypeCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: docTypes,
+                datasets: [{
+                    data: docCounts,
+                    backgroundColor: [
+                        '#007bff',
+                        '#28a745',
+                        '#dc3545',
+                        '#ffc107',
+                        '#17a2b8',
+                        '#6f42c1',
+                        '#fd7e14',
+                        '#20c997',
+                        '#e83e8c'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: '#f8f9fa'
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Document Types',
+                        color: '#f8f9fa'
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

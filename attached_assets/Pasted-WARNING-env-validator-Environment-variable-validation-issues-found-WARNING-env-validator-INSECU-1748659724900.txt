@@ -1,0 +1,32 @@
+WARNING:env_validator:Environment variable validation issues found:
+WARNING:env_validator:  - INSECURE: ADMIN_USERNAME is using a default/insecure value
+WARNING:env_validator:  - INSECURE: ADMIN_PASSWORD is using a default/insecure value
+WARNING:env_validator:  - OPTIONAL: FLASK_ENV - Flask environment setting (not set)
+ERROR:env_validator:Validation failed due to missing or insecure required variables
+
+Environment Variable Validation Failed!
+==================================================
+❌ INSECURE: ADMIN_USERNAME is using a default/insecure value
+❌ INSECURE: ADMIN_PASSWORD is using a default/insecure value
+⚠️  OPTIONAL: FLASK_ENV - Flask environment setting (not set)
+
+Please fix these issues before starting the application.
+Create a .env file or set environment variables directly.
+CRITICAL:app:Application cannot start due to environment variable issues
+[2025-05-31 02:47:26 +0000] [4408] [INFO] Worker exiting (pid: 4408)
+Environment validation failed - check your configuration
+[2025-05-31 02:47:26 +0000] [4394] [INFO] Handling signal: winch
+[2025-05-31 02:47:26 +0000] [4394] [INFO] Handling signal: winch
+[2025-05-31 02:47:26 +0000] [4394] [INFO] Handling signal: winch
+[2025-05-31 02:47:26 +0000] [4394] [INFO] Handling signal: winch
+[2025-05-31 02:47:26 +0000] [4394] [INFO] Handling signal: winch
+[2025-05-31 02:47:26 +0000] [4394] [ERROR] Worker (pid:4408) exited with code 1
+[2025-05-31 02:47:26 +0000] [4394] [ERROR] Worker (pid:4408) exited with code 1.
+[2025-05-31 02:47:26 +0000] [4426] [INFO] Booting worker with pid: 4426
+[2025-05-31 02:47:26 +0000] [4394] [INFO] Handling signal: winch
+[2025-05-31 02:47:26 +0000] [4394] [INFO] Handling signal: winch
+WARNING:env_validator:Environment variable validation issues found:
+WARNING:env_validator:  - INSECURE: ADMIN_USERNAME is using a default/insecure value
+WARNING:env_validator:  - INSECURE: ADMIN_PASSWORD is using a default/insecure value
+WARNING:env_validator:  - OPTIONAL: FLASK_ENV - Flask environment setting (not set)
+ERROR:env_validator:Validation failed due to missing or insecure required variables

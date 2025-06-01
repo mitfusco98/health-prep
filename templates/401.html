@@ -1,0 +1,25 @@
+
+{% extends 'base_demo.html' %}
+
+{% block title %}HealthPrep - Unauthorized{% endblock %}
+
+{% block content %}
+<div class="container text-center py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h1 class="display-1">401</h1>
+            <h2 class="mb-4">Unauthorized</h2>
+            <p class="lead">You need to be logged in to access this resource. Please authenticate and try again.</p>
+            <hr class="my-4">
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                <a href="{{ url_for('login') }}" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-home me-2"></i>Return to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

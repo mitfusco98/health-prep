@@ -1,0 +1,128 @@
+{% extends 'base_simple.html' %}
+
+{% block title %}HealthPrep - Add Immunization{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+    <div class="d-flex flex-column align-items-start">
+        <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary mb-2">
+            <i class="fas fa-arrow-left me-2"></i>Return to Patient List
+        </a>
+        <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Return to Patient Detail
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <h2 class="mb-0 h4">Add Immunization Record</h2>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-12">
+                <p>Patient: <strong>{{ patient.full_name }}</strong> (DOB: {{ patient.date_of_birth|dob }}, MRN: {{ patient.mrn }})</p>
+            </div>
+        </div>
+        
+        <form method="POST" class="mt-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="vaccine_name" class="form-label">Vaccine Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="vaccine_name" name="vaccine_name" required
+                               list="commonVaccines" placeholder="Type or select a vaccine"
+                               value="{{ form.vaccine_name.data or '' }}">
+                        <datalist id="commonVaccines">
+                            <option value="Influenza (Flu)">
+                            <option value="COVID-19 (Pfizer)">
+                            <option value="COVID-19 (Moderna)">
+                            <option value="COVID-19 (Johnson & Johnson)">
+                            <option value="Tdap (Tetanus, Diphtheria, Pertussis)">
+                            <option value="DTaP (Diphtheria, Tetanus, acellular Pertussis)">
+                            <option value="MMR (Measles, Mumps, Rubella)">
+                            <option value="Varicella (Chickenpox)">
+                            <option value="Hepatitis A">
+                            <option value="Hepatitis B">
+                            <option value="HPV (Human Papillomavirus)">
+                            <option value="Pneumococcal (PCV13)">
+                            <option value="Pneumococcal (PPSV23)">
+                            <option value="Zoster (Shingles)">
+                            <option value="Meningococcal">
+                            <option value="Hib (Haemophilus influenzae type b)">
+                            <option value="Rotavirus">
+                            <option value="IPV (Inactivated Polio Vaccine)">
+                            <option value="BCG (Bacillus Calmette-Guérin)">
+                            <option value="Typhoid">
+                            <option value="Yellow Fever">
+                        </datalist>
+                        <small class="form-text text-muted">Start typing to see suggestions or enter a custom vaccine</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="administration_date" class="form-label">Administration Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="administration_date" name="administration_date" required
+                               value="{{ form.administration_date.data.strftime('%Y-%m-%d') if form.administration_date.data else '' }}">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="dose_number" class="form-label">Dose Number</label>
+                        <input type="number" class="form-control" id="dose_number" name="dose_number" min="1"
+                               value="{{ form.dose_number.data or '' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="manufacturer" class="form-label">Manufacturer</label>
+                        <input type="text" class="form-control" id="manufacturer" name="manufacturer"
+                               list="vaccineManufacturers" placeholder="Type or select a manufacturer"
+                               value="{{ form.manufacturer.data or '' }}">
+                        <datalist id="vaccineManufacturers">
+                            <option value="Pfizer">
+                            <option value="Moderna">
+                            <option value="Johnson & Johnson">
+                            <option value="AstraZeneca">
+                            <option value="GlaxoSmithKline (GSK)">
+                            <option value="Sanofi Pasteur">
+                            <option value="Merck">
+                            <option value="Serum Institute of India">
+                            <option value="Novavax">
+                            <option value="Bharat Biotech">
+                        </datalist>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="lot_number" class="form-label">Lot Number</label>
+                        <input type="text" class="form-control" id="lot_number" name="lot_number"
+                               value="{{ form.lot_number.data or '' }}">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label for="notes" class="form-label">Notes</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3">{{ form.notes.data or '' }}</textarea>
+            </div>
+            
+            <div class="d-flex flex-column align-items-start">
+                <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary mb-3">
+                    <i class="fas fa-times me-2"></i>Back to Patient Profile
+                </a>
+                <div class="d-flex justify-content-end w-100">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Immunization
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

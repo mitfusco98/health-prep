@@ -1,0 +1,216 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}HealthPrep - Add Vital Signs for {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<div class="mb-2">
+    <div class="d-flex flex-column align-items-start">
+        <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary mb-2">
+            <i class="fas fa-arrow-left me-2"></i>Return to Patient List
+        </a>
+        <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Patient Profile
+        </a>
+    </div>
+</div>
+
+<div class="mb-4">
+    <h1>
+        <i class="fas fa-heartbeat me-2"></i>Add Vital Signs
+    </h1>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Patient Information</h5>
+            </div>
+            <div class="card-body">
+                <dl>
+                    <dt>Name</dt>
+                    <dd>{{ patient.full_name }}</dd>
+                    
+                    <dt>MRN</dt>
+                    <dd>{{ patient.mrn }}</dd>
+                    
+                    <dt>Date of Birth</dt>
+                    <dd>{{ patient.date_of_birth.strftime('%Y-%m-%d') }} ({{ patient.age }} years)</dd>
+                    
+                    <dt>Sex</dt>
+                    <dd>{{ patient.sex }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Vital Signs</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form.date.label(class="form-label") }}
+                                {{ form.date(class="form-control", type="date") }}
+                                {% if form.date.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.date.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mb-3">Measurements</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.height.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.height(class="form-control") }}
+                                    <span class="input-group-text">in</span>
+                                </div>
+                                {% if form.height.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.height.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.weight.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.weight(class="form-control") }}
+                                    <span class="input-group-text">lbs</span>
+                                </div>
+                                {% if form.weight.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.weight.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mb-3">Vital Signs</h6>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.temperature.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.temperature(class="form-control") }}
+                                    <span class="input-group-text">°F</span>
+                                </div>
+                                {% if form.temperature.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.temperature.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Blood Pressure</label>
+                                <div class="input-group">
+                                    {{ form.blood_pressure_systolic(class="form-control", placeholder="Systolic", style="min-width: 100px;") }}
+                                    <span class="input-group-text">/</span>
+                                    {{ form.blood_pressure_diastolic(class="form-control", placeholder="Diastolic", style="min-width: 100px;") }}
+                                    <span class="input-group-text">mmHg</span>
+                                </div>
+                                {% if form.blood_pressure_systolic.errors or form.blood_pressure_diastolic.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.blood_pressure_systolic.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                    {% for error in form.blood_pressure_diastolic.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.pulse.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.pulse(class="form-control") }}
+                                    <span class="input-group-text">bpm</span>
+                                </div>
+                                {% if form.pulse.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.pulse.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.respiratory_rate.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.respiratory_rate(class="form-control") }}
+                                    <span class="input-group-text">breaths/min</span>
+                                </div>
+                                {% if form.respiratory_rate.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.respiratory_rate.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                {{ form.oxygen_saturation.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.oxygen_saturation(class="form-control") }}
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                {% if form.oxygen_saturation.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.oxygen_saturation.errors %}
+                                    <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex flex-column align-items-start mt-4">
+                        <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary mb-3">
+                            <i class="fas fa-times me-2"></i>Back to Patient Profile
+                        </a>
+                        <div class="d-flex justify-content-end w-100">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

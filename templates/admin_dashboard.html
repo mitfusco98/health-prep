@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-tachometer-alt"></i> Admin Dashboard
+            </h1>
+        </div>
+    </div>
+
+    <!-- Security Overview -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ recent_login_failures }}</h4>
+                            <p class="card-text">Recent Login Failures</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-shield-alt fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ total_users }}</h4>
+                            <p class="card-text">Active Users</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ db_stats.admin_logs }}</h4>
+                            <p class="card-text">Recent Admin Events</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-history fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content: Admin Logs and User Management -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Recent Admin Logs</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_admin_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Event</th>
+                                    <th>Location</th>
+                                    <th>Details</th>
+                                    <th>IP Address</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recent_admin_logs %}
+                                <tr>
+                                    <td>
+                                        <small>{{ (log.timestamp|timestamp_to_est) }}</small>
+                                    </td>
+                                    <td>
+                                        {% if log.user %}
+                                            <small>{{ log.user.username }}</small>
+                                        {% else %}
+                                            <small class="text-muted">Unknown</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>
+                                            {% if log.event_type == 'login_fail' %}
+                                                <span class="badge bg-danger">Login Failed</span>
+                                            {% elif log.event_type == 'login_success' %}
+                                                <span class="badge bg-success">User Login</span>
+                                            {% elif log.event_type == 'admin_dashboard_access' %}
+                                                <span class="badge bg-info">Admin Access</span>
+                                            {% elif log.event_type == 'data_access' %}
+                                                {% if log.event_details_dict and log.event_details_dict.route %}
+                                                    {% set route = log.event_details_dict.route %}
+                                                    {% if route == '/' or '/date/' in route %}
+                                                        <span class="badge bg-secondary">Home Page</span>
+                                                    {% elif '/patient/' in route or '/patient_detail/' in route %}
+                                                        <span class="badge bg-warning">View Patient</span>
+                                                    {% elif '/edit_patient/' in route %}
+                                                        <span class="badge bg-warning">Edit Demographics</span>
+                                                    {% elif '/delete_patient/' in route %}
+                                                        <span class="badge bg-danger">Delete Patient</span>
+                                                    {% elif '/add_appointment' in route %}
+                                                        <span class="badge bg-success">Save Appointment</span>
+                                                    {% elif '/edit_appointment/' in route %}
+                                                        <span class="badge bg-warning">Edit Appointment</span>
+                                                    {% elif '/delete_appointment/' in route %}
+                                                        <span class="badge bg-danger">Delete Appointment</span>
+                                                    {% elif '/all_visits' in route %}
+                                                        <span class="badge bg-info">View Visits</span>
+                                                    {% elif '/delete_appointments_bulk' in route %}
+                                                        <span class="badge bg-danger">Delete Visits</span>
+                                                    {% elif '/add_condition/' in route or '/add_vitals/' in route or '/add_document/' in route or '/add_immunization/' in route or '/add_alert/' in route %}
+                                                        <span class="badge bg-success">Save Medical Data</span>
+                                                    {% elif '/delete_condition/' in route or '/delete_vital/' in route or '/delete_document/' in route or '/delete_lab/' in route or '/delete_imaging/' in route or '/delete_consult/' in route or '/delete_hospital/' in route or '/delete_immunization/' in route or '/delete_alert/' in route %}
+                                                        <span class="badge bg-danger">Delete Medical Data</span>
+                                                    {% elif '/patient_documents/' in route %}
+                                                        <span class="badge bg-warning">View Documents</span>
+                                                    {% elif '/generate_prep_sheet/' in route %}
+                                                        <span class="badge bg-info">Generate Prep Sheet</span>
+                                                    {% elif '/view_document/' in route %}
+                                                        <span class="badge bg-warning">View Document</span>
+                                                    {% elif '/screening_list' in route %}
+                                                        <span class="badge bg-info">Access Screening List</span>
+                                                    {% elif '/add_screening' in route %}
+                                                        <span class="badge bg-success">Save Screening</span>
+                                                    {% elif '/edit_screening/' in route %}
+                                                        <span class="badge bg-warning">Edit Screening</span>
+                                                    {% elif '/delete_screening/' in route %}
+                                                        <span class="badge bg-danger">Delete Screening</span>
+                                                    {% elif '/checklist_settings' in route or '/update_checklist' in route %}
+                                                        <span class="badge bg-info">Edit Checklist Settings</span>
+                                                    {% elif '/screening_types' in route %}
+                                                        <span class="badge bg-info">Screening Types</span>
+                                                    {% elif '/login' in route %}
+                                                        <span class="badge bg-primary">Login Access</span>
+                                                    {% elif '/admin' in route %}
+                                                        <span class="badge bg-info">Admin Access</span>
+                                                    {% elif route.startswith('/api/') %}
+                                                        <span class="badge bg-primary">API Call</span>
+                                                    {% elif route.startswith('/static/') %}
+                                                        <span class="badge bg-secondary">Static File</span>
+                                                    {% else %}
+                                                        <span class="badge bg-warning">Data Access</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge bg-warning">Data Access</span>
+                                                {% endif %}
+                                            {% elif log.event_type == 'validation_error' %}
+                                                <span class="badge bg-danger">Validation Error</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ log.event_type }}</span>
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {% if log.event_details_dict and log.event_details_dict.route %}
+                                                {{ log.event_details_dict.route }}
+                                            {% elif log.event_type == 'login_success' %}
+                                                /login
+                                            {% elif log.event_type == 'login_fail' %}
+                                                /login
+                                            {% elif log.event_type == 'admin_dashboard_access' %}
+                                                /admin_dashboard
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {% if log.event_details_dict %}
+                                                {% if log.event_type == 'data_access' %}
+                                                    {% if log.event_details_dict.route %}
+                                                        <strong>{{ log.event_details_dict.route }}</strong><br>
+                                                    {% endif %}
+                                                    {% if log.event_details_dict.username %}
+                                                        User: {{ log.event_details_dict.username }}<br>
+                                                    {% endif %}
+                                                    {% if log.event_details_dict.patient_id %}
+                                                        Patient ID: {{ log.event_details_dict.patient_id }}<br>
+                                                    {% endif %}
+                                                    {% if log.event_details_dict.appointment_id %}
+                                                        Appointment ID: {{ log.event_details_dict.appointment_id }}<br>
+                                                    {% endif %}
+                                                    {% if log.event_details_dict.method %}
+                                                        Method: {{ log.event_details_dict.method }}
+                                                    {% endif %}
+                                                {% elif log.event_details_dict.attempted_username %}
+                                                    User: {{ log.event_details_dict.attempted_username }}
+                                                {% elif log.event_details_dict.username %}
+                                                    User: {{ log.event_details_dict.username }}
+                                                {% elif log.event_details_dict.action %}
+                                                    {{ log.event_details_dict.action }}
+                                                {% endif %}
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ log.ip_address or 'N/A' }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination Controls -->
+                    {% if admin_logs_pagination and admin_logs_pagination.pages > 1 %}
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="text-muted">
+                            Showing {{ admin_logs_pagination.per_page * (admin_logs_pagination.page - 1) + 1 }} 
+                            to {{ admin_logs_pagination.per_page * (admin_logs_pagination.page - 1) + admin_logs_pagination.items|length }} 
+                            of {{ admin_logs_pagination.total }} entries
+                        </div>
+                        <nav aria-label="Admin logs pagination">
+                            <ul class="pagination pagination-sm mb-0">
+                                <!-- Previous Page -->
+                                {% if admin_logs_pagination.has_prev %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin_dashboard', page=admin_logs_pagination.prev_num) }}">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link"><i class="fas fa-chevron-left"></i></span>
+                                    </li>
+                                {% endif %}
+                                
+                                <!-- Page Numbers -->
+                                {% for page_num in admin_logs_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                                    {% if page_num %}
+                                        {% if page_num != admin_logs_pagination.page %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('admin_dashboard', page=page_num) }}">{{ page_num }}</a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ page_num }}</span>
+                                            </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">…</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                <!-- Next Page -->
+                                {% if admin_logs_pagination.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin_dashboard', page=admin_logs_pagination.next_num) }}">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link"><i class="fas fa-chevron-right"></i></span>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-muted">No admin logs found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-users-cog"></i> User Management</h5>
+                </div>
+                <div class="card-body">
+                    {% if all_users %}
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        {% for user in all_users %}
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                            <div>
+                                <strong>{{ user.username }}</strong><br>
+                                <small class="text-muted">{{ user.email }}</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if user.is_admin %}
+                                    <span class="badge bg-danger">Admin</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">User</span>
+                                {% endif %}
+                                
+                                {% if not user.is_admin or admin_count > 1 %}
+                                <a href="{{ url_for('delete_user', user_id=user.id) }}" 
+                                   class="btn btn-sm btn-outline-danger" 
+                                   onclick="return confirm('Are you sure you want to delete user {{ user.username }}? This action cannot be undone.');"
+                                   title="Delete User">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        disabled
+                                        title="Cannot delete last admin user">
+                                    <i class="fas fa-lock"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No users found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Deletion Modals -->
+{% if all_users %}
+{% for user in all_users %}
+<div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1" aria-labelledby="deleteUserModalLabel{{ user.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteUserModalLabel{{ user.id }}">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm User Deletion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="fw-bold">Are you sure you want to delete user "{{ user.username }}"?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. The user will lose access to the system immediately.
+                    {% if user.is_admin %}
+                    <br><strong>Note:</strong> This will remove an admin user from the system.
+                    {% endif %}
+                </div>
+                <p><strong>User Details:</strong></p>
+                <ul>
+                    <li><strong>Username:</strong> {{ user.username }}</li>
+                    <li><strong>Email:</strong> {{ user.email }}</li>
+                    <li><strong>Role:</strong> {{ "Administrator" if user.is_admin else "User" }}</li>
+                    <li><strong>Created:</strong> {{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else 'Unknown' }}</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_user', user_id=user.id) }}" method="POST" style="display: inline;" onsubmit="console.log('Form submitted for user {{ user.id }}');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="btn btn-danger" onclick="console.log('Delete button clicked for user {{ user.id }}');">
+                        <i class="fas fa-trash me-2"></i>Delete User
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% endblock %}

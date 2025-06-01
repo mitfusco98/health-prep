@@ -1,0 +1,38 @@
+CRITICAL:app:Unexpected Error [9c544e84]:
+CRITICAL:app:Error Type: UndefinedError
+CRITICAL:app:Error Message: 'current_user' is undefined
+CRITICAL:app:URL: https://b1b46abe-838d-464d-8410-80c925647698-00-1zl7ablirpohy.kirk.replit.dev/login
+CRITICAL:app:Method: GET
+CRITICAL:app:Remote Address: 10.82.9.209
+CRITICAL:app:Stack Trace:
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/demo_routes.py", line 1571, in login
+    return render_template('login.html', form=form)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "/home/runner/workspace/templates/login.html", line 1, in top-level template code
+    {% extends 'base.html' %}
+  File "/home/runner/workspace/templates/base.html", line 40, in top-level template code
+    {% if current_user.is_authenticated %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/jinja2/environment.py", line 490, in getattr
+    return getattr(obj, attribute)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'current_user' is undefined
+
+INFO:app:Failed request: {'timestamp': 1748555492.794795, 'ip_address': '10.82.9.209', 'method': 'GET', 'path': '/login', 'user_agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36', 'status_code': 500, 'session_id': 'hm-8gS-edDv8D4nvELhrpxgMN0IMR4cfEdU9QJctJaY'}

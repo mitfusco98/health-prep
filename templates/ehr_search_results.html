@@ -1,0 +1,140 @@
+{% extends "base_demo.html" %}
+
+{% block title %}EHR Patient Search - HealthPrep{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas fa-search me-2"></i>EHR Patient Search</h4>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('search_ehr_patients') }}">
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label for="connection_name" class="form-label">EHR Connection</label>
+                    <select class="form-select" id="connection_name" name="connection_name" required>
+                        <option value="">Select a connection</option>
+                        {% for conn in available_connections %}
+                            <option value="{{ conn }}" {% if conn == connection_name %}selected{% endif %}>{{ conn }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="family_name" class="form-label">Last Name</label>
+                    <input type="text" class="form-control" id="family_name" name="family_name">
+                </div>
+                <div class="col-md-3">
+                    <label for="given_name" class="form-label">First Name</label>
+                    <input type="text" class="form-control" id="given_name" name="given_name">
+                </div>
+                <div class="col-md-3">
+                    <label for="identifier" class="form-label">MRN</label>
+                    <input type="text" class="form-control" id="identifier" name="identifier">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-1"></i> Search
+                </button>
+                <a href="{{ url_for('ehr_integration') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back to EHR Integration
+                </a>
+            </div>
+        </form>
+        
+        {% if connection_name %}
+            <hr>
+            <h5 class="mb-3">Search Results for {{ connection_name }}</h5>
+            
+            {% if patients and patients|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Birth Date</th>
+                                <th>Gender</th>
+                                <th>Identifiers</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for patient in patients %}
+                                <tr>
+                                    <td>
+                                        {% if patient.name %}
+                                            {% for name in patient.name %}
+                                                {% if name.use == 'official' or loop.first %}
+                                                    {% if name.family %}
+                                                        <strong>{{ name.family }}</strong>,
+                                                    {% endif %}
+                                                    {% if name.given %}
+                                                        {{ name.given|join(' ') }}
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% else %}
+                                            <em>No name provided</em>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ patient.birthDate if patient.birthDate else 'Unknown' }}</td>
+                                    <td>{{ patient.gender|capitalize if patient.gender else 'Unknown' }}</td>
+                                    <td>
+                                        {% if patient.identifier %}
+                                            <ul class="list-unstyled small">
+                                                {% for id in patient.identifier %}
+                                                    <li>
+                                                        <strong>{{ id.system.split('/')[-1] if id.system else id.type.text if id.type and id.type.text else 'ID' }}:</strong>
+                                                        {{ id.value }}
+                                                    </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% else %}
+                                            <em>No identifiers</em>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <form action="{{ url_for('import_ehr_patient') }}" method="post">
+                                            <input type="hidden" name="connection_name" value="{{ connection_name }}">
+                                            <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                                            
+                                            <div class="form-check form-switch mb-2">
+                                                <input class="form-check-input" type="checkbox" id="import_patient_{{ loop.index }}" name="import_patient" value="true" checked>
+                                                <label class="form-check-label" for="import_patient_{{ loop.index }}">Patient Info</label>
+                                            </div>
+                                            
+                                            <div class="form-check form-switch mb-2">
+                                                <input class="form-check-input" type="checkbox" id="import_conditions_{{ loop.index }}" name="import_conditions" value="true" checked>
+                                                <label class="form-check-label" for="import_conditions_{{ loop.index }}">Conditions</label>
+                                            </div>
+                                            
+                                            <div class="form-check form-switch mb-2">
+                                                <input class="form-check-input" type="checkbox" id="import_vitals_{{ loop.index }}" name="import_vitals" value="true" checked>
+                                                <label class="form-check-label" for="import_vitals_{{ loop.index }}">Vital Signs</label>
+                                            </div>
+                                            
+                                            <div class="form-check form-switch mb-2">
+                                                <input class="form-check-input" type="checkbox" id="import_documents_{{ loop.index }}" name="import_documents" value="true" checked>
+                                                <label class="form-check-label" for="import_documents_{{ loop.index }}">Documents</label>
+                                            </div>
+                                            
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="fas fa-download me-1"></i> Import
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-1"></i> No patients found matching your search criteria.
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

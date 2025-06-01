@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}HealthPrep - Add Visit{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-calendar-check me-2"></i>Add Visit
+    </h1>
+    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Patient
+    </a>
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i>Adding visit for <strong>{{ patient.full_name }}</strong> (MRN: {{ patient.mrn }})
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Visit Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="row g-3">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="col-md-6">
+                        <label for="visit_date" class="form-label">Visit Date</label>
+                        {{ form.visit_date(class="form-control", type="date") }}
+                        {% if form.visit_date.errors %}
+                            {% for error in form.visit_date.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="visit_type" class="form-label">Visit Type</label>
+                        {{ form.visit_type(class="form-select") }}
+                        {% if form.visit_type.errors %}
+                            {% for error in form.visit_type.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="provider" class="form-label">Provider</label>
+                        {{ form.provider(class="form-control") }}
+                        {% if form.provider.errors %}
+                            {% for error in form.provider.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="reason" class="form-label">Reason for Visit</label>
+                        {{ form.reason(class="form-control") }}
+                        {% if form.reason.errors %}
+                            {% for error in form.reason.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-12">
+                        <label for="notes" class="form-label">Notes</label>
+                        {{ form.notes(class="form-control", rows=4) }}
+                        {% if form.notes.errors %}
+                            {% for error in form.notes.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-12 text-center mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Visit
+                        </button>
+                        <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

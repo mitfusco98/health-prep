@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}HealthPrep - Add Imaging Study{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-x-ray me-2"></i>Add Imaging Study
+    </h1>
+    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Patient
+    </a>
+</div>
+
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle me-2"></i>Adding imaging study for <strong>{{ patient.full_name }}</strong> (MRN: {{ patient.mrn }})
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0">
+            <div class="card-header bg-secondary bg-opacity-25">
+                <h5 class="mb-0">Imaging Study Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="row g-3">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="col-md-6">
+                        <label for="study_type" class="form-label">Study Type</label>
+                        {{ form.study_type(class="form-select") }}
+                        {% if form.study_type.errors %}
+                            {% for error in form.study_type.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="body_site" class="form-label">Body Site</label>
+                        {{ form.body_site(class="form-control") }}
+                        {% if form.body_site.errors %}
+                            {% for error in form.body_site.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label for="study_date" class="form-label">Study Date</label>
+                        {{ form.study_date(class="form-control", type="date") }}
+                        {% if form.study_date.errors %}
+                            {% for error in form.study_date.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-12">
+                        <label for="findings" class="form-label">Findings</label>
+                        {{ form.findings(class="form-control", rows=4) }}
+                        {% if form.findings.errors %}
+                            {% for error in form.findings.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-12">
+                        <label for="impression" class="form-label">Impression</label>
+                        {{ form.impression(class="form-control", rows=4) }}
+                        {% if form.impression.errors %}
+                            {% for error in form.impression.errors %}
+                            <div class="text-danger mt-1">{{ error }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-12 text-center mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Imaging Study
+                        </button>
+                        <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

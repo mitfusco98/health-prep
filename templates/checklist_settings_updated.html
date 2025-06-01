@@ -1,0 +1,182 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}HealthPrep - Prep Sheet Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Custom styles for the settings page */
+.custom-status-item {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 0.4rem 0.8rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+}
+
+.badge .btn-close {
+    font-size: 0.65em;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/checklist_settings.js') }}?v={{ cache_timestamp }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-9">
+        <h1>Prep Sheet Settings</h1>
+        <p class="lead">Configure how quality checklists appear on patient prep sheets</p>
+    </div>
+    <div class="col-md-3 text-md-end">
+        <a href="{{ url_for('screening_list') }}" class="btn btn-outline-secondary">
+            Back to Screenings
+        </a>
+    </div>
+</div>
+
+<!-- Main Settings Content -->
+<div class="card">
+    <div class="card-body">
+        <p class="text-muted mb-4">These settings control the layout and content generation of the screening checklist section in patient prep sheets.</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">Display Options</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('update_checklist_settings') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Checklist Layout Style</label>
+                                <select class="form-select" name="layout_style">
+                                    <option value="table" {% if settings.layout_style == 'table' %}selected{% endif %}>Table Format (Compact)</option>
+                                    <option value="list" {% if settings.layout_style == 'list' %}selected{% endif %}>List Format (Spacious)</option>
+                                </select>
+                                <div class="form-text">Determines how screening items are displayed in the checklist.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Status Options</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="status_due" name="status_options" value="due" 
+                                        {% if 'due' in settings.status_options_list %}checked{% endif %}>
+                                    <label class="form-check-label" for="status_due">Due</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="status_due_soon" name="status_options" value="due_soon"
+                                        {% if 'due_soon' in settings.status_options_list %}checked{% endif %}>
+                                    <label class="form-check-label" for="status_due_soon">Due Soon</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="status_sent" name="status_options" value="sent_incomplete"
+                                        {% if 'sent_incomplete' in settings.status_options_list %}checked{% endif %}>
+                                    <label class="form-check-label" for="status_sent">Sent & Incomplete</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="status_completed" name="status_options" value="completed"
+                                        {% if 'completed' in settings.status_options_list %}checked{% endif %}>
+                                    <label class="form-check-label" for="status_completed">Completed</label>
+                                </div>
+                                <div class="mt-3">
+                                    <label class="form-label">Custom Status Options</label>
+                                    <div class="input-group mb-2">
+                                        <input type="text" class="form-control" id="custom_status_input" placeholder="Add custom status option...">
+                                        <button class="btn btn-outline-primary" type="button" id="add_custom_status">Add</button>
+                                    </div>
+                                    <div class="form-text mb-2">Add your own status options to appear in autocomplete</div>
+                                    <div id="custom_status_list" class="d-flex flex-wrap gap-2 mb-2">
+                                        {% if settings.custom_status_list %}
+                                            {% for status in settings.custom_status_list %}
+                                                <div class="custom-status-item badge bg-light text-dark p-2 d-flex align-items-center">
+                                                    {{ status }}
+                                                    <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="{{ status }}"></button>
+                                                    <input type="hidden" name="custom_status_options" value="{{ status }}">
+                                                </div>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Note Field</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="show_notes" name="show_notes"
+                                        {% if settings.show_notes %}checked{% endif %}>
+                                    <label class="form-check-label" for="show_notes">Show Notes Field</label>
+                                </div>
+                                <div class="form-text">Display a notes field for each screening item.</div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Save Display Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">Checklist Content Generation</h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('update_checklist_generation') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Content Sources</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="source_db" name="content_sources" value="database"
+                                        {% if 'database' in settings.content_sources_list %}checked{% endif %}>
+                                    <label class="form-check-label" for="source_db">Default Items</label>
+                                    <div class="form-text">Include default items specified below</div>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="source_existing" name="content_sources" value="existing_screenings"
+                                        {% if 'existing_screenings' in settings.content_sources_list %}checked{% endif %}>
+                                    <label class="form-check-label" for="source_existing">Patient Screenings</label>
+                                    <div class="form-text">Include screenings already assigned to the patient</div>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="source_age" name="content_sources" value="age_based"
+                                        {% if 'age_based' in settings.content_sources_list %}checked{% endif %}>
+                                    <label class="form-check-label" for="source_age">Age-Based Recommendations</label>
+                                    <div class="form-text">Include screenings based on patient age</div>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="source_gender" name="content_sources" value="gender_based"
+                                        {% if 'gender_based' in settings.content_sources_list %}checked{% endif %}>
+                                    <label class="form-check-label" for="source_gender">Gender-Specific Screenings</label>
+                                    <div class="form-text">Include screenings based on patient gender</div>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="source_condition" name="content_sources" value="condition_based"
+                                        {% if 'condition_based' in settings.content_sources_list %}checked{% endif %}>
+                                    <label class="form-check-label" for="source_condition">Condition-Specific Screenings</label>
+                                    <div class="form-text">Include screenings based on patient conditions</div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Default Items</label>
+                                <textarea class="form-control" name="default_items" rows="4" placeholder="One item per line">{{ default_items_text }}</textarea>
+                                <div class="form-text">Default items to include in every patient's checklist</div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">Save Generation Settings</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
