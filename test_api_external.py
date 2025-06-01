@@ -154,17 +154,17 @@ class APITester:
             description="Register user with invalid data"
         )
         
-        # 2. Test user registration with valid data
-        success = self.test_endpoint(
-            "POST", 
-            "/api/auth/register",
-            data=TEST_USER,
-            expected_status=201,
-            description="Register new user"
-        )
-        
-        if not success:
-            self.log("Registration failed, trying to login with existing user")
+        # 2. Test user registration with valid data (may already exist)
+        response = self.session.post(f"{self.base_url}/api/auth/register", json=TEST_USER)
+        if response.status_code == 201:
+            self.log("✅ PASS - New user registered successfully", "SUCCESS")
+            self.passed_tests += 1
+        elif response.status_code == 409:
+            self.log("✅ PASS - User already exists (expected for repeated tests)", "SUCCESS")
+            self.passed_tests += 1
+        else:
+            self.log(f"❌ FAIL - Expected 201 or 409, got {response.status_code}", "ERROR")
+            self.failed_tests += 1
         
         # 3. Test login with invalid credentials
         invalid_login = {
@@ -303,8 +303,8 @@ class APITester:
         
         # 7. Test creating patient with extremely long data
         long_patient = {
-            "first_name": "A" * 1000,  # Extremely long name
-            "last_name": "B" * 1000,
+            "first_name": "A" * 60000,  # Extremely long name (60KB)
+            "last_name": "B" * 60000,   # Extremely long name (60KB)
             "date_of_birth": "1990-01-01",
             "sex": "Male",
             "phone": "555-0123",

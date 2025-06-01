@@ -301,8 +301,12 @@ def api_create_patient():
             return jsonify({'error': 'No data provided'}), 400
 
         # Check for extremely large field values that would indicate a potential attack
+        total_size = sum(len(str(value)) for value in data.values() if value is not None)
+        if total_size > 100000:  # 100KB total data
+            return jsonify({'error': 'Request too large. Total data exceeds maximum size.'}), 413
+            
         for field, value in data.items():
-            if isinstance(value, str) and len(value) > 1000:
+            if isinstance(value, str) and len(value) > 50000:  # 50KB per field
                 return jsonify({'error': 'Request too large. Field values exceed maximum length.'}), 413
 
         # Validate data size limits first
