@@ -282,7 +282,9 @@ def log_security_event(event_type, description, severity='medium', additional_da
     # Check for invalid patient ID attempts (allow 0 for bulk operations)
     if 'patient_id' in request.view_args:
         patient_id = request.view_args['patient_id']
-        if patient_id < 0:  # Only reject negative numbers, allow 0 for bulk operations
+        # Allow patient_id=0 for bulk operations (like /patients/0/delete)
+        # Only reject negative numbers
+        if patient_id < 0:
             log_security_event('invalid_parameter', f'Invalid patient ID attempted: {patient_id}', 
                              severity='medium', 
                              additional_data={'parameter': 'patient_id', 'value': patient_id})

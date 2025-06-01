@@ -129,9 +129,10 @@ def before_request():
     patient_id = request.view_args.get('patient_id') if request.view_args else None
     if patient_id is not None:
         try:
-            # Ensure patient_id is a positive integer
+            # Ensure patient_id is a valid integer
             patient_id_int = int(patient_id)
-            if patient_id_int <= 0:
+            # Allow patient_id=0 for bulk operations, but reject negative numbers
+            if patient_id_int < 0:
                 structured_logger.log_security_event(
                     event_type='invalid_parameter',
                     severity='medium',
