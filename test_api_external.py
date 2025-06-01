@@ -263,8 +263,8 @@ class APITester:
         self.test_endpoint(
             "GET", 
             "/api/patients?page=999999&per_page=1000",
-            expected_status=200,
-            description="Get patients with extreme pagination"
+            expected_status=400,
+            description="Get patients with extreme pagination (should fail due to per_page limit)"
         )
         
         # 4. Test patients with SQL injection attempt

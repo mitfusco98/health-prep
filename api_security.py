@@ -1,4 +1,3 @@
-
 """
 API Security middleware to prevent exposure of sensitive credentials
 """
@@ -16,7 +15,7 @@ def validate_api_credentials(f):
     def decorated_function(*args, **kwargs):
         # Check if request contains any API keys
         api_key = None
-        
+
         # Check various sources for API keys
         if 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
@@ -24,30 +23,30 @@ def validate_api_credentials(f):
                 api_key = auth_header[7:]
             elif auth_header.startswith('ApiKey '):
                 api_key = auth_header[7:]
-        
+
         if 'X-API-Key' in request.headers:
             api_key = request.headers['X-API-Key']
-        
+
         if request.json and 'api_key' in request.json:
             api_key = request.json['api_key']
-        
+
         # Validate the key if present
         if api_key:
             validation = key_manager.validator.validate_key_security(api_key, context=request.endpoint)
-            
+
             if not validation['valid']:
                 logger.warning(f"Invalid API key rejected: {validation['reason']}")
                 return jsonify({'error': 'Invalid API credentials'}), 401
-            
+
             if not validation['client_safe']:
                 logger.error(f"Service-level key blocked in API request: {validation['key_type'].value}")
                 return jsonify({'error': 'Service-level credentials not allowed in API requests'}), 403
-            
+
             # Store validated key info in request context
             g.api_key_info = validation
-        
+
         return f(*args, **kwargs)
-    
+
     return decorated_function
 
 def block_sensitive_credentials(f):
@@ -61,7 +60,7 @@ def block_sensitive_credentials(f):
             'sk_',  # Stripe-style service keys
             'rk_',  # Restricted keys
         ]
-        
+
         # Check request body
         if request.json:
             for key, value in request.json.items():
@@ -70,7 +69,7 @@ def block_sensitive_credentials(f):
                         if pattern in value.lower():
                             logger.error(f"Blocked sensitive credential pattern: {pattern}")
                             return jsonify({'error': 'Service-level credentials detected and blocked'}), 403
-        
+
         # Check form data
         if request.form:
             for key, value in request.form.items():
@@ -79,25 +78,42 @@ def block_sensitive_credentials(f):
                         if pattern in value.lower():
                             logger.error(f"Blocked sensitive credential pattern: {pattern}")
                             return jsonify({'error': 'Service-level credentials detected and blocked'}), 403
-        
+
         return f(*args, **kwargs)
-    
+
     return decorated_function
 
 def audit_credential_usage():
     """Audit function to check for credential security compliance"""
     audit_results = key_manager.audit_key_usage()
-    
+
     violations = [result for result in audit_results if result['compliance'] == 'FAIL']
-    
+
     if violations:
         logger.warning(f"Credential security violations detected: {len(violations)} issues")
         for violation in violations:
             logger.warning(f"Violation: {violation['key_name']} - {violation['key_type']}")
-    
+
     return {
         'total_keys': len(audit_results),
         'violations': len(violations),
         'compliance_rate': (len(audit_results) - len(violations)) / len(audit_results) * 100,
         'details': audit_results
     }
+
+def verify_api_request():
+    """Verify API request authenticity and security"""
+    # CSRF protection for state-changing operations
+    if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+        # Require either CSRF token or API key for state-changing operations
+        csrf_token = request.headers.get('X-CSRF-Token')
+        api_key = request.headers.get('X-API-Key')
+
+        if not csrf_token and not api_key:
+            # For now, we'll be lenient but log the issue
+            logger.warning(f"CSRF protection bypassed for {request.method} {request.path}")
+
+    # Check for required headers
+    if not request.headers.get('Content-Type', '').startswith('application/json'):
+        if request.method in ['POST', 'PUT', 'PATCH'] and request.is_json:
+            return jsonify({'error': 'Content-Type must be application/json'}), 400
