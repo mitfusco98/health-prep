@@ -1,0 +1,114 @@
+Healthcare API Testing Suite
+    ===========================
+    This script tests the API as an external developer would.
+    
+    Usage: python test_api_external.py [BASE_URL]
+    Default URL: http://localhost:5000
+    
+    Testing URL: http://localhost:5000
+    
+[INFO] 🚀 Starting API Test Suite
+[INFO] Testing API at: http://localhost:5000
+[INFO] ✅ Server is accessible - Status: 200
+[INFO] 
+=== TESTING AUTHENTICATION FLOW ===
+[INFO] Testing POST /api/auth/register - Register new user
+[INFO] Response: 403 - FORBIDDEN
+[ERROR] ❌ FAIL - Expected 201, got 403
+[INFO] Response: {"error":"Access denied"}
+
+[INFO] Registration failed, trying to login with existing user
+[INFO] Testing POST /api/auth/login - User login
+[INFO] Response: 403 - FORBIDDEN
+[ERROR] ❌ FAIL - Expected 200, got 403
+[INFO] Response: {"error":"Access denied"}
+
+[INFO] Testing GET /api/auth/verify - Verify authentication token
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing POST /api/auth/refresh - Refresh authentication token
+[INFO] Response: 500 - INTERNAL SERVER ERROR
+[ERROR] ❌ FAIL - Expected 200, got 500
+[INFO] Response: {"error":"An unexpected error occurred","error_id":"04ad3acf"}
+
+[INFO] Testing POST /api/auth/logout - User logout
+[INFO] Response: 500 - INTERNAL SERVER ERROR
+[ERROR] ❌ FAIL - Expected 200, got 500
+[INFO] Response: {"error":"An unexpected error occurred","error_id":"068f0ccf"}
+
+[INFO] 
+=== TESTING PATIENTS API ===
+[INFO] Testing GET /api/patients - Get patients list
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing GET /api/patients?page=1&per_page=5 - Get patients with pagination
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing GET /api/patients?search=John - Search patients by name
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing GET /api/patients?sort=name&order=asc - Get patients sorted by name
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing POST /api/patients - Create new patient
+[INFO] Response: 403 - FORBIDDEN
+[ERROR] ❌ FAIL - Expected 201, got 403
+[INFO] Response: {"error":"Access denied"}
+
+[INFO] Testing GET /api/patients/1 - Get specific patient details
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] 
+=== TESTING APPOINTMENTS API ===
+[INFO] Testing GET /api/appointments - Get today's appointments
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] Testing GET /api/appointments?date=2025-06-01 - Get appointments for 2025-06-01
+[INFO] Response: 401 - UNAUTHORIZED
+[ERROR] ❌ FAIL - Expected 200, got 401
+[INFO] Response: {"error":"Authorization token is required"}
+
+[INFO] 
+=== TESTING ERROR HANDLING ===
+[INFO] Testing GET /api/patients - Access protected endpoint without auth
+[INFO] Response: 401 - UNAUTHORIZED
+[SUCCESS] ✅ PASS
+[INFO] Response data: {
+  "error": "Authorization token is required"
+}...
+[INFO] Testing GET /api/nonexistent - Access non-existent endpoint
+[INFO] Response: 404 - NOT FOUND
+[SUCCESS] ✅ PASS
+[INFO] Response text: <!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Cache control -->
+    <meta ...
+[ERROR] ❌ FAIL - Expected 400 for malformed JSON, got 403
+[INFO] Testing POST /api/patients - Create patient with invalid data
+[INFO] Response: 403 - FORBIDDEN
+[ERROR] ❌ FAIL - Expected 400, got 403
+[INFO] Response: {"error":"Access denied"}
+
+[INFO] 
+=== TESTING RATE LIMITING ===
+[WARNING] ⚠️  WARNING - No rate limiting detected after 10 rapid requests
+[INFO] 
+🏁 API Test Suite Complete!
+~/workspace$ 
