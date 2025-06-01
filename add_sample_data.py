@@ -458,9 +458,11 @@ def add_sample_appointments():
 
 # Run the functions with Flask app context
 with app.app_context():
-    # Only add demo patients if none exist
-    if Patient.query.count() == 0:
-        add_demo_patients()
+    # Only add demo patients if none exist - DISABLED
+    # Uncomment the lines below if you want to add demo patients
+    # if Patient.query.count() == 0:
+    #     add_demo_patients()
     
-    # Add sample appointments for today
-    add_sample_appointments()
+    # Add sample appointments for today (only if patients exist)
+    if Patient.query.count() > 0:
+        add_sample_appointments()
