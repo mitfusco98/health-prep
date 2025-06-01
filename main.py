@@ -1,3 +1,9 @@
+import os
+
+# Set default FLASK_ENV if not provided
+if not os.environ.get('FLASK_ENV'):
+    os.environ['FLASK_ENV'] = 'development'
+
 from app import app, db  # noqa: F401
 import demo_routes  # noqa: F401
 import ehr_routes  # noqa: F401
