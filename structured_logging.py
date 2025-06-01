@@ -88,18 +88,20 @@ class StructuredLogger:
     
     def log_patient_access(self, patient_id: int, action: str, user_id: Optional[int] = None, 
                           username: Optional[str] = None, additional_data: Optional[Dict] = None):
-        """Log patient data access events"""
-        self.logger.info(
-            f"Patient data access: {action}",
-            extra={
-                'event_type': 'patient_access',
-                'patient_id': patient_id,
-                'action': action,
-                'user_id': user_id or session.get('user_id'),
-                'username': username or session.get('username'),
-                'additional_data': additional_data or {}
-            }
-        )
+        """Log patient data access events - only log suspicious activities"""
+        # Only log if there's a security concern or error
+        if action.startswith('DELETE') or action.startswith('ERROR'):
+            self.logger.warning(
+                f"Patient data access: {action}",
+                extra={
+                    'event_type': 'patient_access',
+                    'patient_id': patient_id,
+                    'action': action,
+                    'user_id': user_id or session.get('user_id'),
+                    'username': username or session.get('username'),
+                    'additional_data': additional_data or {}
+                }
+            )
     
     def log_security_event(self, event_type: str, severity: str, description: str, 
                           additional_data: Optional[Dict] = None):
@@ -139,18 +141,20 @@ class StructuredLogger:
     def log_api_request(self, endpoint: str, method: str, status_code: int, 
                        response_time_ms: Optional[float] = None, 
                        additional_data: Optional[Dict] = None):
-        """Log API requests and responses"""
-        self.logger.info(
-            f"API request: {method} {endpoint} - {status_code}",
-            extra={
-                'event_type': 'api_request',
-                'endpoint': endpoint,
-                'method': method,
-                'status_code': status_code,
-                'response_time_ms': response_time_ms,
-                'additional_data': additional_data or {}
-            }
-        )
+        """Log API requests and responses - only log errors and warnings"""
+        # Only log failed requests to reduce console clutter
+        if status_code >= 400:
+            self.logger.warning(
+                f"API request: {method} {endpoint} - {status_code}",
+                extra={
+                    'event_type': 'api_request',
+                    'endpoint': endpoint,
+                    'method': method,
+                    'status_code': status_code,
+                    'response_time_ms': response_time_ms,
+                    'additional_data': additional_data or {}
+                }
+            )
     
     def log_admin_action(self, action: str, target: str, user_id: Optional[int] = None,
                         username: Optional[str] = None, additional_data: Optional[Dict] = None):

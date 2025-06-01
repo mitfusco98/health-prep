@@ -10,9 +10,9 @@ from structured_logging import setup_structured_logging
 def configure_logging(app):
     """Configure logging based on environment"""
     
-    # Determine log level from environment
-    log_level_str = os.environ.get('LOG_LEVEL', 'INFO').upper()
-    log_level = getattr(logging, log_level_str, logging.INFO)
+    # Determine log level from environment - default to WARNING to reduce console clutter
+    log_level_str = os.environ.get('LOG_LEVEL', 'WARNING').upper()
+    log_level = getattr(logging, log_level_str, logging.WARNING)
     
     # Determine if we're in production
     is_production = os.environ.get('FLASK_ENV', 'development') == 'production'

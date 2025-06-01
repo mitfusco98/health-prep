@@ -355,7 +355,9 @@ def register_api_access_middleware(app):
                     'timestamp': datetime.utcnow().isoformat()
                 }
 
-                logger.info(f"API response: {request.path} -> {response.status_code}")
+                # Only log warnings and errors to reduce console clutter
+                if response.status_code >= 400:
+                    logger.warning(f"API response: {request.path} -> {response.status_code}")
 
             except Exception as e:
                 logger.error(f"Failed to log API response: {str(e)}")
