@@ -841,9 +841,9 @@ with app.app_context():
     # Import JWT authentication routes
     import auth_routes  # noqa: F401
 
-    # Exempt API routes from CSRF protection
-    csrf.exempt(auth_routes.bp)
+    # Import API routes
     import api_routes  # noqa: F401
+    # Exempt API routes from CSRF protection
     csrf.exempt(api_routes.bp)
 
     # JWT configuration with enhanced security validation
