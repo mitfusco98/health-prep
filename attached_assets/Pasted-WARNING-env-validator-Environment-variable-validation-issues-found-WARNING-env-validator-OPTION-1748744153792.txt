@@ -1,0 +1,54 @@
+WARNING:env_validator:Environment variable validation issues found:
+WARNING:env_validator:  - OPTIONAL: FLASK_ENV - Flask environment setting (not set)
+INFO:env_validator:All required environment variables are properly configured
+{"timestamp": "2025-06-01T02:15:32.023467Z", "level": "INFO", "logger": "app", "message": "Development logging configuration loaded", "module": "logging_config", "function": "configure_logging", "line": 48, "thread": 139664177618496, "process": 12358, "extra": {"event_type": "system_startup", "environment": "development", "log_level": "INFO"}}
+{"timestamp": "2025-06-01T02:15:32.024210Z", "level": "INFO", "logger": "app", "message": "Development logging configuration loaded", "module": "logging_config", "function": "configure_logging", "line": 48, "thread": 139664177618496, "process": 12358, "extra": {"event_type": "system_startup", "environment": "development", "log_level": "INFO"}}
+[2025-06-01 02:15:32 +0000] [12348] [INFO] Handling signal: winch
+[2025-06-01 02:15:32 +0000] [12348] [INFO] Handling signal: winch
+[2025-06-01 02:15:32 +0000] [12348] [INFO] Handling signal: winch
+{"timestamp": "2025-06-01T02:15:32.254751Z", "level": "INFO", "logger": "app", "message": "Admin log cleanup scheduler started", "module": "app", "function": "schedule_admin_log_cleanup", "line": 900, "thread": 139664177618496, "process": 12358}
+{"timestamp": "2025-06-01T02:15:32.255220Z", "level": "INFO", "logger": "app", "message": "Admin log cleanup scheduler started", "module": "app", "function": "schedule_admin_log_cleanup", "line": 900, "thread": 139664177618496, "process": 12358}
+{"timestamp": "2025-06-01T02:15:32.255541Z", "level": "INFO", "logger": "app", "message": "Attempting database connection (attempt 1/5)", "module": "app", "function": "<module>", "line": 911, "thread": 139664177618496, "process": 12358}
+{"timestamp": "2025-06-01T02:15:32.255806Z", "level": "INFO", "logger": "app", "message": "Attempting database connection (attempt 1/5)", "module": "app", "function": "<module>", "line": 911, "thread": 139664177618496, "process": 12358}
+[2025-06-01 02:15:32 +0000] [12348] [INFO] Handling signal: winch
+[2025-06-01 02:15:32 +0000] [12348] [INFO] Handling signal: winch
+[2025-06-01 02:15:32 +0000] [12348] [INFO] Handling signal: winch
+{"timestamp": "2025-06-01T02:15:35.159521Z", "level": "INFO", "logger": "app", "message": "Database tables created successfully", "module": "app", "function": "<module>", "line": 913, "thread": 139664177618496, "process": 12358}
+{"timestamp": "2025-06-01T02:15:35.161715Z", "level": "INFO", "logger": "app", "message": "Database tables created successfully", "module": "app", "function": "<module>", "line": 913, "thread": 139664177618496, "process": 12358}
+{"timestamp": "2025-06-01T02:15:35.162063Z", "level": "INFO", "logger": "healthcare_app", "message": "Healthcare management application started", "module": "logging_config", "function": "log_application_startup", "line": 69, "thread": 139664177618496, "process": 12358, "extra": {"event_type": "application_startup", "flask_env": "development", "database_url": "ep-young-lab-a4skpahb.us-east-1.aws.neon.tech/neondb?sslmode=require", "debug_mode": false, "testing_mode": false, "csrf_enabled": true, "session_lifetime": "1800"}}
+{"timestamp": "2025-06-01T02:15:35.169900Z", "level": "INFO", "logger": "validation_middleware", "message": "Validation middleware registered successfully", "module": "validation_middleware", "function": "register_validation_middleware", "line": 270, "thread": 139664177618496, "process": 12358}
+[2025-06-01 02:15:35 +0000] [12358] [ERROR] f-string: unmatched ']' (api_access_middleware.py, line 178)
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/base.py", line 147, in load_wsgi
+    self.wsgi = self.app.wsgi()
+                ^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/app/base.py", line 66, in wsgi
+    self.callable = self.load()
+                    ^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 57, in load
+    return self.load_wsgiapp()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/app/wsgiapp.py", line 47, in load_wsgiapp
+    return util.import_app(self.app_uri)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/util.py", line 370, in import_app
+    mod = importlib.import_module(module)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/runner/workspace/main.py", line 1, in <module>
+    from app import app, db  # noqa: F401
+    ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/app.py", line 956, in <module>
+    from api_access_middleware import register_api_access_middleware
+  File "/home/runner/workspace/api_access_middleware.py", line 178
+    )
+    ^
+SyntaxError: f-string: unmatched ']'

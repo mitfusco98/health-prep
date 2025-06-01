@@ -169,12 +169,15 @@ class APIAccessLogger:
             db.session.commit()
 
             # Log to application logger as well
+            username = user.username if user else 'Anonymous'
+            user_id = user.id if user else 'No ID'
+            ip_addr = request.remote_addr if request else 'Unknown'
+            method = request.method if request else 'UNKNOWN'
+            
             logger.info(
                 f"API access [{access_id}] to {route}: "
-                f"User: {user.username if user else 'Anonymous'} "
-                f"({user.id if user else 'No ID']), "
-                f"IP: {request.remote_addr if request else 'Unknown'}, "
-                f"Method: {request.method if request else 'UNKNOWN'}"
+                f"User: {username} ({user_id}), "
+                f"IP: {ip_addr}, Method: {method}"
             )
 
         except Exception as e:
