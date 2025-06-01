@@ -30,7 +30,12 @@ def jwt_login():
     }
     """
     try:
-        data = request.get_json()
+        # Handle malformed JSON gracefully
+        try:
+            data = request.get_json()
+        except Exception as json_error:
+            logger.warning(f"Malformed JSON received from {request.remote_addr}: {str(json_error)}")
+            return jsonify({'error': 'Invalid JSON format'}), 400
 
         if not data:
             return jsonify({'error': 'JSON data required'}), 400
@@ -92,14 +97,14 @@ def jwt_login():
     except Exception as e:
         import traceback
         import uuid
-        
+
         error_id = str(uuid.uuid4())[:8]
         logger.error(f"JWT Login Error [{error_id}]:")
         logger.error(f"Username attempted: {data.get('username', 'unknown') if 'data' in locals() else 'unknown'}")
         logger.error(f"Remote Address: {request.remote_addr}")
         logger.error(f"Error: {str(e)}")
         logger.error(f"Stack Trace:\n{traceback.format_exc()}")
-        
+
         return jsonify({
             'error': 'Authentication service temporarily unavailable',
             'error_id': error_id
@@ -119,7 +124,12 @@ def jwt_register():
     }
     """
     try:
-        data = request.get_json()
+        # Handle malformed JSON gracefully
+        try:
+            data = request.get_json()
+        except Exception as json_error:
+            logger.warning(f"Malformed JSON received from {request.remote_addr}: {str(json_error)}")
+            return jsonify({'error': 'Invalid JSON format'}), 400
 
         if not data:
             return jsonify({'error': 'JSON data required'}), 400
@@ -204,7 +214,7 @@ def jwt_register():
     except Exception as e:
         import traceback
         import uuid
-        
+
         error_id = str(uuid.uuid4())[:8]
         logger.error(f"JWT Registration Error [{error_id}]:")
         logger.error(f"Username attempted: {data.get('username', 'unknown') if 'data' in locals() else 'unknown'}")
@@ -212,7 +222,7 @@ def jwt_register():
         logger.error(f"Remote Address: {request.remote_addr}")
         logger.error(f"Error: {str(e)}")
         logger.error(f"Stack Trace:\n{traceback.format_exc()}")
-        
+
         db.session.rollback()
         return jsonify({
             'error': 'Registration service temporarily unavailable',
@@ -234,7 +244,7 @@ def jwt_refresh():
     try:
         # Get current token from cookie or Authorization header
         token = request.cookies.get('auth_token')
-        
+
         if not token:
             auth_header = request.headers.get('Authorization')
             if auth_header and auth_header.startswith('Bearer '):
@@ -248,7 +258,7 @@ def jwt_refresh():
 
         if not new_token:
             return jsonify({'error': 'Unable to refresh token'}), 400
-        
+
         response = jsonify({'success': True})
         response.set_cookie(
             'auth_token',
@@ -264,13 +274,13 @@ def jwt_refresh():
     except Exception as e:
         import traceback
         import uuid
-        
+
         error_id = str(uuid.uuid4())[:8]
         logger.error(f"JWT Refresh Error [{error_id}]:")
         logger.error(f"Remote Address: {request.remote_addr}")
         logger.error(f"Error: {str(e)}")
         logger.error(f"Stack Trace:\n{traceback.format_exc()}")
-        
+
         return jsonify({
             'error': 'Token refresh service temporarily unavailable',
             'error_id': error_id
@@ -309,13 +319,13 @@ def jwt_verify():
     except Exception as e:
         import traceback
         import uuid
-        
+
         error_id = str(uuid.uuid4())[:8]
         logger.error(f"JWT Verification Error [{error_id}]:")
         logger.error(f"Remote Address: {request.remote_addr}")
         logger.error(f"Error: {str(e)}")
         logger.error(f"Stack Trace:\n{traceback.format_exc()}")
-        
+
         return jsonify({
             'error': 'Token verification service temporarily unavailable',
             'error_id': error_id
@@ -349,13 +359,13 @@ def jwt_logout():
     except Exception as e:
         import traceback
         import uuid
-        
+
         error_id = str(uuid.uuid4())[:8]
         logger.error(f"JWT Logout Error [{error_id}]:")
         logger.error(f"Remote Address: {request.remote_addr}")
         logger.error(f"Error: {str(e)}")
         logger.error(f"Stack Trace:\n{traceback.format_exc()}")
-        
+
         return jsonify({
             'error': 'Logout service temporarily unavailable',
             'error_id': error_id
