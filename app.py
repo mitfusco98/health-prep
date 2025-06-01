@@ -78,7 +78,7 @@ app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
 # Additional session security configurations
 app.config['SESSION_COOKIE_NAME'] = 'healthprep_session'  # Custom session cookie name
 app.config['WTF_CSRF_FIELD_NAME'] = 'csrf_token'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file upload
+app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024  # 1MB max request size for API endpoints
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 year for static files
 
 # CSRF protection is now enabled for all routes for security
@@ -272,8 +272,8 @@ def handle_request_entity_too_large(error):
     """Handle file upload too large errors"""
     logger.warning(f"Request entity too large from {get_remote_address()}: {request.path}")
     if request.path.startswith('/api/'):
-        return jsonify({'error': 'File too large'}), 413
-    return jsonify({'error': 'File too large. Maximum size is 16MB.'}), 413
+        return jsonify({'error': 'Request too large. Maximum size is 1MB.'}), 413
+    return jsonify({'error': 'File too large. Maximum size is 1MB.'}), 413
 
 @app.errorhandler(429)
 def handle_rate_limit(error):
@@ -373,6 +373,26 @@ def handle_unexpected_error(error):
             'error_id': error_id
         }), 500
     return render_template('500.html', error_id=error_id), 500
+
+@app.before_request
+def validate_patient_id_format():
+    """Validate patient ID format for API routes before processing"""
+    # Only validate for patient-specific API routes
+    if request.endpoint and 'api_get_patient' in str(request.endpoint):
+        patient_id = request.view_args.get('patient_id') if request.view_args else None
+        if patient_id is not None:
+            try:
+                patient_id_int = int(patient_id)
+                if patient_id_int <= 0:
+                    from flask import abort, jsonify
+                    if request.path.startswith('/api/'):
+                        return jsonify({'error': 'Patient ID must be a positive integer'}), 400
+                    abort(400, description="Invalid patient ID")
+            except (ValueError, TypeError):
+                from flask import abort, jsonify
+                if request.path.startswith('/api/'):
+                    return jsonify({'error': 'Patient ID must be a valid integer'}), 400
+                abort(400, description="Patient ID must be a valid number")
 
 @app.before_request
 def validate_csrf_for_state_changes():

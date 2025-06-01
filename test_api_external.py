@@ -315,7 +315,7 @@ class APITester:
             "POST",
             "/api/patients",
             data=long_patient,
-            expected_status=400,
+            expected_status=413,  # Request Entity Too Large
             description="Create patient with extremely long data"
         )
         
@@ -394,7 +394,7 @@ class APITester:
         self.test_endpoint(
             "GET",
             f"/api/appointments?date={past_date}",
-            expected_status=200,
+            expected_status=400,  # Should fail due to date range validation
             description=f"Get appointments for very old date {past_date}"
         )
     

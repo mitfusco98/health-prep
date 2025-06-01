@@ -105,15 +105,20 @@ def verify_api_request():
     """Verify API request authenticity and security"""
     # CSRF protection for state-changing operations
     if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
-        # Require either CSRF token or API key for state-changing operations
+        # Check for authentication first
+        auth_header = request.headers.get('Authorization', '')
+        has_auth_token = auth_header.startswith('Bearer ') and len(auth_header) > 7
+        
+        # Require CSRF token or proper authentication for API requests
         csrf_token = request.headers.get('X-CSRF-Token')
         api_key = request.headers.get('X-API-Key')
 
-        if not csrf_token and not api_key:
-            # For now, we'll be lenient but log the issue
-            logger.warning(f"CSRF protection bypassed for {request.method} {request.path}")
+        if not csrf_token and not api_key and not has_auth_token:
+            logger.warning(f"CSRF protection failed for {request.method} {request.path}")
+            return jsonify({'error': 'CSRF token or authentication required'}), 403
 
-    # Check for required headers
-    if not request.headers.get('Content-Type', '').startswith('application/json'):
-        if request.method in ['POST', 'PUT', 'PATCH'] and request.is_json:
+    # Check for required headers for JSON requests
+    if request.method in ['POST', 'PUT', 'PATCH'] and request.is_json:
+        content_type = request.headers.get('Content-Type', '')
+        if not content_type.startswith('application/json'):
             return jsonify({'error': 'Content-Type must be application/json'}), 400

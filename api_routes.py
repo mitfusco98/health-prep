@@ -131,7 +131,7 @@ def api_patients():
         logger.error(f"Error in API patients endpoint: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
-@app.route('/api/patients/<int:patient_id>', methods=['GET'])
+@app.route('/api/patients/<patient_id>', methods=['GET'])
 @csrf.exempt
 @jwt_required
 def api_patient_detail(patient_id):
@@ -139,16 +139,27 @@ def api_patient_detail(patient_id):
     Get detailed information for a specific patient (JWT protected)
     """
     try:
-        patient = Patient.query.get_or_404(patient_id)
+        # Validate patient ID format
+        try:
+            patient_id_int = int(patient_id)
+            if patient_id_int <= 0:
+                return jsonify({'error': 'Patient ID must be a positive integer'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Patient ID must be a valid integer'}), 400
+
+        patient = Patient.query.get(patient_id_int)
+        if not patient:
+            return jsonify({'error': 'Patient not found'}), 404
+
 
         # Get related data
-        conditions = Condition.query.filter_by(patient_id=patient_id, is_active=True).all()
-        recent_vitals = Vital.query.filter_by(patient_id=patient_id)\
+        conditions = Condition.query.filter_by(patient_id=patient_id_int, is_active=True).all()
+        recent_vitals = Vital.query.filter_by(patient_id=patient_id_int)\
             .order_by(Vital.date.desc()).limit(5).all()
-        recent_visits = Visit.query.filter_by(patient_id=patient_id)\
+        recent_visits = Visit.query.filter_by(patient_id=patient_id_int)\
             .order_by(Visit.visit_date.desc()).limit(5).all()
-        screenings = Screening.query.filter_by(patient_id=patient_id).all()
-        alerts = PatientAlert.query.filter_by(patient_id=patient_id, is_active=True).all()
+        screenings = Screening.query.filter_by(patient_id=patient_id_int).all()
+        alerts = PatientAlert.query.filter_by(patient_id=patient_id_int, is_active=True).all()
 
         # Serialize patient data
         patient_data = {
@@ -284,16 +295,29 @@ def api_create_patient():
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
+        # Validate data size limits first
+        errors = []
+        field_limits = {
+            'first_name': 100,
+            'last_name': 100,
+            'email': 254,
+            'phone': 20,
+            'address': 500,
+            'mrn': 20
+        }
+
+        for field, max_length in field_limits.items():
+            if field in data and data[field] and len(str(data[field])) > max_length:
+                errors.append(f"{field} must be {max_length} characters or less")
+
         # Validate required fields
         required_fields = ['first_name', 'last_name', 'date_of_birth', 'sex']
-        errors = []
 
         for field in required_fields:
             if field not in data or not data[field]:
                 errors.append(f'{field} is required')
-
-        # Validate data formats
-        #errors.extend(validate_patient_data(data))
+            elif isinstance(data[field], str) and not data[field].strip():
+                errors.append(f'{field} cannot be empty or contain only whitespace')
 
         if errors:
             return jsonify({'error': 'Validation failed', 'details': errors}), 400
@@ -377,10 +401,8 @@ def api_appointments():
             try:
                 selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
                 # Validate reasonable date range (not too far in past or future)
-                from datetime import timedelta
-                min_date = date.today() - timedelta(days=365*10)  # 10 years ago
-                max_date = date.today() + timedelta(days=365*2)   # 2 years ahead
-                if selected_date < min_date or selected_date > max_date:
+                # Validate reasonable date range (1900 to 2100)
+                if selected_date.year < 1900 or selected_date.year > 2100:
                     return jsonify({'error': 'Date must be within reasonable range'}), 400
             except ValueError:
                 return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
