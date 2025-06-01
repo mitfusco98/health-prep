@@ -843,8 +843,6 @@ with app.app_context():
 
     # Import API routes
     import api_routes  # noqa: F401
-    # Exempt API routes from CSRF protection
-    csrf.exempt(api_routes.bp)
 
     # JWT configuration with enhanced security validation
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
