@@ -3423,8 +3423,10 @@ def delete_patient(patient_id):
     app.logger.debug(f"Selected patients (array): {selected_patients}")
     app.logger.debug(f"Patient IDs (string): {patient_ids_str}")
     
-    # Check if we have an array of selected patients
-    if selected_patients:
+    # Check if this is a bulk deletion (patient_id=0 indicates bulk operation)
+    is_bulk_operation = (patient_id == 0) or selected_patients or patient_ids_str
+    
+    if is_bulk_operation and selected_patients:
         app.logger.debug(f"Bulk deletion requested with array: {selected_patients}")
         try:
             # Convert string IDs to integers
@@ -3468,7 +3470,7 @@ def delete_patient(patient_id):
             flash(f'Error deleting patients: {str(e)}', 'danger')
     
     # Check if we have a comma-separated list of patient IDs
-    elif patient_ids_str:
+    elif is_bulk_operation and patient_ids_str:
         app.logger.debug(f"Bulk deletion requested with IDs: {patient_ids_str}")
         # Bulk deletion
         try:
@@ -3509,6 +3511,9 @@ def delete_patient(patient_id):
             db.session.rollback()
             app.logger.error(f"Error in bulk patient deletion: {str(e)}")
             flash(f'Error deleting patients: {str(e)}', 'danger')
+    elif patient_id == 0:
+        # Bulk operation requested but no patients selected
+        flash('No patients were selected for deletion.', 'warning')
     else:
         app.logger.debug(f"Single patient deletion requested for ID: {patient_id}")
         # Single patient deletion

@@ -243,6 +243,12 @@ def _is_validation_error(exception):
     return any(indicator in error_message or indicator in exception_type 
                for indicator in validation_indicators)
 
+def validate_patient_id(patient_id):
+    """Validate patient ID parameter"""
+    # Allow patient_id=0 for bulk operations, but reject negative numbers
+    if patient_id is None or patient_id < 0:
+        raise ValueError("Invalid patient ID")
+
 
 # Flask middleware for automatic validation logging
 def register_validation_middleware(app):
