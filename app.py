@@ -742,8 +742,7 @@ def sanitize_form_data():
                 sanitized_value = sanitize_input(value, max_length=10, field_type='date')
             else:
                 # Default sanitization for other fields
-                sanitized_value = sanitize_input(value, max```python
-_length=500, field_type='general')
+                sanitized_value = sanitize_input(value, max_length=500, field_type='general')
 
             sanitized_form[key] = sanitized_value
 
