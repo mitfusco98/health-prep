@@ -52,7 +52,7 @@
 {% if patients %}
 <div class="card border-0">
     <div class="card-body p-0">
-        <form method="POST" action="{{ url_for('delete_patient', patient_id=0) }}" id="deleteForm">
+        <form method="POST" action="{{ url_for('delete_patient', patient_id=1) }}" id="deleteForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
             <div class="mb-3 p-3 border-bottom">
@@ -176,6 +176,68 @@
 {% endfor %}
 
 <!-- JavaScript for patient deletion -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAllPatients');
+    const patientCheckboxes = document.querySelectorAll('input[name="selected_patients[]"]');
+    const deleteButton = document.getElementById('deleteButton');
+    const selectedCount = document.getElementById('selectedCount');
+    const deleteForm = document.getElementById('deleteForm');
+
+    // Handle select all functionality
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            patientCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateDeleteButton();
+        });
+    }
+
+    // Handle individual checkbox changes
+    patientCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateDeleteButton);
+    });
+
+    function updateDeleteButton() {
+        const checkedBoxes = document.querySelectorAll('input[name="selected_patients[]"]:checked');
+        const count = checkedBoxes.length;
+        
+        selectedCount.textContent = `${count} selected`;
+        deleteButton.disabled = count === 0;
+        
+        // Update select all checkbox state
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = count === patientCheckboxes.length;
+            selectAllCheckbox.indeterminate = count > 0 && count < patientCheckboxes.length;
+        }
+    }
+
+    // Handle form submission
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function(e) {
+            const checkedBoxes = document.querySelectorAll('input[name="selected_patients[]"]:checked');
+            if (checkedBoxes.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one patient to delete.');
+                return;
+            }
+            
+            const count = checkedBoxes.length;
+            const confirmMessage = count === 1 
+                ? 'Are you sure you want to delete 1 patient?' 
+                : `Are you sure you want to delete ${count} patients?`;
+            
+            if (!confirm(confirmMessage)) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    // Initial update
+    updateDeleteButton();
+});
+</script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         console.log("DOM content loaded, initializing patient list JavaScript");

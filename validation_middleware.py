@@ -156,9 +156,11 @@ class ValidationLogger:
 
             # Log to application logger as well
             structured_logger = get_structured_logger('validation')
-            structured_logger.warning(
+            structured_logger.log_event(
+                'validation_failure',
                 "Validation failure detected",
-                extra={
+                severity='warning',
+                additional_data={
                     'request_id': request_id,
                     'endpoint': endpoint,
                     'method': request.method if request else 'UNKNOWN',
