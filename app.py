@@ -241,13 +241,12 @@ def jwt_unauthorized(error):
 @app.errorhandler(403)
 def jwt_forbidden(e):
     """Handle JWT forbidden responses"""
-    # Only log if this isn't a normal authentication failure
-    if not request.path.startswith('/api/'):
-        logger.warning(f"Forbidden access attempt from {request.remote_addr} to {request.path}")
-
     # Return JSON response for API endpoints
     if request.path.startswith('/api/'):
         return jsonify({'error': 'Access denied'}), 403
+
+    # Log warning only for non-API endpoints
+    logger.warning(f"Forbidden access attempt from {request.remote_addr} to {request.path}")
 
     # Return HTML response for web endpoints
     return render_template('403.html'), 403
@@ -378,31 +377,34 @@ def handle_unexpected_error(error):
 @app.before_request
 def validate_csrf_for_state_changes():
     """Enhanced CSRF validation for state-changing requests"""
-    # Skip CSRF for all API routes first (they use JWT authentication instead)
+    # Skip CSRF for all API routes completely (they use JWT authentication instead)
     if request.path.startswith('/api/'):
-        return
-
-    # Skip CSRF for API endpoints that are already exempt
-    if request.endpoint and hasattr(app.view_functions.get(request.endpoint), '_csrf_exempt'):
         return
 
     # Skip CSRF for safe methods
     if request.method in ['GET', 'HEAD', 'OPTIONS']:
         return
 
-    # Check if this is an AJAX request without CSRF token
+    # Skip CSRF for endpoints that are explicitly exempt
+    if request.endpoint and hasattr(app.view_functions.get(request.endpoint), '_csrf_exempt'):
+        return
+
+    # Only validate CSRF for non-API endpoints
+    # For AJAX requests to web endpoints, check CSRF token
     if request.is_json or request.headers.get('Content-Type', '').startswith('application/json'):
-        csrf_token = request.headers.get('X-CSRFToken') or request.json.get('csrf_token') if request.json else None
+        csrf_token = request.headers.get('X-CSRFToken') or (request.json.get('csrf_token') if request.json else None)
         if not csrf_token:
             logger.warning(f"Missing CSRF token in AJAX request to {request.endpoint}")
-            return
+            from flask import abort
+            abort(403, description="CSRF token required for AJAX requests")
 
-    # For form-based requests, check the token
+    # For form-based requests to web endpoints, check the token
     if request.form:
         csrf_token = request.form.get('csrf_token')
         if not csrf_token:
             logger.warning(f"Missing CSRF token in form request to {request.endpoint}")
-            return
+            from flask import abort
+            abort(403, description="CSRF token required for form requests")
 
 def validate_uploaded_file(file):
     """Validate uploaded files for security"""

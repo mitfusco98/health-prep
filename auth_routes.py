@@ -221,11 +221,10 @@ def jwt_register():
 
 @app.route('/api/auth/refresh', methods=['POST'])
 @csrf.exempt
-@jwt_required
 def jwt_refresh():
     """
     Refresh JWT token endpoint
-    Requires a valid JWT token in Authorization header
+    Requires a valid JWT token in Authorization header or cookie
 
     Returns:
     {
@@ -233,8 +232,13 @@ def jwt_refresh():
     }
     """
     try:
-        # Get current token from the cookie
+        # Get current token from cookie or Authorization header
         token = request.cookies.get('auth_token')
+        
+        if not token:
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                token = auth_header[7:]
 
         if not token:
             return jsonify({'error': 'Current token required'}), 400
@@ -245,7 +249,7 @@ def jwt_refresh():
         if not new_token:
             return jsonify({'error': 'Unable to refresh token'}), 400
         
-        response = jsonify({})
+        response = jsonify({'success': True})
         response.set_cookie(
             'auth_token',
             new_token,
