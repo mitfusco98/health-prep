@@ -56,7 +56,7 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
             <div class="mb-3 p-3 border-bottom">
-                <button type="submit" id="deleteButton" class="btn btn-sm btn-danger" disabled>
+                <button type="button" id="deleteButton" class="btn btn-sm btn-danger" disabled>
                     <i class="fas fa-trash me-2"></i> Delete Selected Patients
                 </button>
                 <span id="selectedCount" class="badge bg-secondary ms-2">0 selected</span>
@@ -213,23 +213,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Handle form submission
-    if (deleteForm) {
-        deleteForm.addEventListener('submit', function(e) {
+    // Handle delete button click
+    if (deleteButton) {
+        deleteButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
             const checkedBoxes = document.querySelectorAll('input[name="selected_patients[]"]:checked');
             if (checkedBoxes.length === 0) {
-                e.preventDefault();
                 alert('Please select at least one patient to delete.');
                 return;
             }
             
             const count = checkedBoxes.length;
             const confirmMessage = count === 1 
-                ? 'Are you sure you want to delete 1 patient?' 
-                : `Are you sure you want to delete ${count} patients?`;
+                ? 'Are you sure you want to delete 1 patient and all associated records?' 
+                : `Are you sure you want to delete ${count} patients and all associated records?`;
             
-            if (!confirm(confirmMessage)) {
-                e.preventDefault();
+            if (confirm(confirmMessage)) {
+                // Submit the form with POST method
+                deleteForm.submit();
             }
         });
     }
@@ -237,64 +239,5 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial update
     updateDeleteButton();
 });
-</script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log("DOM content loaded, initializing patient list JavaScript");
-        
-        const selectAllCheckbox = document.getElementById('selectAllPatients');
-        const patientCheckboxes = document.querySelectorAll('.patient-checkbox');
-        const deleteButton = document.getElementById('deleteButton');
-        const selectedCountBadge = document.getElementById('selectedCount');
-        
-        // Function to update form with selected patient IDs before submission
-        function updateSelectedPatientIds() {
-            const selectedIds = [];
-            const checkedBoxes = document.querySelectorAll('.patient-checkbox:checked');
-            
-            // Count selected patients and update badge
-            const checkedCount = checkedBoxes.length;
-            if (selectedCountBadge) {
-                selectedCountBadge.textContent = `${checkedCount} selected`;
-            }
-            
-            // Enable/disable delete button
-            if (deleteButton) {
-                deleteButton.disabled = (checkedCount === 0);
-            }
-            
-            // Gather patient IDs
-            checkedBoxes.forEach(checkbox => {
-                selectedIds.push(checkbox.value);
-            });
-            
-            // Now using form submission with checkboxes directly
-            console.log("Selected patient IDs:", selectedIds);
-        }
-        
-        // Add event listeners to checkboxes
-        if (selectAllCheckbox) {
-            selectAllCheckbox.addEventListener('change', function() {
-                patientCheckboxes.forEach(checkbox => {
-                    checkbox.checked = selectAllCheckbox.checked;
-                });
-                updateSelectedPatientIds();
-            });
-        }
-        
-        patientCheckboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                updateSelectedPatientIds();
-                
-                // Update select all checkbox state
-                if (selectAllCheckbox) {
-                    selectAllCheckbox.checked = (document.querySelectorAll('.patient-checkbox:checked').length === patientCheckboxes.length);
-                }
-            });
-        });
-        
-        // Initialize the form
-        updateSelectedPatientIds();
-    });
 </script>
 {% endblock %}
