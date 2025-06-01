@@ -1,6 +1,6 @@
 from flask import request, jsonify
 from werkzeug.security import check_password_hash
-from app import app, db
+from app import app, db, csrf
 from models import User
 from jwt_utils import generate_jwt_token, jwt_required, refresh_token
 import logging
@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 @app.route('/api/auth/login', methods=['POST'])
+@csrf.exempt
 def jwt_login():
     """
     JWT-based login endpoint
@@ -105,6 +106,7 @@ def jwt_login():
         }), 500
 
 @app.route('/api/auth/register', methods=['POST'])
+@csrf.exempt
 def jwt_register():
     """
     JWT-based registration endpoint
@@ -218,6 +220,7 @@ def jwt_register():
         }), 500
 
 @app.route('/api/auth/refresh', methods=['POST'])
+@csrf.exempt
 @jwt_required
 def jwt_refresh():
     """
@@ -270,6 +273,7 @@ def jwt_refresh():
         }), 500
 
 @app.route('/api/auth/verify', methods=['GET'])
+@csrf.exempt
 @jwt_required
 def jwt_verify():
     """
@@ -314,6 +318,7 @@ def jwt_verify():
         }), 500
 
 @app.route('/api/auth/logout', methods=['POST'])
+@csrf.exempt
 def jwt_logout():
     """
     Logout endpoint that clears the HTTP-only cookie

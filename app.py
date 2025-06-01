@@ -109,7 +109,7 @@ db.init_app(app)
 def before_request():
     # Add correlation ID for request tracing
     correlation_id = add_correlation_id_to_request()
-    
+
     # Clean up any existing session at the start of each request to avoid stale transactions
     db.session.remove()
 
@@ -283,10 +283,10 @@ def handle_internal_server_error(error):
     """Handle internal server errors with detailed logging but generic client response"""
     import traceback
     import uuid
-    
+
     # Generate unique error ID for tracking
     error_id = str(uuid.uuid4())[:8]
-    
+
     # Log structured error information
     structured_logger.logger.error(
         f"Internal Server Error [{error_id}]",
@@ -306,13 +306,13 @@ def handle_internal_server_error(error):
         },
         exc_info=True
     )
-    
+
     # Roll back any database transactions
     try:
         db.session.rollback()
     except Exception as rollback_error:
         logger.error(f"Error during rollback [{error_id}]: {str(rollback_error)}")
-    
+
     # Return generic error message to client
     if request.path.startswith('/api/'):
         return jsonify({
@@ -342,10 +342,10 @@ def handle_unexpected_error(error):
     """Catch-all handler for unexpected errors"""
     import traceback
     import uuid
-    
+
     # Generate unique error ID for tracking
     error_id = str(uuid.uuid4())[:8]
-    
+
     # Log detailed error information
     logger.critical(f"Unexpected Error [{error_id}]:")
     logger.critical(f"Error Type: {type(error).__name__}")
@@ -354,13 +354,13 @@ def handle_unexpected_error(error):
     logger.critical(f"Method: {request.method}")
     logger.critical(f"Remote Address: {get_remote_address()}")
     logger.critical(f"Stack Trace:\n{traceback.format_exc()}")
-    
+
     # Roll back any database transactions
     try:
         db.session.rollback()
     except Exception as rollback_error:
         logger.critical(f"Error during rollback [{error_id}]: {str(rollback_error)}")
-    
+
     # Return generic error message
     if request.path.startswith('/api/'):
         return jsonify({
@@ -841,6 +841,11 @@ with app.app_context():
     # Import JWT authentication routes
     import auth_routes  # noqa: F401
 
+    # Exempt API routes from CSRF protection
+    csrf.exempt(auth_routes.bp)
+    import api_routes  # noqa: F401
+    csrf.exempt(api_routes.bp)
+
     # JWT configuration with enhanced security validation
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
     JWT_ALGORITHM = 'HS256'
@@ -869,7 +874,7 @@ with app.app_context():
         import threading
         import time
         from datetime import datetime, timedelta
-        
+
         def cleanup_task():
             while True:
                 try:
@@ -878,22 +883,22 @@ with app.app_context():
                     next_run = now.replace(hour=2, minute=0, second=0, microsecond=0)
                     if next_run <= now:
                         next_run += timedelta(days=1)
-                    
+
                     sleep_seconds = (next_run - now).total_seconds()
                     time.sleep(sleep_seconds)
-                    
+
                     # Perform cleanup
                     with app.app_context():
                         from admin_log_cleanup import cleanup_old_admin_logs
                         deleted_count = cleanup_old_admin_logs(10)
                         if deleted_count > 0:
                             logger.info(f"Daily cleanup: Removed {deleted_count} old admin log entries")
-                            
+
                 except Exception as e:
                     logger.error(f"Error in admin log cleanup task: {str(e)}")
                     # Sleep for 1 hour before retrying
                     time.sleep(3600)
-        
+
         # Start cleanup thread
         cleanup_thread = threading.Thread(target=cleanup_task, daemon=True)
         cleanup_thread.start()

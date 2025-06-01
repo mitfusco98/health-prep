@@ -1,5 +1,5 @@
 from flask import jsonify, request, g
-from app import app, db
+from app import app, db, csrf
 from models import Patient, Condition, Vital, LabResult, Visit, ImagingStudy, ConsultReport, HospitalSummary, Screening, MedicalDocument, Appointment, PatientAlert
 from jwt_utils import jwt_required, optional_jwt, admin_required
 from datetime import datetime, date, timedelta
@@ -9,6 +9,7 @@ from sqlalchemy import func, or_
 logger = logging.getLogger(__name__)
 
 @app.route('/api/patients', methods=['GET'])
+@csrf.exempt
 @jwt_required
 def api_patients():
     """
@@ -131,6 +132,7 @@ def api_patients():
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/patients/<int:patient_id>', methods=['GET'])
+@csrf.exempt
 @jwt_required
 def api_patient_detail(patient_id):
     """
@@ -272,6 +274,7 @@ def validate_patient_fields(data):
     return errors
 
 @app.route('/api/patients', methods=['POST'])
+@csrf.exempt
 @jwt_required
 def api_create_patient():
     """Create a new patient via API"""
@@ -356,6 +359,7 @@ def api_create_patient():
         return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/appointments', methods=['GET'])
+@csrf.exempt
 @jwt_required
 def api_appointments():
     """
