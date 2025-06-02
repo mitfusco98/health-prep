@@ -230,6 +230,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 : `Are you sure you want to delete ${count} patients and all associated records?`;
             
             if (confirm(confirmMessage)) {
+                // Debug: Log what we're about to submit
+                const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+                console.log('Submitting patient deletion for IDs:', selectedIds);
+                console.log('Form action:', deleteForm.action);
+                console.log('Form method:', deleteForm.method);
+                
+                // Ensure form is set to POST method
+                deleteForm.method = 'POST';
+                
                 // Submit the form with POST method
                 deleteForm.submit();
             }

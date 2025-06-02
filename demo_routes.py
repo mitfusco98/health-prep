@@ -3432,6 +3432,10 @@ def delete_patient(patient_id):
     For bulk deletion, pass patient IDs in selected_patients[] array
     or as a comma-separated list in patient_ids field.
     """
+    # Get all form data for debugging
+    all_form_data = dict(request.form)
+    app.logger.debug(f"All form data: {all_form_data}")
+    
     # First check if this is an array-style submission (selected_patients[])
     selected_patients = request.form.getlist('selected_patients[]')
     
@@ -3439,7 +3443,6 @@ def delete_patient(patient_id):
     patient_ids_str = request.form.get('patient_ids')
     
     app.logger.debug(f"Delete patient route called with patient_id={patient_id}")
-    app.logger.debug(f"Form data: {request.form}")
     app.logger.debug(f"Selected patients (array): {selected_patients}")
     app.logger.debug(f"Patient IDs (string): {patient_ids_str}")
     
@@ -3477,10 +3480,28 @@ def delete_patient(patient_id):
             
             # Get patient IDs from either source
             if selected_patients:
-                patient_ids = [int(pid) for pid in selected_patients if pid.strip()]
+                # Convert and validate patient IDs from array
+                for pid in selected_patients:
+                    try:
+                        if pid.strip():  # Skip empty strings
+                            patient_id_int = int(pid.strip())
+                            if patient_id_int > 0:  # Only positive IDs
+                                patient_ids.append(patient_id_int)
+                    except (ValueError, TypeError) as e:
+                        app.logger.warning(f"Invalid patient ID in array: {pid}, error: {e}")
+                        continue
                 app.logger.debug(f"Using array format - parsed patient IDs: {patient_ids}")
             elif patient_ids_str:
-                patient_ids = [int(id.strip()) for id in patient_ids_str.split(',') if id.strip()]
+                # Convert and validate patient IDs from comma-separated string
+                for id_str in patient_ids_str.split(','):
+                    try:
+                        if id_str.strip():  # Skip empty strings
+                            patient_id_int = int(id_str.strip())
+                            if patient_id_int > 0:  # Only positive IDs
+                                patient_ids.append(patient_id_int)
+                    except (ValueError, TypeError) as e:
+                        app.logger.warning(f"Invalid patient ID in string: {id_str}, error: {e}")
+                        continue
                 app.logger.debug(f"Using comma-separated format - parsed patient IDs: {patient_ids}")
             
             if not patient_ids:
@@ -3488,20 +3509,34 @@ def delete_patient(patient_id):
                 return redirect(url_for('patient_list'))
             
             deleted_count = 0
+            failed_deletions = []
             
             # Delete each patient
             for pid in patient_ids:
-                if delete_patient_with_records(pid):
-                    deleted_count += 1
+                try:
+                    if delete_patient_with_records(pid):
+                        deleted_count += 1
+                        app.logger.debug(f"Successfully deleted patient ID: {pid}")
+                    else:
+                        failed_deletions.append(pid)
+                        app.logger.warning(f"Failed to delete patient ID: {pid} (not found)")
+                except Exception as e:
+                    failed_deletions.append(pid)
+                    app.logger.error(f"Error deleting patient ID {pid}: {str(e)}")
             
             # Commit all deletions at once
             db.session.commit()
             app.logger.debug(f"Successfully deleted {deleted_count} patients")
             
-            if deleted_count == 1:
-                flash(f'1 patient and all associated records have been deleted.', 'success')
-            else:
-                flash(f'{deleted_count} patients and all associated records have been deleted.', 'success')
+            # Provide feedback
+            if deleted_count > 0:
+                if deleted_count == 1:
+                    flash(f'1 patient and all associated records have been deleted.', 'success')
+                else:
+                    flash(f'{deleted_count} patients and all associated records have been deleted.', 'success')
+            
+            if failed_deletions:
+                flash(f'Failed to delete {len(failed_deletions)} patient(s). They may not exist.', 'warning')
                 
         except Exception as e:
             db.session.rollback()
