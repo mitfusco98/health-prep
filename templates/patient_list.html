@@ -230,16 +230,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 : `Are you sure you want to delete ${count} patients and all associated records?`;
             
             if (confirm(confirmMessage)) {
-                // Debug: Log what we're about to submit
+                // Get selected patient IDs
                 const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
                 console.log('Submitting patient deletion for IDs:', selectedIds);
+                
+                // Clear any existing hidden inputs for patient IDs
+                const existingInputs = deleteForm.querySelectorAll('input[name="patient_ids"]');
+                existingInputs.forEach(input => input.remove());
+                
+                // Add selected patient IDs as a comma-separated hidden input
+                const patientIdsInput = document.createElement('input');
+                patientIdsInput.type = 'hidden';
+                patientIdsInput.name = 'patient_ids';
+                patientIdsInput.value = selectedIds.join(',');
+                deleteForm.appendChild(patientIdsInput);
+                
                 console.log('Form action:', deleteForm.action);
-                console.log('Form method:', deleteForm.method);
+                console.log('Added patient_ids input with value:', patientIdsInput.value);
                 
                 // Ensure form is set to POST method
                 deleteForm.method = 'POST';
                 
-                // Submit the form with POST method
+                // Submit the form
                 deleteForm.submit();
             }
         });
