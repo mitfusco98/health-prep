@@ -3474,26 +3474,14 @@ def delete_patient(patient_id):
             return True
         return False
     
-    # Handle bulk deletion - either from array or comma-separated string
+    # Handle bulk deletion - prioritize comma-separated string format over array format
     if is_bulk_operation and (selected_patients or patient_ids_str):
         app.logger.debug(f"Bulk deletion requested")
         try:
             patient_ids = []
             
-            # Get patient IDs from either source
-            if selected_patients:
-                # Convert and validate patient IDs from array
-                for pid in selected_patients:
-                    try:
-                        if pid.strip():  # Skip empty strings
-                            patient_id_int = int(pid.strip())
-                            if patient_id_int > 0:  # Only positive IDs
-                                patient_ids.append(patient_id_int)
-                    except (ValueError, TypeError) as e:
-                        app.logger.warning(f"Invalid patient ID in array: {pid}, error: {e}")
-                        continue
-                app.logger.debug(f"Using array format - parsed patient IDs: {patient_ids}")
-            elif patient_ids_str:
+            # Prioritize patient_ids_str (comma-separated) over selected_patients array
+            if patient_ids_str:
                 # Convert and validate patient IDs from comma-separated string
                 for id_str in patient_ids_str.split(','):
                     try:
@@ -3505,6 +3493,18 @@ def delete_patient(patient_id):
                         app.logger.warning(f"Invalid patient ID in string: {id_str}, error: {e}")
                         continue
                 app.logger.debug(f"Using comma-separated format - parsed patient IDs: {patient_ids}")
+            elif selected_patients:
+                # Fallback to array format if no comma-separated string
+                for pid in selected_patients:
+                    try:
+                        if pid.strip():  # Skip empty strings
+                            patient_id_int = int(pid.strip())
+                            if patient_id_int > 0:  # Only positive IDs
+                                patient_ids.append(patient_id_int)
+                    except (ValueError, TypeError) as e:
+                        app.logger.warning(f"Invalid patient ID in array: {pid}, error: {e}")
+                        continue
+                app.logger.debug(f"Using array format - parsed patient IDs: {patient_ids}")
             
             if not patient_ids:
                 flash('No valid patients were selected for deletion.', 'warning')

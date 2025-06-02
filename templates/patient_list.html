@@ -234,9 +234,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
                 console.log('Submitting patient deletion for IDs:', selectedIds);
                 
-                // Clear any existing hidden inputs for patient IDs
+                // Clear any existing hidden inputs for patient IDs and uncheck all checkboxes to avoid conflicts
                 const existingInputs = deleteForm.querySelectorAll('input[name="patient_ids"]');
                 existingInputs.forEach(input => input.remove());
+                
+                // Uncheck all the checkboxes to prevent them from being submitted
+                checkedBoxes.forEach(cb => cb.checked = false);
                 
                 // Add selected patient IDs as a comma-separated hidden input
                 const patientIdsInput = document.createElement('input');
@@ -247,6 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 console.log('Form action:', deleteForm.action);
                 console.log('Added patient_ids input with value:', patientIdsInput.value);
+                console.log('Unchecked all checkboxes to avoid duplicate submission');
                 
                 // Ensure form is set to POST method
                 deleteForm.method = 'POST';
