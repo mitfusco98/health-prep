@@ -262,6 +262,13 @@ function deleteSelectedAppointments() {
         input.value = appointmentIds.join(',');
         form.appendChild(input);
 
+        console.log('Submitting bulk delete form with appointment IDs:', appointmentIds.join(','));
+
+        // Submit the form
+        document.body.appendChild(form);
+        form.submit();ntIds.join(',');
+        form.appendChild(input);
+
         document.body.appendChild(form);
         form.submit();
     }

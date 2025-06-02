@@ -3096,23 +3096,43 @@ def delete_appointments_bulk():
             return redirect(url_for('all_visits'))
         
         deleted_count = 0
+        # Convert appointment IDs to integers and validate them
+        valid_appointment_ids = []
         for appt_id in selected_appointments:
             try:
-                print(f"DEBUG: Processing appointment ID: {appt_id}")
-                appointment = Appointment.query.get(int(appt_id))
-                if appointment:
-                    print(f"DEBUG: Found appointment {appointment.id} for patient {appointment.patient.full_name}")
-                    db.session.delete(appointment)
-                    deleted_count += 1
-                    print(f"DEBUG: Marked appointment {appointment.id} for deletion")
+                appointment_id_int = int(appt_id.strip())
+                if appointment_id_int > 0:
+                    valid_appointment_ids.append(appointment_id_int)
+                    print(f"DEBUG: Added valid appointment ID: {appointment_id_int}")
                 else:
-                    print(f"DEBUG: No appointment found with ID {appt_id}")
+                    print(f"DEBUG: Skipping invalid appointment ID: {appt_id}")
             except (ValueError, TypeError) as e:
                 print(f"DEBUG: Error processing appointment ID {appt_id}: {e}")
                 continue
         
+        print(f"DEBUG: Valid appointment IDs to delete: {valid_appointment_ids}")
+        
+        if not valid_appointment_ids:
+            flash('No valid appointments were selected for deletion.', 'warning')
+            return redirect(url_for('all_visits'))
+        
+        # Delete appointments in bulk using a single query for efficiency
+        appointments_to_delete = Appointment.query.filter(Appointment.id.in_(valid_appointment_ids)).all()
+        
+        print(f"DEBUG: Found {len(appointments_to_delete)} appointments to delete")
+        
+        for appointment in appointments_to_delete:
+            print(f"DEBUG: Deleting appointment {appointment.id} for patient {appointment.patient.full_name}")
+            db.session.delete(appointment)
+            deleted_count += 1
+        
         db.session.commit()
-        flash(f'Successfully deleted {deleted_count} appointment(s).', 'success')
+        print(f"DEBUG: Successfully committed deletion of {deleted_count} appointments")
+        
+        if deleted_count == 1:
+            flash(f'Successfully deleted 1 appointment.', 'success')
+        else:
+            flash(f'Successfully deleted {deleted_count} appointments.', 'success')
         
     except Exception as e:
         db.session.rollback()
