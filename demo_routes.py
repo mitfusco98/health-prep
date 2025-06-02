@@ -3434,7 +3434,7 @@ def delete_patient(patient_id):
     """
     # Get all form data for debugging
     all_form_data = dict(request.form)
-    app.logger.debug(f"All form data: {all_form_data}")
+    app.logger.warning(f"DELETE PATIENT DEBUG - All form data: {all_form_data}")
     
     # First check if this is an array-style submission (selected_patients[])
     selected_patients = request.form.getlist('selected_patients[]')
@@ -3442,9 +3442,11 @@ def delete_patient(patient_id):
     # If not, check for comma-separated list in patient_ids
     patient_ids_str = request.form.get('patient_ids')
     
-    app.logger.debug(f"Delete patient route called with patient_id={patient_id}")
-    app.logger.debug(f"Selected patients (array): {selected_patients}")
-    app.logger.debug(f"Patient IDs (string): {patient_ids_str}")
+    app.logger.warning(f"DELETE PATIENT DEBUG - patient_id={patient_id}")
+    app.logger.warning(f"DELETE PATIENT DEBUG - Selected patients (array): {selected_patients}")
+    app.logger.warning(f"DELETE PATIENT DEBUG - Patient IDs (string): {patient_ids_str}")
+    app.logger.warning(f"DELETE PATIENT DEBUG - Request method: {request.method}")
+    app.logger.warning(f"DELETE PATIENT DEBUG - Request endpoint: {request.endpoint}")
     
     # Check if this is a bulk deletion (patient_id=0 indicates bulk operation)
     is_bulk_operation = (patient_id == 0) or selected_patients or patient_ids_str
@@ -3511,22 +3513,25 @@ def delete_patient(patient_id):
             deleted_count = 0
             failed_deletions = []
             
-            # Delete each patient
+            # Delete each patient with individual transaction handling
             for pid in patient_ids:
                 try:
+                    app.logger.debug(f"Attempting to delete patient ID: {pid}")
                     if delete_patient_with_records(pid):
+                        # Commit each deletion individually to avoid rollback issues
+                        db.session.commit()
                         deleted_count += 1
                         app.logger.debug(f"Successfully deleted patient ID: {pid}")
                     else:
                         failed_deletions.append(pid)
                         app.logger.warning(f"Failed to delete patient ID: {pid} (not found)")
                 except Exception as e:
+                    # Rollback this specific deletion and continue with others
+                    db.session.rollback()
                     failed_deletions.append(pid)
                     app.logger.error(f"Error deleting patient ID {pid}: {str(e)}")
             
-            # Commit all deletions at once
-            db.session.commit()
-            app.logger.debug(f"Successfully deleted {deleted_count} patients")
+            app.logger.debug(f"Bulk deletion completed: {deleted_count} patients deleted, {len(failed_deletions)} failed")
             
             # Provide feedback
             if deleted_count > 0:
