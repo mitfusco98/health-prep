@@ -3446,79 +3446,55 @@ def delete_patient(patient_id):
     # Check if this is a bulk deletion (patient_id=0 indicates bulk operation)
     is_bulk_operation = (patient_id == 0) or selected_patients or patient_ids_str
     
-    if is_bulk_operation and selected_patients:
-        app.logger.debug(f"Bulk deletion requested with array: {selected_patients}")
-        try:
-            # Convert string IDs to integers
-            patient_ids = [int(pid) for pid in selected_patients if pid.strip()]
-            app.logger.debug(f"Parsed patient IDs from array: {patient_ids}")
-            deleted_count = 0
+    def delete_patient_with_records(pid):
+        """Helper function to delete a patient and all associated records"""
+        patient = Patient.query.get(pid)
+        if patient:
+            app.logger.debug(f"Deleting patient ID {pid}: {patient.full_name}")
+            # Delete all related records first to avoid foreign key constraint errors
+            # The cascade delete should handle most of these, but we'll be explicit
+            Vital.query.filter_by(patient_id=pid).delete()
+            Condition.query.filter_by(patient_id=pid).delete()
+            Screening.query.filter_by(patient_id=pid).delete()
+            Appointment.query.filter_by(patient_id=pid).delete()
+            Visit.query.filter_by(patient_id=pid).delete()
+            LabResult.query.filter_by(patient_id=pid).delete()
+            ImagingStudy.query.filter_by(patient_id=pid).delete()
+            ConsultReport.query.filter_by(patient_id=pid).delete()
+            HospitalSummary.query.filter_by(patient_id=pid).delete()
+            MedicalDocument.query.filter_by(patient_id=pid).delete()
             
-            for pid in patient_ids:
-                patient = Patient.query.get(pid)
-                if patient:
-                    app.logger.debug(f"Deleting patient ID {pid}: {patient.full_name}")
-                    # Delete all related records first to avoid foreign key constraint errors
-                    # The cascade delete should handle most of these, but we'll be explicit
-                    Vital.query.filter_by(patient_id=pid).delete()
-                    Condition.query.filter_by(patient_id=pid).delete()
-                    Screening.query.filter_by(patient_id=pid).delete()
-                    Appointment.query.filter_by(patient_id=pid).delete()
-                    Visit.query.filter_by(patient_id=pid).delete()
-                    LabResult.query.filter_by(patient_id=pid).delete()
-                    ImagingStudy.query.filter_by(patient_id=pid).delete()
-                    ConsultReport.query.filter_by(patient_id=pid).delete()
-                    HospitalSummary.query.filter_by(patient_id=pid).delete()
-                    MedicalDocument.query.filter_by(patient_id=pid).delete()
-                    
-                    # Delete the patient
-                    db.session.delete(patient)
-                    deleted_count += 1
-            
-            db.session.commit()
-            app.logger.debug(f"Successfully deleted {deleted_count} patients")
-            
-            if deleted_count == 1:
-                flash(f'1 patient and all associated records have been deleted.', 'success')
-            else:
-                flash(f'{deleted_count} patients and all associated records have been deleted.', 'success')
-            
-            return redirect(url_for('patient_list'))
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f"Error in bulk patient deletion (array): {str(e)}")
-            flash(f'Error deleting patients: {str(e)}', 'danger')
+            # Delete the patient
+            db.session.delete(patient)
+            return True
+        return False
     
-    # Check if we have a comma-separated list of patient IDs
-    elif is_bulk_operation and patient_ids_str:
-        app.logger.debug(f"Bulk deletion requested with IDs: {patient_ids_str}")
-        # Bulk deletion
+    # Handle bulk deletion - either from array or comma-separated string
+    if is_bulk_operation and (selected_patients or patient_ids_str):
+        app.logger.debug(f"Bulk deletion requested")
         try:
-            patient_ids = [int(id.strip()) for id in patient_ids_str.split(',') if id.strip()]
-            app.logger.debug(f"Parsed patient IDs: {patient_ids}")
+            patient_ids = []
+            
+            # Get patient IDs from either source
+            if selected_patients:
+                patient_ids = [int(pid) for pid in selected_patients if pid.strip()]
+                app.logger.debug(f"Using array format - parsed patient IDs: {patient_ids}")
+            elif patient_ids_str:
+                patient_ids = [int(id.strip()) for id in patient_ids_str.split(',') if id.strip()]
+                app.logger.debug(f"Using comma-separated format - parsed patient IDs: {patient_ids}")
+            
+            if not patient_ids:
+                flash('No valid patients were selected for deletion.', 'warning')
+                return redirect(url_for('patient_list'))
+            
             deleted_count = 0
             
+            # Delete each patient
             for pid in patient_ids:
-                patient = Patient.query.get(pid)
-                if patient:
-                    app.logger.debug(f"Deleting patient ID {pid}: {patient.full_name}")
-                    # Delete all related records first to avoid foreign key constraint errors
-                    # The cascade delete should handle most of these, but we'll be explicit
-                    Vital.query.filter_by(patient_id=pid).delete()
-                    Condition.query.filter_by(patient_id=pid).delete()
-                    Screening.query.filter_by(patient_id=pid).delete()
-                    Appointment.query.filter_by(patient_id=pid).delete()
-                    Visit.query.filter_by(patient_id=pid).delete()
-                    LabResult.query.filter_by(patient_id=pid).delete()
-                    ImagingStudy.query.filter_by(patient_id=pid).delete()
-                    ConsultReport.query.filter_by(patient_id=pid).delete()
-                    HospitalSummary.query.filter_by(patient_id=pid).delete()
-                    MedicalDocument.query.filter_by(patient_id=pid).delete()
-                    
-                    # Delete the patient
-                    db.session.delete(patient)
+                if delete_patient_with_records(pid):
                     deleted_count += 1
             
+            # Commit all deletions at once
             db.session.commit()
             app.logger.debug(f"Successfully deleted {deleted_count} patients")
             
@@ -3531,6 +3507,7 @@ def delete_patient(patient_id):
             db.session.rollback()
             app.logger.error(f"Error in bulk patient deletion: {str(e)}")
             flash(f'Error deleting patients: {str(e)}', 'danger')
+    
     elif patient_id == 0:
         # Bulk operation requested but no patients selected
         flash('No patients were selected for deletion.', 'warning')
@@ -3541,47 +3518,13 @@ def delete_patient(patient_id):
         patient_name = patient.full_name
         
         try:
-            # Delete all related records first to avoid foreign key constraint errors
-            # The cascade delete should handle most of these, but we'll be explicit
-            
-            # Delete vitals
-            Vital.query.filter_by(patient_id=patient_id).delete()
-            
-            # Delete conditions
-            Condition.query.filter_by(patient_id=patient_id).delete()
-            
-            # Delete screenings
-            Screening.query.filter_by(patient_id=patient_id).delete()
-            
-            # Delete appointments
-            appointment_count = Appointment.query.filter_by(patient_id=patient_id).count()
-            app.logger.debug(f"Deleting {appointment_count} appointments for patient {patient_id}")
-            Appointment.query.filter_by(patient_id=patient_id).delete()
-            
-            # Delete visits
-            Visit.query.filter_by(patient_id=patient_id).delete()
-            
-            # Delete lab results
-            LabResult.query.filter_by(patient_id=patient_id).delete()
-            
-            # Delete imaging studies
-            ImagingStudy.query.filter_by(patient_id=patient_id).delete()
-            
-            # Delete consult reports
-            ConsultReport.query.filter_by(patient_id=patient_id).delete()
-            
-            # Delete hospital summaries
-            HospitalSummary.query.filter_by(patient_id=patient_id).delete()
-            
-            # Delete medical documents
-            MedicalDocument.query.filter_by(patient_id=patient_id).delete()
-            
-            # Finally, delete the patient
-            db.session.delete(patient)
-            db.session.commit()
-            app.logger.debug(f"Successfully deleted patient {patient_id}: {patient_name}")
-            
-            flash(f'Patient {patient_name} and all associated records have been deleted.', 'success')
+            if delete_patient_with_records(patient_id):
+                db.session.commit()
+                app.logger.debug(f"Successfully deleted patient {patient_id}: {patient_name}")
+                flash(f'Patient {patient_name} and all associated records have been deleted.', 'success')
+            else:
+                flash(f'Patient not found.', 'warning')
+                
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Error deleting patient: {str(e)}")
