@@ -67,6 +67,61 @@ def add_test_patients():
             'email': 'emma.wilson@test.com',
             'address': '654 Maple Dr, Test City, TC 12345',
             'insurance': 'Kaiser Permanente'
+        },
+        {
+            'first_name': 'James',
+            'last_name': 'Rodriguez',
+            'date_of_birth': date(1975, 1, 25),
+            'sex': 'Male',
+            'mrn': f'TEST{random.randint(10000, 99999)}',
+            'phone': '555-0106',
+            'email': 'james.rodriguez@test.com',
+            'address': '890 Cedar Ln, Test City, TC 12345',
+            'insurance': 'Humana'
+        },
+        {
+            'first_name': 'Sarah',
+            'last_name': 'Thompson',
+            'date_of_birth': date(1995, 6, 3),
+            'sex': 'Female',
+            'mrn': f'TEST{random.randint(10000, 99999)}',
+            'phone': '555-0107',
+            'email': 'sarah.thompson@test.com',
+            'address': '432 Birch St, Test City, TC 12345',
+            'insurance': 'Blue Cross Blue Shield'
+        },
+        {
+            'first_name': 'Michael',
+            'last_name': 'Chen',
+            'date_of_birth': date(1963, 11, 18),
+            'sex': 'Male',
+            'mrn': f'TEST{random.randint(10000, 99999)}',
+            'phone': '555-0108',
+            'email': 'michael.chen@test.com',
+            'address': '567 Spruce Ave, Test City, TC 12345',
+            'insurance': 'Medicare'
+        },
+        {
+            'first_name': 'Jennifer',
+            'last_name': 'Garcia',
+            'date_of_birth': date(1989, 4, 14),
+            'sex': 'Female',
+            'mrn': f'TEST{random.randint(10000, 99999)}',
+            'phone': '555-0109',
+            'email': 'jennifer.garcia@test.com',
+            'address': '123 Willow Way, Test City, TC 12345',
+            'insurance': 'Tricare'
+        },
+        {
+            'first_name': 'Robert',
+            'last_name': 'Anderson',
+            'date_of_birth': date(1981, 12, 7),
+            'sex': 'Male',
+            'mrn': f'TEST{random.randint(10000, 99999)}',
+            'phone': '555-0110',
+            'email': 'robert.anderson@test.com',
+            'address': '789 Poplar Pl, Test City, TC 12345',
+            'insurance': 'Medicaid'
         }
     ]
     
