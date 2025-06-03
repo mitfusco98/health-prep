@@ -6,7 +6,6 @@ from jwt_utils import generate_jwt_token, jwt_required, refresh_token
 import logging
 from datetime import datetime, timedelta
 import jwt
-import bcrypt
 import secrets
 import uuid
 from structured_logging import get_structured_logger
