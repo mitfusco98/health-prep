@@ -334,12 +334,7 @@ def format_log_details(log):
                             change_label = display_key.replace('_', ' ').title()
                             formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <span class='text-primary'>{change_value}</span>")
 
-                # Show form data fields (what was submitted)
-                if event_data.get('form_data') and isinstance(event_data['form_data'], dict):
-                    form_data = event_data['form_data']
-                    field_names = [field for field in form_data.keys() if field != 'csrf_token']
-                    if field_names:
-                        formatted_details.append(f"<div class='mt-1'><small class='text-muted'>Form Fields: {', '.join(field_names)}</small></div>")
+                
 
                 # Show relevant technical details
                 relevant_details = []
