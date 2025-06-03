@@ -87,9 +87,8 @@
                                 <td><span class="badge bg-secondary text-white" style="font-size: 0.7em;">{{ log.event_type }}</span></td>
                                 <td><strong>{{ log.user.username if log.user else 'System' }}</strong></td>
                                 <td>
-                                    <div style="font-size: 0.8em; max-width: 300px;">
-                                        {% set details = format_event_details(log) %}
-                                        {{ details[:150]|safe }}{% if details|length > 150 %}...{% endif %}
+                                    <div style="font-size: 0.85em; max-width: 500px;">
+                                        {{ format_event_details(log)|safe }}
                                     </div>
                                 </td>
                             </tr>

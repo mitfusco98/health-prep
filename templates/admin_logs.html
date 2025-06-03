@@ -1,2 +1,5 @@
-The code has been modified to enhance the admin logs table with improved readability, custom styles, and hover effects.
-```
+<td class="text-muted small">
+    <div style="max-width: 600px;">
+        {{ format_log_details(log)|safe }}
+    </div>
+</td>

@@ -260,7 +260,7 @@ def admin_log_stats():
 def format_log_details(log):
     """
     Format event details for display in admin logs
-    Limited to view, edit, delete, and add actions with proper patient information
+    Show full details with page address and complete information
     """
     # Parse event details if it's JSON
     if log.event_details:
@@ -291,6 +291,18 @@ def format_log_details(log):
                 
                 # Start with standardized action
                 formatted_details.append(f"<span class='badge bg-dark'>Action: {action.title()}</span>")
+
+                # Show page address/endpoint prominently
+                page_address = None
+                if 'endpoint' in event_data:
+                    page_address = event_data['endpoint']
+                elif 'route' in event_data:
+                    page_address = event_data['route']
+                elif 'path' in event_data:
+                    page_address = event_data['path']
+                
+                if page_address:
+                    formatted_details.append(f"<span class='badge bg-primary'>Page: {page_address}</span>")
 
                 # For appointment-related actions, ensure we always show patient info
                 if 'appointment' in event_type:
@@ -332,15 +344,33 @@ def format_log_details(log):
                             change_label = change_key.replace('_', ' ').title()
                             formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <code>{change_value}</code>")
 
-                # Show minimal additional context
-                if 'endpoint' in event_data:
-                    formatted_details.append(f"<small class='text-muted'>Endpoint: {event_data['endpoint']}</small>")
+                # Show full details section
+                formatted_details.append("<div class='mt-2'><strong>Full Details:</strong></div>")
+                formatted_details.append("<div class='small text-muted' style='background-color: #f8f9fa; padding: 8px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; word-break: break-all;'>")
+                
+                # Format the full event data nicely
+                try:
+                    formatted_json = json.dumps(event_data, indent=2, default=str)
+                    formatted_details.append(formatted_json)
+                except:
+                    formatted_details.append(str(event_data))
+                
+                formatted_details.append("</div>")
 
                 return "<br>".join(formatted_details)
         except Exception as e:
             # Log the parsing error but don't show it to users
             pass
 
-    # If parsing fails, return simplified format
+    # If parsing fails, show raw event details
+    if log.event_details:
+        formatted_details = []
+        action_type = log.event_type.replace('_', ' ').title()
+        formatted_details.append(f"<span class='badge bg-secondary'>{action_type}</span>")
+        formatted_details.append("<div class='mt-2'><strong>Raw Details:</strong></div>")
+        formatted_details.append(f"<div class='small text-muted' style='background-color: #f8f9fa; padding: 8px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; word-break: break-all;'>{log.event_details}</div>")
+        return "<br>".join(formatted_details)
+    
+    # Minimal fallback
     action_type = log.event_type.replace('_', ' ').title()
     return f"<span class='badge bg-secondary'>{action_type}</span>"
