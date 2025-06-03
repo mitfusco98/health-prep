@@ -13,6 +13,8 @@ import uuid
 import threading
 import time
 from structured_logging import get_structured_logger
+from functools import wraps
+
 
 # Create logger for API access middleware
 logger = logging.getLogger(__name__)
@@ -111,78 +113,102 @@ class APIAccessLogger:
     }
 
     @staticmethod
-    def log_api_access(route, user_id=None, additional_data=None):
+    def log_api_access(route, user=None, additional_data=None):
         """
-        Log API access to admin logs with standardized format.
+        Log API access for audit purposes with rate limiting to prevent spam
 
         Args:
-            route: The API route being accessed
-            user_id: ID of the user accessing the API
-            additional_data: Additional context data for the access
+            route: The route/endpoint being accessed
+            user: User object (optional)
+            additional_data: Dictionary of additional data to log
         """
         try:
-            # Get user info
-            user = None
-            if user_id:
-                user = User.query.get(user_id)
-            elif session.get('user_id'):
-                user = User.query.get(session.get('user_id'))
-
-            # Check for duplicate requests using in-memory cache
-            method = request.method if request else 'GET'
-            user_identifier = user.id if user else 'anonymous'
-
-            if _is_duplicate_request(user_identifier, route, method):
-                logger.debug(f"Skipping duplicate request: {user_identifier}:{route}:{method}")
+            # Skip logging for certain routes to avoid spam
+            skip_routes = ['/static/', '/favicon.ico', '/health', '/ping']
+            if any(skip_route in route for skip_route in skip_routes):
                 return
 
-            # Generate unique access ID for tracking
-            access_id = str(uuid.uuid4())[:8]
+            # Get user from session if not provided
+            if not user and request and session and session.get('user_id'):
+                try:
+                    from models import User
+                    user = User.query.get(session.get('user_id'))
+                except Exception:
+                    pass
 
-            # Collect request details
-            request_details = {
-                'access_id': access_id,
-                'route': route,
-                'method': request.method if request else 'UNKNOWN',
-                'user_agent': request.headers.get('User-Agent', 'Unknown') if request else 'Unknown',
-                'ip_address': request.remote_addr if request else 'Unknown',
-                'query_params': dict(request.args) if request and request.args else {},
-                'content_type': request.content_type if request else 'Unknown',
-                'user_id': user.id if user else None,
-                'username': user.username if user else 'Anonymous'
-            }
+            # Rate limiting check
+            user_id_for_rate_limit = user.id if user else session.get('user_id', 0)
+            if _is_duplicate_request(user_id_for_rate_limit, route, request.method if request else 'UNKNOWN'):
+                return
 
-            # Add additional data if provided
-            if additional_data:
-                request_details.update(additional_data)
+            # Generate unique access ID for this request
+            access_id = str(uuid.uuid4())
 
-            # Create admin log entry
-            admin_log = AdminLog(
-                user_id=user.id if user else None,
-                event_type='data_access',
-                event_details=str(request_details),
-                request_id=access_id,
-                ip_address=request.remote_addr if request else 'Unknown'
-            )
+            # Log the access attempt
+            if user:
+                logger.info(f"API Access: {route} by user {user.username} (ID: {user.id})")
+            else:
+                logger.info(f"API Access: {route} by anonymous user")
 
-            db.session.add(admin_log)
-            db.session.commit()
+            # Only log to admin_logs for significant routes and non-GET requests
+            significant_routes = [
+                '/admin', '/delete', '/edit', '/add', '/patient/', '/appointment',
+                '/condition', '/immunization', '/vital', '/visit', '/lab', '/imaging',
+                '/consult', '/hospital', '/screening', '/document', '/upload'
+            ]
 
-            # Log to application logger as well
-            username = user.username if user else 'Anonymous'
-            user_id = user.id if user else 'No ID'
-            ip_addr = request.remote_addr if request else 'Unknown'
-            method = request.method if request else 'UNKNOWN'
-            
-            logger.info(
-                f"API access [{access_id}] to {route}: "
-                f"User: {username} ({user_id}), "
-                f"IP: {ip_addr}, Method: {method}"
-            )
+            # Check if this is a significant route or non-GET request
+            is_significant = (any(sig_route in route for sig_route in significant_routes) or 
+                         (request and request.method != 'GET'))
+
+            if is_significant:
+                # Get proper user information
+                user_id = user.id if user else session.get('user_id')
+                username = user.username if user else session.get('username', 'Anonymous')
+
+                # Collect comprehensive request details as JSON
+                request_details = {
+                    'access_id': access_id,
+                    'route': route,
+                    'method': request.method if request else 'UNKNOWN',
+                    'user_agent': request.headers.get('User-Agent', 'Unknown') if request else 'Unknown',
+                    'ip_address': request.remote_addr if request else 'Unknown',
+                    'query_params': dict(request.args) if request and request.args else {},
+                    'content_type': request.content_type if request else 'Unknown',
+                    'user_id': user_id,
+                    'username': username,
+                    'session_id': session.get('session_id', 'Unknown') if session else 'Unknown',
+                    'timestamp': datetime.now().isoformat()
+                }
+
+                # Add additional data if provided
+                if additional_data:
+                    request_details.update(additional_data)
+
+                # Store as proper JSON string
+                import json
+                event_details_json = json.dumps(request_details, default=str)
+
+                # Create admin log entry with proper JSON formatting
+                admin_log = AdminLog(
+                    user_id=user_id,
+                    event_type='data_access',
+                    event_details=event_details_json,
+                    request_id=access_id,
+                    ip_address=request.remote_addr if request else 'Unknown',
+                    user_agent=request.headers.get('User-Agent', 'Unknown') if request else 'Unknown'
+                )
+
+                db.session.add(admin_log)
+                db.session.commit()
 
         except Exception as e:
-            logger.error(f"Failed to log API access: {str(e)}")
-            # Don't raise exception to avoid breaking the main application flow
+            logger.error(f"Error logging API access: {str(e)}")
+            # Don't let logging errors break the application
+            try:
+                db.session.rollback()
+            except:
+                pass
 
     @staticmethod
     def should_log_route(route_path):

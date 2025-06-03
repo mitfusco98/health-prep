@@ -480,6 +480,7 @@ class AdminLog(db.Model):
             return {}
         try:
             # First try to parse as JSON
+            import json
             return json.loads(self.event_details)
         except (json.JSONDecodeError, TypeError):
             # If JSON parsing fails, try to evaluate as Python dict
@@ -487,7 +488,17 @@ class AdminLog(db.Model):
                 import ast
                 return ast.literal_eval(self.event_details)
             except (ValueError, SyntaxError):
-                return {'raw': self.event_details}
+                # If both fail, try to extract basic info from string format
+                try:
+                    # Handle old string format like "{'route': '/path', 'method': 'GET'}"
+                    if self.event_details.strip().startswith('{') and self.event_details.strip().endswith('}'):
+                        # Try to fix common formatting issues
+                        fixed_details = self.event_details.replace("'", '"')
+                        return json.loads(fixed_details)
+                except:
+                    pass
+                # Return raw string in a dict if all else fails
+                return {'raw': self.event_details, 'parsed': False}
     
     @classmethod
     def log_event(cls, event_type, user_id=None, event_details=None, request_id=None, ip_address=None, user_agent=None):

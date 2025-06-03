@@ -4,6 +4,12 @@ from app import app, db, csrf
 from models import User
 from jwt_utils import generate_jwt_token, jwt_required, refresh_token
 import logging
+from datetime import datetime, timedelta
+import jwt
+import bcrypt
+import secrets
+import uuid
+from structured_logging import get_structured_logger
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +71,37 @@ def jwt_login():
         ).first()
 
         if not user or not user.check_password(password):
-            logger.warning(f"Failed login attempt for username: {username}")
+            flash('Invalid username or password', 'error')
+
+        # Log failed login attempt with details
+        from models import AdminLog
+        import json
+
+        failed_login_details = {
+            'attempted_username': username,
+            'login_method': 'web_form',
+            'ip_address': request.remote_addr,
+            'user_agent': request.headers.get('User-Agent', 'Unknown'),
+            'reason': 'invalid_credentials',
+            'timestamp': datetime.now().isoformat()
+        }
+
+        AdminLog.log_event(
+            event_type='login_fail',
+            user_id=None,
+            event_details=json.dumps(failed_login_details),
+            request_id=str(uuid.uuid4()),
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent', 'Unknown')
+        )
+
+        # Log failed login attempt
+        structured_logger.log_authentication_event(
+            event_type='login',
+            username=username,
+            success=False,
+            reason='invalid_credentials'
+        )
             return jsonify({'error': 'Invalid username or password'}), 401
 
         # Generate JWT token with admin role
