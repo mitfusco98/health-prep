@@ -220,5 +220,5 @@ def after_cursor_execute(conn, cursor, statement, parameters, context, executema
         profiler.record_db_query(statement, duration)
         
         # Log only extremely slow queries to reduce console noise
-        if duration > 500:
+        if duration > 1000:  # Increased threshold to 1 second
             logger.warning(f"Slow database query ({duration:.2f}ms): {str(statement)[:100]}...")
