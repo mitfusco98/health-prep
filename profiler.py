@@ -211,14 +211,18 @@ profiler = AppProfiler()
 # Database query profiling
 @event.listens_for(Engine, "before_cursor_execute")
 def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-    context._query_start_time = time.time()
+    # Use high-precision timer for better accuracy
+    context._query_start_time = time.perf_counter()
 
 @event.listens_for(Engine, "after_cursor_execute")
 def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
     if hasattr(context, '_query_start_time'):
-        duration = (time.time() - context._query_start_time) * 1000
-        profiler.record_db_query(statement, duration)
+        duration = (time.perf_counter() - context._query_start_time) * 1000
         
-        # Log only extremely slow queries to reduce console noise
-        if duration > 1000:  # Increased threshold to 1 second
-            logger.warning(f"Slow database query ({duration:.2f}ms): {str(statement)[:100]}...")
+        # Only record queries over 50ms to reduce profiling overhead
+        if duration > 50:
+            profiler.record_db_query(statement, duration)
+            
+            # Log only extremely slow queries to reduce console noise
+            if duration > 1000:  # Threshold at 1 second
+                logger.warning(f"Slow database query ({duration:.2f}ms): {str(statement)[:100]}...")

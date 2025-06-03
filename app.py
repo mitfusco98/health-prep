@@ -97,9 +97,14 @@ app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///healthcare.db
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
-    "pool_pre_ping": True,
-    "pool_timeout": 30,
-    "connect_args": {"connect_timeout": 10}
+    "pool_pre_ping": False,  # Disable pre-ping to reduce blocking operations
+    "pool_timeout": 10,      # Reduced from 30 to avoid long waits
+    "pool_size": 20,         # Increased pool size for better concurrency
+    "max_overflow": 30,      # Allow more overflow connections
+    "connect_args": {
+        "connect_timeout": 5,    # Reduced connection timeout
+        "application_name": "healthprep_app"
+    }
 }
 
 # Initialize the app with the extension
@@ -157,8 +162,8 @@ def before_request():
             from flask import abort
             abort(400, description="Patient ID must be a valid number")
 
-    # Reduce frequent database pings - only ping for critical operations
-    if request.method in ['POST', 'PUT', 'DELETE'] or 'admin' in request.path:
+    # Only check database connection for critical admin operations
+    if 'admin' in request.path and request.method in ['POST', 'PUT', 'DELETE']:
         try:
             with db.engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
@@ -458,24 +463,21 @@ def validate_csrf_for_state_changes():
             abort(403, description="CSRF token required for form requests")
 
 def validate_uploaded_file(file):
-    """Validate uploaded files for security"""
+    """Validate uploaded files for security - optimized for non-blocking validation"""
     import mimetypes
     import magic
 
-    # Check file size (10MB limit)
-    file.seek(0, 2)  # Seek to end
-    file_size = file.tell()
-    file.seek(0)  # Reset to beginning
-
-    if file_size > 10 * 1024 * 1024:  # 10MB
-        return False
-
-    # Check filename for malicious patterns
+    # Quick size check without seeking to end (non-blocking)
+    if hasattr(file, 'content_length') and file.content_length:
+        if file.content_length > 10 * 1024 * 1024:  # 10MB
+            return False
+    
+    # Check filename for malicious patterns (fast check)
     filename = file.filename.lower()
     if any(char in filename for char in ['..', '/', '\\', ':', '*', '?', '"', '<', '>', '|']):
         return False
 
-    # Check for executable file extensions
+    # Check for executable file extensions (fast check)
     dangerous_extensions = [
         '.exe', '.bat', '.cmd', '.com', '.scr', '.pif', '.vbs', '.js', 
         '.jar', '.app', '.deb', '.rpm', '.dmg', '.pkg', '.sh', '.ps1'
@@ -483,10 +485,11 @@ def validate_uploaded_file(file):
     if any(filename.endswith(ext) for ext in dangerous_extensions):
         return False
 
-    # Validate MIME type using python-magic
+    # Optimized MIME type validation - read smaller chunk and cache position
     try:
-        file_content = file.read(1024)  # Read first 1KB for magic number check
-        file.seek(0)  # Reset to beginning
+        current_pos = file.tell()
+        file_content = file.read(512)  # Reduced from 1KB to 512 bytes for faster processing
+        file.seek(current_pos)  # Reset to original position
 
         detected_mime = magic.from_buffer(file_content, mime=True)
 

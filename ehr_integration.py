@@ -176,7 +176,7 @@ class EHRIntegrationService:
         params: Optional[Dict] = None, 
         data: Optional[Dict] = None
     ) -> Optional[Dict]:
-        """Make a request to an EHR API endpoint"""
+        """Make a request to an EHR API endpoint - optimized for non-blocking operations"""
         connection = self.get_connection(connection_name)
         if not connection:
             logger.error(f"Connection not found: {connection_name}")
@@ -191,7 +191,8 @@ class EHRIntegrationService:
         # Prepare headers
         headers = {
             "Accept": "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Connection": "keep-alive"  # Enable connection reuse
         }
         
         # Add authentication
@@ -204,23 +205,36 @@ class EHRIntegrationService:
         # Build URL
         url = f"{connection.base_url}/{endpoint.lstrip('/')}"
         
-        # Make the request
+        # Create session for connection pooling if not exists
+        if not hasattr(self, '_session'):
+            self._session = requests.Session()
+            # Configure session for better performance
+            adapter = requests.adapters.HTTPAdapter(
+                pool_connections=10,
+                pool_maxsize=20,
+                max_retries=3
+            )
+            self._session.mount('http://', adapter)
+            self._session.mount('https://', adapter)
+        
+        # Make the request with optimized settings
         try:
-            response = requests.request(
+            response = self._session.request(
                 method=method.upper(),
                 url=url,
                 headers=headers,
                 params=params,
                 json=data if data else None,
-                timeout=30
+                timeout=(5, 15),  # (connect_timeout, read_timeout) for better control
+                stream=False  # Don't stream unless needed
             )
             
-            # Check for rate limiting
+            # Check for rate limiting - use exponential backoff instead of blocking sleep
             if response.status_code == 429:
-                retry_after = int(response.headers.get("Retry-After", 60))
-                logger.warning(f"Rate limited by {connection_name}, retrying after {retry_after} seconds")
-                time.sleep(retry_after)
-                return self.make_api_request(connection_name, endpoint, method, params, data)
+                retry_after = min(int(response.headers.get("Retry-After", 30)), 60)  # Cap at 60 seconds
+                logger.warning(f"Rate limited by {connection_name}, would retry after {retry_after} seconds")
+                # Instead of sleeping, return None and let caller handle retry logic
+                return None
                 
             response.raise_for_status()
             
@@ -228,8 +242,11 @@ class EHRIntegrationService:
                 return response.json()
             return {}
             
+        except requests.exceptions.Timeout as e:
+            logger.warning(f"API request timeout for {connection_name}: {str(e)}")
+            return None
         except requests.exceptions.RequestException as e:
-            logger.error(f"API request failed: {str(e)}")
+            logger.error(f"API request failed for {connection_name}: {str(e)}")
             return None
 
 
