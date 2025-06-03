@@ -2,6 +2,10 @@
 
 {% block title %}HealthPrep - All Visits{% endblock %}
 
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
 {% block content %}
 <div class="row mb-4">
     <div class="col-md-12">
@@ -245,14 +249,37 @@ function deleteSelectedAppointments() {
         form.method = 'POST';
         form.action = '{{ url_for("delete_appointments_bulk") }}';
 
-        // Add CSRF token
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
+        // Add CSRF token - try multiple methods to get it
+        let csrfToken = null;
+
+        // Method 1: Try meta tag
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (csrfMeta) {
+            csrfToken = csrfMeta.getAttribute('content');
+        }
+
+        // Method 2: Try hidden input in existing forms
+        if (!csrfToken) {
+            const existingCsrfInput = document.querySelector('input[name="csrf_token"]');
+            if (existingCsrfInput) {
+                csrfToken = existingCsrfInput.value;
+            }
+        }
+
+        // Method 3: Try data attribute on body
+        if (!csrfToken) {
+            csrfToken = document.body.getAttribute('data-csrf-token');
+        }
+
         if (csrfToken) {
             const csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
             csrfInput.name = 'csrf_token';
-            csrfInput.value = csrfToken.getAttribute('content');
+            csrfInput.value = csrfToken;
             form.appendChild(csrfInput);
+            console.log('Added CSRF token to form:', csrfToken.substring(0, 10) + '...');
+        } else {
+            console.warn('No CSRF token found - form may fail');
         }
 
         // Add selected appointment IDs - create one input with comma-separated values
@@ -265,10 +292,6 @@ function deleteSelectedAppointments() {
         console.log('Submitting bulk delete form with appointment IDs:', appointmentIds.join(','));
 
         // Submit the form
-        document.body.appendChild(form);
-        form.submit();ntIds.join(',');
-        form.appendChild(input);
-
         document.body.appendChild(form);
         form.submit();
     }

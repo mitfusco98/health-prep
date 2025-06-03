@@ -3064,7 +3064,6 @@ def delete_appointment(appointment_id):
 @app.route('/delete_appointments_bulk', methods=['POST'])
 @csrf.exempt
 @fresh_session_operation
-@validate_bulk_delete_input
 def delete_appointments_bulk():
     """Delete multiple selected appointments"""
     try:

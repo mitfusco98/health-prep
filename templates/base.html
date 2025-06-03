@@ -8,6 +8,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>{% block title %}HealthPrep - Patient Visit Preparation{% endblock %}</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
@@ -134,7 +135,7 @@
 
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    
+
     <!-- Button Performance Optimization -->
     <script src="{{ url_for('static', filename='js/button-performance.js') }}"></script>
 
