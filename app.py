@@ -225,7 +225,7 @@ def add_security_headers(response):
     # Content Security Policy - restrictive but allows Bootstrap and Font Awesome
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net; "
         "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdn.replit.com cdnjs.cloudflare.com; "
         "font-src 'self' cdn.jsdelivr.net cdnjs.cloudflare.com; "
         "img-src 'self' data:; "
