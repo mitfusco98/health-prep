@@ -260,7 +260,7 @@ def admin_log_stats():
 def format_log_details(log):
     """
     Format event details for display in admin logs
-    Show full details with page address and complete information
+    Show relevant details and changes without code dumps
     """
     # Parse event details if it's JSON
     if log.event_details:
@@ -339,38 +339,45 @@ def format_log_details(log):
                 if action == "edit" and 'appointment_changes' in event_data:
                     changes = event_data['appointment_changes']
                     if changes:
-                        formatted_details.append("<strong>Changes:</strong>")
+                        formatted_details.append("<div class='mt-1'><strong>Changes Made:</strong></div>")
                         for change_key, change_value in changes.items():
                             change_label = change_key.replace('_', ' ').title()
-                            formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <code>{change_value}</code>")
+                            formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <span class='text-primary'>{change_value}</span>")
 
-                # Show full details section
-                formatted_details.append("<div class='mt-2'><strong>Full Details:</strong></div>")
-                formatted_details.append("<div class='small text-muted' style='background-color: #f8f9fa; padding: 8px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; word-break: break-all;'>")
-                
-                # Format the full event data nicely
-                try:
-                    formatted_json = json.dumps(event_data, indent=2, default=str)
-                    formatted_details.append(formatted_json)
-                except:
-                    formatted_details.append(str(event_data))
-                
-                formatted_details.append("</div>")
+                # Show relevant details section (not raw code)
+                relevant_details = []
+                for key, value in event_data.items():
+                    if key in ['endpoint', 'route', 'path', 'appointment_id', 'patient_name', 'patient_id', 'appointment_changes']:
+                        continue  # Already shown above
+                    
+                    # Include meaningful details only
+                    if key in ['form_data', 'method', 'user_agent', 'ip_address', 'status_code', 'error_message', 'description']:
+                        if key == 'form_data' and isinstance(value, dict):
+                            # Show form fields but not their values for privacy
+                            field_names = [field for field in value.keys() if field != 'csrf_token']
+                            if field_names:
+                                relevant_details.append(f"Form fields: {', '.join(field_names)}")
+                        elif key == 'method':
+                            relevant_details.append(f"HTTP Method: {value}")
+                        elif key == 'status_code':
+                            relevant_details.append(f"Status: {value}")
+                        elif key == 'error_message':
+                            relevant_details.append(f"Error: {value}")
+                        elif key == 'description':
+                            relevant_details.append(f"Details: {value}")
+                        elif key not in ['user_agent']:  # Skip very long fields
+                            relevant_details.append(f"{key.replace('_', ' ').title()}: {str(value)[:100]}")
+
+                if relevant_details:
+                    formatted_details.append("<div class='mt-1 small text-muted'>")
+                    formatted_details.extend(relevant_details)
+                    formatted_details.append("</div>")
 
                 return "<br>".join(formatted_details)
         except Exception as e:
             # Log the parsing error but don't show it to users
             pass
 
-    # If parsing fails, show raw event details
-    if log.event_details:
-        formatted_details = []
-        action_type = log.event_type.replace('_', ' ').title()
-        formatted_details.append(f"<span class='badge bg-secondary'>{action_type}</span>")
-        formatted_details.append("<div class='mt-2'><strong>Raw Details:</strong></div>")
-        formatted_details.append(f"<div class='small text-muted' style='background-color: #f8f9fa; padding: 8px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; word-break: break-all;'>{log.event_details}</div>")
-        return "<br>".join(formatted_details)
-    
-    # Minimal fallback
+    # If parsing fails, show simplified format
     action_type = log.event_type.replace('_', ' ').title()
     return f"<span class='badge bg-secondary'>{action_type}</span>"
