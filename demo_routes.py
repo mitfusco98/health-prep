@@ -1671,6 +1671,9 @@ def admin_dashboard():
         flash('Access denied. Admin privileges required.', 'error')
         return redirect(url_for('login'))
     
+    # Import the format_event_details function
+    from admin_log_viewer import format_log_details as format_event_details
+    
     # Log admin dashboard access
     try:
         import uuid
@@ -1800,7 +1803,8 @@ def admin_dashboard():
                           recent_documents=recent_documents,
                           all_users=all_users,
                           admin_count=admin_count,
-                          db_stats=db_stats)
+                          db_stats=db_stats,
+                          format_event_details=format_event_details)
 
 # Error handlers
 @app.route('/admin/users/<int:user_id>/delete', methods=['GET', 'POST'])
