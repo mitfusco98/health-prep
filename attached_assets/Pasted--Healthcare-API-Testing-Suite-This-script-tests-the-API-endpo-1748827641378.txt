@@ -1,0 +1,252 @@
+    Healthcare API Testing Suite
+    ===========================
+    This script tests the API endpoints with edge cases and invalid input testing.
+    
+    Testing URL: http://localhost:5000
+    Mode: Comprehensive Testing
+    
+[01:26:40] [INFO] 🚀 Starting Comprehensive API Test Suite
+[01:26:40] [INFO] Testing API at: http://localhost:5000
+[01:26:42] [INFO] ✅ Server is accessible - Status: 200
+[01:26:42] [INFO] 
+=== TESTING AUTHENTICATION FLOW ===
+[01:26:42] [INFO] Testing POST /api/auth/register - Register user with invalid data
+[01:26:43] [INFO] Response: 400 - BAD REQUEST
+[01:26:43] [SUCCESS] ✅ PASS
+[01:26:43] [INFO] Response data: {
+  "error": "username is required"
+}...
+[01:26:43] [SUCCESS] ✅ PASS - User already exists (expected for repeated tests)
+[01:26:43] [INFO] Testing POST /api/auth/login - Login with invalid password
+[01:26:44] [INFO] Response: 401 - UNAUTHORIZED
+[01:26:44] [SUCCESS] ✅ PASS
+[01:26:44] [INFO] Response data: {
+  "error": "Invalid username or password"
+}...
+[01:26:44] [INFO] Testing POST /api/auth/login - Login with missing fields
+[01:26:44] [INFO] Response: 400 - BAD REQUEST
+[01:26:44] [SUCCESS] ✅ PASS
+[01:26:44] [INFO] Response data: {
+  "error": "Username and password are required"
+}...
+[01:26:44] [INFO] Testing POST /api/auth/login - User login with valid credentials
+[01:26:45] [INFO] Response: 200 - OK
+[01:26:45] [SUCCESS] ✅ PASS
+[01:26:45] [INFO] Response data: {
+  "user": {
+    "email": "apitest@example.com",
+    "id": 3,
+    "is_admin": false,
+    "username": "api_test_user"
+  }
+}...
+[01:26:45] [INFO] Testing GET /api/auth/verify - Verify authentication token
+[01:26:45] [INFO] Response: 200 - OK
+[01:26:45] [SUCCESS] ✅ PASS
+[01:26:45] [INFO] Response data: {
+  "user": {
+    "email": "apitest@example.com",
+    "id": 3,
+    "is_admin": false,
+    "username": "api_test_user"
+  },
+  "valid": true
+}...
+[01:26:45] [INFO] Testing POST /api/auth/refresh - Refresh authentication token
+[01:26:46] [INFO] Response: 200 - OK
+[01:26:46] [SUCCESS] ✅ PASS
+[01:26:46] [INFO] Response data: {
+  "success": true
+}...
+[01:26:46] [INFO] Testing POST /api/auth/logout - User logout
+[01:26:46] [INFO] Response: 200 - OK
+[01:26:46] [SUCCESS] ✅ PASS
+[01:26:46] [INFO] Response data: {
+  "message": "Logout successful",
+  "success": true
+}...
+[01:26:46] [INFO] 
+=== TESTING PATIENTS API ===
+[01:26:47] [INFO] Testing GET /api/patients - Get patients list
+[01:26:47] [INFO] Response: 200 - OK
+[01:26:47] [SUCCESS] ✅ PASS
+[01:26:47] [INFO] Response data: {
+  "pagination": {
+    "has_next": false,
+    "has_prev": false,
+    "next_num": null,
+    "page": 1,
+    "pages": 1,
+    "per_page": 20,
+    "prev_num": null,
+    "total": 12
+  },
+  "patients": [
+  ...
+[01:26:47] [INFO] Testing GET /api/patients?page=-1&per_page=0 - Get patients with invalid pagination
+[01:26:48] [INFO] Response: 400 - BAD REQUEST
+[01:26:48] [SUCCESS] ✅ PASS
+[01:26:48] [INFO] Response data: {
+  "error": "page must be a positive integer"
+}...
+[01:26:48] [INFO] Testing GET /api/patients?page=999999&per_page=1000 - Get patients with extreme pagination (should fail due to per_page limit)
+[01:26:49] [INFO] Response: 400 - BAD REQUEST
+[01:26:49] [SUCCESS] ✅ PASS
+[01:26:49] [INFO] Response data: {
+  "error": "per_page must be between 1 and 100"
+}...
+[01:26:49] [INFO] Testing GET /api/patients?search='; DROP TABLE patients; -- - Test SQL injection protection in search
+[01:26:49] [INFO] Response: 200 - OK
+[01:26:49] [SUCCESS] ✅ PASS
+[01:26:49] [INFO] Response data: {
+  "pagination": {
+    "has_next": false,
+    "has_prev": false,
+    "next_num": null,
+    "page": 1,
+    "pages": 0,
+    "per_page": 20,
+    "prev_num": null,
+    "total": 0
+  },
+  "patients": [],
+ ...
+[01:26:49] [INFO] Testing GET /api/patients?search=<script>alert('xss')</script> - Test XSS protection in search
+[01:26:50] [INFO] Response: 200 - OK
+[01:26:50] [SUCCESS] ✅ PASS
+[01:26:50] [INFO] Response data: {
+  "pagination": {
+    "has_next": false,
+    "has_prev": false,
+    "next_num": null,
+    "page": 1,
+    "pages": 0,
+    "per_page": 20,
+    "prev_num": null,
+    "total": 0
+  },
+  "patients": [],
+ ...
+[01:26:50] [INFO] Testing POST /api/patients - Create patient with invalid data
+[01:26:50] [INFO] Response: 400 - BAD REQUEST
+[01:26:50] [SUCCESS] ✅ PASS
+[01:26:50] [INFO] Response data: {
+  "details": [
+    "first_name is required"
+  ],
+  "error": "Validation failed"
+}...
+[01:26:50] [INFO] Testing POST /api/patients - Create patient with extremely long data
+[01:26:51] [INFO] Response: 413 - REQUEST ENTITY TOO LARGE
+[01:26:51] [SUCCESS] ✅ PASS
+[01:26:51] [INFO] Response data: {
+  "error": "Request too large. Total data exceeds maximum size."
+}...
+[01:26:51] [INFO] Testing POST /api/patients - Create valid patient
+[01:26:53] [INFO] Response: 201 - CREATED
+[01:26:53] [SUCCESS] ✅ PASS
+[01:26:53] [INFO] Response data: {
+  "address": "",
+  "age": 35,
+  "created_at": "2025-06-02T01:26:51.938774",
+  "date_of_birth": "1990-01-01",
+  "email": "test.patient@example.com",
+  "first_name": "Test",
+  "full_name": "Test Patie...
+[01:26:53] [INFO] Testing GET /api/patients/999999 - Get non-existent patient
+[01:26:53] [INFO] Response: 404 - NOT FOUND
+[01:26:53] [SUCCESS] ✅ PASS
+[01:26:53] [INFO] Response data: {
+  "error": "Patient not found"
+}...
+[01:26:53] [INFO] Testing GET /api/patients/invalid-id - Get patient with invalid ID format
+[01:26:53] [INFO] Response: 400 - BAD REQUEST
+[01:26:53] [SUCCESS] ✅ PASS
+[01:26:53] [INFO] Response text: <!doctype html>
+<html lang=en>
+<title>400 Bad Request</title>
+<h1>Bad Request</h1>
+<p>Patient ID must be a valid number</p>
+...
+[01:26:53] [INFO] 
+=== TESTING APPOINTMENTS API ===
+[01:26:54] [INFO] Testing GET /api/appointments - Get today's appointments
+[01:26:55] [INFO] Response: 200 - OK
+[01:26:55] [SUCCESS] ✅ PASS
+[01:26:55] [INFO] Response data: {
+  "appointments": [
+    {
+      "appointment_date": "2025-06-02",
+      "appointment_time": "09:15",
+      "id": 160,
+      "note": "Blood pressure cherck",
+      "patient_id": 5,
+      "patient_mrn...
+[01:26:55] [INFO] Testing GET /api/appointments?date=invalid-date - Get appointments with invalid date format
+[01:26:55] [INFO] Response: 400 - BAD REQUEST
+[01:26:55] [SUCCESS] ✅ PASS
+[01:26:55] [INFO] Response data: {
+  "error": "Date must be in YYYY-MM-DD format"
+}...
+[01:26:55] [INFO] Testing GET /api/appointments?date=2025-12-31 - Get appointments for future date 2025-12-31
+[01:26:56] [INFO] Response: 200 - OK
+[01:26:56] [SUCCESS] ✅ PASS
+[01:26:56] [INFO] Response data: {
+  "appointments": [],
+  "date": "2025-12-31",
+  "total": 0
+}...
+[01:26:56] [INFO] Testing GET /api/appointments?date=1900-01-01 - Get appointments for very old date 1900-01-01
+[01:26:56] [INFO] Response: 400 - BAD REQUEST
+[01:26:56] [SUCCESS] ✅ PASS
+[01:26:56] [INFO] Response data: {
+  "error": "Date must be within reasonable range (1950-2050)"
+}...
+[01:26:56] [INFO] 
+=== TESTING SECURITY VULNERABILITIES ===
+[01:26:57] [INFO] ✅ CSRF protection appears active
+[01:26:57] [INFO] ✅ No stack traces in error responses
+[01:26:57] [INFO] Testing GET /api/../../../etc/passwd - Test directory traversal protection
+[01:26:57] [INFO] Response: 404 - NOT FOUND
+[01:26:57] [SUCCESS] ✅ PASS
+[01:26:57] [INFO] Response text: <!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Cache control -->
+    <meta ...
+[01:26:57] [INFO] 
+=== TESTING ERROR HANDLING ===
+[01:26:57] [INFO] Testing GET /api/patients - Access protected endpoint without auth
+[01:26:58] [INFO] Response: 401 - UNAUTHORIZED
+[01:26:58] [SUCCESS] ✅ PASS
+[01:26:58] [INFO] Response data: {
+  "error": "Authorization token is required"
+}...
+[01:26:58] [INFO] Testing GET /api/nonexistent - Access non-existent endpoint
+[01:26:58] [INFO] Response: 404 - NOT FOUND
+[01:26:58] [SUCCESS] ✅ PASS
+[01:26:58] [INFO] Response text: <!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Cache control -->
+    <meta ...
+[01:26:58] [SUCCESS] ✅ PASS - Malformed JSON handled correctly
+[01:26:59] [INFO] ✅ Large payload protection active
+[01:26:59] [INFO] 
+=== TESTING RATE LIMITING ===
+[01:26:59] [SUCCESS] ✅ PASS - Rate limiting active after 2 requests
+[01:26:59] [INFO] 
+=== TESTING PERFORMANCE ===
+[01:27:00] [INFO] ✅ /api/patients responded in 257.61ms
+[01:27:00] [INFO] ✅ /api/appointments responded in 259.96ms
+[01:27:00] [INFO] ✅ /api/auth/verify responded in 258.31ms
+[01:27:00] [INFO] 
+🏁 API Test Suite Complete!
+[01:27:00] [INFO] 📊 Results: 33 passed, 0 failed
+[01:27:00] [INFO] 📈 Success Rate: 100.0%
+[01:27:00] [SUCCESS] 🎉 All tests passed!
+~/workspace$ 
