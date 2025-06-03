@@ -150,18 +150,22 @@ class APIAccessLogger:
             else:
                 logger.info(f"API Access: {route} by anonymous user")
 
-            # Only log to admin_logs for significant routes and non-GET requests
-            significant_routes = [
+            # Log ALL data access and modifications
+            # Expanded to include all CRUD operations and page accesses
+            logged_routes = [
                 '/admin', '/delete', '/edit', '/add', '/patient/', '/appointment',
                 '/condition', '/immunization', '/vital', '/visit', '/lab', '/imaging',
-                '/consult', '/hospital', '/screening', '/document', '/upload'
+                '/consult', '/hospital', '/screening', '/document', '/upload', '/view',
+                '/update', '/create', '/remove', '/modify', '/generate', '/download',
+                '/checklist', '/prep_sheet', '/all_visits', '/screening_list'
             ]
 
-            # Check if this is a significant route or non-GET request
-            is_significant = (any(sig_route in route for sig_route in significant_routes) or 
-                         (request and request.method != 'GET'))
+            # Log ALL requests to monitored routes, including GET requests for audit trail
+            is_logged = (any(logged_route in route for logged_route in logged_routes) or 
+                        route in APIAccessLogger.MONITORED_ROUTES or
+                        request.method in ['POST', 'PUT', 'DELETE', 'PATCH'])
 
-            if is_significant:
+            if is_logged:
                 # Get proper user information
                 user_id = user.id if user else session.get('user_id')
                 username = user.username if user else session.get('username', 'Anonymous')
