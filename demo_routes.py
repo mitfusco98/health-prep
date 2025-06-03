@@ -73,6 +73,7 @@ from forms import (PatientForm, ConditionForm, VitalForm,
                   VisitForm, LabResultForm, ImagingStudyForm, ConsultReportForm, 
                   HospitalSummaryForm, ScreeningForm, CSVUploadForm, DocumentUploadForm,
                   AppointmentForm, ImmunizationForm, PatientAlertForm)
+from comprehensive_logging import log_patient_operation, log_admin_operation, log_data_modification, log_page_access
 from models import (Patient, Condition, Vital, Visit, LabResult, ImagingStudy, 
                    ConsultReport, HospitalSummary, Screening, MedicalDocument, DocumentType,
                    Appointment, Immunization, PatientAlert)
@@ -298,6 +299,7 @@ def add_patient():
 
 @app.route('/patients/<int:patient_id>')
 @safe_db_operation
+@log_patient_operation('view_patient')
 def patient_detail(patient_id):
     """Display patient details"""
     app.logger.info(f"Viewing patient details for ID: {patient_id}")
@@ -411,6 +413,7 @@ def patient_detail(patient_id):
 
 @app.route('/patients/<int:patient_id>/edit', methods=['GET', 'POST'])
 @safe_db_operation
+@log_patient_operation('edit_patient')
 def edit_patient(patient_id):
     """Edit patient information"""
     app.logger.info(f"Editing patient with ID: {patient_id}, method: {request.method}")
@@ -2336,6 +2339,7 @@ def get_available_slots():
 @app.route('/add-appointment', methods=['GET', 'POST'], endpoint='add_appointment')
 @fresh_session_operation
 @validate_appointment_input
+@log_patient_operation('add_appointment')
 def add_appointment():
     """Add a new appointment - Enhanced version with 15-minute time slots and conflict prevention"""
     print("=" * 50)
@@ -2738,6 +2742,7 @@ def add_appointment():
 
 @app.route('/appointments/<int:appointment_id>/edit', methods=['GET', 'POST'])
 @fresh_session_operation
+@log_patient_operation('edit_appointment')
 def edit_appointment(appointment_id):
     """Edit an existing appointment - Enhanced version with improved data handling"""
     print("=" * 50)
@@ -2916,6 +2921,7 @@ def edit_appointment(appointment_id):
 
 @app.route('/appointments/<int:appointment_id>/update-status', methods=['POST'])
 @fresh_session_operation
+@log_patient_operation('update_appointment_status')
 def update_appointment_status(appointment_id):
     """Update the status of an appointment"""
     # Check if this is an AJAX request
@@ -2971,6 +2977,7 @@ def update_appointment_status(appointment_id):
 
 @app.route('/appointments/<int:appointment_id>/delete', methods=['GET', 'POST'])
 @fresh_session_operation
+@log_patient_operation('delete_appointment')
 def delete_appointment(appointment_id):
     """Delete an appointment and redirect to the home page"""
     print(f"Attempting to delete appointment {appointment_id}")
