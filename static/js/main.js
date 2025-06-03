@@ -11,22 +11,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add the fallback date field to ensure proper redirect
         const submitBtn = document.getElementById('submit-appointment');
         if (submitBtn) {
-            // Cache DOM elements (equivalent to useMemo)
-            const dateInput = document.querySelector('input[name="appointment_date"]');
-            let hiddenField = document.querySelector('input[name="fallback_date"]');
-            
-            // Pre-create hidden field if it doesn't exist (avoid repeated checks)
-            if (!hiddenField) {
-                hiddenField = document.createElement('input');
-                hiddenField.type = 'hidden';
-                hiddenField.name = 'fallback_date';
-                appointmentForm.appendChild(hiddenField);
-            }
-
-            // Optimized click handler (equivalent to useCallback)
             submitBtn.addEventListener('click', function(e) {
+                // Don't prevent default, let the form submit normally, but add the fallback date
+                const dateInput = document.querySelector('input[name="appointment_date"]');
                 if (dateInput && dateInput.value) {
                     console.log('Adding hidden field with date:', dateInput.value);
+                    // Check if fallback_date field already exists
+                    let hiddenField = document.querySelector('input[name="fallback_date"]');
+                    if (!hiddenField) {
+                        hiddenField = document.createElement('input');
+                        hiddenField.type = 'hidden';
+                        hiddenField.name = 'fallback_date';
+                        appointmentForm.appendChild(hiddenField);
+                    }
                     hiddenField.value = dateInput.value;
                 }
             });
@@ -44,68 +41,42 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Popover(popoverTriggerEl);
     });
 
-    // Cache and initialize dropdowns efficiently (equivalent to useMemo)
-    const dropdownElements = document.querySelectorAll('.dropdown-toggle');
-    if (dropdownElements.length > 0) {
-        const dropdownInstances = Array.from(dropdownElements).map(el => new bootstrap.Dropdown(el));
-        // Store instances for potential cleanup later
-        window._dropdownInstances = dropdownInstances;
-    }
+    // Make sure all dropdowns are properly initialized
+    var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+    dropdownElementList.map(function (dropdownToggleEl) {
+        return new bootstrap.Dropdown(dropdownToggleEl);
+    });
 
-    // Handle section history links with advanced caching (useMemo equivalent)
+    // Handle section history links in patient detail page - optimized for performance
     const sectionContainer = document.querySelector('.patient-detail-container');
     if (sectionContainer) {
-        // Pre-build section cache and visibility state (equivalent to useMemo)
-        const sectionCache = new Map();
-        const allSections = document.querySelectorAll('.history-section');
-        allSections.forEach(section => {
-            sectionCache.set(section.id, {
-                element: section,
-                isVisible: false
-            });
-        });
-
-        // Optimized toggle function (equivalent to useCallback)
-        const toggleSection = function(sectionName) {
-            const targetId = `${sectionName}-history`;
-            const target = sectionCache.get(targetId);
-            
-            if (!target) return;
-
-            // Batch DOM operations for better performance
-            const updates = [];
-            
-            // Hide all visible sections
-            sectionCache.forEach((section, id) => {
-                if (section.isVisible && id !== targetId) {
-                    updates.push(() => {
-                        section.element.classList.add('d-none');
-                        section.isVisible = false;
-                    });
-                }
-            });
-
-            // Show target section
-            if (!target.isVisible) {
-                updates.push(() => {
-                    target.element.classList.remove('d-none');
-                    target.isVisible = true;
-                    target.element.scrollIntoView({behavior: 'smooth', block: 'start'});
-                });
-            }
-
-            // Execute all updates in a single batch
-            updates.forEach(update => update());
-        };
-
-        // Use event delegation with cached handler
+        // Use event delegation for better performance
         sectionContainer.addEventListener('click', function(e) {
             const sectionLink = e.target.closest('.section-link');
             if (sectionLink) {
                 e.preventDefault();
+                
                 const sectionName = sectionLink.getAttribute('data-section');
-                if (sectionName) {
-                    toggleSection(sectionName);
+                if (!sectionName) return;
+
+                // Cache section elements for better performance
+                if (!this._sectionCache) {
+                    this._sectionCache = {};
+                    document.querySelectorAll('.history-section').forEach(section => {
+                        this._sectionCache[section.id] = section;
+                    });
+                }
+
+                // Hide all sections efficiently
+                Object.values(this._sectionCache).forEach(section => {
+                    section.classList.add('d-none');
+                });
+
+                // Show the selected section
+                const sectionToShow = this._sectionCache[`${sectionName}-history`];
+                if (sectionToShow) {
+                    sectionToShow.classList.remove('d-none');
+                    sectionToShow.scrollIntoView({behavior: 'smooth', block: 'start'});
                 }
             }
         });
@@ -181,37 +152,23 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateBMI();
     }
 
-    // Patient search functionality with debouncing (like useMemo/useCallback)
+    // Patient search functionality
     const patientSearchInput = document.getElementById('patient-search');
     if (patientSearchInput) {
-        // Cache patient rows and their data for better performance
-        const patientRows = Array.from(document.querySelectorAll('.patient-row'));
-        const patientData = patientRows.map(row => ({
-            element: row,
-            name: row.getAttribute('data-patient-name')?.toLowerCase() || '',
-            mrn: row.getAttribute('data-patient-mrn')?.toLowerCase() || ''
-        }));
-
-        // Debounced search function (equivalent to useCallback with dependencies)
-        let searchTimeout;
-        const debouncedSearch = function(searchTerm) {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                const term = searchTerm.toLowerCase();
-                
-                // Use cached data instead of re-querying DOM
-                patientData.forEach(patient => {
-                    if (patient.name.includes(term) || patient.mrn.includes(term)) {
-                        patient.element.style.display = '';
-                    } else {
-                        patient.element.style.display = 'none';
-                    }
-                });
-            }, 150); // Debounce delay
-        };
-
         patientSearchInput.addEventListener('input', function(e) {
-            debouncedSearch(e.target.value);
+            const searchTerm = e.target.value.toLowerCase();
+            const patientRows = document.querySelectorAll('.patient-row');
+
+            patientRows.forEach(row => {
+                const patientName = row.getAttribute('data-patient-name').toLowerCase();
+                const patientMrn = row.getAttribute('data-patient-mrn').toLowerCase();
+
+                if (patientName.includes(searchTerm) || patientMrn.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
         });
     }
 });
