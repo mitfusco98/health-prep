@@ -115,22 +115,6 @@ def log_patient_operation(operation_type):
                     log_details['form_data'] = sanitized_form
                     if form_changes:
                         log_details['form_changes'] = form_changes
-                    
-                    # Extract specific appointment data if available
-                    if 'appointment' in f.__name__.lower() or 'appointment' in request.path:
-                        appointment_changes = {}
-                        if 'appointment_date' in request.form:
-                            appointment_changes['date'] = request.form['appointment_date']
-                        if 'appointment_time' in request.form:
-                            appointment_changes['time'] = request.form['appointment_time']
-                        if 'note' in request.form:
-                            appointment_changes['note'] = request.form['note']
-                        if 'patient_id' in request.form:
-                            appointment_changes['patient_reassigned'] = request.form['patient_id']
-                        if 'status' in request.form:
-                            appointment_changes['status'] = request.form['status']
-                        if appointment_changes:
-                            log_details['appointment_changes'] = appointment_changes
 
                 # Extract appointment ID from URL if present
                 appointment_id = None

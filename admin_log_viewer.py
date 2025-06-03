@@ -275,7 +275,7 @@ def format_log_details(log):
             if isinstance(event_data, dict):
                 # Get standardized action from event_data or event_type
                 action = event_data.get('action', log.event_type)
-                
+
                 # Ensure action is one of the four standard types
                 if action not in ['view', 'edit', 'delete', 'add']:
                     # Map legacy event types
@@ -289,7 +289,7 @@ def format_log_details(log):
                         action = "view"
 
                 formatted_details = []
-                
+
                 # Start with standardized action
                 action_badge_color = {
                     'view': 'bg-secondary', 
@@ -302,7 +302,7 @@ def format_log_details(log):
                 # Show Patient information prominently
                 patient_name = event_data.get('patient_name')
                 patient_id = event_data.get('patient_id')
-                
+
                 if patient_name and patient_name != 'Unknown':
                     formatted_details.append(f"<span class='badge bg-info'>Patient: {patient_name}</span>")
                 if patient_id:
@@ -319,26 +319,19 @@ def format_log_details(log):
                     page_address = event_data['endpoint']
                 elif 'route' in event_data:
                     page_address = event_data['route']
-                
+
                 if page_address:
                     formatted_details.append(f"<span class='badge bg-dark'>Page: {page_address}</span>")
 
-                # Show form changes with detailed information
-                if action in ["edit", "add"] and event_data.get('form_changes'):
+                # Show form changes for any edit action
+                if action == "edit" and 'form_changes' in event_data:
                     changes = event_data['form_changes']
                     if changes:
-                        formatted_details.append("<div class='mt-2'><strong>Form Changes:</strong></div>")
+                        formatted_details.append("<div class='mt-1'><strong>Changes Made:</strong></div>")
                         for change_key, change_value in changes.items():
-                            change_label = change_key.replace('_', ' ').title()
-                            formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <span class='text-primary'>{change_value}</span>")
-
-                # Also show appointment changes if present
-                if action == "edit" and event_data.get('appointment_changes'):
-                    changes = event_data['appointment_changes']
-                    if changes:
-                        formatted_details.append("<div class='mt-2'><strong>Appointment Changes:</strong></div>")
-                        for change_key, change_value in changes.items():
-                            change_label = change_key.replace('_', ' ').title()
+                            # Clean up the key for display (remove prefixes like 'appointment_', 'demographics_', etc.)
+                            display_key = change_key.replace('appointment_', '').replace('demographics_', '').replace('alert_', '').replace('screening_', '')
+                            change_label = display_key.replace('_', ' ').title()
                             formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <span class='text-primary'>{change_value}</span>")
 
                 # Show form data fields (what was submitted)
@@ -351,9 +344,9 @@ def format_log_details(log):
                 # Show relevant technical details
                 relevant_details = []
                 for key, value in event_data.items():
-                    if key in ['action', 'endpoint', 'route', 'patient_name', 'patient_id', 'appointment_id', 'form_changes', 'appointment_changes', 'form_data']:
+                    if key in ['endpoint', 'route', 'path', 'appointment_id', 'patient_name', 'patient_id', 'form_changes']:
                         continue  # Already shown above
-                    
+
                     # Include specific technical details
                     if key in ['method', 'ip_address', 'function_name']:
                         if key == 'method':
