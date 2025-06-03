@@ -168,3 +168,63 @@ def get_today_appointments_optimized():
     
     appointment_cache.set(cache_key, result)
     return result
+<line_number>1</line_number>
+"""
+Database and application performance optimizations
+"""
+
+def optimize_database_connection_pool():
+    """Optimize database connection pool settings"""
+    from app import app, db
+    
+    # Update SQLAlchemy engine options for better performance
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"].update({
+        "pool_size": 10,
+        "pool_recycle": 300,
+        "pool_pre_ping": False,  # Disable automatic pinging to reduce overhead
+        "pool_timeout": 30,
+        "max_overflow": 20,
+        "connect_args": {
+            "connect_timeout": 10,
+            "application_name": "healthprep_app"
+        }
+    })
+    
+    return "Database connection pool optimized"
+
+def add_query_result_caching():
+    """Add simple query result caching for frequently accessed data"""
+    import time
+    from functools import wraps
+    
+    # Simple in-memory cache
+    _cache = {}
+    _cache_timeout = 300  # 5 minutes
+    
+    def cache_query_result(cache_key, timeout=300):
+        def decorator(func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                current_time = time.time()
+                
+                # Check if result is in cache and not expired
+                if cache_key in _cache:
+                    cached_data, cache_time = _cache[cache_key]
+                    if current_time - cache_time < timeout:
+                        return cached_data
+                
+                # Execute function and cache result
+                result = func(*args, **kwargs)
+                _cache[cache_key] = (result, current_time)
+                
+                # Clean up expired cache entries
+                expired_keys = [k for k, (_, t) in _cache.items() 
+                              if current_time - t > timeout]
+                for k in expired_keys:
+                    del _cache[k]
+                
+                return result
+            return wrapper
+        return decorator
+    
+    return cache_query_result

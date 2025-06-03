@@ -219,6 +219,6 @@ def after_cursor_execute(conn, cursor, statement, parameters, context, executema
         duration = (time.time() - context._query_start_time) * 1000
         profiler.record_db_query(statement, duration)
         
-        # Log slow queries
-        if duration > 100:
+        # Log only very slow queries to reduce console noise
+        if duration > 200:
             logger.warning(f"Slow database query ({duration:.2f}ms): {str(statement)[:200]}...")

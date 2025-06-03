@@ -64,6 +64,8 @@ def add_database_indexes():
 
 def analyze_slow_queries():
     """Analyze and report on potentially slow queries"""
+    import time
+    
     slow_query_checks = [
         {
             'name': 'Patients without MRN index usage',
@@ -72,18 +74,13 @@ def analyze_slow_queries():
         },
         {
             'name': 'Appointments without date range',
-            'query': "SELECT COUNT(*) FROM appointment WHERE appointment_date > date('now', '-30 days');",
+            'query': "SELECT COUNT(*) FROM appointment WHERE appointment_date > CURRENT_DATE - INTERVAL '30 days';",
             'description': 'Date range queries should use proper indexes'
         },
         {
-            'name': 'Visits with complex JOINs',
-            'query': """
-                SELECT COUNT(*) 
-                FROM visit v 
-                JOIN patient p ON v.patient_id = p.id 
-                WHERE v.visit_date > date('now', '-7 days');
-            """,
-            'description': 'JOIN operations should be optimized with proper indexes'
+            'name': 'Medical documents query optimization',
+            'query': "SELECT COUNT(*) FROM medical_document LIMIT 1000;",
+            'description': 'Large document tables need pagination and indexing'
         }
     ]
     

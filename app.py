@@ -157,14 +157,15 @@ def before_request():
             from flask import abort
             abort(400, description="Patient ID must be a valid number")
 
-    # Try to ping the database to see if the connection is alive
-    try:
-        with db.engine.connect() as conn:
-            conn.execute(text("SELECT :test_value"), {"test_value": 1})
-    except Exception as e:
-        logger.warning(f"Database connection issue detected: {str(e)}")
-        # Force a new connection to be created
-        db.engine.dispose()
+    # Reduce frequent database pings - only ping for critical operations
+    if request.method in ['POST', 'PUT', 'DELETE'] or 'admin' in request.path:
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+        except Exception as e:
+            logger.warning(f"Database connection issue detected: {str(e)}")
+            # Force a new connection to be created
+            db.engine.dispose()
 
 @app.teardown_request
 def teardown_request(exception=None):
@@ -211,8 +212,8 @@ def add_security_headers(response):
                 if len(profiler.route_stats[route_name]) > 100:
                     profiler.route_stats[route_name] = profiler.route_stats[route_name][-100:]
         
-        # Log slow requests
-        if duration > 1000:  # > 1 second
+        # Log only very slow requests to reduce console noise
+        if duration > 2000:  # > 2 seconds
             logger.warning(f"Slow request: {request.method} {request.path} took {duration:.1f}ms")
     
     # Prevent XSS attacks
