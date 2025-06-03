@@ -1719,7 +1719,7 @@ def admin_dashboard():
     # Get recent login failures from admin logs
     recent_login_failures = 0
     
-    # Get paginated admin logs
+    # Get paginated admin logs with comprehensive logging data
     page = request.args.get('page', 1, type=int)
     per_page = 20  # Number of logs per page
     
@@ -1727,6 +1727,8 @@ def admin_dashboard():
     admin_logs_pagination = None
     try:
         from models import AdminLog
+        
+        # Get comprehensive admin logs including all user activities
         admin_logs_pagination = AdminLog.query.order_by(AdminLog.timestamp.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
@@ -1739,8 +1741,16 @@ def admin_dashboard():
             AdminLog.timestamp >= twenty_four_hours_ago
         ).count()
         
+        # Also include appointment edits and other user activities in the count
+        recent_user_activities = AdminLog.query.filter(
+            AdminLog.timestamp >= twenty_four_hours_ago
+        ).count()
+        
+        print(f"Admin Dashboard: Found {len(recent_admin_logs)} recent logs, {recent_login_failures} login failures, {recent_user_activities} total activities in last 24h")
+        
     except Exception as e:
         logger.warning(f"Could not fetch admin logs: {str(e)}")
+        recent_login_failures = 0
     
     # Get recent patients
     recent_patients = Patient.query.order_by(Patient.created_at.desc()).limit(5).all()
@@ -1767,6 +1777,14 @@ def admin_dashboard():
         'admin_logs': len(recent_admin_logs)
     }
     
+    # Debug logging to see what we're passing to template
+    print(f"Admin Dashboard Template Data:")
+    print(f"- Total patients: {total_patients}")
+    print(f"- Recent admin logs count: {len(recent_admin_logs)}")
+    print(f"- Recent login failures: {recent_login_failures}")
+    if recent_admin_logs:
+        print(f"- Sample recent log: {recent_admin_logs[0].event_type} at {recent_admin_logs[0].timestamp}")
+        
     return render_template('admin_dashboard.html',
                           total_patients=total_patients,
                           todays_appointments=todays_appointments,
@@ -1850,6 +1868,8 @@ def delete_user(user_id):
             print(f"Admin action logged for user deletion: {username}")
         except Exception as e:
             logger.error(f"Error logging user deletion: {str(e)}")
+            # Don't let logging errors break the main function
+            pass
         
     except Exception as e:
         db.session.rollback()

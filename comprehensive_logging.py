@@ -1,4 +1,3 @@
-
 """
 Comprehensive logging decorators for healthcare application
 Logs all edits, deletions, views, and page accesses with detailed context
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 def log_patient_operation(operation_type):
     """
     Decorator to log patient-related operations (view, edit, delete, create)
-    
+
     Args:
         operation_type: String describing the operation (view, edit, delete, create)
     """
@@ -26,7 +25,7 @@ def log_patient_operation(operation_type):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             start_time = datetime.now()
-            
+
             try:
                 # Extract patient ID from URL parameters or form data
                 patient_id = None
@@ -38,11 +37,11 @@ def log_patient_operation(operation_type):
                     patient_id = request.view_args['id']
                 elif request.form and 'patient_id' in request.form:
                     patient_id = request.form['patient_id']
-                
+
                 # Get user information
                 user_id = session.get('user_id')
                 username = session.get('username', 'Unknown')
-                
+
                 # Get patient information if available
                 patient_name = 'Unknown'
                 if patient_id:
@@ -52,14 +51,14 @@ def log_patient_operation(operation_type):
                             patient_name = patient.full_name
                     except Exception:
                         pass
-                
+
                 # Execute the original function
                 result = f(*args, **kwargs)
-                
+
                 # Calculate execution time
                 end_time = datetime.now()
                 execution_time = (end_time - start_time).total_seconds() * 1000
-                
+
                 # Log the operation
                 log_details = {
                     'operation_type': operation_type,
@@ -77,7 +76,7 @@ def log_patient_operation(operation_type):
                     'timestamp': datetime.now().isoformat(),
                     'success': True
                 }
-                
+
                 # Add form data context for modifications
                 if request.method in ['POST', 'PUT', 'PATCH'] and request.form:
                     # Sanitize form data (remove sensitive fields)
@@ -87,7 +86,7 @@ def log_patient_operation(operation_type):
                         if key.lower() not in sensitive_fields:
                             sanitized_form[key] = str(value)[:200]  # Truncate long values
                     log_details['form_data'] = sanitized_form
-                
+
                 # Create admin log entry
                 AdminLog.log_event(
                     event_type=f'patient_{operation_type}',
@@ -97,11 +96,11 @@ def log_patient_operation(operation_type):
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get('User-Agent', '')
                 )
-                
+
                 db.session.commit()
-                
+
                 return result
-                
+
             except Exception as e:
                 # Log errors
                 error_details = {
@@ -114,7 +113,7 @@ def log_patient_operation(operation_type):
                     'timestamp': datetime.now().isoformat(),
                     'success': False
                 }
-                
+
                 AdminLog.log_event(
                     event_type=f'patient_{operation_type}_error',
                     user_id=session.get('user_id'),
@@ -123,14 +122,14 @@ def log_patient_operation(operation_type):
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get('User-Agent', '')
                 )
-                
+
                 try:
                     db.session.commit()
                 except:
                     db.session.rollback()
-                
+
                 raise
-        
+
         return decorated_function
     return decorator
 
@@ -142,19 +141,19 @@ def log_admin_operation(operation_type):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             start_time = datetime.now()
-            
+
             try:
                 # Get user information
                 user_id = session.get('user_id')
                 username = session.get('username', 'Unknown')
-                
+
                 # Execute the original function
                 result = f(*args, **kwargs)
-                
+
                 # Calculate execution time
                 end_time = datetime.now()
                 execution_time = (end_time - start_time).total_seconds() * 1000
-                
+
                 # Log the operation
                 log_details = {
                     'operation_type': operation_type,
@@ -170,11 +169,11 @@ def log_admin_operation(operation_type):
                     'timestamp': datetime.now().isoformat(),
                     'success': True
                 }
-                
+
                 # Add query parameters for GET requests
                 if request.args:
                     log_details['query_params'] = dict(request.args)
-                
+
                 # Add form data for modifications
                 if request.method in ['POST', 'PUT', 'PATCH'] and request.form:
                     sanitized_form = {}
@@ -183,7 +182,7 @@ def log_admin_operation(operation_type):
                         if key.lower() not in sensitive_fields:
                             sanitized_form[key] = str(value)[:200]
                     log_details['form_data'] = sanitized_form
-                
+
                 # Create admin log entry
                 AdminLog.log_event(
                     event_type=f'admin_{operation_type}',
@@ -193,11 +192,11 @@ def log_admin_operation(operation_type):
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get('User-Agent', '')
                 )
-                
+
                 db.session.commit()
-                
+
                 return result
-                
+
             except Exception as e:
                 # Log errors
                 error_details = {
@@ -209,7 +208,7 @@ def log_admin_operation(operation_type):
                     'timestamp': datetime.now().isoformat(),
                     'success': False
                 }
-                
+
                 AdminLog.log_event(
                     event_type=f'admin_{operation_type}_error',
                     user_id=session.get('user_id'),
@@ -218,21 +217,21 @@ def log_admin_operation(operation_type):
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get('User-Agent', '')
                 )
-                
+
                 try:
                     db.session.commit()
                 except:
                     db.session.rollback()
-                
+
                 raise
-        
+
         return decorated_function
     return decorator
 
 def log_data_modification(data_type):
     """
     Decorator to log data modifications (conditions, vitals, documents, etc.)
-    
+
     Args:
         data_type: String describing the type of data (condition, vital, document, etc.)
     """
@@ -240,33 +239,33 @@ def log_data_modification(data_type):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             start_time = datetime.now()
-            
+
             try:
                 # Get user information
                 user_id = session.get('user_id')
                 username = session.get('username', 'Unknown')
-                
+
                 # Extract relevant IDs from URL parameters or form data
                 record_id = None
                 patient_id = None
-                
+
                 if 'id' in kwargs:
                     record_id = kwargs['id']
                 elif request.view_args and 'id' in request.view_args:
                     record_id = request.view_args['id']
-                
+
                 if 'patient_id' in kwargs:
                     patient_id = kwargs['patient_id']
                 elif request.form and 'patient_id' in request.form:
                     patient_id = request.form['patient_id']
-                
+
                 # Execute the original function
                 result = f(*args, **kwargs)
-                
+
                 # Calculate execution time
                 end_time = datetime.now()
                 execution_time = (end_time - start_time).total_seconds() * 1000
-                
+
                 # Log the operation
                 log_details = {
                     'data_type': data_type,
@@ -284,7 +283,7 @@ def log_data_modification(data_type):
                     'timestamp': datetime.now().isoformat(),
                     'success': True
                 }
-                
+
                 # Add form data for modifications
                 if request.method in ['POST', 'PUT', 'PATCH'] and request.form:
                     sanitized_form = {}
@@ -293,7 +292,7 @@ def log_data_modification(data_type):
                         if key.lower() not in sensitive_fields:
                             sanitized_form[key] = str(value)[:200]
                     log_details['modified_data'] = sanitized_form
-                
+
                 # Create admin log entry
                 AdminLog.log_event(
                     event_type=f'data_modification',
@@ -303,11 +302,11 @@ def log_data_modification(data_type):
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get('User-Agent', '')
                 )
-                
+
                 db.session.commit()
-                
+
                 return result
-                
+
             except Exception as e:
                 # Log errors
                 error_details = {
@@ -319,7 +318,7 @@ def log_data_modification(data_type):
                     'timestamp': datetime.now().isoformat(),
                     'success': False
                 }
-                
+
                 AdminLog.log_event(
                     event_type=f'data_modification_error',
                     user_id=session.get('user_id'),
@@ -328,21 +327,21 @@ def log_data_modification(data_type):
                     ip_address=request.remote_addr,
                     user_agent=request.headers.get('User-Agent', '')
                 )
-                
+
                 try:
                     db.session.commit()
                 except:
                     db.session.rollback()
-                
+
                 raise
-        
+
         return decorated_function
     return decorator
 
 def log_page_access(page_type):
     """
     Decorator to log page access
-    
+
     Args:
         page_type: String describing the page type (dashboard, patient_list, etc.)
     """
@@ -353,10 +352,10 @@ def log_page_access(page_type):
                 # Get user information
                 user_id = session.get('user_id')
                 username = session.get('username', 'Unknown')
-                
+
                 # Execute the original function
                 result = f(*args, **kwargs)
-                
+
                 # Log the page access
                 log_details = {
                     'page_type': page_type,
@@ -372,11 +371,11 @@ def log_page_access(page_type):
                     'referer': request.headers.get('Referer', ''),
                     'success': True
                 }
-                
+
                 # Add query parameters
                 if request.args:
                     log_details['query_params'] = dict(request.args)
-                
+
                 # Create admin log entry (only for significant page accesses)
                 if page_type in ['admin_dashboard', 'patient_list', 'patient_detail', 'screening_list']:
                     AdminLog.log_event(
@@ -387,11 +386,11 @@ def log_page_access(page_type):
                         ip_address=request.remote_addr,
                         user_agent=request.headers.get('User-Agent', '')
                     )
-                    
+
                     db.session.commit()
-                
+
                 return result
-                
+
             except Exception as e:
                 logger.error(f"Error logging page access for {page_type}: {str(e)}")
                 # Don't let logging errors break the application
@@ -400,6 +399,6 @@ def log_page_access(page_type):
                 except:
                     pass
                 raise
-        
+
         return decorated_function
     return decorator
