@@ -82,6 +82,7 @@ from utils import (process_csv_upload, generate_prep_sheet, evaluate_screening_n
                   group_documents_by_type)
 from prep_doc_utils import generate_prep_sheet_doc
 from appointment_utils import detect_appointment_conflicts, format_conflict_message, get_available_time_slots, get_booked_time_slots, DEFAULT_APPOINTMENT_DURATION
+from admin_log_viewer import format_log_details as format_event_details
 from datetime import datetime, timedelta
 import json
 import logging
@@ -1670,9 +1671,6 @@ def admin_dashboard():
     if not session.get('user_id') or not session.get('is_admin'):
         flash('Access denied. Admin privileges required.', 'error')
         return redirect(url_for('login'))
-    
-    # Import the format_event_details function
-    from admin_log_viewer import format_log_details as format_event_details
     
     # Log admin dashboard access
     try:
