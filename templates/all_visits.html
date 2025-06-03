@@ -249,27 +249,12 @@ function deleteSelectedAppointments() {
         form.method = 'POST';
         form.action = '{{ url_for("delete_appointments_bulk") }}';
 
-        // Add CSRF token - try multiple methods to get it
-        let csrfToken = null;
-
-        // Method 1: Try meta tag
+        // Get CSRF token from meta tag
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        if (csrfMeta) {
-            csrfToken = csrfMeta.getAttribute('content');
-        }
-
-        // Method 2: Try hidden input in existing forms
-        if (!csrfToken) {
-            const existingCsrfInput = document.querySelector('input[name="csrf_token"]');
-            if (existingCsrfInput) {
-                csrfToken = existingCsrfInput.value;
-            }
-        }
-
-        // Method 3: Try data attribute on body
-        if (!csrfToken) {
-            csrfToken = document.body.getAttribute('data-csrf-token');
-        }
+        let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : null;
+        
+        console.log('CSRF Debug - Meta tag found:', !!csrfMeta);
+        console.log('CSRF Debug - Token value:', csrfToken ? csrfToken.substring(0, 10) + '...' : 'null');
 
         if (csrfToken) {
             const csrfInput = document.createElement('input');
@@ -277,9 +262,11 @@ function deleteSelectedAppointments() {
             csrfInput.name = 'csrf_token';
             csrfInput.value = csrfToken;
             form.appendChild(csrfInput);
-            console.log('Added CSRF token to form:', csrfToken.substring(0, 10) + '...');
+            console.log('CSRF token added to form successfully');
         } else {
-            console.warn('No CSRF token found - form may fail');
+            console.error('CSRF token not found - this will cause a 403 error');
+            alert('CSRF token not found. Please refresh the page and try again.');
+            return;
         }
 
         // Add selected appointment IDs - create one input with comma-separated values
