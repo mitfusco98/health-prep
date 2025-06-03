@@ -117,7 +117,7 @@ db.init_app(app)
 def before_request():
     # Add correlation ID for request tracing
     correlation_id = add_correlation_id_to_request()
-    
+
     # Start timing the request for profiling
     g.start_time = time.time()
 
@@ -202,7 +202,7 @@ def add_security_headers(response):
     if hasattr(g, 'start_time'):
         duration = (time.time() - g.start_time) * 1000
         route_name = request.endpoint or request.path
-        
+
         # Record in profiler if not a static file - only for performance monitoring
         if not request.path.startswith('/static/') and duration > 100:  # Only record slow requests
             with profiler.lock:
@@ -212,11 +212,11 @@ def add_security_headers(response):
                     'method': request.method,
                     'status_code': response.status_code
                 })
-                
+
                 # Keep only last 50 entries per route to reduce memory usage
                 if len(profiler.route_stats[route_name]) > 50:
                     profiler.route_stats[route_name] = profiler.route_stats[route_name][-50:]
-    
+
     # Prevent XSS attacks
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
@@ -315,47 +315,39 @@ def handle_rate_limit(error):
         return jsonify({'error': 'Too many requests. Please slow down.'}), 429
     return jsonify({'error': 'Too many requests. Please slow down.'}), 429
 
-@app.errorhandler(500)
-def handle_internal_server_error(error):
-    """Handle internal server errors with detailed logging but generic client response"""
+@app.errorhandler(Exception)
+def handle_unexpected_error(e):
+    """Handle all unhandled exceptions with reduced console noise"""
     import traceback
     import uuid
 
-    # Generate unique error ID for tracking
+    # Generate a unique error ID
     error_id = str(uuid.uuid4())[:8]
 
-    # Log structured error information
-    structured_logger.logger.error(
-        f"Internal Server Error [{error_id}]",
-        extra={
-            'event_type': 'internal_server_error',
-            'error_id': error_id,
-            'correlation_id': getattr(g, 'correlation_id', None),
-            'url': request.url,
-            'method': request.method,
-            'remote_address': get_remote_address(),
-            'user_agent': request.headers.get('User-Agent', 'Unknown'),
-            'form_data': dict(request.form) if request.form else None,
-            'json_data': request.get_json() if request.is_json else None,
-            'headers': dict(request.headers),
-            'error_details': str(error),
-            'stack_trace': traceback.format_exc().split('\n')
-        },
-        exc_info=True
-    )
+    # Check if this is a database SSL connection error
+    if 'SSL connection has been closed unexpectedly' in str(e):
+        # Log database connection errors less verbosely
+        app.logger.warning(f"Database connection lost [{error_id}]: Attempting to reconnect")
+        try:
+            db.session.rollback()
+            # Try to re-establish connection by creating a new session
+            db.session.remove()
+        except:
+            pass
+        return render_template('500.html', error_id=error_id, message="Database connection issue - please try again"), 500
 
-    # Roll back any database transactions
-    try:
-        db.session.rollback()
-    except Exception as rollback_error:
-        logger.error(f"Error during rollback [{error_id}]: {str(rollback_error)}")
+    # For other errors, log with full detail but less duplicated output
+    app.logger.error(f"Unexpected Error [{error_id}]: {type(e).__name__} - {str(e)}")
+    app.logger.debug(f"Full traceback for [{error_id}]:\n{traceback.format_exc()}")
 
-    # Return generic error message to client
-    if request.path.startswith('/api/'):
-        return jsonify({
-            'error': 'Internal server error',
-            'error_id': error_id
-        }), 500
+    # For database errors, try to recover
+    if 'database' in str(e).lower() or 'sql' in str(e).lower() or 'psycopg2' in str(e).lower():
+        try:
+            db.session.rollback()
+        except:
+            pass
+
+    # Return a user-friendly error page
     return render_template('500.html', error_id=error_id), 500
 
 @app.errorhandler(502)
@@ -471,7 +463,7 @@ def validate_uploaded_file(file):
     if hasattr(file, 'content_length') and file.content_length:
         if file.content_length > 10 * 1024 * 1024:  # 10MB
             return False
-    
+
     # Check filename for malicious patterns (fast check)
     filename = file.filename.lower()
     if any(char in filename for char in ['..', '/', '\\', ':', '*', '?', '"', '<', '>', '|']):
@@ -750,7 +742,8 @@ def sanitize_form_data():
     if request.method in ['POST', 'PUT', 'PATCH'] and request.form:
         from werkzeug.datastructures import MultiDict
 
-        # Create a new MultiDict with sanitized values to preserve the interface
+        # Create a new MultiDict with sanitized values to preserve the previous content.
+        # the interface
         sanitized_form = MultiDict()
 
         for key, value in request.form.items():

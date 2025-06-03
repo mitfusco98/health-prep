@@ -103,6 +103,7 @@ def redirect_to_home():
 
 @app.route('/home')
 @app.route('/home/date/<date_str>')
+@log_page_access('home_dashboard')
 def index(date_str=None):
     """Application home page - Demo version with sample patients"""
     # Get stats for the dashboard
@@ -1103,6 +1104,7 @@ def delete_immunization(patient_id, immunization_id):
 
 
 @app.route('/patients/<int:patient_id>/add_alert', methods=['GET', 'POST'])
+@log_patient_operation('add')
 def add_alert(patient_id):
     """Add an alert for a patient"""
     patient = Patient.query.get_or_404(patient_id)
@@ -1136,6 +1138,7 @@ def add_alert(patient_id):
 
 
 @app.route('/patients/<int:patient_id>/edit_alert/<int:alert_id>', methods=['GET', 'POST'])
+@log_patient_operation('edit')
 def edit_alert(patient_id, alert_id):
     """Edit a patient alert"""
     patient = Patient.query.get_or_404(patient_id)
@@ -1173,6 +1176,7 @@ def edit_alert(patient_id, alert_id):
 
 
 @app.route('/patients/<int:patient_id>/delete_alert/<int:alert_id>')
+@log_patient_operation('delete')
 def delete_alert(patient_id, alert_id):
     """Delete a patient alert"""
     try:

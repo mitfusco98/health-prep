@@ -260,7 +260,7 @@ def admin_log_stats():
 def format_log_details(log):
     """
     Format event details for display in admin logs
-    Show relevant details and changes without code dumps
+    Show Patient ID, Patient Name, Appointment ID, and form changes
     """
     # Parse event details if it's JSON
     if log.event_details:
@@ -273,105 +273,100 @@ def format_log_details(log):
                 event_data = eval(log.event_details)
 
             if isinstance(event_data, dict):
-                # Determine the action type and standardize it
-                action = "view"  # default
+                # Get standardized action from event_data or event_type
+                action = event_data.get('action', log.event_type)
                 
-                # Map event types to standardized actions
-                event_type = log.event_type.lower()
-                if 'edit' in event_type or 'update' in event_type or 'modify' in event_type:
-                    action = "edit"
-                elif 'delete' in event_type or 'remove' in event_type:
-                    action = "delete"
-                elif 'add' in event_type or 'create' in event_type or 'new' in event_type:
-                    action = "add"
-                elif 'view' in event_type or 'access' in event_type or 'dashboard' in event_type:
-                    action = "view"
+                # Ensure action is one of the four standard types
+                if action not in ['view', 'edit', 'delete', 'add']:
+                    # Map legacy event types
+                    if 'edit' in action.lower() or 'update' in action.lower():
+                        action = "edit"
+                    elif 'delete' in action.lower() or 'remove' in action.lower():
+                        action = "delete"
+                    elif 'add' in action.lower() or 'create' in action.lower():
+                        action = "add"
+                    else:
+                        action = "view"
 
                 formatted_details = []
                 
                 # Start with standardized action
-                formatted_details.append(f"<span class='badge bg-dark'>Action: {action.title()}</span>")
+                action_badge_color = {
+                    'view': 'bg-secondary', 
+                    'edit': 'bg-warning', 
+                    'delete': 'bg-danger', 
+                    'add': 'bg-success'
+                }.get(action, 'bg-dark')
+                formatted_details.append(f"<span class='badge {action_badge_color}'>Action: {action.title()}</span>")
 
-                # Show page address/endpoint prominently
+                # Show Patient information prominently
+                patient_name = event_data.get('patient_name')
+                patient_id = event_data.get('patient_id')
+                
+                if patient_name and patient_name != 'Unknown':
+                    formatted_details.append(f"<span class='badge bg-info'>Patient: {patient_name}</span>")
+                if patient_id:
+                    formatted_details.append(f"<span class='badge bg-primary'>Patient ID: {patient_id}</span>")
+
+                # Show Appointment ID if present
+                appointment_id = event_data.get('appointment_id')
+                if appointment_id:
+                    formatted_details.append(f"<span class='badge bg-success'>Appointment ID: {appointment_id}</span>")
+
+                # Show page address/endpoint
                 page_address = None
                 if 'endpoint' in event_data:
                     page_address = event_data['endpoint']
                 elif 'route' in event_data:
                     page_address = event_data['route']
-                elif 'path' in event_data:
-                    page_address = event_data['path']
                 
                 if page_address:
-                    formatted_details.append(f"<span class='badge bg-primary'>Page: {page_address}</span>")
+                    formatted_details.append(f"<span class='badge bg-dark'>Page: {page_address}</span>")
 
-                # For appointment-related actions, ensure we always show patient info
-                if 'appointment' in event_type:
-                    appointment_id = event_data.get('appointment_id')
-                    patient_name = event_data.get('patient_name')
-                    patient_id = event_data.get('patient_id')
-                    
-                    # If we have appointment but missing patient info, try to fetch it
-                    if appointment_id and not patient_name and patient_id:
-                        try:
-                            from models import Patient
-                            patient = Patient.query.get(patient_id)
-                            if patient:
-                                patient_name = patient.full_name
-                        except:
-                            pass
-                    
-                    if appointment_id:
-                        formatted_details.append(f"<span class='badge bg-success'>Appointment ID: {appointment_id}</span>")
-                    
-                    if patient_name:
-                        formatted_details.append(f"<span class='badge bg-info'>Patient: {patient_name}</span>")
-                    elif patient_id:
-                        formatted_details.append(f"<span class='badge bg-warning'>Patient ID: {patient_id}</span>")
-
-                # For non-appointment actions, show relevant entity info
-                elif 'patient' in event_type:
-                    if 'patient_name' in event_data and event_data['patient_name']:
-                        formatted_details.append(f"<span class='badge bg-info'>Patient: {event_data['patient_name']}</span>")
-                    elif 'patient_id' in event_data and event_data['patient_id']:
-                        formatted_details.append(f"<span class='badge bg-primary'>Patient ID: {event_data['patient_id']}</span>")
-
-                # Show key changes for edit actions
-                if action == "edit" and 'appointment_changes' in event_data:
-                    changes = event_data['appointment_changes']
+                # Show form changes with detailed information
+                if action in ["edit", "add"] and event_data.get('form_changes'):
+                    changes = event_data['form_changes']
                     if changes:
-                        formatted_details.append("<div class='mt-1'><strong>Changes Made:</strong></div>")
+                        formatted_details.append("<div class='mt-2'><strong>Form Changes:</strong></div>")
                         for change_key, change_value in changes.items():
                             change_label = change_key.replace('_', ' ').title()
                             formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <span class='text-primary'>{change_value}</span>")
 
-                # Show relevant details section (not raw code)
+                # Also show appointment changes if present
+                if action == "edit" and event_data.get('appointment_changes'):
+                    changes = event_data['appointment_changes']
+                    if changes:
+                        formatted_details.append("<div class='mt-2'><strong>Appointment Changes:</strong></div>")
+                        for change_key, change_value in changes.items():
+                            change_label = change_key.replace('_', ' ').title()
+                            formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <span class='text-primary'>{change_value}</span>")
+
+                # Show form data fields (what was submitted)
+                if event_data.get('form_data') and isinstance(event_data['form_data'], dict):
+                    form_data = event_data['form_data']
+                    field_names = [field for field in form_data.keys() if field != 'csrf_token']
+                    if field_names:
+                        formatted_details.append(f"<div class='mt-1'><small class='text-muted'>Form Fields: {', '.join(field_names)}</small></div>")
+
+                # Show relevant technical details
                 relevant_details = []
                 for key, value in event_data.items():
-                    if key in ['endpoint', 'route', 'path', 'appointment_id', 'patient_name', 'patient_id', 'appointment_changes']:
+                    if key in ['action', 'endpoint', 'route', 'patient_name', 'patient_id', 'appointment_id', 'form_changes', 'appointment_changes', 'form_data']:
                         continue  # Already shown above
                     
-                    # Include meaningful details only
-                    if key in ['form_data', 'method', 'user_agent', 'ip_address', 'status_code', 'error_message', 'description']:
-                        if key == 'form_data' and isinstance(value, dict):
-                            # Show form fields but not their values for privacy
-                            field_names = [field for field in value.keys() if field != 'csrf_token']
-                            if field_names:
-                                relevant_details.append(f"Form fields: {', '.join(field_names)}")
-                        elif key == 'method':
-                            relevant_details.append(f"HTTP Method: {value}")
-                        elif key == 'status_code':
-                            relevant_details.append(f"Status: {value}")
-                        elif key == 'error_message':
-                            relevant_details.append(f"Error: {value}")
-                        elif key == 'description':
-                            relevant_details.append(f"Details: {value}")
-                        elif key not in ['user_agent']:  # Skip very long fields
-                            relevant_details.append(f"{key.replace('_', ' ').title()}: {str(value)[:100]}")
+                    # Include specific technical details
+                    if key in ['method', 'ip_address', 'function_name']:
+                        if key == 'method':
+                            relevant_details.append(f"Method: {value}")
+                        elif key == 'ip_address':
+                            relevant_details.append(f"IP: {value}")
+                        elif key == 'function_name':
+                            relevant_details.append(f"Function: {value}")
 
                 if relevant_details:
-                    formatted_details.append("<div class='mt-1 small text-muted'>")
+                    formatted_details.append("<div class='mt-1'><small class='text-muted'>")
                     formatted_details.extend(relevant_details)
-                    formatted_details.append("</div>")
+                    formatted_details.append("</small></div>")
 
                 return "<br>".join(formatted_details)
         except Exception as e:
