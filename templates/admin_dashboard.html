@@ -71,29 +71,80 @@
                 <div class="card-body">
                     {% if recent_admin_logs %}
                     <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
+                        <table class="table table-sm table-striped">
+                            <thead class="table-dark">
                                 <tr>
-                                    <th>Timestamp</th>
-                                    <th>Event</th>
-                                    <th>User</th>
-                                    <th>Details</th>
+                                    <th width="15%">Timestamp</th>
+                                    <th width="20%">Action</th>
+                                    <th width="25%">Location/Details</th>
+                                    <th width="15%">User</th>
+                                    <th width="25%">IP Address & Agent</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for log in recent_admin_logs[:10] %}
-                            <tr>
-                                <td><small>{{ log.timestamp.strftime('%m/%d %H:%M') }}</small></td>
-                                <td><span class="badge bg-secondary text-white" style="font-size: 0.7em;">{{ log.event_type }}</span></td>
-                                <td><strong>{{ log.user.username if log.user else 'System' }}</strong></td>
-                                <td>
-                                    <div style="font-size: 0.8em; max-width: 300px;">
-                                        {% set details = format_event_details(log) %}
-                                        {{ details[:150]|safe }}{% if details|length > 150 %}...{% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">{{ log.timestamp.strftime('%m/%d %H:%M') }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary" style="font-size: 0.75em;">
+                                            {{ log.event_type.replace('_', ' ').title() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="font-size: 0.8em;">
+                                            {% set details = format_event_details(log) %}
+                                            {% if log.event_details_dict %}
+                                                {% set event_data = log.event_details_dict %}
+                                                {% if event_data.get('endpoint') %}
+                                                    <strong>Endpoint:</strong> <code>{{ event_data.endpoint }}</code><br>
+                                                {% endif %}
+                                                {% if event_data.get('method') %}
+                                                    <strong>Method:</strong> <span class="badge bg-info">{{ event_data.method }}</span><br>
+                                                {% endif %}
+                                                {% if event_data.get('patient_name') %}
+                                                    <strong>Patient:</strong> {{ event_data.patient_name }}<br>
+                                                {% endif %}
+                                                {% if event_data.get('appointment_id') %}
+                                                    <strong>Appt ID:</strong> {{ event_data.appointment_id }}<br>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">{{ details[:100]|safe }}{% if details|length > 100 %}...{% endif %}</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong>{{ log.user.username if log.user else 'System' }}</strong>
+                                        {% if log.user and log.user.is_admin %}
+                                            <br><small class="badge bg-danger">Admin</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div style="font-size: 0.75em;">
+                                            {% if log.ip_address %}
+                                                <strong>IP:</strong> <code>{{ log.ip_address }}</code><br>
+                                            {% endif %}
+                                            {% if log.user_agent %}
+                                                <strong>Agent:</strong> 
+                                                <span class="text-muted" title="{{ log.user_agent }}">
+                                                    {% if 'Chrome' in log.user_agent %}
+                                                        Chrome
+                                                    {% elif 'Firefox' in log.user_agent %}
+                                                        Firefox
+                                                    {% elif 'Safari' in log.user_agent %}
+                                                        Safari
+                                                    {% elif 'Edge' in log.user_agent %}
+                                                        Edge
+                                                    {% else %}
+                                                        {{ log.user_agent[:20] }}...
+                                                    {% endif %}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
