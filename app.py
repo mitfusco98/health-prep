@@ -198,8 +198,8 @@ def add_security_headers(response):
         duration = (time.time() - g.start_time) * 1000
         route_name = request.endpoint or request.path
         
-        # Record in profiler if not a static file
-        if not request.path.startswith('/static/'):
+        # Record in profiler if not a static file - only for performance monitoring
+        if not request.path.startswith('/static/') and duration > 100:  # Only record slow requests
             with profiler.lock:
                 profiler.route_stats[route_name].append({
                     'duration_ms': duration,
@@ -208,13 +208,9 @@ def add_security_headers(response):
                     'status_code': response.status_code
                 })
                 
-                # Keep only last 100 entries per route
-                if len(profiler.route_stats[route_name]) > 100:
-                    profiler.route_stats[route_name] = profiler.route_stats[route_name][-100:]
-        
-        # Log only very slow requests to reduce console noise
-        if duration > 2000:  # > 2 seconds
-            logger.warning(f"Slow request: {request.method} {request.path} took {duration:.1f}ms")
+                # Keep only last 50 entries per route to reduce memory usage
+                if len(profiler.route_stats[route_name]) > 50:
+                    profiler.route_stats[route_name] = profiler.route_stats[route_name][-50:]
     
     # Prevent XSS attacks
     response.headers['X-Content-Type-Options'] = 'nosniff'

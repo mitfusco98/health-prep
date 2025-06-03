@@ -45,6 +45,10 @@ def add_database_indexes():
         # Admin log indexes
         "CREATE INDEX IF NOT EXISTS idx_admin_log_timestamp ON admin_log(timestamp);",
         "CREATE INDEX IF NOT EXISTS idx_admin_log_user ON admin_log(user_id);",
+        
+        # Medical document indexes for faster home page loading
+        "CREATE INDEX IF NOT EXISTS idx_medical_document_patient ON medical_document(patient_id);",
+        "CREATE INDEX IF NOT EXISTS idx_medical_document_created ON medical_document(created_at);",
     ]
     
     try:

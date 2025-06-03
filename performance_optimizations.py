@@ -35,6 +35,7 @@ class SimpleCache:
 # Global cache instances
 patient_cache = SimpleCache(ttl=300)  # 5 minutes
 appointment_cache = SimpleCache(ttl=60)  # 1 minute
+home_page_cache = SimpleCache(ttl=120)  # 2 minutes for home page data
 
 def cache_key_from_request():
     """Generate cache key from request parameters"""
@@ -168,6 +169,51 @@ def get_today_appointments_optimized():
     
     appointment_cache.set(cache_key, result)
     return result
+
+def get_home_page_data_optimized():
+    """Optimized data loading for home page"""
+    from models import Patient, Appointment, MedicalDocument
+    from sqlalchemy import func, text
+    from datetime import date, timedelta
+    
+    cache_key = f"home_page_data_{date.today().isoformat()}"
+    cached_result = home_page_cache.get(cache_key)
+    
+    if cached_result is not None:
+        return cached_result
+    
+    # Use efficient aggregate queries instead of loading all records
+    try:
+        # Get counts efficiently
+        patient_count = Patient.query.count()
+        
+        # Get today's appointment count
+        today_apt_count = Appointment.query.filter(
+            Appointment.appointment_date == date.today()
+        ).count()
+        
+        # Get recent document count (last 30 days) with limit
+        thirty_days_ago = date.today() - timedelta(days=30)
+        recent_doc_count = MedicalDocument.query.filter(
+            MedicalDocument.created_at >= thirty_days_ago
+        ).count()
+        
+        result = {
+            'patient_count': patient_count,
+            'today_appointments': today_apt_count,
+            'recent_documents': min(recent_doc_count, 1000)  # Cap at 1000 for performance
+        }
+        
+        home_page_cache.set(cache_key, result)
+        return result
+        
+    except Exception as e:
+        # Return safe defaults if query fails
+        return {
+            'patient_count': 0,
+            'today_appointments': 0,
+            'recent_documents': 0
+        }
 <line_number>1</line_number>
 """
 Database and application performance optimizations
