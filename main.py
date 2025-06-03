@@ -9,6 +9,7 @@ import demo_routes  # noqa: F401
 import ehr_routes  # noqa: F401
 import checklist_routes  # noqa: F401
 import api_routes  # noqa: F401
+import performance_routes  # noqa: F401
 import logging
 
 # Initialize EHR connections

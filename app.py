@@ -16,6 +16,9 @@ import time
 # Import structured logging
 from structured_logging import setup_structured_logging, get_structured_logger, add_correlation_id_to_request
 
+# Import profiler
+from profiler import profiler
+
 # Setup basic logging first (will be replaced with structured logging)
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -109,6 +112,9 @@ db.init_app(app)
 def before_request():
     # Add correlation ID for request tracing
     correlation_id = add_correlation_id_to_request()
+    
+    # Start timing the request for profiling
+    g.start_time = time.time()
 
     # Clean up any existing session at the start of each request to avoid stale transactions
     db.session.remove()
@@ -185,7 +191,30 @@ def teardown_request(exception=None):
 
 @app.after_request
 def add_security_headers(response):
-    """Add security headers to all responses"""
+    """Add security headers to all responses and log performance"""
+    # Log request performance
+    if hasattr(g, 'start_time'):
+        duration = (time.time() - g.start_time) * 1000
+        route_name = request.endpoint or request.path
+        
+        # Record in profiler if not a static file
+        if not request.path.startswith('/static/'):
+            with profiler.lock:
+                profiler.route_stats[route_name].append({
+                    'duration_ms': duration,
+                    'timestamp': time.time(),
+                    'method': request.method,
+                    'status_code': response.status_code
+                })
+                
+                # Keep only last 100 entries per route
+                if len(profiler.route_stats[route_name]) > 100:
+                    profiler.route_stats[route_name] = profiler.route_stats[route_name][-100:]
+        
+        # Log slow requests
+        if duration > 1000:  # > 1 second
+            logger.warning(f"Slow request: {request.method} {request.path} took {duration:.1f}ms")
+    
     # Prevent XSS attacks
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
