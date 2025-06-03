@@ -158,6 +158,19 @@ class StructuredLogger:
     def log_admin_action(self, action: str, target: str, user_id: Optional[int] = None,
                         username: Optional[str] = None, additional_data: Optional[Dict] = None):
         """Log administrative actions"""
+        # Enhance appointment-related logging with patient information
+        enhanced_data = additional_data or {}
+        
+        if 'appointment' in target.lower() and 'appointment_id' in enhanced_data:
+            try:
+                from models import Appointment
+                appointment = Appointment.query.get(enhanced_data['appointment_id'])
+                if appointment and appointment.patient:
+                    enhanced_data['patient_name'] = appointment.patient.full_name
+                    enhanced_data['patient_id'] = appointment.patient.id
+            except:
+                pass
+        
         self.logger.warning(
             f"Admin action: {action} on {target}",
             extra={
@@ -166,7 +179,7 @@ class StructuredLogger:
                 'target': target,
                 'user_id': user_id or session.get('user_id'),
                 'username': username or session.get('username'),
-                'additional_data': additional_data or {}
+                'additional_data': enhanced_data
             }
         )
 

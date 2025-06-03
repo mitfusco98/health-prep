@@ -260,6 +260,7 @@ def admin_log_stats():
 def format_log_details(log):
     """
     Format event details for display in admin logs
+    Limited to view, edit, delete, and add actions with proper patient information
     """
     # Parse event details if it's JSON
     if log.event_details:
@@ -272,55 +273,74 @@ def format_log_details(log):
                 event_data = eval(log.event_details)
 
             if isinstance(event_data, dict):
-                # Format the data nicely with emphasis on key information
+                # Determine the action type and standardize it
+                action = "view"  # default
+                
+                # Map event types to standardized actions
+                event_type = log.event_type.lower()
+                if 'edit' in event_type or 'update' in event_type or 'modify' in event_type:
+                    action = "edit"
+                elif 'delete' in event_type or 'remove' in event_type:
+                    action = "delete"
+                elif 'add' in event_type or 'create' in event_type or 'new' in event_type:
+                    action = "add"
+                elif 'view' in event_type or 'access' in event_type or 'dashboard' in event_type:
+                    action = "view"
+
                 formatted_details = []
+                
+                # Start with standardized action
+                formatted_details.append(f"<span class='badge bg-dark'>Action: {action.title()}</span>")
 
-                # Highlight key information first
-                if 'patient_id' in event_data and event_data['patient_id']:
-                    formatted_details.append(f"<span class='badge bg-primary'>Patient ID: {event_data['patient_id']}</span>")
+                # For appointment-related actions, ensure we always show patient info
+                if 'appointment' in event_type:
+                    appointment_id = event_data.get('appointment_id')
+                    patient_name = event_data.get('patient_name')
+                    patient_id = event_data.get('patient_id')
+                    
+                    # If we have appointment but missing patient info, try to fetch it
+                    if appointment_id and not patient_name and patient_id:
+                        try:
+                            from models import Patient
+                            patient = Patient.query.get(patient_id)
+                            if patient:
+                                patient_name = patient.full_name
+                        except:
+                            pass
+                    
+                    if appointment_id:
+                        formatted_details.append(f"<span class='badge bg-success'>Appointment ID: {appointment_id}</span>")
+                    
+                    if patient_name:
+                        formatted_details.append(f"<span class='badge bg-info'>Patient: {patient_name}</span>")
+                    elif patient_id:
+                        formatted_details.append(f"<span class='badge bg-warning'>Patient ID: {patient_id}</span>")
 
-                if 'patient_name' in event_data and event_data['patient_name']:
-                    formatted_details.append(f"<span class='badge bg-info'>Patient: {event_data['patient_name']}</span>")
+                # For non-appointment actions, show relevant entity info
+                elif 'patient' in event_type:
+                    if 'patient_name' in event_data and event_data['patient_name']:
+                        formatted_details.append(f"<span class='badge bg-info'>Patient: {event_data['patient_name']}</span>")
+                    elif 'patient_id' in event_data and event_data['patient_id']:
+                        formatted_details.append(f"<span class='badge bg-primary'>Patient ID: {event_data['patient_id']}</span>")
 
-                if 'appointment_id' in event_data and event_data['appointment_id']:
-                    formatted_details.append(f"<span class='badge bg-success'>Appointment ID: {event_data['appointment_id']}</span>")
-
-                # Show appointment changes if present
-                if 'appointment_changes' in event_data and event_data['appointment_changes']:
-                    formatted_details.append("<strong>Changes Made:</strong>")
+                # Show key changes for edit actions
+                if action == "edit" and 'appointment_changes' in event_data:
                     changes = event_data['appointment_changes']
-                    for change_key, change_value in changes.items():
-                        change_label = change_key.replace('_', ' ').title()
-                        formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <code>{change_value}</code>")
+                    if changes:
+                        formatted_details.append("<strong>Changes:</strong>")
+                        for change_key, change_value in changes.items():
+                            change_label = change_key.replace('_', ' ').title()
+                            formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <code>{change_value}</code>")
 
-                # Show form data changes if present
-                if 'form_data' in event_data and event_data['form_data']:
-                    form_data = event_data['form_data']
-                    formatted_details.append("<strong>Form Data Submitted:</strong>")
-                    for key, value in form_data.items():
-                        if key not in ['csrf_token', '_form_debug']:
-                            field_label = key.replace('_', ' ').title()
-                            formatted_details.append(f"&nbsp;&nbsp;• {field_label}: <code>{value}</code>")
-
-                # Show other important details
-                important_fields = ['operation_type', 'function_name', 'endpoint', 'method', 'execution_time_ms']
-                for key in important_fields:
-                    if key in event_data and key not in ['patient_id', 'patient_name', 'appointment_id', 'appointment_changes', 'form_data']:
-                        formatted_details.append(f"<strong>{key.replace('_', ' ').title()}:</strong> {event_data[key]}")
-
-                # Show remaining fields
-                for key, value in event_data.items():
-                    if key not in ['patient_id', 'patient_name', 'appointment_id', 'appointment_changes', 'form_data'] + important_fields:
-                        if isinstance(value, dict):
-                            formatted_details.append(f"<strong>{key}:</strong>")
-                            for subkey, subvalue in value.items():
-                                formatted_details.append(f"&nbsp;&nbsp;{subkey}: {subvalue}")
-                        else:
-                            formatted_details.append(f"<strong>{key}:</strong> {value}")
+                # Show minimal additional context
+                if 'endpoint' in event_data:
+                    formatted_details.append(f"<small class='text-muted'>Endpoint: {event_data['endpoint']}</small>")
 
                 return "<br>".join(formatted_details)
-        except:
+        except Exception as e:
+            # Log the parsing error but don't show it to users
             pass
 
-    # If parsing fails, return the raw details
-    return log.event_details or ""
+    # If parsing fails, return simplified format
+    action_type = log.event_type.replace('_', ' ').title()
+    return f"<span class='badge bg-secondary'>{action_type}</span>"
