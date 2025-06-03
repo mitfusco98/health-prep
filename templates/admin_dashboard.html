@@ -75,147 +75,25 @@
                             <thead>
                                 <tr>
                                     <th>Timestamp</th>
-                                    <th>User</th>
                                     <th>Event</th>
-                                    <th>Location</th>
+                                    <th>User</th>
                                     <th>Details</th>
-                                    <th>IP Address</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for log in recent_admin_logs %}
-                                <tr>
-                                    <td>
-                                        <small>{{ (log.timestamp|timestamp_to_est) }}</small>
-                                    </td>
-                                    <td>
-                                        {% if log.user %}
-                                            <small>{{ log.user.username }}</small>
-                                        {% else %}
-                                            <small class="text-muted">Unknown</small>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <small>
-                                            {% if log.event_type == 'login_fail' %}
-                                                <span class="badge bg-danger">Login Failed</span>
-                                            {% elif log.event_type == 'login_success' %}
-                                                <span class="badge bg-success">User Login</span>
-                                            {% elif log.event_type == 'admin_dashboard_access' %}
-                                                <span class="badge bg-info">Admin Access</span>
-                                            {% elif log.event_type == 'data_access' %}
-                                                {% if log.event_details_dict and log.event_details_dict.route %}
-                                                    {% set route = log.event_details_dict.route %}
-                                                    {% if route == '/' or '/date/' in route %}
-                                                        <span class="badge bg-secondary">Home Page</span>
-                                                    {% elif '/patient/' in route or '/patient_detail/' in route %}
-                                                        <span class="badge bg-warning">View Patient</span>
-                                                    {% elif '/edit_patient/' in route %}
-                                                        <span class="badge bg-warning">Edit Demographics</span>
-                                                    {% elif '/delete_patient/' in route %}
-                                                        <span class="badge bg-danger">Delete Patient</span>
-                                                    {% elif '/add_appointment' in route %}
-                                                        <span class="badge bg-success">Save Appointment</span>
-                                                    {% elif '/edit_appointment/' in route %}
-                                                        <span class="badge bg-warning">Edit Appointment</span>
-                                                    {% elif '/delete_appointment/' in route %}
-                                                        <span class="badge bg-danger">Delete Appointment</span>
-                                                    {% elif '/all_visits' in route %}
-                                                        <span class="badge bg-info">View Visits</span>
-                                                    {% elif '/delete_appointments_bulk' in route %}
-                                                        <span class="badge bg-danger">Delete Visits</span>
-                                                    {% elif '/add_condition/' in route or '/add_vitals/' in route or '/add_document/' in route or '/add_immunization/' in route or '/add_alert/' in route %}
-                                                        <span class="badge bg-success">Save Medical Data</span>
-                                                    {% elif '/delete_condition/' in route or '/delete_vital/' in route or '/delete_document/' in route or '/delete_lab/' in route or '/delete_imaging/' in route or '/delete_consult/' in route or '/delete_hospital/' in route or '/delete_immunization/' in route or '/delete_alert/' in route %}
-                                                        <span class="badge bg-danger">Delete Medical Data</span>
-                                                    {% elif '/patient_documents/' in route %}
-                                                        <span class="badge bg-warning">View Documents</span>
-                                                    {% elif '/generate_prep_sheet/' in route %}
-                                                        <span class="badge bg-info">Generate Prep Sheet</span>
-                                                    {% elif '/view_document/' in route %}
-                                                        <span class="badge bg-warning">View Document</span>
-                                                    {% elif '/screening_list' in route %}
-                                                        <span class="badge bg-info">Access Screening List</span>
-                                                    {% elif '/add_screening' in route %}
-                                                        <span class="badge bg-success">Save Screening</span>
-                                                    {% elif '/edit_screening/' in route %}
-                                                        <span class="badge bg-warning">Edit Screening</span>
-                                                    {% elif '/delete_screening/' in route %}
-                                                        <span class="badge bg-danger">Delete Screening</span>
-                                                    {% elif '/checklist_settings' in route or '/update_checklist' in route %}
-                                                        <span class="badge bg-info">Edit Checklist Settings</span>
-                                                    {% elif '/screening_types' in route %}
-                                                        <span class="badge bg-info">Screening Types</span>
-                                                    {% elif '/login' in route %}
-                                                        <span class="badge bg-primary">Login Access</span>
-                                                    {% elif '/admin' in route %}
-                                                        <span class="badge bg-info">Admin Access</span>
-                                                    {% elif route.startswith('/api/') %}
-                                                        <span class="badge bg-primary">API Call</span>
-                                                    {% elif route.startswith('/static/') %}
-                                                        <span class="badge bg-secondary">Static File</span>
-                                                    {% else %}
-                                                        <span class="badge bg-warning">Data Access</span>
-                                                    {% endif %}
-                                                {% else %}
-                                                    <span class="badge bg-warning">Data Access</span>
-                                                {% endif %}
-                                            {% elif log.event_type == 'validation_error' %}
-                                                <span class="badge bg-danger">Validation Error</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary">{{ log.event_type }}</span>
-                                            {% endif %}
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">
-                                            {% if log.event_details_dict and log.event_details_dict.route %}
-                                                {{ log.event_details_dict.route }}
-                                            {% elif log.event_type == 'login_success' %}
-                                                /login
-                                            {% elif log.event_type == 'login_fail' %}
-                                                /login
-                                            {% elif log.event_type == 'admin_dashboard_access' %}
-                                                /admin_dashboard
-                                            {% else %}
-                                                -
-                                            {% endif %}
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">
-                                            {% if log.event_details_dict %}
-                                                {% if log.event_type == 'data_access' %}
-                                                    {% if log.event_details_dict.route %}
-                                                        <strong>{{ log.event_details_dict.route }}</strong><br>
-                                                    {% endif %}
-                                                    {% if log.event_details_dict.username %}
-                                                        User: {{ log.event_details_dict.username }}<br>
-                                                    {% endif %}
-                                                    {% if log.event_details_dict.patient_id %}
-                                                        Patient ID: {{ log.event_details_dict.patient_id }}<br>
-                                                    {% endif %}
-                                                    {% if log.event_details_dict.appointment_id %}
-                                                        Appointment ID: {{ log.event_details_dict.appointment_id }}<br>
-                                                    {% endif %}
-                                                    {% if log.event_details_dict.method %}
-                                                        Method: {{ log.event_details_dict.method }}
-                                                    {% endif %}
-                                                {% elif log.event_details_dict.attempted_username %}
-                                                    User: {{ log.event_details_dict.attempted_username }}
-                                                {% elif log.event_details_dict.username %}
-                                                    User: {{ log.event_details_dict.username }}
-                                                {% elif log.event_details_dict.action %}
-                                                    {{ log.event_details_dict.action }}
-                                                {% endif %}
-                                            {% endif %}
-                                        </small>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{ log.ip_address or 'N/A' }}</small>
-                                    </td>
-                                </tr>
-                                {% endfor %}
+                                {% for log in recent_admin_logs[:10] %}
+                            <tr>
+                                <td><small>{{ log.timestamp.strftime('%m/%d %H:%M') }}</small></td>
+                                <td><span class="badge bg-secondary text-white" style="font-size: 0.7em;">{{ log.event_type }}</span></td>
+                                <td><strong>{{ log.user.username if log.user else 'System' }}</strong></td>
+                                <td>
+                                    <div style="font-size: 0.8em; max-width: 300px;">
+                                        {% set details = format_event_details(log) %}
+                                        {{ details[:150]|safe }}{% if details|length > 150 %}...{% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
                             </tbody>
                         </table>
                     </div>

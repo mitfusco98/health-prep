@@ -86,6 +86,39 @@ def log_patient_operation(operation_type):
                         if key.lower() not in sensitive_fields:
                             sanitized_form[key] = str(value)[:200]  # Truncate long values
                     log_details['form_data'] = sanitized_form
+                    
+                    # Extract specific appointment data if available
+                    if 'appointment' in operation_type.lower():
+                        appointment_changes = {}
+                        if 'appointment_date' in request.form:
+                            appointment_changes['date_changed'] = request.form['appointment_date']
+                        if 'appointment_time' in request.form:
+                            appointment_changes['time_changed'] = request.form['appointment_time']
+                        if 'note' in request.form:
+                            appointment_changes['note_changed'] = request.form['note']
+                        if 'patient_id' in request.form:
+                            appointment_changes['patient_reassigned'] = request.form['patient_id']
+                        log_details['appointment_changes'] = appointment_changes
+
+                # Extract appointment ID from URL if present
+                appointment_id = None
+                if 'appointment_id' in kwargs:
+                    appointment_id = kwargs['appointment_id']
+                elif request.view_args and 'appointment_id' in request.view_args:
+                    appointment_id = request.view_args['appointment_id']
+                elif '/appointments/' in request.path:
+                    try:
+                        # Extract appointment ID from URL path
+                        path_parts = request.path.split('/')
+                        if 'appointments' in path_parts:
+                            apt_index = path_parts.index('appointments')
+                            if apt_index + 1 < len(path_parts):
+                                appointment_id = int(path_parts[apt_index + 1])
+                    except (ValueError, IndexError):
+                        pass
+
+                if appointment_id:
+                    log_details['appointment_id'] = appointment_id
 
                 # Create admin log entry
                 AdminLog.log_event(
