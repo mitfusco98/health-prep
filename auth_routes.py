@@ -71,37 +71,37 @@ def jwt_login():
         ).first()
 
         if not user or not user.check_password(password):
-            flash('Invalid username or password', 'error')
+            # Log failed login attempt with details
+            from models import AdminLog
+            import json
 
-        # Log failed login attempt with details
-        from models import AdminLog
-        import json
+            failed_login_details = {
+                'attempted_username': username,
+                'login_method': 'web_form',
+                'ip_address': request.remote_addr,
+                'user_agent': request.headers.get('User-Agent', 'Unknown'),
+                'reason': 'invalid_credentials',
+                'timestamp': datetime.now().isoformat()
+            }
 
-        failed_login_details = {
-            'attempted_username': username,
-            'login_method': 'web_form',
-            'ip_address': request.remote_addr,
-            'user_agent': request.headers.get('User-Agent', 'Unknown'),
-            'reason': 'invalid_credentials',
-            'timestamp': datetime.now().isoformat()
-        }
+            AdminLog.log_event(
+                event_type='login_fail',
+                user_id=None,
+                event_details=json.dumps(failed_login_details),
+                request_id=str(uuid.uuid4()),
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', 'Unknown')
+            )
 
-        AdminLog.log_event(
-            event_type='login_fail',
-            user_id=None,
-            event_details=json.dumps(failed_login_details),
-            request_id=str(uuid.uuid4()),
-            ip_address=request.remote_addr,
-            user_agent=request.headers.get('User-Agent', 'Unknown')
-        )
-
-        # Log failed login attempt
-        structured_logger.log_authentication_event(
-            event_type='login',
-            username=username,
-            success=False,
-            reason='invalid_credentials'
-        )
+            # Log failed login attempt
+            from structured_logging import get_structured_logger
+            structured_logger = get_structured_logger('auth')
+            structured_logger.log_authentication_event(
+                event_type='login',
+                username=username,
+                success=False,
+                reason='invalid_credentials'
+            )
             return jsonify({'error': 'Invalid username or password'}), 401
 
         # Generate JWT token with admin role
