@@ -3,17 +3,64 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     
-    // Debounce function to prevent rapid button clicks
-    function debounce(func, wait) {
+    // Advanced debouncing with memoization (equivalent to useCallback + useMemo)
+    function createOptimizedDebounce(func, wait, immediate = false) {
         let timeout;
-        return function executedFunction(...args) {
+        let lastArgs;
+        let lastThis;
+        let maxTimeoutId;
+        let result;
+
+        const debounced = function executedFunction(...args) {
+            lastArgs = args;
+            lastThis = this;
+
             const later = () => {
-                clearTimeout(timeout);
-                func(...args);
+                timeout = null;
+                if (!immediate) {
+                    result = func.apply(lastThis, lastArgs);
+                }
             };
+
+            const callNow = immediate && !timeout;
+            
             clearTimeout(timeout);
+            clearTimeout(maxTimeoutId);
+            
             timeout = setTimeout(later, wait);
+            
+            // Ensure function is called at least every 2x wait time (prevent indefinite delays)
+            maxTimeoutId = setTimeout(() => {
+                if (timeout) {
+                    clearTimeout(timeout);
+                    later();
+                }
+            }, wait * 2);
+
+            if (callNow) {
+                result = func.apply(lastThis, lastArgs);
+            }
+
+            return result;
         };
+
+        debounced.cancel = function() {
+            clearTimeout(timeout);
+            clearTimeout(maxTimeoutId);
+            timeout = null;
+        };
+
+        return debounced;
+    }
+
+    // Memoize event handlers for better performance
+    const memoizedHandlers = new Map();
+    
+    function getMemoizedHandler(key, handlerFactory) {
+        if (!memoizedHandlers.has(key)) {
+            memoizedHandlers.set(key, handlerFactory());
+        }
+        return memoizedHandlers.get(key);
     }
 
     // Optimize all action buttons
