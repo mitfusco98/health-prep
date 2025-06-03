@@ -334,8 +334,6 @@ def format_log_details(log):
                             change_label = display_key.replace('_', ' ').title()
                             formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <span class='text-primary'>{change_value}</span>")
 
-                
-
                 # Show relevant technical details
                 relevant_details = []
                 for key, value in event_data.items():
