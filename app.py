@@ -70,7 +70,7 @@ limiter = Limiter(
 )
 app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour CSRF token expiry
 app.config['WTF_CSRF_SSL_STRICT'] = False  # Allow CSRF in development mode
-app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minute session lifetime
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # 24 hour admin session lifetime
 app.config['SESSION_COOKIE_SECURE'] = False  # Allow cookies in development mode
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Less strict for development compatibility

@@ -86,11 +86,29 @@
                             <i class="fas fa-user-md me-1"></i> Demo Mode
                         </span>
                     </li>
+                    {% if session.get('user_id') and session.get('is_admin') %}
+                    <li class="nav-item">
+                        <a class="nav-link text-success" href="{{ url_for('admin_dashboard') }}">
+                            <i class="fas fa-tachometer-alt me-1"></i> Admin Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <span class="nav-link text-light">
+                            <i class="fas fa-user me-1"></i> {{ session.get('username', 'Admin') }}
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-warning" href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt me-1"></i> Logout
+                        </a>
+                    </li>
+                    {% else %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('login') }}">
                             <i class="fas fa-key me-1"></i> Admin Login
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>
