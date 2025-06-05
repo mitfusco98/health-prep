@@ -1,102 +1,20 @@
 import re
 from datetime import datetime, date, timedelta
 
-def validate_required_fields(data, required_fields):
-    """Validate that all required fields are present and not empty"""
-    errors = []
-    for field in required_fields:
-        if not data.get(field) or (isinstance(data[field], str) and not data[field].strip()):
-            errors.append(f'{field} is required')
-    return errors
+# Required fields validation moved to shared_utilities.py for consistency
+from shared_utilities import validate_required_fields
 
-def validate_string_field(value, field_name, min_length=0, max_length=None, pattern=None, allow_empty=False):
-    """Validate string fields with length and pattern constraints"""
-    errors = []
+# String field validation moved to shared_utilities.py for consistency
+from shared_utilities import validate_string_field
 
-    if not value and not allow_empty:
-        errors.append(f'{field_name} is required')
-        return errors
+# Email validation moved to shared_utilities.py for consistency
+from shared_utilities import validate_email
 
-    if not value and allow_empty:
-        return errors
+# Phone validation moved to shared_utilities.py for consistency
+from shared_utilities import validate_phone
 
-    if not isinstance(value, str):
-        errors.append(f'{field_name} must be a string')
-        return errors
-
-    if len(value.strip()) < min_length:
-        errors.append(f'{field_name} must be at least {min_length} characters long')
-
-    if max_length and len(value) > max_length:
-        errors.append(f'{field_name} must be maximum {max_length} characters')
-
-    if pattern and not re.match(pattern, value):
-        errors.append(f'{field_name} format is invalid')
-
-    return errors
-
-def validate_email(email, field_name='email', required=False):
-    """Validate email address format"""
-    errors = []
-
-    if not email and not required:
-        return errors
-
-    if not email and required:
-        errors.append(f'{field_name} is required')
-        return errors
-
-    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-    if not re.match(email_pattern, email) or len(email) > 254:
-        errors.append(f'{field_name} format is invalid')
-
-    return errors
-
-def validate_phone(phone, field_name='phone', required=False):
-    """Validate phone number format"""
-    errors = []
-
-    if not phone and not required:
-        return errors
-
-    if not phone and required:
-        errors.append(f'{field_name} is required')
-        return errors
-
-    # Remove all non-digit characters for validation
-    digits_only = re.sub(r'\D', '', phone)
-
-    # Should have 10-15 digits (international format)
-    if len(digits_only) < 10 or len(digits_only) > 15:
-        errors.append(f'{field_name} must contain 10-15 digits')
-
-    return errors
-
-def validate_date(date_str, field_name='date', required=False, date_format='%Y-%m-%d'):
-    """Validate date format and value"""
-    errors = []
-
-    if not date_str and not required:
-        return errors, None
-
-    if not date_str and required:
-        errors.append(f'{field_name} is required')
-        return errors, None
-
-    try:
-        parsed_date = datetime.strptime(date_str, date_format).date()
-
-        # Validate reasonable date range for most medical applications
-        min_date = date(1900, 1, 1)
-        max_date = date.today() + timedelta(days=365*2)
-
-        if parsed_date < min_date or parsed_date > max_date:
-            errors.append(f'{field_name} must be within reasonable range')
-
-        return errors, parsed_date
-    except ValueError:
-        errors.append(f'{field_name} must be in {date_format} format')
-        return errors, None
+# Date validation moved to shared_utilities.py for consistency
+from shared_utilities import validate_date_input as validate_date
 
 def validate_integer(value, field_name, min_value=None, max_value=None, required=False):
     """Validate integer fields with range constraints"""
