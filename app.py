@@ -666,7 +666,7 @@ def validate_session_security():
         # Check for session timeout
         if 'session_created' in session:
             session_age = time.time() - session['session_created']
-            if session_age > app.config['PERMANENT_SESSION_LIFETIME']:
+            if session_age > app.config['PERMANENT_SESSION_LIFETIME'].total_seconds():
                 logger.info(f"Session expired for IP {g.security_context['ip_address']}")
                 session.clear()
     else:
