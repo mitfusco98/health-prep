@@ -2,6 +2,7 @@ from flask import jsonify, request, g
 from app import app, db, csrf
 from models import Patient, Condition, Vital, LabResult, Visit, ImagingStudy, ConsultReport, HospitalSummary, Screening, MedicalDocument, Appointment, PatientAlert
 from jwt_utils import jwt_required, optional_jwt, admin_required
+from cache_manager import cache_route, invalidate_cache_pattern, cache_manager
 from datetime import datetime, date, timedelta
 import logging
 from sqlalchemy import func, or_
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 @app.route('/api/patients', methods=['GET'])
 @csrf.exempt
 @jwt_required
+@cache_route(timeout=300, vary_on=['page', 'per_page', 'search', 'sort', 'order'])
 def api_patients():
     """
     Get paginated list of patients (JWT protected)
@@ -134,6 +136,7 @@ def api_patients():
 @app.route('/api/patients/<patient_id>', methods=['GET'])
 @csrf.exempt
 @jwt_required
+@cache_route(timeout=600, vary_on=['patient_id'])
 def api_patient_detail(patient_id):
     """
     Get detailed information for a specific patient (JWT protected)
@@ -369,6 +372,10 @@ def api_create_patient():
         db.session.add(patient)
         db.session.commit()
 
+        # Invalidate patient-related caches
+        invalidate_cache_pattern('api_patients*')
+        invalidate_cache_pattern('patients*')
+
         # Evaluate screening needs
         from utils import evaluate_screening_needs
         evaluate_screening_needs(patient)
@@ -399,6 +406,7 @@ def api_create_patient():
 @app.route('/api/appointments', methods=['GET'])
 @csrf.exempt
 @jwt_required
+@cache_route(timeout=180, vary_on=['date'])
 def api_appointments():
     """
     Get appointments for a specific date (JWT protected)
@@ -449,4 +457,51 @@ def api_appointments():
 
     except Exception as e:
         logger.error(f"Error in API appointments endpoint: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
+@app.route('/api/cache/stats', methods=['GET'])
+@csrf.exempt
+@jwt_required
+@admin_required
+def api_cache_stats():
+    """Get cache statistics (admin only)"""
+    try:
+        stats = cache_manager.get_stats()
+        
+        return jsonify({
+            'cache_type': 'redis' if cache_manager.redis_client else 'memory',
+            'stats': stats,
+            'timestamp': datetime.now().isoformat()
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting cache stats: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/cache/clear', methods=['POST'])
+@csrf.exempt
+@jwt_required
+@admin_required
+def api_cache_clear():
+    """Clear cache (admin only)"""
+    try:
+        pattern = request.json.get('pattern', '*') if request.json else '*'
+        
+        if pattern == '*':
+            cache_manager.clear_all()
+            message = 'All cache cleared'
+        else:
+            invalidate_cache_pattern(pattern)
+            message = f'Cache cleared for pattern: {pattern}'
+        
+        logger.info(f"Cache cleared by admin {g.current_user.username}: {pattern}")
+        
+        return jsonify({
+            'success': True,
+            'message': message
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error clearing cache: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
