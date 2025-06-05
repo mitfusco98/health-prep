@@ -104,6 +104,7 @@ def redirect_to_home():
 @app.route('/home')
 @app.route('/home/date/<date_str>')
 @log_page_access('home_dashboard')
+@cache_route('dashboard', ttl=60, vary_on=['selected_date', 'date_str', 'refresh'])
 def index(date_str=None):
     """Application home page - Demo version with sample patients"""
     # Get stats for the dashboard
@@ -177,6 +178,7 @@ def index(date_str=None):
                           timestamp=timestamp)
 
 @app.route('/patients')
+@cache_route('patients_list', ttl=300, vary_on=['search', 'sort', 'order'])
 def patient_list():
     """List all patients"""
     # Get the search query parameters
@@ -289,6 +291,10 @@ def add_patient():
             db.session.commit()
             app.logger.info(f"Patient {patient.id} successfully saved to database")
             
+            # Invalidate related caches
+            invalidate_cache_pattern('patients_list:*')
+            invalidate_cache_pattern('dashboard:*')
+            
             flash('Patient added successfully.', 'success')
             return redirect(url_for('patient_detail', patient_id=patient.id))
             
@@ -302,6 +308,7 @@ def add_patient():
 @app.route('/patients/<int:patient_id>')
 @safe_db_operation
 @log_patient_operation('view_patient')
+@cache_route('patient_detail', ttl=180)
 def patient_detail(patient_id):
     """Display patient details"""
     app.logger.info(f"Viewing patient details for ID: {patient_id}")
@@ -473,6 +480,9 @@ def edit_patient(patient_id):
             # Explicitly commit the changes
             db.session.commit()
             app.logger.info(f"Patient {patient.id} successfully saved to database")
+            
+            # Invalidate patient-specific caches
+            invalidate_patient_cache(patient.id)
             
             flash('Patient demographics updated successfully.', 'success')
             return redirect(url_for('patient_detail', patient_id=patient.id))
@@ -2674,6 +2684,9 @@ def add_appointment():
                 appointment_date_str = today.strftime('%Y-%m-%d')
                 print(f"No appointment date found, defaulting to today: {appointment_date_str}")
                 
+            # Invalidate appointment-related caches
+            invalidate_appointment_cache(appointment_date)
+            
             # Use a cache-busting parameter to ensure fresh page load
             timestamp = int(time_module.time())
             print(f"Redirecting to index with date_str: {appointment_date_str} and refresh: {timestamp}")
