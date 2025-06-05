@@ -81,15 +81,17 @@
                             </li>
                         </ul>
                     </li>
+                <li class="nav-item">
+                        <span class="nav-link text-light">
+                            <i class="fas fa-user-md me-1"></i> Demo Mode
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">
+                            <i class="fas fa-key me-1"></i> Admin Login
+                        </a>
+                    </li>
                 </ul>
-                <div class="d-flex flex-column align-items-end">
-                    <span class="text-light me-3 d-flex align-items-center">
-                        <i class="fas fa-user-md me-1"></i> Demo Mode
-                    </span>
-                    <a href="{{ url_for('login') }}" class="text-light me-3 d-flex align-items-center small">
-                        <i class="fas fa-key me-1"></i> Admin Login
-                    </a>
-                </div>
             </div>
         </div>
     </nav>
