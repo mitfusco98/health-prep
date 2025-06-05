@@ -82,10 +82,13 @@
                         </ul>
                     </li>
                 </ul>
-                <div class="d-flex">
+                <div class="d-flex flex-column align-items-end">
                     <span class="text-light me-3 d-flex align-items-center">
                         <i class="fas fa-user-md me-1"></i> Demo Mode
                     </span>
+                    <a href="{{ url_for('login') }}" class="text-light me-3 d-flex align-items-center small">
+                        <i class="fas fa-key me-1"></i> Admin Login
+                    </a>
                 </div>
             </div>
         </div>
