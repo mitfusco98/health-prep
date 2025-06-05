@@ -2607,13 +2607,7 @@ def add_appointment():
             return render_template('appointment_form.html', form=form, patients=patients, editing=False)
         
         print(f"Proceeding without conflict check for date: {appointment_date}, time: {appointment_time}")
-        # Conflict detection removed - appointments can be scheduled at any timeem
-            return render_template('appointment_form.html', 
-                                  form=form, 
-                                  patients=patients, 
-                                  editing=False, 
-                                  conflicts=conflicts,
-                                  conflict_message=conflict_message)
+        # Conflict detection removed - appointments can be scheduled at any time
         
         # Create a new appointment
         try:
@@ -2829,21 +2823,7 @@ def edit_appointment(appointment_id):
             return render_template('appointment_form.html', form=form, patients=patients, editing=True, appointment=appointment)
         
         print(f"Proceeding without conflict check for edit - date: {appointment_date}, time: {appointment_time}")
-        # Conflict detection removed - appointments can be scheduled at any time({
-                    'success': False, 
-                    'message': warn_msg,
-                    'has_conflicts': True,
-                    'conflicts': [{'patient': c.patient.full_name, 'time': c.appointment_time.strftime('%I:%M %p')} for c in conflicts]
-                })
-            
-            flash(warn_msg, 'warning')
-            return render_template('appointment_form.html', 
-                                 form=form, 
-                                 patients=patients, 
-                                 editing=True, 
-                                 conflicts=conflicts,
-                                 conflict_message=conflict_message,
-                                 appointment=appointment)
+        # Conflict detection removed - appointments can be scheduled at any time
         
         # Update the appointment with our parsed data
         try:
