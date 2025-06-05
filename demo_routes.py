@@ -74,6 +74,7 @@ from forms import (PatientForm, ConditionForm, VitalForm,
                   HospitalSummaryForm, ScreeningForm, CSVUploadForm, DocumentUploadForm,
                   AppointmentForm, ImmunizationForm, PatientAlertForm)
 from comprehensive_logging import log_patient_operation, log_admin_operation, log_data_modification, log_page_access
+from cache_manager import cache_route, invalidate_cache_pattern, invalidate_patient_cache, invalidate_appointment_cache
 from models import (Patient, Condition, Vital, Visit, LabResult, ImagingStudy, 
                    ConsultReport, HospitalSummary, Screening, MedicalDocument, DocumentType,
                    Appointment, Immunization, PatientAlert)
