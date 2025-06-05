@@ -742,7 +742,7 @@ def sanitize_form_data():
     if request.method in ['POST', 'PUT', 'PATCH'] and request.form:
         from werkzeug.datastructures import MultiDict
 
-        # Create a new MultiDict with sanitized values to preserve thecontent.
+        # Create a new MultiDict with sanitized values to preserve the previous content.
         # the interface
         sanitized_form = MultiDict()
 
@@ -1014,7 +1014,3 @@ register_api_access_middleware(app)
 # Register admin route protection middleware
 from admin_middleware import register_admin_middleware
 register_admin_middleware(app)
-
-# Initialize cache manager
-from cache_manager import cache_manager
-cache_manager.init_app(app)

@@ -5,14 +5,12 @@ from jwt_utils import jwt_required, optional_jwt, admin_required
 from datetime import datetime, date, timedelta
 import logging
 from sqlalchemy import func, or_
-from cache_manager import cache_route, invalidate_patient_cache, invalidate_appointment_cache
 
 logger = logging.getLogger(__name__)
 
 @app.route('/api/patients', methods=['GET'])
 @csrf.exempt
 @jwt_required
-@cache_route('api_patients', ttl=180, vary_on=['page', 'per_page', 'search', 'sort', 'order'])
 def api_patients():
     """
     Get paginated list of patients (JWT protected)
@@ -136,7 +134,6 @@ def api_patients():
 @app.route('/api/patients/<patient_id>', methods=['GET'])
 @csrf.exempt
 @jwt_required
-@cache_route('api_patient_detail', ttl=300)
 def api_patient_detail(patient_id):
     """
     Get detailed information for a specific patient (JWT protected)
@@ -377,11 +374,6 @@ def api_create_patient():
         evaluate_screening_needs(patient)
 
         logger.info(f"Created new patient: {patient.full_name} (MRN: {patient.mrn}) by user {g.current_user.username}")
-        
-        # Invalidate related caches
-        from cache_manager import invalidate_cache_pattern
-        invalidate_cache_pattern('api_patients:*')
-        invalidate_cache_pattern('dashboard:*')
 
         return jsonify({
             'id': patient.id,
@@ -407,7 +399,6 @@ def api_create_patient():
 @app.route('/api/appointments', methods=['GET'])
 @csrf.exempt
 @jwt_required
-@cache_route('api_appointments', ttl=120, vary_on=['date'])
 def api_appointments():
     """
     Get appointments for a specific date (JWT protected)
