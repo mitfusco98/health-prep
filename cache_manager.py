@@ -1,3 +1,11 @@
+import redis
+import json
+import time
+import logging
+from flask import request
+from functools import wraps
+
+
 def invalidate_appointment_cache(patient_id=None, date=None):
     """Invalidate appointment-related cache entries"""
     patterns = [
