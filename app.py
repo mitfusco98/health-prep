@@ -97,13 +97,14 @@ app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///healthcare.db
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
-    "pool_pre_ping": False,  # Disable pre-ping to reduce blocking operations
+    "pool_pre_ping": True,   # Enable pre-ping to detect stale connections
     "pool_timeout": 10,      # Reduced from 30 to avoid long waits
     "pool_size": 20,         # Increased pool size for better concurrency
     "max_overflow": 30,      # Allow more overflow connections
     "connect_args": {
-        "connect_timeout": 5,    # Reduced connection timeout
-        "application_name": "healthprep_app"
+        "connect_timeout": 10,   # Increased connection timeout for stability
+        "application_name": "healthprep_app",
+        "sslmode": "prefer"      # Handle SSL connection issues more gracefully
     }
 }
 

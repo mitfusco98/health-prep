@@ -1,4 +1,51 @@
 
+from functools import wraps
+from flask import flash, redirect, url_for
+import logging
+
+logger = logging.getLogger(__name__)
+
+def with_db_retry(max_retries=2):
+    """Decorator to retry database operations with connection recovery"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            from app import db
+            
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    error_str = str(e).lower()
+                    is_db_error = any(term in error_str for term in [
+                        'ssl connection has been closed',
+                        'connection closed',
+                        'server closed the connection',
+                        'operationalerror',
+                        'connection pool',
+                        'database connection'
+                    ])
+                    
+                    if is_db_error and attempt < max_retries:
+                        logger.warning(f"Database connection error on attempt {attempt + 1}, retrying: {str(e)}")
+                        try:
+                            # Try to recover the connection
+                            db.session.rollback()
+                            db.session.remove()
+                            db.engine.dispose()
+                        except:
+                            pass
+                        continue
+                    else:
+                        # Re-raise the exception if it's not a DB error or we've exhausted retries
+                        raise e
+            
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
+
 import functools
 import logging
 from app import sanitize_input

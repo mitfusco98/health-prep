@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, date, time, timedelta
 from sqlalchemy import func
 from app import app, db, csrf
-from db_utils import safe_db_operation, fresh_session_operation
+from db_utils import safe_db_operation, fresh_session_operation, with_db_retry
 from models import (
     Patient, Condition, Vital, MedicalDocument, 
     LabResult, ImagingStudy, ConsultReport, HospitalSummary, 
@@ -2741,15 +2741,32 @@ def add_appointment():
 @app.route('/appointments/<int:appointment_id>/edit', methods=['GET', 'POST'])
 @fresh_session_operation
 @log_patient_operation('edit_appointment')
+@with_db_retry(max_retries=2)
 def edit_appointment(appointment_id):
     """Edit an existing appointment - Enhanced version with improved data handling"""
     print("=" * 50)
     print(f"Starting edit_appointment function for ID: {appointment_id}")
     print(f"Request method: {request.method}")
     
-    # Get the appointment by ID
-    appointment = Appointment.query.get_or_404(appointment_id)
-    print(f"Found appointment: ID={appointment.id}, Patient={appointment.patient.full_name}, Date={appointment.appointment_date}")
+    # Get the appointment by ID with database connection recovery
+    try:
+        appointment = Appointment.query.get_or_404(appointment_id)
+        print(f"Found appointment: ID={appointment.id}, Patient={appointment.patient.full_name}, Date={appointment.appointment_date}")
+    except Exception as db_error:
+        print(f"Database error in edit_appointment: {str(db_error)}")
+        # Try to recover from database connection issues
+        try:
+            db.session.rollback()
+            db.session.remove()
+            # Force a new connection by disposing the engine
+            db.engine.dispose()
+            # Retry the query with a fresh connection
+            appointment = Appointment.query.get_or_404(appointment_id)
+            print(f"Database connection recovered - Found appointment: ID={appointment.id}")
+        except Exception as retry_error:
+            print(f"Database connection recovery failed: {str(retry_error)}")
+            flash('Database connection error. Please try again.', 'danger')
+            return redirect(url_for('index'))
     
     # Create form with standard handling
     if request.method == 'GET':
