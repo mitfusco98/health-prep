@@ -2842,10 +2842,7 @@ def edit_appointment(appointment_id):
             print(f"Appointment updated successfully")
             
             # Set success message
-            if conflicts and force_save:
-                success_msg = 'Appointment updated with scheduling conflicts.'
-            else:
-                success_msg = 'Appointment updated successfully.'
+            success_msg = 'Appointment updated successfully.'
             
             # Use a cache-busting timestamp
             timestamp = int(time_module.time())
@@ -2866,10 +2863,7 @@ def edit_appointment(appointment_id):
                 })
             
             # Set flash message
-            if conflicts and force_save:
-                flash(success_msg, 'warning')
-            else:
-                flash(success_msg, 'success')
+            flash(success_msg, 'success')
             
             # Clear the editing appointment ID from session
             session.pop('editing_appointment_id', None)
