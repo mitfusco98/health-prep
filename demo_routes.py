@@ -2606,30 +2606,8 @@ def add_appointment():
             flash(error_msg, 'danger')
             return render_template('appointment_form.html', form=form, patients=patients, editing=False)
         
-        print(f"Checking conflicts for date: {appointment_date}, time: {appointment_time}")
-        # Check for appointment conflicts
-        conflicts = detect_appointment_conflicts(
-            date=appointment_date,  # Use the directly parsed date
-            time_obj=appointment_time,
-            duration_minutes=30  # Default appointment duration
-        )
-        
-        if conflicts and not force_save:
-            print(f"Found {len(conflicts)} conflicts and force_save is False")
-            # Generate a warning message about the conflict
-            conflict_message = format_conflict_message(conflicts)
-            warn_msg = f'Warning: {conflict_message}'
-            
-            if is_ajax:
-                return jsonify({
-                    'success': False, 
-                    'message': warn_msg,
-                    'has_conflicts': True,
-                    'conflicts': [{'patient': c.patient.full_name, 'time': c.appointment_time.strftime('%I:%M %p')} for c in conflicts]
-                })
-            
-            flash(warn_msg, 'warning')
-            # Pass conflicts to template to highlight them
+        print(f"Proceeding without conflict check for date: {appointment_date}, time: {appointment_time}")
+        # Conflict detection removed - appointments can be scheduled at any timeem
             return render_template('appointment_form.html', 
                                   form=form, 
                                   patients=patients, 
@@ -2850,21 +2828,8 @@ def edit_appointment(appointment_id):
             flash(error_msg, 'danger')
             return render_template('appointment_form.html', form=form, patients=patients, editing=True, appointment=appointment)
         
-        # Check for conflicts
-        conflicts = detect_appointment_conflicts(
-            date=appointment_date,
-            time_obj=appointment_time,
-            duration_minutes=30,  # Default appointment duration
-            appointment_id=appointment.id  # Exclude this appointment from conflict check
-        )
-        
-        if conflicts and not force_save:
-            print(f"Found {len(conflicts)} conflicts and force_save is False")
-            conflict_message = format_conflict_message(conflicts)
-            warn_msg = f'Warning: {conflict_message}'
-            
-            if is_ajax:
-                return jsonify({
+        print(f"Proceeding without conflict check for edit - date: {appointment_date}, time: {appointment_time}")
+        # Conflict detection removed - appointments can be scheduled at any time({
                     'success': False, 
                     'message': warn_msg,
                     'has_conflicts': True,

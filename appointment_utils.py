@@ -7,7 +7,7 @@ DEFAULT_APPOINTMENT_DURATION = 15
 
 def detect_appointment_conflicts(date, time_obj, duration_minutes=DEFAULT_APPOINTMENT_DURATION, appointment_id=None):
     """
-    Detect conflicts with existing appointments
+    Detect conflicts with existing appointments - DISABLED
     
     Args:
         date: The date of the appointment
@@ -16,47 +16,10 @@ def detect_appointment_conflicts(date, time_obj, duration_minutes=DEFAULT_APPOIN
         appointment_id: ID of the appointment being edited (to exclude from conflict check)
         
     Returns:
-        list: List of conflicting appointments, empty if no conflicts
+        list: Always returns empty list (conflict detection disabled)
     """
-    if not date or not time_obj:
-        return []
-    
-    # Calculate the end time of this appointment
-    start_dt = datetime.combine(date, time_obj)
-    end_dt = start_dt + timedelta(minutes=duration_minutes)
-    end_time = end_dt.time()
-    
-    # Query for appointments on the same day
-    query = Appointment.query.filter(
-        Appointment.appointment_date == date
-    )
-    
-    # Exclude the current appointment if editing
-    if appointment_id:
-        query = query.filter(Appointment.id != appointment_id)
-    
-    # Get all appointments for the day
-    day_appointments = query.all()
-    
-    # Check for time conflicts (15-minute appointments)
-    conflicts = []
-    for appt in day_appointments:
-        # Calculate end time for existing appointment
-        appt_start = datetime.combine(date, appt.appointment_time)
-        appt_end = appt_start + timedelta(minutes=duration_minutes)
-        
-        # Check if appointments overlap
-        # New appointment starts during existing appointment
-        condition1 = (time_obj >= appt.appointment_time and time_obj < appt_end.time())
-        # New appointment ends during existing appointment
-        condition2 = (end_time > appt.appointment_time and end_time <= appt_end.time())
-        # New appointment completely contains existing appointment
-        condition3 = (time_obj <= appt.appointment_time and end_time >= appt_end.time())
-        
-        if condition1 or condition2 or condition3:
-            conflicts.append(appt)
-            
-    return conflicts
+    # Conflict detection disabled - return no conflicts
+    return []
 
 def get_booked_time_slots(date, appointment_id=None, as_string=False):
     """
