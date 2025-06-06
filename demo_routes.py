@@ -2636,6 +2636,40 @@ def add_appointment():
             db.session.commit()
             print(f"Appointment created successfully with ID: {appointment.id}")
             
+            # Log the appointment addition to admin dashboard with detailed information
+            try:
+                import uuid
+                from models import AdminLog
+                request_id = str(uuid.uuid4())
+                
+                # Get patient name for logging
+                patient = Patient.query.get(patient_id_int)
+                patient_name = patient.full_name if patient else 'Unknown'
+                
+                AdminLog.log_event(
+                    event_type='appointment_addition',
+                    user_id=session.get('user_id'),
+                    event_details={
+                        'action': 'add',
+                        'appointment_id': appointment.id,
+                        'patient_id': patient_id_int,
+                        'patient_name': patient_name,
+                        'appointment_date': appointment_date.strftime('%Y-%m-%d'),
+                        'appointment_time': appointment_time.strftime('%H:%M'),
+                        'note': note or '',
+                        'admin_user': session.get('username'),
+                        'timestamp': datetime.now().isoformat()
+                    },
+                    request_id=request_id,
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent', '')
+                )
+                db.session.commit()
+            except Exception as log_error:
+                logger.error(f"Error logging appointment addition: {str(log_error)}")
+                # Don't let logging errors break the appointment creation
+                pass
+            
             # Double-check the appointment was actually created and log the result
             verify = Appointment.query.get(appointment.id)
             if verify:
