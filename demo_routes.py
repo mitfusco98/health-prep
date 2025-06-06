@@ -2656,10 +2656,7 @@ def add_appointment():
             else:
                 print("WARNING: Could not verify appointment in database after creation!")
                 
-            if conflicts and force_save:
-                success_msg = 'Appointment added with scheduling conflicts.'
-            else:
-                success_msg = 'Appointment added successfully.'
+            success_msg = 'Appointment added successfully.'
             
             # Use our original unparsed date string for the redirect - it's already in the correct format
             appointment_date_str = appointment_date_str  # This is from the form input and is already in 'YYYY-MM-DD' format
@@ -2695,10 +2692,7 @@ def add_appointment():
                     'redirect': redirect_url
                 })
             
-            if conflicts and force_save:
-                flash(success_msg, 'warning')
-            else:
-                flash(success_msg, 'success')
+            flash(success_msg, 'success')
                 
             print(f"Form date: {form.appointment_date.data}, type: {type(form.appointment_date.data)}")
             
