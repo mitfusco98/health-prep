@@ -84,6 +84,7 @@
                         <th width="40">
                             <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
                         </th>
+                        <th width="80">ID</th>
                         <th>Date</th>
                         <th>Time</th>
                         <th>Patient</th>
@@ -99,6 +100,9 @@
                     <tr>
                         <td>
                             <input type="checkbox" class="appointment-checkbox" value="{{ appointment.id }}" onchange="updateDeleteButton()">
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ appointment.id }}</span>
                         </td>
                         <td>
                             {{ appointment.appointment_date.strftime('%m/%d/%Y') }}
