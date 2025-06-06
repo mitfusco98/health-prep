@@ -42,33 +42,24 @@ def utility_processor():
         'cache_bust': cache_bust()
     }
 
-# Add a datetime filter for templates
+# Template filters using shared utility functions for consistency
+from shared_utilities import format_datetime_display, format_date_of_birth, format_timestamp_to_est
+
+# Register template filters using consolidated functions
 @app.template_filter('datetime')
 def format_datetime(value, format='%B %d, %Y'):
     """Format a datetime object to a readable string."""
-    if value is None:
-        return ""
-    return value.strftime(format)
+    return format_datetime_display(value, format)
 
-# Add a date of birth filter for templates
 @app.template_filter('dob')
 def format_dob(value):
     """Format a date object to MM/DD/YYYY format for date of birth."""
-    if value is None:
-        return ""
-    return value.strftime('%m/%d/%Y')
+    return format_date_of_birth(value)
 
 @app.template_filter('timestamp_to_est')
 def timestamp_to_est(utc_timestamp):
     """Convert UTC timestamp to EST and format for display."""
-    from datetime import timezone, timedelta
-    if utc_timestamp:
-        # EST is UTC-5, EDT is UTC-4. For simplicity, using EST offset
-        est_offset = timedelta(hours=-5)
-        est_timezone = timezone(est_offset)
-        est_time = utc_timestamp.replace(tzinfo=timezone.utc).astimezone(est_timezone)
-        return est_time.strftime('%m/%d %H:%M EST')
-    return ''
+    return format_timestamp_to_est(utc_timestamp)
 from forms import (PatientForm, ConditionForm, VitalForm, 
                   VisitForm, LabResultForm, ImagingStudyForm, ConsultReportForm, 
                   HospitalSummaryForm, ScreeningForm, CSVUploadForm, DocumentUploadForm,

@@ -11,48 +11,12 @@ import json
 
 logger = logging.getLogger(__name__)
 
+# Validation error logging moved to shared_utilities.py for consistency
+from shared_utilities import log_validation_error_unified
+
 def log_validation_error(schema_name, validation_errors, form_data, user_id=None):
-    """Log validation errors to admin logs"""
-    try:
-        from models import AdminLog
-        from app import db
-        
-        request_id = str(uuid.uuid4())
-        
-        # Format validation errors for logging
-        error_details = {}
-        for error in validation_errors:
-            field = '.'.join(str(loc) for loc in error['loc'])
-            error_details[field] = error['msg']
-        
-        # Sanitize form data for logging (remove sensitive fields)
-        sanitized_data = {}
-        sensitive_fields = ['password', 'password_hash', 'csrf_token']
-        
-        for key, value in form_data.items():
-            if key.lower() not in sensitive_fields:
-                sanitized_data[key] = str(value)[:100]  # Truncate long values
-        
-        AdminLog.log_event(
-            event_type='validation_error',
-            user_id=user_id,
-            event_details={
-                'schema': schema_name,
-                'validation_errors': error_details,
-                'form_data_fields': list(sanitized_data.keys()),
-                'sanitized_form_data': sanitized_data,
-                'error_count': len(validation_errors)
-            },
-            request_id=request_id,
-            ip_address=request.remote_addr,
-            user_agent=request.headers.get('User-Agent', '')
-        )
-        db.session.commit()
-        
-        logger.warning(f"Validation error logged: {schema_name} - {len(validation_errors)} errors")
-        
-    except Exception as e:
-        logger.error(f"Error logging validation error: {str(e)}")
+    """Log validation errors to admin logs - unified implementation"""
+    return log_validation_error_unified(schema_name, validation_errors, form_data, user_id)
 
 
 def validate_input(schema_class, redirect_route=None, flash_errors=True):
