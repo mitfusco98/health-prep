@@ -2961,6 +2961,37 @@ def delete_appointment(appointment_id):
         appointment_date = appointment.appointment_date.strftime('%Y-%m-%d') if appointment.appointment_date else None
         print(f"Appointment date for redirect: {appointment_date}")
         
+        # Log the deletion to admin dashboard before deleting
+        try:
+            import uuid
+            from models import AdminLog
+            request_id = str(uuid.uuid4())
+            
+            AdminLog.log_event(
+                event_type='appointment_deletion',
+                user_id=session.get('user_id'),
+                event_details={
+                    'action': 'delete',
+                    'appointment_id': appointment.id,
+                    'patient_id': appointment.patient_id,
+                    'patient_name': appointment.patient.full_name,
+                    'appointment_date': appointment.appointment_date.strftime('%Y-%m-%d'),
+                    'appointment_time': appointment.appointment_time.strftime('%H:%M') if appointment.appointment_time else 'N/A',
+                    'note': appointment.note or '',
+                    'deletion_location': 'individual_appointment',
+                    'admin_user': session.get('username'),
+                    'timestamp': datetime.now().isoformat()
+                },
+                request_id=request_id,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')
+            )
+            db.session.commit()
+        except Exception as log_error:
+            logger.error(f"Error logging appointment deletion: {str(log_error)}")
+            # Don't let logging errors break the deletion
+            pass
+        
         # Delete the appointment
         db.session.delete(appointment)
         db.session.commit()
@@ -2977,7 +3008,7 @@ def delete_appointment(appointment_id):
                 return jsonify({
                     'success': True, 
                     'message': success_msg,
-                    'redirect': f"/date/{appointment_date}?refresh={timestamp}"
+                    'redirect': f"/home/date/{appointment_date}?refresh={timestamp}"
                 })
             else:
                 return jsonify({
@@ -2989,7 +3020,7 @@ def delete_appointment(appointment_id):
         # Use Flask's url_for for consistency
         try:
             if appointment_date:
-                redirect_url = url_for('index', date=appointment_date, refresh=timestamp)
+                redirect_url = url_for('index', date_str=appointment_date, refresh=timestamp)
                 print(f"Delete redirect URL via url_for: {redirect_url}")
             else:
                 redirect_url = url_for('index', refresh=timestamp)
@@ -3096,6 +3127,37 @@ def delete_appointments_bulk():
         
         for appointment in appointments_to_delete:
             print(f"DEBUG: Deleting appointment {appointment.id} for patient {appointment.patient.full_name}")
+            
+            # Log each deletion to admin dashboard
+            try:
+                import uuid
+                from models import AdminLog
+                request_id = str(uuid.uuid4())
+                
+                AdminLog.log_event(
+                    event_type='appointment_deletion',
+                    user_id=session.get('user_id'),
+                    event_details={
+                        'action': 'delete',
+                        'appointment_id': appointment.id,
+                        'patient_id': appointment.patient_id,
+                        'patient_name': appointment.patient.full_name,
+                        'appointment_date': appointment.appointment_date.strftime('%Y-%m-%d'),
+                        'appointment_time': appointment.appointment_time.strftime('%H:%M') if appointment.appointment_time else 'N/A',
+                        'note': appointment.note or '',
+                        'deletion_location': 'bulk_visits_page',
+                        'admin_user': session.get('username'),
+                        'timestamp': datetime.now().isoformat()
+                    },
+                    request_id=request_id,
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent', '')
+                )
+            except Exception as log_error:
+                logger.error(f"Error logging appointment deletion: {str(log_error)}")
+                # Don't let logging errors break the deletion
+                pass
+            
             db.session.delete(appointment)
             deleted_count += 1
         
