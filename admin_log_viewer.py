@@ -276,8 +276,12 @@ def format_log_details(log):
                 # Get standardized action from event_data or event_type
                 action = event_data.get('action', log.event_type)
 
-                # Ensure action is one of the four standard types
-                if action not in ['view', 'edit', 'delete', 'add']:
+                # Map event types to standard actions
+                if log.event_type == 'appointment_addition':
+                    action = "add"
+                elif log.event_type == 'appointment_deletion':
+                    action = "delete"
+                elif action not in ['view', 'edit', 'delete', 'add']:
                     # Map legacy event types
                     if 'edit' in action.lower() or 'update' in action.lower():
                         action = "edit"
@@ -312,6 +316,19 @@ def format_log_details(log):
                 appointment_id = event_data.get('appointment_id')
                 if appointment_id:
                     formatted_details.append(f"<span class='badge bg-success'>Appointment ID: {appointment_id}</span>")
+                
+                # Show appointment details for add/delete operations
+                if action in ['add', 'delete'] and appointment_id:
+                    appointment_date = event_data.get('appointment_date')
+                    appointment_time = event_data.get('appointment_time')
+                    appointment_note = event_data.get('note')
+                    
+                    if appointment_date:
+                        formatted_details.append(f"<span class='badge bg-info'>Date: {appointment_date}</span>")
+                    if appointment_time and appointment_time != 'N/A':
+                        formatted_details.append(f"<span class='badge bg-info'>Time: {appointment_time}</span>")
+                    if appointment_note:
+                        formatted_details.append(f"<span class='badge bg-secondary'>Note: {appointment_note}</span>")
 
                 # Show page address/endpoint
                 page_address = None
