@@ -1,0 +1,63 @@
+Starting add_appointment function...
+Request method: GET
+Request headers: {'Host': 'b1b46abe-838d-464d-8410-80c925647698-00-1zl7ablirpohy.kirk.replit.dev', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7', 'Accept-Encoding': 'gzip, deflate, br', 'Accept-Language': 'en-US', 'Cookie': 'healthprep_session=.eJxNj09LxDAUxL9LzkvZpHl5SW8eVsE_6LIHWUVK8vLi1rLd2rQqiN_diAc9DcxvhmE-BeUptfOp50E0olbBU4KYXDAWPSvPupY60jo64zRGlgChJrESE78unOd27o5F_HHMonmUqJ00iFZWxmGtlX5aicw5d6ehpYn9zFE0vylTFirU2jqDf6GucHGv_MWyv7oc32D_ct5H-IDbzd20y7Q9u-netw-78Xrs0pD6jfhXHUtVriurKllJKwtaMk-tf-Zhbg8-HwpXNgIohUE5w0wpRRcDALmgig0SKUaQQByQEB0FXwdyJvzcMYm8-PoGCqhd3g.aEIupw.MirzKd2OMOUCbm5jklD5GgJXt38', 'Referer': 'https://b1b46abe-838d-464d-8410-80c925647698-00-1zl7ablirpohy.kirk.replit.dev/home/date/2025-06-05?refresh=1749167782', 'Sec-Fetch-Dest': 'document', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Site': 'same-origin', 'Sec-Fetch-User': '?1', 'Upgrade-Insecure-Requests': '1', 'X-Forwarded-For': '69.207.59.155, 10.82.1.181', 'X-Forwarded-Proto': 'https', 'X-Replit-User-Bio': '', 'X-Replit-User-Id': '', 'X-Replit-User-Name': '', 'X-Replit-User-Profile-Image': '', 'X-Replit-User-Roles': '', 'X-Replit-User-Teams': '', 'X-Replit-User-Url': ''}
+Request is AJAX: False
+Request form data: ImmutableMultiDict([])
+Request args: ImmutableMultiDict([('date', '2025-06-05'), ('refresh', '1749167783')])
+Request files: ImmutableMultiDict([])
+==================================================
+Selected date from URL: 2025-06-05
+Current date for reference: 2025-06-05
+Initial form appointment_date.data: None
+Force save flag: False
+Is AJAX request: False
+Found 12 patients for dropdown
+Set form appointment_date to: 2025-06-05
+Date format check - Selected date: 2025-06-05, Parsed as: 2025-06-05, Form value: 2025-06-05
+Form submitted: False
+--------------------------------------------------
+FINAL DEBUG - Request method: GET
+FINAL DEBUG - Form validation status: GET request
+FINAL DEBUG - Selected date: 2025-06-05
+FINAL DEBUG - Fallback date: None
+--------------------------------------------------
+Get available slots - Date: 2025-06-05, Appointment ID: None
+Get available slots - Date: 2025-06-05, Appointment ID: None
+==================================================
+Starting add_appointment function...
+Request method: POST
+Request headers: {'Host': 'b1b46abe-838d-464d-8410-80c925647698-00-1zl7ablirpohy.kirk.replit.dev', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36', 'Content-Length': '237', 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7', 'Accept-Encoding': 'gzip, deflate, br', 'Accept-Language': 'en-US', 'Cache-Control': 'max-age=0', 'Content-Type': 'application/x-www-form-urlencoded', 'Cookie': 'healthprep_session=.eJxNj09LxDAUxL9LzkvZpHl5SW8eVsE_6LIHWUVK8vLi1rLd2rQqiN_diAc9DcxvhmE-BeUptfOp50E0olbBU4KYXDAWPSvPupY60jo64zRGlgChJrESE78unOd27o5F_HHMonmUqJ00iFZWxmGtlX5aicw5d6ehpYn9zFE0vylTFirU2jqDf6GucHGv_MWyv7oc32D_ct5H-IDbzd20y7Q9u-netw-78Xrs0pD6jfhXHUtVriurKllJKwtaMk-tf-Zhbg8-HwpXNgIohUE5w0wpRRcDALmgig0SKUaQQByQEB0FXwdyJvzcMYm8-PoGCqhd3g.aEIupw.MirzKd2OMOUCbm5jklD5GgJXt38', 'Origin': 'https://b1b46abe-838d-464d-8410-80c925647698-00-1zl7ablirpohy.kirk.replit.dev', 'Referer': 'https://b1b46abe-838d-464d-8410-80c925647698-00-1zl7ablirpohy.kirk.replit.dev/add-appointment?date=2025-06-05&refresh=1749167783', 'Sec-Fetch-Dest': 'document', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Site': 'same-origin', 'Sec-Fetch-User': '?1', 'Upgrade-Insecure-Requests': '1', 'X-Forwarded-For': '69.207.59.155, 10.82.1.181', 'X-Forwarded-Proto': 'https', 'X-Replit-User-Bio': '', 'X-Replit-User-Id': '', 'X-Replit-User-Name': '', 'X-Replit-User-Profile-Image': '', 'X-Replit-User-Roles': '', 'X-Replit-User-Teams': '', 'X-Replit-User-Url': ''}
+Request is AJAX: False
+Request form data: MultiDict([('csrf_token', 'IjMyYmFjZjVkZjliNjg3YWUyYWU0MzE0ZGMwZDk2OTQ3ZGUxNTViM2Mi.aEIurw.JUuTC0PN4meTPXiwHIvGV5gk780'), ('fallback_date', '2025-06-05'), ('_form_debug', 'direct_post_submission'), ('patient_id', '8'), ('appointment_date', '2025-06-05'), ('appointment_time', '10:45'), ('note', 'nmn')])
+Request args: ImmutableMultiDict([])
+Request files: ImmutableMultiDict([])
+==================================================
+Selected date from URL: None
+Current date for reference: 2025-06-05
+Initial form appointment_date.data: None
+Fallback date from form: 2025-06-05
+Force save flag: False
+Is AJAX request: False
+Found 12 patients for dropdown
+Form submitted: True
+Form data: MultiDict([('csrf_token', 'IjMyYmFjZjVkZjliNjg3YWUyYWU0MzE0ZGMwZDk2OTQ3ZGUxNTViM2Mi.aEIurw.JUuTC0PN4meTPXiwHIvGV5gk780'), ('fallback_date', '2025-06-05'), ('_form_debug', 'direct_post_submission'), ('patient_id', '8'), ('appointment_date', '2025-06-05'), ('appointment_time', '10:45'), ('note', 'nmn')])
+Debug info: direct_post_submission - Has errors: false
+POST data before creating form: appointment_date=2025-06-05
+Form after creation: appointment_date=2025-06-05
+Appointment date before validation: 2025-06-05, type: <class 'datetime.date'>
+Form validation: True
+Appointment date after validation: 2025-06-05, type: <class 'datetime.date'>
+Processing POST request for appointment creation
+Direct form data: patient_id=8, date=2025-06-05, time=10:45
+Form validated: True
+Successfully parsed date: 2025-06-05 and time: 10:45:00
+Proceeding without conflict check for date: 2025-06-05, time: 10:45:00
+Raw appointment date: 2025-06-05
+Using parsed date: 2025-06-05
+Creating appointment for patient ID: 8, date: 2025-06-05
+Appointment created successfully with ID: 171
+Verified appointment exists in database with ID 171
+Total appointments for 2025-06-05: 5
+Error saving appointment: name 'conflicts' is not defined
+Get available slots - Date: 2025-06-05, Appointment ID: None
+Get available slots - Date: 2025-06-05, Appointment ID: None
