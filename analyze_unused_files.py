@@ -78,9 +78,18 @@ def analyze_file_usage():
     # Files that appear unused (not imported by other files)
     potentially_unused = python_modules - imported_modules
     
-    # Remove obvious main files that wouldn't be imported
+    # Remove obvious main files and utility scripts that wouldn't be imported
     main_files = {'main', 'app'}
-    potentially_unused = potentially_unused - main_files
+    utility_scripts = {
+        'add_default_screening_types', 'add_test_patients', 'analyze_unused_files',
+        'change_admin_password', 'create_admin_user', 'create_admin_logs_table',
+        'fix_admin_logs', 'migrate_to_unified_config', 'setup_secrets',
+        'test_api_external', 'direct_appointment_add', 'fix_db',
+        'optimize_db_queries', 'secure_admin', 'update_appointment_schema',
+        'update_checklist_settings', 'update_document_binary', 'update_document_schema',
+        'remove_screening_type_unique_constraint'
+    }
+    potentially_unused = potentially_unused - main_files - utility_scripts
     
     return {
         'all_files': python_files,
