@@ -1,0 +1,83 @@
+Analyzing file usage...
+Error parsing performance_optimizations.py: invalid syntax (<unknown>, line 225)
+
+📊 Analysis Results:
+Total Python files: 68
+Imported modules: 33
+Potentially unused: 34
+
+✅ Files that ARE imported by other files:
+  - admin_log_cleanup.py
+  - admin_log_viewer.py
+  - admin_middleware.py
+  - api_access_middleware.py
+  - api_routes.py
+  - app.py
+  - appointment_utils.py
+  - auth_routes.py
+  - cache_manager.py
+  - checklist_routes.py
+  - comprehensive_logging.py
+  - config.py
+  - db_utils.py
+  - demo_routes.py
+  - ehr_integration.py
+  - ehr_routes.py
+  - env_validator.py
+  - forms.py
+  - input_validator.py
+  - jwt_utils.py
+  - key_management.py
+  - logging_config.py
+  - models.py
+  - performance_routes.py
+  - prep_doc_utils.py
+  - profiler.py
+  - screening_rules.py
+  - shared_utilities.py
+  - sql_security.py
+  - structured_logger.py
+  - structured_logging.py
+  - utils.py
+  - validation_middleware.py
+
+❓ Files that may be unused (not imported):
+  - add_default_screening_types.py (but referenced as string in: add_default_screening_types.py)
+  - add_sample_data.py
+  - add_test_patients.py (but referenced as string in: add_test_patients.py)
+  - analyze_unused_files.py
+  - api_security.py
+  - async_utils.py
+  - change_admin_password.py (but referenced as string in: change_admin_password.py)
+  - create_admin_logs_table.py (but referenced as string in: create_admin_logs_table.py)
+  - create_admin_user.py (but referenced as string in: create_admin_user.py, setup_secrets.py)
+  - db_security_wrapper.py
+  - debug_events.py
+  - debug_template.py
+  - demo_routes_backup.py
+  - direct_appointment_add.py
+  - fix_admin_logs.py (but referenced as string in: fix_admin_logs.py)
+  - fix_db.py
+  - generate_sample_admin_logs.py
+  - log_aggregation_utils.py
+  - migrate_to_unified_config.py (but referenced as string in: migrate_to_unified_config.py)
+  - optimize_db_queries.py
+  - performance_logger.py
+  - performance_optimizations.py
+  - remove_screening_type_unique_constraint.py
+  - routes.py (but referenced as string in: performance_routes.py, main.py, performance_optimizations.py, profiler.py, api_access_middleware.py, routes.py, admin_middleware.py, shared_utilities.py, app.py, demo_routes.py)
+  - secure_admin.py (but referenced as string in: secure_admin.py)
+  - setup_secrets.py
+  - test_api_external.py
+  - update_appointment_schema.py
+  - update_checklist_settings.py (but referenced as string in: checklist_routes.py, api_access_middleware.py)
+  - update_document_binary.py
+  - update_document_schema.py
+  - validation_schemas.py
+  - validation_utils.py (but referenced as string in: shared_utilities.py)
+  - validators.py (but referenced as string in: forms.py)
+
+📄 Template includes found:
+  - base.html
+  - base_demo.html
+  - base_simple.html
