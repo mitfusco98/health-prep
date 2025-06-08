@@ -100,7 +100,12 @@ import trafilatura
 from sqlalchemy import func, or_
 from sqlalchemy import text
 
-# Removed unused CSV processing function - not referenced anywhere in codebase
+def process_csv_upload(csv_file):
+    """
+    Process CSV upload and return processed data.
+    This is a wrapper around process_csv_data for backward compatibility.
+    """
+    return process_csv_data(csv_file)
 
 def process_csv_data(csv_file):
     """
