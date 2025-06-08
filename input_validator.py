@@ -205,4 +205,3 @@ def validate_login_input(func):
 def validate_bulk_delete_input(func):
     """Decorator for bulk delete validation"""
     return validate_post_input(validate_bulk_delete_data)(func)
-```
