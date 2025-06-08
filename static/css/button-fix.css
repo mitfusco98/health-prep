@@ -2,9 +2,7 @@
  * Override for button icons - added May 18, 2025 
  */
 
-/* Hide all Font Awesome icons in screening management buttons */
-.screening-management-buttons .fas,
-.screening-management-buttons .fa,
+/* Hide all Font Awesome icons in screening tables */
 #screening-list-table .fas,
 #screening-list-table .fa,
 #screening-types-table .fas,
