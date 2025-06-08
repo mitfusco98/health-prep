@@ -505,3 +505,20 @@ def api_cache_clear():
     except Exception as e:
         logger.error(f"Error clearing cache: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/config', methods=['GET'])
+@csrf.exempt
+@cache_route(timeout=3600)  # Cache for 1 hour since config rarely changes
+def api_config():
+    """Get frontend configuration"""
+    try:
+        from config import get_config
+        
+        config = get_config()
+        frontend_config = config.get_frontend_config()
+        
+        return jsonify(frontend_config), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting frontend config: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
