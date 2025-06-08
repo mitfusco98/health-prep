@@ -487,75 +487,127 @@ def process_document_upload(content, filename, source_system="HealthPrep"):
 
     return result
 
+class DocumentClassifier:
+    """Strategy pattern for document classification"""
+    
+    def __init__(self):
+        # Filename pattern lookup
+        self.filename_patterns = {
+            ('discharge', 'summary'): DocumentType.DISCHARGE_SUMMARY,
+            ('radiology', 'xray', 'mri', 'ct'): DocumentType.RADIOLOGY_REPORT,
+            ('lab', 'test', 'result'): DocumentType.LAB_REPORT,
+            ('medication', 'med_list', 'prescription'): DocumentType.MEDICATION_LIST,
+            ('referral',): DocumentType.REFERRAL,
+            ('consult',): DocumentType.CONSULTATION,
+            ('operation', 'surgical', 'procedure'): DocumentType.OPERATIVE_REPORT,
+            ('pathology',): DocumentType.PATHOLOGY_REPORT,
+        }
+        
+        # Content pattern strategies
+        self.content_strategies = [
+            self._classify_discharge_summary,
+            self._classify_radiology_report,
+            self._classify_lab_report,
+            self._classify_medication_list,
+            self._classify_referral,
+            self._classify_consultation,
+            self._classify_operative_report,
+            self._classify_pathology_report,
+        ]
+    
+    def classify(self, content, filename=None):
+        """
+        Classify a document based on its content and filename.
+        Returns a tuple of (DocumentType, metadata_dict)
+        """
+        metadata = {}
+        
+        # Try filename classification first
+        if filename:
+            doc_type = self._classify_by_filename(filename)
+            if doc_type:
+                return doc_type, metadata
+        
+        # Try content classification strategies
+        content_lower = content.lower()
+        for strategy in self.content_strategies:
+            result = strategy(content_lower, metadata)
+            if result:
+                return result
+        
+        # Default to unknown
+        return DocumentType.UNKNOWN, metadata
+    
+    def _classify_by_filename(self, filename):
+        """Classify document by filename patterns"""
+        filename_lower = filename.lower()
+        
+        for keywords, doc_type in self.filename_patterns.items():
+            if any(keyword in filename_lower for keyword in keywords):
+                return doc_type
+        
+        return None
+    
+    def _classify_discharge_summary(self, content_lower, metadata):
+        if re.search(r'discharge\s+summary', content_lower) or re.search(r'discharged\s+from', content_lower):
+            return DocumentType.DISCHARGE_SUMMARY, metadata
+        return None
+    
+    def _classify_radiology_report(self, content_lower, metadata):
+        if re.search(r'radiolog(y|ical)|x-?ray|mri|ct scan|ultrasound', content_lower):
+            if re.search(r'impression:', content_lower):
+                metadata['has_impression'] = True
+            return DocumentType.RADIOLOGY_REPORT, metadata
+        return None
+    
+    def _classify_lab_report(self, content_lower, metadata):
+        if re.search(r'laboratory|lab(\s+)results?|test(\s+)results?', content_lower):
+            # Extract test names
+            test_names = []
+            test_pattern = r'(?:test|lab):\s*([A-Za-z0-9\s]+)'
+            matches = re.finditer(test_pattern, content_lower)
+            for match in matches:
+                if match.group(1).strip():
+                    test_names.append(match.group(1).strip())
+            
+            metadata['test_names'] = test_names
+            return DocumentType.LAB_REPORT, metadata
+        return None
+    
+    def _classify_medication_list(self, content_lower, metadata):
+        if re.search(r'medications?|prescriptions?', content_lower):
+            return DocumentType.MEDICATION_LIST, metadata
+        return None
+    
+    def _classify_referral(self, content_lower, metadata):
+        if re.search(r'referr(ed|al)', content_lower):
+            return DocumentType.REFERRAL, metadata
+        return None
+    
+    def _classify_consultation(self, content_lower, metadata):
+        if re.search(r'consult(ation)?', content_lower):
+            return DocumentType.CONSULTATION, metadata
+        return None
+    
+    def _classify_operative_report(self, content_lower, metadata):
+        if re.search(r'operat(ive|ion)|surgical|procedure', content_lower):
+            return DocumentType.OPERATIVE_REPORT, metadata
+        return None
+    
+    def _classify_pathology_report(self, content_lower, metadata):
+        if re.search(r'pathology', content_lower):
+            return DocumentType.PATHOLOGY_REPORT, metadata
+        return None
+
+# Global classifier instance
+_document_classifier = DocumentClassifier()
+
 def classify_document(content, filename=None):
     """
     Classify a document based on its content and filename.
     Returns a tuple of (DocumentType, metadata_dict)
     """
-    # Initialize metadata
-    metadata = {}
-
-    # First check if we can determine type from filename
-    if filename:
-        filename_lower = filename.lower()
-        if 'discharge' in filename_lower and 'summary' in filename_lower:
-            return DocumentType.DISCHARGE_SUMMARY, metadata
-        elif 'radiology' in filename_lower or 'xray' in filename_lower or 'mri' in filename_lower or 'ct' in filename_lower:
-            return DocumentType.RADIOLOGY_REPORT, metadata
-        elif 'lab' in filename_lower or 'test' in filename_lower or 'result' in filename_lower:
-            return DocumentType.LAB_REPORT, metadata
-        elif 'medication' in filename_lower or 'med_list' in filename_lower or 'prescription' in filename_lower:
-            return DocumentType.MEDICATION_LIST, metadata
-        elif 'referral' in filename_lower:
-            return DocumentType.REFERRAL, metadata
-        elif 'consult' in filename_lower:
-            return DocumentType.CONSULTATION, metadata
-        elif 'operation' in filename_lower or 'surgical' in filename_lower or 'procedure' in filename_lower:
-            return DocumentType.OPERATIVE_REPORT, metadata
-        elif 'pathology' in filename_lower:
-            return DocumentType.PATHOLOGY_REPORT, metadata
-
-    # If we couldn't determine from filename, check content
-    content_lower = content.lower()
-
-    # Look for document headers/sections that might indicate document type
-    if re.search(r'discharge\s+summary', content_lower) or re.search(r'discharged\s+from', content_lower):
-        return DocumentType.DISCHARGE_SUMMARY, metadata
-
-    elif re.search(r'radiolog(y|ical)|x-?ray|mri|ct scan|ultrasound', content_lower):
-        if re.search(r'impression:', content_lower):
-            metadata['has_impression'] = True
-        return DocumentType.RADIOLOGY_REPORT, metadata
-
-    elif re.search(r'laboratory|lab(\s+)results?|test(\s+)results?', content_lower):
-        # Extract test names
-        test_names = []
-        test_pattern = r'(?:test|lab):\s*([A-Za-z0-9\s]+)'
-        matches = re.finditer(test_pattern, content_lower)
-        for match in matches:
-            if match.group(1).strip():
-                test_names.append(match.group(1).strip())
-
-        metadata['test_names'] = test_names
-        return DocumentType.LAB_REPORT, metadata
-
-    elif re.search(r'medications?|prescriptions?', content_lower):
-        return DocumentType.MEDICATION_LIST, metadata
-
-    elif re.search(r'referr(ed|al)', content_lower):
-        return DocumentType.REFERRAL, metadata
-
-    elif re.search(r'consult(ation)?', content_lower):
-        return DocumentType.CONSULTATION, metadata
-
-    elif re.search(r'operat(ive|ion)|surgical|procedure', content_lower):
-        return DocumentType.OPERATIVE_REPORT, metadata
-
-    elif re.search(r'pathology', content_lower):
-        return DocumentType.PATHOLOGY_REPORT, metadata
-
-    # If we can't determine the type, classify as unknown
-    return DocumentType.UNKNOWN, metadata
+    return _document_classifier.classify(content, filename)
 
 def process_document(document_id):
     """
@@ -679,14 +731,10 @@ def get_patient_documents_summary(patient_id):
 
     return grouped_docs
 
-def group_documents_by_type(documents):
-    """
-    Group a list of document objects by their document type.
-    Returns a dictionary with readable document type names as keys and lists of document objects as values.
-    This is different from get_patient_documents_summary as it works with document objects directly.
-    """
-    # Define a mapping from enum values to readable names
-    type_names = {
+class DocumentTypeMapper:
+    """Lookup object for document type display names and metadata"""
+    
+    TYPE_DISPLAY_NAMES = {
         DocumentType.DISCHARGE_SUMMARY.value: 'Hospital Discharge',
         DocumentType.OPERATIVE_REPORT.value: 'Operative Report',
         DocumentType.PATHOLOGY_REPORT.value: 'Pathology Report',
@@ -697,6 +745,27 @@ def group_documents_by_type(documents):
         DocumentType.REFERRAL.value: 'Referral',
         DocumentType.UNKNOWN.value: 'Other Documents'
     }
+    
+    @classmethod
+    def get_display_name(cls, doc_type_value):
+        """Get readable display name for document type"""
+        return cls.TYPE_DISPLAY_NAMES.get(doc_type_value, 'Other Documents')
+    
+    @classmethod
+    def get_all_display_names(cls):
+        """Get all available display names"""
+        return cls.TYPE_DISPLAY_NAMES
+
+# Global mapper instance
+_document_type_mapper = DocumentTypeMapper()
+
+def group_documents_by_type(documents):
+    """
+    Group a list of document objects by their document type.
+    Returns a dictionary with readable document type names as keys and lists of document objects as values.
+    This is different from get_patient_documents_summary as it works with document objects directly.
+    """
+    type_names = _document_type_mapper.get_all_display_names()
 
     # Group documents by type
     grouped_docs = {}
