@@ -4,10 +4,7 @@
  */
 
 /* Override screening list table backgrounds - updated May 17, 2025 */
-#screening-list-table tr {
-    background-color: inherit !important;
-}
-
+#screening-list-table tr,
 #screening-list-table tr.table-danger,
 #screening-list-table tr.table-warning {
     background-color: inherit !important;
@@ -36,21 +33,20 @@
     border-bottom: 1px solid #dee2e6;
 }
 
-.screening-cell {
+/* Base table cell styling */
+.screening-cell,
+.screening-status-cell,
+.screening-note-cell {
     display: table-cell;
     vertical-align: middle;
+}
+
+.screening-cell {
     padding: 3px 10px 3px 0;
 }
 
 .screening-status-cell {
-    display: table-cell;
     width: 180px;
-    vertical-align: middle;
-}
-
-.screening-note-cell {
-    display: table-cell;
-    vertical-align: middle;
 }
 
 /* Set fixed width for status dropdowns */
@@ -106,10 +102,40 @@
     gap: 0.25rem;
 }
 
+/* Utility Classes */
+.flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.flex-column-gap-sm {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.flex-column-gap-md {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.table-cell {
+    display: table-cell;
+    vertical-align: middle;
+}
+
 /* Vertical action buttons for appointments */
 .vertical-action-btns {
     display: flex;
     flex-direction: column;
     gap: 4px;
     width: 100%;
+}
+
+/* Appointment actions using utility classes */
+.appointment-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
