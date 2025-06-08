@@ -100,35 +100,7 @@ import trafilatura
 from sqlalchemy import func, or_
 from sqlalchemy import text
 
-def process_csv_upload(file):
-    """Process a CSV file upload containing patient data"""
-    result = {
-        'success': False,
-        'processed': 0,
-        'error': None
-    }
-
-    try:
-        # Read CSV file
-        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-        csv_data = csv.DictReader(stream)
-
-        # Determine the type of data in the CSV
-        processed_count = 0
-
-        # Get the first row to check headers (without consuming the iterator)
-        headers = csv_data.fieldnames
-
-        if 'mrn' in headers and 'first_name' in headers and 'last_name' in headers:
-            # Process as patients data
-            for row in csv_data:
-                # Check if patient already exists
-                existing_patient = Patient.query.filter_by(mrn=row['mrn']).first()
-
-                if existing_patient:
-                    # Update existing patient
-                    existing_patient.first_name = row.get('first_name', existing_patient.first_name)
-                    existing_patient.last_name = row.get('last_name', existing_patient.last_name)
+# Removed unused CSV processing function - not referenced anywhere in codebase
 
                     if 'date_of_birth' in row and row['date_of_birth']:
                         try:

@@ -277,28 +277,5 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Main JavaScript file for the application
-$(document).ready(function() {
-    // Initialize tooltips
-    $('[data-bs-toggle="tooltip"]').tooltip();
-
-    // Auto-hide alerts after 5 seconds
-    setTimeout(function() {
-        $('.alert').fadeOut('slow');
-    }, 5000);
-
-    // Setup CSRF token for all AJAX requests
-    var csrf_token = $('meta[name=csrf-token]').attr('content');
-
-    // Configure jQuery to include CSRF token in all AJAX requests
-    $.ajaxSetup({
-        beforeSend: function(xhr, settings) {
-            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-                xhr.setRequestHeader("X-CSRFToken", csrf_token);
-            }
-        },
-        xhrFields: {
-            withCredentials: true  // Include cookies in AJAX requests
-        }
-    });
-});
+// jQuery functionality consolidated into vanilla JS above
+// Removed duplicate jQuery initialization

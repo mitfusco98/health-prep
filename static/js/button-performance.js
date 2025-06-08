@@ -54,44 +54,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Optimize dropdown buttons specifically
-    const dropdownButtons = document.querySelectorAll('.dropdown-toggle');
-    dropdownButtons.forEach(button => {
-        // Use faster event delegation instead of individual listeners
-        button.addEventListener('click', debounce(function(e) {
-            // Immediate visual feedback
-            this.classList.add('active');
-            setTimeout(() => {
-                this.classList.remove('active');
-            }, 150);
-        }, 100));
-    });
-
-    // Optimize form submission buttons
-    const forms = document.querySelectorAll('form');
-    forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            const submitBtn = this.querySelector('button[type="submit"], input[type="submit"]');
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = submitBtn.innerHTML.includes('spinner') ? 
-                    submitBtn.innerHTML : 
-                    '<span class="spinner-border spinner-border-sm me-2" role="status"></span>' + submitBtn.textContent;
-            }
-        });
-    });
-
-    // Optimize modal buttons
-    const modalButtons = document.querySelectorAll('[data-bs-toggle="modal"]');
-    modalButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Immediate feedback
-            this.style.opacity = '0.7';
-            setTimeout(() => {
-                this.style.opacity = '1';
-            }, 200);
-        });
-    });
+    // Removed: Duplicate dropdown optimization (already in main.js)
+// Removed: Unused form submission optimization
+// Removed: Unused modal button optimization
 
     // Performance optimization for tables with many action buttons
     const tables = document.querySelectorAll('table');
