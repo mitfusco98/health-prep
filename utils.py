@@ -102,6 +102,53 @@ from sqlalchemy import text
 
 # Removed unused CSV processing function - not referenced anywhere in codebase
 
+def process_csv_data(csv_file):
+    """
+    Process CSV data to import patients, conditions, lab results, and visits.
+
+    This function handles CSV data with various formats, including:
+    - Patients data: mrn, first_name, last_name, date_of_birth, sex, phone, email, address, insurance
+    - Conditions data: patient_mrn, condition_name, code, diagnosed_date, is_active, notes
+    - Lab results data: patient_mrn, test_name, test_date, result_value, unit, reference_range, is_abnormal, notes
+    - Visits data: patient_mrn, visit_date, visit_type, provider, reason, notes
+
+    Returns a dictionary with success status, number of processed records, and error messages if any.
+    """
+    result = {'success': False, 'processed': 0, 'error': None}
+
+    try:
+        csv_data = csv.DictReader(io.StringIO(csv_file.decode('utf-8')))
+        headers = [header.lower() for header in csv_data.fieldnames]
+
+        # Check for minimal required headers and determine data type
+        if not any(header in headers for header in ['mrn', 'patient_mrn']):
+            return {'success': False, 'error': 'MRN column is required'}
+
+        if not any(header in headers for header in ['first_name', 'condition_name', 'test_name', 'visit_date']):
+            return {'success': False, 'error': 'At least first_name, condition_name, test_name or visit_date column is required'}
+
+    except Exception as e:
+        logging.error(f"Error processing CSV: {str(e)}")
+        return {'success': False, 'error': str(e)}
+
+    try:
+        csv_data = csv.DictReader(io.StringIO(csv_file.decode('utf-8')))
+        headers = [header.lower() for header in csv_data.fieldnames]
+
+        # Process CSV data based on detected format
+        processed_count = 0
+
+        if 'mrn' in headers and 'first_name' in headers and 'last_name' in headers:
+            # Process as patient data
+            for row in csv_data:
+                # Check if patient already exists
+                existing_patient = Patient.query.filter_by(mrn=row['mrn']).first()
+
+                if existing_patient:
+                    # Update existing patient
+                    existing_patient.first_name = row.get('first_name', existing_patient.first_name)
+                    existing_patient.last_name = row.get('last_name', existing_patient.last_name)
+
                     if 'date_of_birth' in row and row['date_of_birth']:
                         try:
                             existing_patient.date_of_birth = datetime.strptime(row['date_of_birth'], '%Y-%m-%d').date()
