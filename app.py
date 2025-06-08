@@ -23,37 +23,28 @@ from profiler import profiler
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Validate environment variables before starting
-from env_validator import validate_startup_environment
-if not validate_startup_environment():
-    logger.critical("Application cannot start due to environment variable issues")
-    raise SystemExit("Environment validation failed - check your configuration")
+# Import unified configuration
+from config import get_config, is_production, is_development
+
+# Get configuration instance
+config = get_config()
 
 class Base(DeclarativeBase):
     pass
-
 
 db = SQLAlchemy(model_class=Base)
 
 # Create the app
 app = Flask(__name__)
 
+# Apply configuration to Flask app
+app.config.update(config.get_flask_config())
+
 # Import logging configuration
-from logging_config import configure_logging, log_application_startup
+from structured_logging import setup_structured_logging
 
 # Setup structured JSON logging based on environment
-structured_logger = configure_logging(app)
-
-# Validate required environment variables
-session_secret = os.environ.get("SESSION_SECRET")
-if not session_secret:
-    logger.error("SESSION_SECRET environment variable is required")
-    raise ValueError("SESSION_SECRET environment variable must be set")
-
-if session_secret == "dev_secret_key":
-    logger.warning("Using default session secret - this is insecure!")
-
-app.secret_key = session_secret
+structured_logger = setup_structured_logging(app, log_level=config.logging.log_level)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
 
 # Initialize CSRF protection
@@ -68,45 +59,11 @@ limiter = Limiter(
     storage_uri="memory://",
     strategy="fixed-window"
 )
-app.config['WTF_CSRF_TIME_LIMIT'] = 3600  # 1 hour CSRF token expiry
-app.config['WTF_CSRF_SSL_STRICT'] = False  # Allow CSRF in development mode
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # 24 hour admin session lifetime
-app.config['SESSION_COOKIE_SECURE'] = False  # Allow cookies in development mode
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Less strict for development compatibility
-app.config['REMEMBER_COOKIE_SECURE'] = False  # Allow cookies in development mode
-app.config['REMEMBER_COOKIE_HTTPONLY'] = True
-app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
-
-# Additional session security configurations
-app.config['SESSION_COOKIE_NAME'] = 'healthprep_session'  # Custom session cookie name
-app.config['WTF_CSRF_FIELD_NAME'] = 'csrf_token'
-app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024  # 1MB max request size for API endpoints
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 year for static files
+# Security configuration is now handled by unified config system
 
 # CSRF protection is now enabled for all routes for security
 
-# Configure the database
-database_url = os.environ.get("DATABASE_URL")
-# Handle potential "postgres://" format by converting to "postgresql://"
-if database_url and database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
-
-# Default to SQLite if no database URL is provided
-app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///healthcare.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_recycle": 300,
-    "pool_pre_ping": True,   # Enable pre-ping to detect stale connections
-    "pool_timeout": 10,      # Reduced from 30 to avoid long waits
-    "pool_size": 20,         # Increased pool size for better concurrency
-    "max_overflow": 30,      # Allow more overflow connections
-    "connect_args": {
-        "connect_timeout": 10,   # Increased connection timeout for stability
-        "application_name": "healthprep_app",
-        "sslmode": "prefer"      # Handle SSL connection issues more gracefully
-    }
-}
+# Database configuration is now handled by unified config system
 
 # Initialize the app with the extension
 db.init_app(app)
@@ -897,27 +854,8 @@ with app.app_context():
     # Import API routes
     import api_routes  # noqa: F401
 
-    # JWT configuration with enhanced security validation
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
-    JWT_ALGORITHM = 'HS256'
-    JWT_EXPIRATION_DELTA = timedelta(hours=24)
-
-    # Validate JWT secret key security
-    def validate_jwt_secret():
-        """Validate that JWT secret is secure and present"""
-        if not JWT_SECRET_KEY:
-            logger.error("JWT_SECRET_KEY environment variable is required")
-            raise ValueError("JWT_SECRET_KEY environment variable must be set")
-
-        if JWT_SECRET_KEY == 'your-secret-key-change-in-production':
-            logger.error("JWT secret key is still using default value - this is insecure!")
-            raise ValueError("JWT_SECRET_KEY must be changed from default value")
-
-        if len(JWT_SECRET_KEY) < 32:
-            logger.error("JWT secret key should be at least 32 characters")
-            raise ValueError("JWT_SECRET_KEY must be at least 32 characters long")
-
-    validate_jwt_secret()
+    # JWT configuration from unified config system
+    JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_DELTA = config.security.jwt_secret_key, config.security.jwt_algorithm, config.security.jwt_expiration_delta
 
     # Schedule automatic admin log cleanup
     def schedule_admin_log_cleanup():

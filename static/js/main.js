@@ -1,5 +1,27 @@
 // main.js - Core JavaScript for HealthPrep application
 
+// Configuration will be loaded from AppConfig
+let CONFIG = null;
+
+// Wait for configuration to load
+document.addEventListener('configLoaded', function(event) {
+    CONFIG = event.detail.config;
+    console.log('Main.js using configuration:', CONFIG);
+
+    // Initialize components that depend on configuration
+    initializeConfigDependentComponents();
+});
+
+function initializeConfigDependentComponents() {
+    // Initialize components that need configuration here
+    if (typeof initializePagination === 'function') {
+        initializePagination();
+    }
+    if (typeof initializeFileUpload === 'function') {
+        initializeFileUpload();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Handle appointment form submission
     const appointmentForm = document.getElementById('appointment-form');
@@ -55,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const sectionLink = e.target.closest('.section-link');
             if (sectionLink) {
                 e.preventDefault();
-                
+
                 const sectionName = sectionLink.getAttribute('data-section');
                 if (!sectionName) return;
 
