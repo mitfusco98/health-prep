@@ -107,20 +107,29 @@ def log_patient_operation(operation_type):
                             # Track specific field changes for different types
                             if key in ['first_name', 'last_name', 'date_of_birth', 'sex', 'mrn', 'phone', 'email', 'address', 'insurance']:
                                 form_changes[f'demographics_{key}'] = str(value)[:100]
-                            elif key in ['alert_type', 'description', 'details', 'severity', 'start_date', 'end_date', 'text', 'priority']:
+                            elif key in ['alert_type', 'description', 'details', 'severity', 'start_date', 'end_date', 'text', 'priority', 'is_active']:
                                 form_changes[f'alert_{key}'] = str(value)[:100]
-                                # Store alert-specific data with detailed field names
-                                if key == 'text' or key == 'description':
-                                    log_details['alert_text'] = str(value)[:200]
+                                # Store alert-specific data with ALL detailed field names
+                                if key == 'description':
+                                    log_details['alert_description'] = str(value)[:200]
+                                    log_details['alert_text'] = str(value)[:200]  # Legacy compatibility
+                                elif key == 'details':
+                                    log_details['alert_details'] = str(value)[:500]
                                 elif key == 'alert_type':
                                     log_details['alert_type'] = str(value)[:50]
-                                elif key == 'priority':
-                                    log_details['priority'] = str(value)[:20]
-                                elif key == 'start_date':
-                                    log_details['alert_date'] = str(value)[:20]
-                                    log_details['alert_time'] = current_time
                                 elif key == 'severity':
                                     log_details['severity'] = str(value)[:20]
+                                    log_details['priority'] = str(value)[:20]  # Map severity to priority
+                                elif key == 'start_date':
+                                    log_details['alert_start_date'] = str(value)[:20]
+                                    log_details['alert_date'] = str(value)[:20]  # Legacy compatibility
+                                    log_details['alert_time'] = current_time
+                                elif key == 'end_date':
+                                    log_details['alert_end_date'] = str(value)[:20]
+                                elif key == 'is_active':
+                                    log_details['alert_is_active'] = bool(value)
+                                elif key == 'text':
+                                    log_details['alert_text'] = str(value)[:200]
                             elif key in ['screening_type', 'due_date', 'last_completed', 'priority', 'notes']:
                                 form_changes[f'screening_{key}'] = str(value)[:100]
                             elif key in ['appointment_date', 'appointment_time', 'note', 'status']:
@@ -464,12 +473,19 @@ def log_data_modification(data_type):
                     # Capture specific details based on data type with enhanced information
                     if data_type == 'alert':
                         log_details['action'] = 'add' if request.method == 'POST' else 'edit'
-                        log_details['alert_text'] = request.form.get('text', request.form.get('description', ''))[:200]
-                        log_details['alert_date'] = request.form.get('start_date', current_date)
-                        log_details['alert_time'] = current_time
-                        log_details['priority'] = request.form.get('priority', '')
+                        # Capture ALL alert fields for comprehensive logging
+                        log_details['alert_description'] = request.form.get('description', '')[:200]
+                        log_details['alert_details'] = request.form.get('details', '')[:500]
                         log_details['alert_type'] = request.form.get('alert_type', '')
                         log_details['severity'] = request.form.get('severity', '')
+                        log_details['start_date'] = request.form.get('start_date', current_date)
+                        log_details['end_date'] = request.form.get('end_date', '')
+                        log_details['is_active'] = bool(request.form.get('is_active'))
+                        log_details['alert_time'] = current_time
+                        # Legacy field for backward compatibility
+                        log_details['alert_text'] = request.form.get('description', '')[:200]
+                        log_details['alert_date'] = request.form.get('start_date', current_date)
+                        log_details['priority'] = request.form.get('severity', '')  # Map severity to priority for consistency
                     elif data_type == 'condition':
                         log_details['action'] = 'add' if request.method == 'POST' else 'edit'
                         log_details['condition_name'] = request.form.get('name', request.form.get('condition_name', request.form.get('diagnosis', '')))
@@ -568,9 +584,13 @@ def log_data_modification(data_type):
                         log_details['file_name'] = log_details.get('document_name', 'Text Document')
                         log_details['file_type'] = 'text/plain'
 
-                # Create admin log entry
+                # Create admin log entry - use more specific event type for alerts
+                event_type_name = 'data_modification'
+                if data_type == 'alert':
+                    event_type_name = f'alert_{log_details.get("action", "modification")}'
+                
                 AdminLog.log_event(
-                    event_type=f'data_modification',
+                    event_type=event_type_name,
                     user_id=user_id,
                     event_details=json.dumps(log_details),
                     request_id=str(uuid.uuid4()),

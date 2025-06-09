@@ -1164,6 +1164,54 @@ def delete_alert(patient_id, alert_id):
             flash("Alert does not belong to this patient.", "error")
             return redirect(url_for('patient_detail', patient_id=patient_id))
         
+        # Log comprehensive alert details before deletion
+        try:
+            import uuid
+            from models import AdminLog
+            from datetime import datetime
+            from flask import session
+            import json
+            
+            # Capture all alert fields before deletion
+            deletion_log_details = {
+                'action': 'delete',
+                'data_type': 'alert',
+                'patient_id': patient_id,
+                'patient_name': alert.patient.full_name if alert.patient else 'Unknown',
+                'alert_id': alert_id,
+                'deleted_alert_description': alert.description or '',
+                'deleted_alert_details': alert.details or '',
+                'deleted_alert_type': alert.alert_type or '',
+                'deleted_severity': alert.severity or '',
+                'deleted_start_date': alert.start_date.strftime('%Y-%m-%d') if alert.start_date else '',
+                'deleted_end_date': alert.end_date.strftime('%Y-%m-%d') if alert.end_date else '',
+                'deleted_is_active': alert.is_active,
+                'deleted_created_at': alert.created_at.strftime('%Y-%m-%d %H:%M:%S') if alert.created_at else '',
+                'deleted_updated_at': alert.updated_at.strftime('%Y-%m-%d %H:%M:%S') if alert.updated_at else '',
+                'deletion_time': datetime.now().strftime('%H:%M:%S'),
+                'user_id': session.get('user_id'),
+                'username': session.get('username', 'Unknown'),
+                'endpoint': 'delete_alert',
+                'method': 'GET',
+                'timestamp': datetime.now().isoformat(),
+                'success': True
+            }
+            
+            AdminLog.log_event(
+                event_type='data_modification',
+                user_id=session.get('user_id'),
+                event_details=json.dumps(deletion_log_details),
+                request_id=str(uuid.uuid4()),
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')
+            )
+            
+            db.session.commit()
+        except Exception as log_error:
+            logger.error(f"Error logging alert deletion: {str(log_error)}")
+            # Don't let logging errors break the deletion
+            pass
+        
         db.session.delete(alert)
         db.session.commit()
         flash("Alert deleted successfully.", "success")
