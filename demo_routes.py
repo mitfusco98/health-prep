@@ -167,51 +167,7 @@ def index(date_str=None):
                           today_date=today,
                           timestamp=timestamp)
 
-@app.route('/patients')
-def patient_list():
-    """List all patients"""
-    # Get the search query parameters
-    search_query = request.args.get('search', '')
-    sort_by = request.args.get('sort', 'last_name')
-    order = request.args.get('order', 'asc')
-    
-    # Base query
-    query = Patient.query
-    
-    # Apply search filter if provided
-    if search_query:
-        query = query.filter(
-            db.or_(
-                Patient.first_name.ilike(f'%{search_query}%'),
-                Patient.last_name.ilike(f'%{search_query}%'),
-                Patient.mrn.ilike(f'%{search_query}%')
-            )
-        )
-    
-    # Apply sorting
-    if sort_by == 'last_name':
-        if order == 'asc':
-            query = query.order_by(Patient.last_name.asc())
-        else:
-            query = query.order_by(Patient.last_name.desc())
-    elif sort_by == 'first_name':
-        if order == 'asc':
-            query = query.order_by(Patient.first_name.asc())
-        else:
-            query = query.order_by(Patient.first_name.desc())
-    elif sort_by == 'dob':
-        if order == 'asc':
-            query = query.order_by(Patient.date_of_birth.asc())
-        else:
-            query = query.order_by(Patient.date_of_birth.desc())
-    elif sort_by == 'mrn':
-        if order == 'asc':
-            query = query.order_by(Patient.mrn.asc())
-        else:
-            query = query.order_by(Patient.mrn.desc())
-    
-    # Execute the query
-    patients = query.all()
+# Removed duplicate patient_list route - now handled by routes/patient_routes.py
     
     return render_template('patient_list.html', patients=patients, search_query=search_query)
 
