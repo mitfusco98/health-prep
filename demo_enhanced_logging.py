@@ -39,7 +39,7 @@ def create_sample_alert_log():
         
         AdminLog.log_event(
             event_type='data_modification',
-            user_id=1,
+            user_id=2,
             event_details=json.dumps(log_details),
             request_id='demo_alert_001',
             ip_address='127.0.0.1',
@@ -64,7 +64,7 @@ def create_sample_alert_log():
         
         AdminLog.log_event(
             event_type='data_modification',
-            user_id=1,
+            user_id=2,
             event_details=json.dumps(doc_log_details),
             request_id='demo_doc_001',
             ip_address='127.0.0.1',
@@ -88,7 +88,7 @@ def create_sample_alert_log():
         
         AdminLog.log_event(
             event_type='data_modification',
-            user_id=1,
+            user_id=2,
             event_details=json.dumps(lab_log_details),
             request_id='demo_lab_001',
             ip_address='127.0.0.1',
@@ -112,7 +112,7 @@ def create_sample_alert_log():
         
         AdminLog.log_event(
             event_type='data_modification',
-            user_id=1,
+            user_id=2,
             event_details=json.dumps(condition_log_details),
             request_id='demo_condition_001',
             ip_address='127.0.0.1',
@@ -138,7 +138,7 @@ def create_sample_alert_log():
         
         AdminLog.log_event(
             event_type='data_modification',
-            user_id=1,
+            user_id=2,
             event_details=json.dumps(vital_log_details),
             request_id='demo_vital_001',
             ip_address='127.0.0.1',
@@ -162,7 +162,7 @@ def create_sample_alert_log():
         
         AdminLog.log_event(
             event_type='data_modification',
-            user_id=1,
+            user_id=2,
             event_details=json.dumps(immunization_log_details),
             request_id='demo_immunization_001',
             ip_address='127.0.0.1',
