@@ -333,8 +333,11 @@ def format_log_details(log):
                     if appointment_note:
                         formatted_details.append(f"<span class='badge bg-secondary'>Note: {appointment_note}</span>")
 
+                # Get data type from event_details for enhanced logging
+                data_type = event_data.get('data_type', '')
+                
                 # Show alert details for add/edit/delete operations
-                if 'alert' in log.event_type.lower() or 'alert' in action.lower():
+                if 'alert' in log.event_type.lower() or 'alert' in action.lower() or data_type == 'alert':
                     alert_text = event_data.get('alert_text') or event_data.get('text')
                     alert_date = event_data.get('alert_date') or event_data.get('date_created')
                     alert_time = event_data.get('alert_time') or event_data.get('time_created')
@@ -356,14 +359,16 @@ def format_log_details(log):
 
                 # Show medical data details (documents, conditions, vitals, etc.)
                 medical_data_types = ['document', 'condition', 'vital', 'lab', 'imaging', 'consult', 'hospital', 'immunization']
-                is_medical_data = any(data_type in log.event_type.lower() for data_type in medical_data_types)
+                is_medical_data = (any(data_type_check in log.event_type.lower() for data_type_check in medical_data_types) or 
+                                 data_type in medical_data_types)
                 
                 if is_medical_data:
                     # Document-specific details
-                    if 'document' in log.event_type.lower():
+                    if 'document' in log.event_type.lower() or data_type == 'document':
                         file_name = event_data.get('file_name') or event_data.get('filename') or event_data.get('document_name')
                         file_type = event_data.get('file_type') or event_data.get('document_type')
                         upload_date = event_data.get('upload_date') or event_data.get('date_uploaded')
+                        upload_time = event_data.get('upload_time') or event_data.get('time_uploaded')
                         file_size = event_data.get('file_size')
                         
                         if file_name:
@@ -372,15 +377,17 @@ def format_log_details(log):
                             formatted_details.append(f"<span class='badge bg-secondary'>Type: {file_type}</span>")
                         if upload_date:
                             formatted_details.append(f"<span class='badge bg-info'>Upload Date: {upload_date}</span>")
+                        if upload_time:
+                            formatted_details.append(f"<span class='badge bg-info'>Upload Time: {upload_time}</span>")
                         if file_size:
                             formatted_details.append(f"<span class='badge bg-light text-dark'>Size: {file_size}</span>")
                     
                     # Lab/Test results details
-                    elif 'lab' in log.event_type.lower() or 'test' in log.event_type.lower():
+                    elif 'lab' in log.event_type.lower() or 'test' in log.event_type.lower() or data_type == 'lab':
                         test_name = event_data.get('test_name') or event_data.get('lab_name')
                         test_date = event_data.get('test_date') or event_data.get('lab_date')
                         test_time = event_data.get('test_time') or event_data.get('lab_time')
-                        result_value = event_data.get('result') or event_data.get('value')
+                        result_value = event_data.get('result_value') or event_data.get('result') or event_data.get('value')
                         
                         if test_name:
                             formatted_details.append(f"<span class='badge bg-primary'>Test: {test_name}</span>")
@@ -392,7 +399,7 @@ def format_log_details(log):
                             formatted_details.append(f"<span class='badge bg-success'>Result: {result_value}</span>")
                     
                     # Condition details
-                    elif 'condition' in log.event_type.lower():
+                    elif 'condition' in log.event_type.lower() or data_type == 'condition':
                         condition_name = event_data.get('condition_name') or event_data.get('diagnosis')
                         diagnosis_date = event_data.get('diagnosis_date') or event_data.get('condition_date')
                         severity = event_data.get('severity')
@@ -408,7 +415,7 @@ def format_log_details(log):
                             formatted_details.append(f"<span class='badge bg-secondary'>Status: {status}</span>")
                     
                     # Vital signs details
-                    elif 'vital' in log.event_type.lower():
+                    elif 'vital' in log.event_type.lower() or data_type == 'vital':
                         vital_date = event_data.get('vital_date') or event_data.get('measurement_date')
                         vital_time = event_data.get('vital_time') or event_data.get('measurement_time')
                         blood_pressure = event_data.get('blood_pressure')
@@ -430,7 +437,7 @@ def format_log_details(log):
                             formatted_details.append(f"<span class='badge bg-success'>Weight: {weight}</span>")
                     
                     # Immunization details
-                    elif 'immunization' in log.event_type.lower():
+                    elif 'immunization' in log.event_type.lower() or data_type == 'immunization':
                         vaccine_name = event_data.get('vaccine_name') or event_data.get('immunization_name')
                         vaccination_date = event_data.get('vaccination_date') or event_data.get('immunization_date')
                         vaccination_time = event_data.get('vaccination_time') or event_data.get('immunization_time')
