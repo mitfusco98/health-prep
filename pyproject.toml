@@ -27,4 +27,6 @@ dependencies = [
     "flask-dance>=7.1.0",
     "oauthlib>=3.2.2",
     "flask-jwt-extended>=4.7.1",
+    "flask-compress>=1.17",
+    "redis>=6.2.0",
 ]

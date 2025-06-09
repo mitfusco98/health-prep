@@ -155,14 +155,34 @@ def api_patient_detail(patient_id):
             return jsonify({'error': 'Patient not found'}), 404
 
 
-        # Get related data
-        conditions = Condition.query.filter_by(patient_id=patient_id_int, is_active=True).all()
-        recent_vitals = Vital.query.filter_by(patient_id=patient_id_int)\
-            .order_by(Vital.date.desc()).limit(5).all()
-        recent_visits = Visit.query.filter_by(patient_id=patient_id_int)\
-            .order_by(Visit.visit_date.desc()).limit(5).all()
-        screenings = Screening.query.filter_by(patient_id=patient_id_int).all()
-        alerts = PatientAlert.query.filter_by(patient_id=patient_id_int, is_active=True).all()
+        # Get query parameters for lazy loading
+        include_vitals = request.args.get('include_vitals', 'false').lower() == 'true'
+        include_visits = request.args.get('include_visits', 'false').lower() == 'true'
+        include_screenings = request.args.get('include_screenings', 'false').lower() == 'true'
+        include_alerts = request.args.get('include_alerts', 'false').lower() == 'true'
+        
+        # Always load basic conditions (lightweight)
+        conditions = Condition.query.filter_by(patient_id=patient_id_int, is_active=True).limit(10).all()
+        
+        # Conditionally load heavy data
+        recent_vitals = []
+        recent_visits = []
+        screenings = []
+        alerts = []
+        
+        if include_vitals:
+            recent_vitals = Vital.query.filter_by(patient_id=patient_id_int)\
+                .order_by(Vital.date.desc()).limit(5).all()
+        
+        if include_visits:
+            recent_visits = Visit.query.filter_by(patient_id=patient_id_int)\
+                .order_by(Visit.visit_date.desc()).limit(5).all()
+        
+        if include_screenings:
+            screenings = Screening.query.filter_by(patient_id=patient_id_int).limit(20).all()
+        
+        if include_alerts:
+            alerts = PatientAlert.query.filter_by(patient_id=patient_id_int, is_active=True).limit(10).all()
 
         # Serialize patient data
         patient_data = {
@@ -277,6 +297,115 @@ def validate_patient_fields(data):
     if 'mrn' in data and data['mrn']:
         import re
         if not re.match(r'^[A-Za-z0-9\-]+$', data['mrn']) or len(data['mrn']) < 3 or len(data['mrn']) > 20:
+
+
+@app.route('/api/patients/<patient_id>/vitals', methods=['GET'])
+@csrf.exempt
+@jwt_required
+@cache_route(timeout=300, vary_on=['patient_id', 'limit'])
+def api_patient_vitals(patient_id):
+    """Get patient vitals separately for lazy loading"""
+    try:
+        patient_id_int = int(patient_id)
+        limit = min(int(request.args.get('limit', 10)), 50)  # Max 50 records
+        
+        vitals = Vital.query.filter_by(patient_id=patient_id_int)\
+            .order_by(Vital.date.desc()).limit(limit).all()
+        
+        vitals_data = [{
+            'id': v.id,
+            'date': v.date.isoformat() if v.date else None,
+            'weight': v.weight,
+            'height': v.height,
+            'bmi': v.bmi,
+            'temperature': v.temperature,
+            'blood_pressure_systolic': v.blood_pressure_systolic,
+            'blood_pressure_diastolic': v.blood_pressure_diastolic,
+            'pulse': v.pulse,
+            'respiratory_rate': v.respiratory_rate,
+            'oxygen_saturation': v.oxygen_saturation
+        } for v in vitals]
+        
+        return jsonify({'vitals': vitals_data}), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching patient vitals: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/patients/<patient_id>/visits', methods=['GET'])
+@csrf.exempt
+@jwt_required
+@cache_route(timeout=300, vary_on=['patient_id', 'limit', 'page'])
+def api_patient_visits(patient_id):
+    """Get patient visits with pagination"""
+    try:
+        patient_id_int = int(patient_id)
+        page = int(request.args.get('page', 1))
+        per_page = min(int(request.args.get('per_page', 10)), 25)  # Max 25 per page
+        
+        pagination = Visit.query.filter_by(patient_id=patient_id_int)\
+            .order_by(Visit.visit_date.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+        
+        visits_data = [{
+            'id': v.id,
+            'visit_date': v.visit_date.isoformat() if v.visit_date else None,
+            'visit_type': v.visit_type,
+            'provider': v.provider,
+            'reason': v.reason,
+            'notes': v.notes[:200] + '...' if v.notes and len(v.notes) > 200 else v.notes  # Truncate long notes
+        } for v in pagination.items]
+        
+        return jsonify({
+            'visits': visits_data,
+            'pagination': {
+                'page': pagination.page,
+                'per_page': pagination.per_page,
+                'total': pagination.total,
+                'pages': pagination.pages,
+                'has_next': pagination.has_next,
+                'has_prev': pagination.has_prev
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching patient visits: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/patients/<patient_id>/documents/summary', methods=['GET'])
+@csrf.exempt
+@jwt_required
+@cache_route(timeout=600, vary_on=['patient_id'])
+def api_patient_documents_summary(patient_id):
+    """Get lightweight document summary without full content"""
+    try:
+        patient_id_int = int(patient_id)
+        
+        documents = MedicalDocument.query.filter_by(patient_id=patient_id_int)\
+            .with_entities(
+                MedicalDocument.id,
+                MedicalDocument.filename,
+                MedicalDocument.document_type,
+                MedicalDocument.document_date,
+                MedicalDocument.provider,
+                MedicalDocument.source_system
+            ).order_by(MedicalDocument.document_date.desc()).limit(50).all()
+        
+        documents_data = [{
+            'id': doc.id,
+            'filename': doc.filename,
+            'document_type': doc.document_type,
+            'document_date': doc.document_date.isoformat() if doc.document_date else None,
+            'provider': doc.provider,
+            'source_system': doc.source_system
+        } for doc in documents]
+        
+        return jsonify({'documents': documents_data}), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching patient documents summary: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
             errors.append('mrn must be alphanumeric with optional hyphens, 3-20 characters')
 
     if 'address' in data and data['address'] and len(data['address']) > 500:

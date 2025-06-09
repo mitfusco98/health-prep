@@ -1,0 +1,85 @@
+
+/* Lazy Loading Styles */
+.loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #666;
+}
+
+.loading-spinner::before {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error-message {
+    padding: 10px;
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+.lazy-section {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin: 10px 0;
+    overflow: hidden;
+}
+
+.lazy-header {
+    background-color: #f8f9fa;
+    padding: 10px 15px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.lazy-header:hover {
+    background-color: #e9ecef;
+}
+
+.lazy-content {
+    padding: 15px;
+    display: none;
+}
+
+.lazy-content.loaded {
+    display: block;
+}
+
+.vital-item, .visit-item, .document-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.vital-item:last-child,
+.visit-item:last-child,
+.document-item:last-child {
+    border-bottom: none;
+}
+
+.vital-date, .visit-date, .doc-date {
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.doc-type {
+    background-color: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    margin-left: 10px;
+}

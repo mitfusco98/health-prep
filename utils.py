@@ -596,22 +596,23 @@ class PrepSheetGenerator:
 # Global generator instance
 _prep_sheet_generator = PrepSheetGenerator()
 
-def generate_prep_sheet(patient, recent_vitals, recent_labs, recent_imaging, recent_consults, recent_hospital, active_conditions, screenings, last_visit_date=None, past_appointments=None):
+def generate_prep_sheet(patient, recent_vitals=None, recent_labs=None, recent_imaging=None, recent_consults=None, recent_hospital=None, active_conditions=None, screenings=None, last_visit_date=None, past_appointments=None, include_full_data=False):
     """
     Generate a preparation sheet summary for a patient
     Maintains backward compatibility with existing interface.
     """
     # Create prep data container from individual parameters
     prep_data = PatientPrepData(patient)
-    prep_data.recent_vitals = recent_vitals
-    prep_data.recent_labs = recent_labs
-    prep_data.recent_imaging = recent_imaging
-    prep_data.recent_consults = recent_consults
-    prep_data.recent_hospital = recent_hospital
-    prep_data.active_conditions = active_conditions
-    prep_data.screenings = screenings
+    # Use lightweight data by default, full data only when requested
+    prep_data.recent_vitals = recent_vitals or []
+    prep_data.recent_labs = (recent_labs or [])[:5] if not include_full_data else (recent_labs or [])
+    prep_data.recent_imaging = (recent_imaging or [])[:3] if not include_full_data else (recent_imaging or [])
+    prep_data.recent_consults = (recent_consults or [])[:3] if not include_full_data else (recent_consults or [])
+    prep_data.recent_hospital = (recent_hospital or [])[:2] if not include_full_data else (recent_hospital or [])
+    prep_data.active_conditions = (active_conditions or [])[:10] if not include_full_data else (active_conditions or [])
+    prep_data.screenings = (screenings or [])[:10] if not include_full_data else (screenings or [])
     prep_data.last_visit_date = last_visit_date
-    prep_data.past_appointments = past_appointments
+    prep_data.past_appointments = (past_appointments or [])[:5] if not include_full_data else (past_appointments or [])
     
     return _prep_sheet_generator.generate(prep_data)
     # Initialize prep sheet data
