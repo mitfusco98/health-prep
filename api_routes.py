@@ -3,6 +3,11 @@ from app import app, db, csrf
 from models import Patient, Condition, Vital, LabResult, Visit, ImagingStudy, ConsultReport, HospitalSummary, Screening, MedicalDocument, Appointment, PatientAlert
 from jwt_utils import jwt_required, optional_jwt, admin_required
 from cache_manager import cache_route, invalidate_cache_pattern, cache_manager
+from db_utils import (
+    get_patient_by_id_or_404, search_patients, get_appointments_for_date,
+    get_patient_recent_vitals, get_patient_recent_visits, get_patient_screenings,
+    serialize_patient_basic, serialize_appointment
+)
 from datetime import datetime, date, timedelta
 import logging
 from sqlalchemy import func, or_
@@ -53,62 +58,11 @@ def api_patients():
         if sort_order not in ['asc', 'desc']:
             return jsonify({'error': 'order must be either "asc" or "desc"'}), 400
 
-        # Build query
-        query = Patient.query
+        # Use shared search function
+        pagination = search_patients(search_term, page, per_page, sort_field, sort_order)
 
-        # Apply search filter
-        if search_term:
-            search_filter = or_(
-                Patient.first_name.ilike(f'%{search_term}%'),
-                Patient.last_name.ilike(f'%{search_term}%'),
-                Patient.mrn.ilike(f'%{search_term}%'),
-                func.concat(Patient.first_name, ' ', Patient.last_name).ilike(f'%{search_term}%')
-            )
-            query = query.filter(search_filter)
-
-        # Apply sorting
-        if sort_field == 'name':
-            sort_column = Patient.first_name
-        elif sort_field == 'mrn':
-            sort_column = Patient.mrn
-        elif sort_field == 'age':
-            sort_column = Patient.date_of_birth
-            # For age, reverse the order since older birth dates = older age
-            sort_order = 'asc' if sort_order == 'desc' else 'desc'
-        else:
-            sort_column = Patient.created_at
-
-        if sort_order == 'desc':
-            query = query.order_by(sort_column.desc())
-        else:
-            query = query.order_by(sort_column.asc())
-
-        # Paginate
-        pagination = query.paginate(
-            page=page,
-            per_page=per_page,
-            error_out=False
-        )
-
-        # Serialize patients
-        patients_data = []
-        for patient in pagination.items:
-            patients_data.append({
-                'id': patient.id,
-                'mrn': patient.mrn,
-                'first_name': patient.first_name,
-                'last_name': patient.last_name,
-                'full_name': patient.full_name,
-                'date_of_birth': patient.date_of_birth.isoformat() if patient.date_of_birth else None,
-                'age': patient.age,
-                'sex': patient.sex,
-                'phone': patient.phone,
-                'email': patient.email,
-                'address': patient.address,
-                'insurance': patient.insurance,
-                'created_at': patient.created_at.isoformat() if patient.created_at else None,
-                'updated_at': patient.updated_at.isoformat() if patient.updated_at else None
-            })
+        # Serialize patients using shared function
+        patients_data = [serialize_patient_basic(patient) for patient in pagination.items]
 
         return jsonify({
             'patients': patients_data,
@@ -142,18 +96,9 @@ def api_patient_detail(patient_id):
     Get detailed information for a specific patient (JWT protected)
     """
     try:
-        # Validate patient ID format
-        try:
-            patient_id_int = int(patient_id)
-            if patient_id_int <= 0:
-                return jsonify({'error': 'Patient ID must be a positive integer'}), 400
-        except (ValueError, TypeError):
-            return jsonify({'error': 'Patient ID must be a valid integer'}), 400
-
-        patient = Patient.query.get(patient_id_int)
+        patient = get_patient_by_id_or_404(patient_id)
         if not patient:
             return jsonify({'error': 'Patient not found'}), 404
-
 
         # Get query parameters for lazy loading
         include_vitals = request.args.get('include_vitals', 'false').lower() == 'true'
@@ -162,27 +107,13 @@ def api_patient_detail(patient_id):
         include_alerts = request.args.get('include_alerts', 'false').lower() == 'true'
 
         # Always load basic conditions (lightweight)
-        conditions = Condition.query.filter_by(patient_id=patient_id_int, is_active=True).limit(10).all()
+        conditions = Condition.query.filter_by(patient_id=patient.id, is_active=True).limit(10).all()
 
-        # Conditionally load heavy data
-        recent_vitals = []
-        recent_visits = []
-        screenings = []
-        alerts = []
-
-        if include_vitals:
-            recent_vitals = Vital.query.filter_by(patient_id=patient_id_int)\
-                .order_by(Vital.date.desc()).limit(5).all()
-
-        if include_visits:
-            recent_visits = Visit.query.filter_by(patient_id=patient_id_int)\
-                .order_by(Visit.visit_date.desc()).limit(5).all()
-
-        if include_screenings:
-            screenings = Screening.query.filter_by(patient_id=patient_id_int).limit(20).all()
-
-        if include_alerts:
-            alerts = PatientAlert.query.filter_by(patient_id=patient_id_int, is_active=True).limit(10).all()
+        # Conditionally load heavy data using shared functions
+        recent_vitals = get_patient_recent_vitals(patient.id) if include_vitals else []
+        recent_visits = get_patient_recent_visits(patient.id) if include_visits else []
+        screenings = get_patient_screenings(patient.id) if include_screenings else []
+        alerts = PatientAlert.query.filter_by(patient_id=patient.id, is_active=True).limit(10).all() if include_alerts else []
 
         # Serialize patient data
         patient_data = {
@@ -557,24 +488,11 @@ def api_appointments():
         else:
             selected_date = date.today()
 
-        # Get appointments for the selected date
-        appointments = Appointment.query.filter(
-            func.date(Appointment.appointment_date) == selected_date
-        ).order_by(Appointment.appointment_time).all()
+        # Get appointments for the selected date using shared function
+        appointments = get_appointments_for_date(selected_date)
 
-        # Serialize appointments
-        appointments_data = []
-        for apt in appointments:
-            appointments_data.append({
-                'id': apt.id,
-                'patient_id': apt.patient_id,
-                'patient_name': apt.patient.full_name,
-                'patient_mrn': apt.patient.mrn,
-                'appointment_date': apt.appointment_date.isoformat(),
-                'appointment_time': apt.appointment_time.strftime('%H:%M'),
-                'note': apt.note,
-                'status': apt.status
-            })
+        # Serialize appointments using shared function
+        appointments_data = [serialize_appointment(apt) for apt in appointments]
 
         return jsonify({
             'date': selected_date.isoformat(),
