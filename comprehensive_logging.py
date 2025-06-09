@@ -681,3 +681,20 @@ def log_data_modification(data_type):
                         event_type='data_modification',
                         user_id=user_id,
                         event_details=json.dumps(log_details),
+                        request_id=str(uuid.uuid4()),
+                        ip_address=request.remote_addr,
+                        user_agent=request.headers.get('User-Agent', '')
+                    )
+
+                    try:
+                        db.session.commit()
+                    except Exception as commit_error:
+                        logger.warning(f"Failed to commit admin log: {str(commit_error)}")
+                        db.session.rollback()
+                except Exception as log_error:
+                    logger.error(f"Failed to log data modification: {str(log_error)}")
+
+            return result
+
+        return decorated_function
+    return decorator
