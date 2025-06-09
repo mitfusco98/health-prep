@@ -321,8 +321,6 @@ class PatientAlertForm(FlaskForm):
                       description="Additional information about this alert")
     start_date = DateField('Start Date', validators=[DataRequired()], format='%Y-%m-%d',
                      default=datetime.utcnow().date())
-    end_date = DateField('End Date', validators=[Optional()], format='%Y-%m-%d',
-                   description="Leave blank for permanent alert")
     is_active = BooleanField('Active', default=True,
                        description="Uncheck to deactivate this alert")
     severity = SelectField('Severity', validators=[DataRequired()],

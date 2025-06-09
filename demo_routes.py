@@ -1095,7 +1095,7 @@ def add_alert(patient_id):
                 description=form.description.data,
                 details=form.details.data,
                 start_date=form.start_date.data,
-                end_date=form.end_date.data,
+                end_date=None,
                 is_active=form.is_active.data,
                 severity=form.severity.data
             )
@@ -1124,7 +1124,6 @@ def add_alert(patient_id):
                     'severity': form.severity.data or '',
                     'priority': form.severity.data or '',  # Map severity to priority
                     'alert_start_date': form.start_date.data.strftime('%Y-%m-%d') if form.start_date.data else '',
-                    'alert_end_date': form.end_date.data.strftime('%Y-%m-%d') if form.end_date.data else '',
                     'alert_is_active': form.is_active.data,
                     'alert_time': datetime.now().strftime('%H:%M:%S'),
                     'alert_date': form.start_date.data.strftime('%Y-%m-%d') if form.start_date.data else '',
@@ -1184,7 +1183,7 @@ def edit_alert(patient_id, alert_id):
             alert.description = form.description.data
             alert.details = form.details.data
             alert.start_date = form.start_date.data
-            alert.end_date = form.end_date.data
+            alert.end_date = None
             alert.is_active = form.is_active.data
             alert.severity = form.severity.data
             
@@ -1237,7 +1236,6 @@ def delete_alert(patient_id, alert_id):
                 'severity': alert.severity or '',
                 'priority': alert.severity or '',        # Map severity to priority for consistency
                 'alert_start_date': alert.start_date.strftime('%Y-%m-%d') if alert.start_date else '',
-                'alert_end_date': alert.end_date.strftime('%Y-%m-%d') if alert.end_date else '',
                 'alert_is_active': alert.is_active,
                 'created_at': alert.created_at.strftime('%Y-%m-%d %H:%M:%S') if alert.created_at else '',
                 'updated_at': alert.updated_at.strftime('%Y-%m-%d %H:%M:%S') if alert.updated_at else '',
@@ -1261,7 +1259,6 @@ def delete_alert(patient_id, alert_id):
                 'deleted_severity': alert.severity or '',
                 'deleted_priority': alert.severity or '',
                 'deleted_start_date': alert.start_date.strftime('%Y-%m-%d') if alert.start_date else '',
-                'deleted_end_date': alert.end_date.strftime('%Y-%m-%d') if alert.end_date else '',
                 'deleted_is_active': alert.is_active
             }
             

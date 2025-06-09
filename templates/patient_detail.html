@@ -46,11 +46,10 @@
                             <thead class="table-light">
                                 <tr>
                                     <th style="width: 15%;">Type</th>
-                                    <th style="width: 30%;">Description</th>
+                                    <th style="width: 35%;">Description</th>
                                     <th style="width: 10%;">Severity</th>
                                     <th style="width: 15%;">Start Date</th>
-                                    <th style="width: 15%;">End Date</th>
-                                    <th style="width: 15%;">Actions</th>
+                                    <th style="width: 25%;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -70,7 +69,6 @@
                                                 </span>
                                             </td>
                                             <td>{{ alert.start_date|dob }}</td>
-                                            <td>{{ alert.end_date|dob if alert.end_date else 'Permanent' }}</td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
                                                     <a href="{{ url_for('edit_alert', patient_id=patient.id, alert_id=alert.id) }}" class="btn btn-outline-secondary">
