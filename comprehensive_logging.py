@@ -105,12 +105,50 @@ def log_patient_operation(operation_type):
                             # Track specific field changes for different types
                             if key in ['first_name', 'last_name', 'date_of_birth', 'sex', 'mrn', 'phone', 'email', 'address', 'insurance']:
                                 form_changes[f'demographics_{key}'] = str(value)[:100]
-                            elif key in ['alert_type', 'description', 'details', 'severity', 'start_date', 'end_date']:
+                            elif key in ['alert_type', 'description', 'details', 'severity', 'start_date', 'end_date', 'text', 'priority']:
                                 form_changes[f'alert_{key}'] = str(value)[:100]
+                                # Store alert-specific data with detailed field names
+                                if key == 'text' or key == 'description':
+                                    log_details['alert_text'] = str(value)[:200]
+                                elif key == 'alert_type':
+                                    log_details['alert_type'] = str(value)[:50]
+                                elif key == 'priority':
+                                    log_details['priority'] = str(value)[:20]
+                                elif key == 'start_date':
+                                    log_details['alert_date'] = str(value)[:20]
                             elif key in ['screening_type', 'due_date', 'last_completed', 'priority', 'notes']:
                                 form_changes[f'screening_{key}'] = str(value)[:100]
                             elif key in ['appointment_date', 'appointment_time', 'note', 'status']:
                                 form_changes[f'appointment_{key}'] = str(value)[:100]
+                            # Medical data specific fields
+                            elif key in ['condition_name', 'diagnosis', 'diagnosis_date', 'severity', 'status']:
+                                form_changes[f'condition_{key}'] = str(value)[:100]
+                                if key == 'condition_name' or key == 'diagnosis':
+                                    log_details['condition_name'] = str(value)[:100]
+                                elif key == 'diagnosis_date':
+                                    log_details['diagnosis_date'] = str(value)[:20]
+                            elif key in ['test_name', 'test_date', 'result', 'lab_name', 'lab_date', 'value']:
+                                form_changes[f'lab_{key}'] = str(value)[:100]
+                                if key == 'test_name' or key == 'lab_name':
+                                    log_details['test_name'] = str(value)[:100]
+                                elif key == 'test_date' or key == 'lab_date':
+                                    log_details['test_date'] = str(value)[:20]
+                                elif key == 'result' or key == 'value':
+                                    log_details['result_value'] = str(value)[:100]
+                            elif key in ['vaccine_name', 'vaccination_date', 'lot_number', 'immunization_name', 'immunization_date']:
+                                form_changes[f'immunization_{key}'] = str(value)[:100]
+                                if key == 'vaccine_name' or key == 'immunization_name':
+                                    log_details['vaccine_name'] = str(value)[:100]
+                                elif key == 'vaccination_date' or key == 'immunization_date':
+                                    log_details['vaccination_date'] = str(value)[:20]
+                                elif key == 'lot_number':
+                                    log_details['lot_number'] = str(value)[:50]
+                            elif key in ['blood_pressure', 'heart_rate', 'temperature', 'weight', 'vital_date', 'measurement_date']:
+                                form_changes[f'vital_{key}'] = str(value)[:100]
+                                if key == 'vital_date' or key == 'measurement_date':
+                                    log_details['vital_date'] = str(value)[:20]
+                                elif key in ['blood_pressure', 'heart_rate', 'temperature', 'weight']:
+                                    log_details[key] = str(value)[:20]
                     
                     log_details['form_data'] = sanitized_form
                     if form_changes:
@@ -341,14 +379,60 @@ def log_data_modification(data_type):
                     'success': True
                 }
 
-                # Add form data for modifications
+                # Add form data for modifications and capture specific details
                 if request.method in ['POST', 'PUT', 'PATCH'] and request.form:
                     sanitized_form = {}
                     sensitive_fields = ['password', 'csrf_token']
+                    current_date = datetime.now().strftime('%Y-%m-%d')
+                    current_time = datetime.now().strftime('%H:%M:%S')
+                    
                     for key, value in request.form.items():
                         if key.lower() not in sensitive_fields:
                             sanitized_form[key] = str(value)[:200]
                     log_details['modified_data'] = sanitized_form
+                    
+                    # Capture specific details based on data type
+                    if data_type == 'alert':
+                        log_details['alert_text'] = request.form.get('text', request.form.get('description', ''))[:200]
+                        log_details['alert_date'] = request.form.get('start_date', current_date)
+                        log_details['alert_time'] = current_time
+                        log_details['priority'] = request.form.get('priority', '')
+                        log_details['alert_type'] = request.form.get('alert_type', '')
+                    elif data_type == 'condition':
+                        log_details['condition_name'] = request.form.get('condition_name', request.form.get('diagnosis', ''))
+                        log_details['diagnosis_date'] = request.form.get('diagnosis_date', current_date)
+                        log_details['severity'] = request.form.get('severity', '')
+                        log_details['status'] = request.form.get('status', '')
+                    elif data_type == 'vital':
+                        log_details['vital_date'] = request.form.get('vital_date', request.form.get('measurement_date', current_date))
+                        log_details['vital_time'] = current_time
+                        log_details['blood_pressure'] = request.form.get('blood_pressure', '')
+                        log_details['heart_rate'] = request.form.get('heart_rate', '')
+                        log_details['temperature'] = request.form.get('temperature', '')
+                        log_details['weight'] = request.form.get('weight', '')
+                    elif data_type in ['lab', 'test']:
+                        log_details['test_name'] = request.form.get('test_name', request.form.get('lab_name', ''))
+                        log_details['test_date'] = request.form.get('test_date', request.form.get('lab_date', current_date))
+                        log_details['test_time'] = current_time
+                        log_details['result_value'] = request.form.get('result', request.form.get('value', ''))
+                    elif data_type == 'immunization':
+                        log_details['vaccine_name'] = request.form.get('vaccine_name', request.form.get('immunization_name', ''))
+                        log_details['vaccination_date'] = request.form.get('vaccination_date', request.form.get('immunization_date', current_date))
+                        log_details['vaccination_time'] = current_time
+                        log_details['lot_number'] = request.form.get('lot_number', '')
+
+                # Capture file upload details for document operations
+                if data_type == 'document' and request.files:
+                    for file_key, file_obj in request.files.items():
+                        if file_obj and file_obj.filename:
+                            log_details['file_name'] = file_obj.filename
+                            log_details['file_type'] = file_obj.content_type or 'unknown'
+                            log_details['upload_date'] = datetime.now().strftime('%Y-%m-%d')
+                            log_details['upload_time'] = datetime.now().strftime('%H:%M:%S')
+                            # Get file size if available
+                            if hasattr(file_obj, 'content_length') and file_obj.content_length:
+                                log_details['file_size'] = f"{file_obj.content_length} bytes"
+                            break
 
                 # Create admin log entry
                 AdminLog.log_event(
