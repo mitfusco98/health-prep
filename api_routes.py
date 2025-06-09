@@ -297,7 +297,15 @@ def validate_patient_fields(data):
     if 'mrn' in data and data['mrn']:
         import re
         if not re.match(r'^[A-Za-z0-9\-]+$', data['mrn']) or len(data['mrn']) < 3 or len(data['mrn']) > 20:
+            errors.append('mrn must be alphanumeric with optional hyphens, 3-20 characters')
 
+    if 'address' in data and data['address'] and len(data['address']) > 500:
+        errors.append('address must be maximum 500 characters')
+
+    if 'insurance' in data and data['insurance'] and len(data['insurance']) > 200:
+        errors.append('insurance must be maximum 200 characters')
+
+    return errors
 
 @app.route('/api/patients/<patient_id>/vitals', methods=['GET'])
 @csrf.exempt
