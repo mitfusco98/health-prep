@@ -1172,26 +1172,28 @@ def delete_alert(patient_id, alert_id):
             from flask import session
             import json
             
-            # Capture ALL alert fields before deletion including notes
+            # Capture ALL alert fields before deletion including notes - using same field names as add/edit
             deletion_log_details = {
                 'action': 'delete',
                 'data_type': 'alert',
                 'patient_id': patient_id,
                 'patient_name': alert.patient.full_name if alert.patient else 'Unknown',
                 'alert_id': alert_id,
-                'deleted_alert_description': alert.description or '',
-                'deleted_alert_details': alert.details or '',  # This contains the alert notes
-                'deleted_alert_notes': alert.details or '',    # Explicit notes field for clarity
-                'deleted_alert_type': alert.alert_type or '',
-                'deleted_severity': alert.severity or '',
-                'deleted_priority': alert.severity or '',      # Map severity to priority for consistency
-                'deleted_start_date': alert.start_date.strftime('%Y-%m-%d') if alert.start_date else '',
-                'deleted_end_date': alert.end_date.strftime('%Y-%m-%d') if alert.end_date else '',
-                'deleted_is_active': alert.is_active,
-                'deleted_created_at': alert.created_at.strftime('%Y-%m-%d %H:%M:%S') if alert.created_at else '',
-                'deleted_updated_at': alert.updated_at.strftime('%Y-%m-%d %H:%M:%S') if alert.updated_at else '',
+                # Use consistent field names with add/edit operations
+                'alert_description': alert.description or '',
+                'alert_details': alert.details or '',
+                'alert_notes': alert.details or '',      # Explicit notes field for consistency
+                'alert_type': alert.alert_type or '',
+                'severity': alert.severity or '',
+                'priority': alert.severity or '',        # Map severity to priority for consistency
+                'alert_start_date': alert.start_date.strftime('%Y-%m-%d') if alert.start_date else '',
+                'alert_end_date': alert.end_date.strftime('%Y-%m-%d') if alert.end_date else '',
+                'alert_is_active': alert.is_active,
+                'created_at': alert.created_at.strftime('%Y-%m-%d %H:%M:%S') if alert.created_at else '',
+                'updated_at': alert.updated_at.strftime('%Y-%m-%d %H:%M:%S') if alert.updated_at else '',
                 'deletion_time': datetime.now().strftime('%H:%M:%S'),
                 'deletion_date': datetime.now().strftime('%Y-%m-%d'),
+                'alert_time': datetime.now().strftime('%H:%M:%S'),
                 'user_id': session.get('user_id'),
                 'username': session.get('username', 'Unknown'),
                 'endpoint': 'delete_alert',
@@ -1201,7 +1203,16 @@ def delete_alert(patient_id, alert_id):
                 # Legacy field mappings for backward compatibility
                 'alert_text': alert.description or '',
                 'alert_date': alert.start_date.strftime('%Y-%m-%d') if alert.start_date else '',
-                'alert_time': datetime.now().strftime('%H:%M:%S')
+                # Additional deleted prefixed fields for deletion-specific searches
+                'deleted_alert_description': alert.description or '',
+                'deleted_alert_details': alert.details or '',
+                'deleted_alert_notes': alert.details or '',
+                'deleted_alert_type': alert.alert_type or '',
+                'deleted_severity': alert.severity or '',
+                'deleted_priority': alert.severity or '',
+                'deleted_start_date': alert.start_date.strftime('%Y-%m-%d') if alert.start_date else '',
+                'deleted_end_date': alert.end_date.strftime('%Y-%m-%d') if alert.end_date else '',
+                'deleted_is_active': alert.is_active
             }
             
             AdminLog.log_event(

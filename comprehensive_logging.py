@@ -109,12 +109,13 @@ def log_patient_operation(operation_type):
                                 form_changes[f'demographics_{key}'] = str(value)[:100]
                             elif key in ['alert_type', 'description', 'details', 'severity', 'start_date', 'end_date', 'text', 'priority', 'is_active']:
                                 form_changes[f'alert_{key}'] = str(value)[:100]
-                                # Store alert-specific data with ALL detailed field names
+                                # Store alert-specific data with ALL detailed field names for both add and edit operations
                                 if key == 'description':
                                     log_details['alert_description'] = str(value)[:200]
                                     log_details['alert_text'] = str(value)[:200]  # Legacy compatibility
                                 elif key == 'details':
                                     log_details['alert_details'] = str(value)[:500]
+                                    log_details['alert_notes'] = str(value)[:500]  # Explicit notes field
                                 elif key == 'alert_type':
                                     log_details['alert_type'] = str(value)[:50]
                                 elif key == 'severity':
@@ -474,18 +475,27 @@ def log_data_modification(data_type):
                     if data_type == 'alert':
                         log_details['action'] = 'add' if request.method == 'POST' else 'edit'
                         # Capture ALL alert fields for comprehensive logging
-                        log_details['alert_description'] = request.form.get('description', '')[:200]
-                        log_details['alert_details'] = request.form.get('details', '')[:500]
-                        log_details['alert_type'] = request.form.get('alert_type', '')
-                        log_details['severity'] = request.form.get('severity', '')
-                        log_details['start_date'] = request.form.get('start_date', current_date)
-                        log_details['end_date'] = request.form.get('end_date', '')
-                        log_details['is_active'] = bool(request.form.get('is_active'))
+                        alert_description = request.form.get('description', '')
+                        alert_details = request.form.get('details', '')
+                        alert_type = request.form.get('alert_type', '')
+                        alert_severity = request.form.get('severity', '')
+                        alert_start_date = request.form.get('start_date', current_date)
+                        alert_end_date = request.form.get('end_date', '')
+                        alert_is_active = bool(request.form.get('is_active'))
+                        
+                        log_details['alert_description'] = alert_description[:200]
+                        log_details['alert_details'] = alert_details[:500] 
+                        log_details['alert_notes'] = alert_details[:500]  # Explicit notes field
+                        log_details['alert_type'] = alert_type
+                        log_details['severity'] = alert_severity
+                        log_details['start_date'] = alert_start_date
+                        log_details['end_date'] = alert_end_date
+                        log_details['is_active'] = alert_is_active
                         log_details['alert_time'] = current_time
-                        # Legacy field for backward compatibility
-                        log_details['alert_text'] = request.form.get('description', '')[:200]
-                        log_details['alert_date'] = request.form.get('start_date', current_date)
-                        log_details['priority'] = request.form.get('severity', '')  # Map severity to priority for consistency
+                        # Legacy fields for backward compatibility
+                        log_details['alert_text'] = alert_description[:200]
+                        log_details['alert_date'] = alert_start_date
+                        log_details['priority'] = alert_severity  # Map severity to priority for consistency
                     elif data_type == 'condition':
                         log_details['action'] = 'add' if request.method == 'POST' else 'edit'
                         log_details['condition_name'] = request.form.get('name', request.form.get('condition_name', request.form.get('diagnosis', '')))
