@@ -260,16 +260,22 @@ def admin_log_stats():
     except Exception as e:
         return jsonify({'error': f'Stats generation failed: {str(e)}'}), 500
 
-def format_log_details(details):
+def format_log_details(log_or_details):
     """Format log details for display with enhanced medical data formatting"""
-    if not details:
+    if not log_or_details:
         return "No details available"
 
     try:
-        if isinstance(details, str):
-            data = json.loads(details)
+        # Handle AdminLog object vs raw details
+        if hasattr(log_or_details, 'event_details_dict'):
+            # This is an AdminLog object
+            data = log_or_details.event_details_dict
+        elif isinstance(log_or_details, str):
+            # This is a JSON string
+            data = json.loads(log_or_details)
         else:
-            data = details
+            # This is already a dictionary
+            data = log_or_details
 
         formatted = []
 
