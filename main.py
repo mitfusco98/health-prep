@@ -14,8 +14,8 @@ import api_routes  # noqa: F401
 import performance_routes  # noqa: F401
 
 # Import modular route files
-import routes.patient_routes  # noqa: F401
-import routes.appointment_routes  # noqa: F401
+from routes import patient_routes  # noqa: F401
+from routes import appointment_routes  # noqa: F401
 
 # Import service layers for dependency injection
 from services import patient_service, appointment_service  # noqa: F401

@@ -6,8 +6,8 @@ from forms import PatientForm, AppointmentForm, ConditionForm, VitalForm, Docume
 from comprehensive_logging import log_patient_operation, log_admin_operation, log_data_modification, log_page_access
 
 # Import modular route files
-import routes.patient_routes
-import routes.appointment_routes
+from routes import patient_routes
+from routes import appointment_routes
 
 # Keep only unique routes that aren't in demo_routes.py or modular route files
 # All duplicate routes have been removed to prevent conflicts
