@@ -551,6 +551,31 @@ def log_data_modification(data_type):
                         log_details['discharge_diagnosis'] = request.form.get('discharge_diagnosis', '')[:200]
                         log_details['procedures'] = request.form.get('procedures', '')[:200]
 
+                # Handle deletion operations with comprehensive field capture
+                if request.method in ['DELETE'] or 'delete' in f.__name__.lower():
+                    log_details['action'] = 'delete'
+                    # For deletions, try to capture the current record data before deletion
+                    if data_type == 'alert' and record_id:
+                        try:
+                            # Import here to avoid circular imports
+                            from models import PatientAlert
+                            alert_to_delete = PatientAlert.query.get(record_id)
+                            if alert_to_delete:
+                                # Capture all alert fields before deletion
+                                log_details['deleted_alert_description'] = alert_to_delete.description or ''
+                                log_details['deleted_alert_details'] = alert_to_delete.details or ''
+                                log_details['deleted_alert_notes'] = alert_to_delete.details or ''  # Explicit notes field
+                                log_details['deleted_alert_type'] = alert_to_delete.alert_type or ''
+                                log_details['deleted_severity'] = alert_to_delete.severity or ''
+                                log_details['deleted_priority'] = alert_to_delete.severity or ''
+                                log_details['deleted_start_date'] = alert_to_delete.start_date.strftime('%Y-%m-%d') if alert_to_delete.start_date else ''
+                                log_details['deleted_end_date'] = alert_to_delete.end_date.strftime('%Y-%m-%d') if alert_to_delete.end_date else ''
+                                log_details['deleted_is_active'] = alert_to_delete.is_active
+                                log_details['deletion_date'] = current_date
+                                log_details['deletion_time'] = current_time
+                        except Exception as alert_error:
+                            logger.warning(f"Could not capture alert details for deletion: {str(alert_error)}")
+                
                 # Capture file upload details for document operations
                 if data_type == 'document':
                     log_details['action'] = 'add' if request.method == 'POST' else 'edit'
