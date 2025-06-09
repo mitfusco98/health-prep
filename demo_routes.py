@@ -1102,6 +1102,56 @@ def add_alert(patient_id):
             
             db.session.add(alert)
             db.session.commit()
+            
+            # Log the successful alert addition with detailed information
+            try:
+                import uuid
+                from models import AdminLog
+                from datetime import datetime
+                import json
+                
+                # Create comprehensive log entry for alert addition
+                log_details = {
+                    'action': 'add',
+                    'data_type': 'alert',
+                    'patient_id': patient_id,
+                    'patient_name': patient.full_name,
+                    'alert_id': alert.id,
+                    'alert_description': form.description.data or '',
+                    'alert_details': form.details.data or '',
+                    'alert_notes': form.details.data or '',  # Explicit notes field
+                    'alert_type': form.alert_type.data or '',
+                    'severity': form.severity.data or '',
+                    'priority': form.severity.data or '',  # Map severity to priority
+                    'alert_start_date': form.start_date.data.strftime('%Y-%m-%d') if form.start_date.data else '',
+                    'alert_end_date': form.end_date.data.strftime('%Y-%m-%d') if form.end_date.data else '',
+                    'alert_is_active': form.is_active.data,
+                    'alert_time': datetime.now().strftime('%H:%M:%S'),
+                    'alert_date': form.start_date.data.strftime('%Y-%m-%d') if form.start_date.data else '',
+                    'alert_text': form.description.data or '',  # Legacy compatibility
+                    'user_id': session.get('user_id'),
+                    'username': session.get('username', 'Unknown'),
+                    'endpoint': 'add_alert',
+                    'method': 'POST',
+                    'timestamp': datetime.now().isoformat(),
+                    'success': True
+                }
+                
+                AdminLog.log_event(
+                    event_type='alert_add',
+                    user_id=session.get('user_id'),
+                    event_details=json.dumps(log_details),
+                    request_id=str(uuid.uuid4()),
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent', '')
+                )
+                
+                db.session.commit()
+            except Exception as log_error:
+                logger.error(f"Error logging alert addition: {str(log_error)}")
+                # Don't let logging errors break the alert creation
+                pass
+            
             flash("Alert added successfully.", "success")
             return redirect(url_for('patient_detail', patient_id=patient_id))
         except Exception as e:

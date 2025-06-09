@@ -254,9 +254,19 @@ def log_patient_operation(operation_type):
                 if appointment_id:
                     log_details['appointment_id'] = appointment_id
 
-                # Create admin log entry with standardized event type
+                # Create admin log entry with standardized event type - use specific alert event type for alerts
+                event_type = standardized_operation
+                if 'alert_type' in log_details or 'alert_description' in log_details:
+                    # This is an alert operation - use specific alert event type
+                    if standardized_operation == 'add':
+                        event_type = 'alert_add'
+                    elif standardized_operation == 'edit':
+                        event_type = 'alert_edit'
+                    elif standardized_operation == 'delete':
+                        event_type = 'alert_delete'
+                
                 AdminLog.log_event(
-                    event_type=standardized_operation,  # Use standardized action as event type
+                    event_type=event_type,
                     user_id=user_id,
                     event_details=json.dumps(log_details),
                     request_id=str(uuid.uuid4()),
