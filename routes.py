@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, f
 from werkzeug.utils import secure_filename
 from app import app, db
 from models import Patient, Appointment, Condition, Vital, MedicalDocument, LabResult, ImagingStudy, ConsultReport, HospitalSummary, Immunization, PatientAlert, Visit, User, AdminLog
-from forms import PatientForm, AppointmentForm, ConditionForm, VitalForm, DocumentUploadForm, LabForm, ImagingForm, ConsultForm, HospitalForm, ImmunizationForm, AlertForm, VisitForm
+from forms import PatientForm, AppointmentForm, ConditionForm, VitalForm, DocumentUploadForm, LabResultForm, ImagingStudyForm, ConsultReportForm, HospitalSummaryForm, ImmunizationForm, PatientAlertForm, VisitForm
 from comprehensive_logging import log_patient_operation, log_admin_operation, log_data_modification, log_page_access
 
 # Import modular route files
