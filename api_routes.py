@@ -11,6 +11,7 @@ from db_utils import (
 from datetime import datetime, date, timedelta
 import logging
 from sqlalchemy import func, or_
+from comprehensive_logging import log_patient_operation, log_data_modification
 
 logger = logging.getLogger(__name__)
 
@@ -566,4 +567,469 @@ def api_config():
 
     except Exception as e:
         logger.error(f"Error getting frontend config: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/patients/<int:patient_id>/vitals', methods=['POST'])
+@csrf.exempt
+@log_data_modification('vital')
+def add_vitals_api(patient_id):
+    """Add vitals for a specific patient"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Validate data
+        errors = []
+        if 'weight' not in data or not isinstance(data['weight'], (int, float)):
+            errors.append('weight is required and must be a number')
+
+        if 'height' not in data or not isinstance(data['height'], (int, float)):
+            errors.append('height is required and must be a number')
+
+        if 'date' not in data or not isinstance(data['date'], str):
+            errors.append('date is required and must be a string')
+        else:
+            try:
+                datetime.strptime(data['date'], '%Y-%m-%d')
+            except ValueError:
+                errors.append('date must be in YYYY-MM-DD format')
+
+        if errors:
+            return jsonify({'error': 'Validation failed', 'details': errors}), 400
+
+        vital = Vital(
+            patient_id=patient_id,
+            date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+            weight=data['weight'],
+            height=data['height'],
+            bmi=data.get('bmi'),
+            temperature=data.get('temperature'),
+            blood_pressure_systolic=data.get('blood_pressure_systolic'),
+            blood_pressure_diastolic=data.get('blood_pressure_diastolic'),
+            pulse=data.get('pulse'),
+            respiratory_rate=data.get('respiratory_rate'),
+            oxygen_saturation=data.get('oxygen_saturation')
+        )
+
+        db.session.add(vital)
+        db.session.commit()
+
+        # Invalidate cache for patient vitals
+        invalidate_cache_pattern(f'api_patient_vitals?patient_id={patient_id}*')
+
+        return jsonify({
+            'id': vital.id,
+            'patient_id': vital.patient_id,
+            'date': vital.date.isoformat(),
+            'weight': vital.weight,
+            'height': vital.height,
+            'bmi': vital.bmi,
+            'temperature': vital.temperature,
+            'blood_pressure_systolic': vital.blood_pressure_systolic,
+            'blood_pressure_diastolic': vital.blood_pressure_diastolic,
+            'pulse': vital.pulse,
+            'respiratory_rate': vital.respiratory_rate,
+            'oxygen_saturation': vital.oxygen_saturation
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error adding vitals: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/patients/<int:patient_id>/conditions', methods=['POST'])
+@csrf.exempt
+@log_data_modification('condition')
+def add_condition_api(patient_id):
+    """Add conditions for a specific patient"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Validate data
+        errors = []
+        if 'name' not in data or not isinstance(data['name'], str):
+            errors.append('name is required and must be a string')
+
+        if 'code' not in data or not isinstance(data['code'], str):
+            errors.append('code is required and must be a string')
+
+        if 'diagnosed_date' not in data or not isinstance(data['diagnosed_date'], str):
+            errors.append('diagnosed_date is required and must be a string')
+        else:
+            try:
+                datetime.strptime(data['diagnosed_date'], '%Y-%m-%d')
+            except ValueError:
+                errors.append('diagnosed_date must be in YYYY-MM-DD format')
+
+        if errors:
+            return jsonify({'error': 'Validation failed', 'details': errors}), 400
+
+        condition = Condition(
+            patient_id=patient_id,
+            name=data['name'],
+            code=data['code'],
+            diagnosed_date=datetime.strptime(data['diagnosed_date'], '%Y-%m-%d').date(),
+            notes=data.get('notes')
+        )
+
+        db.session.add(condition)
+        db.session.commit()
+
+        return jsonify({
+            'id': condition.id,
+            'patient_id': condition.patient_id,
+            'name': condition.name,
+            'code': condition.code,
+            'diagnosed_date': condition.diagnosed_date.isoformat(),
+            'notes': condition.notes
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error adding condition: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/patients/<int:patient_id>/lab_results', methods=['POST'])
+@csrf.exempt
+@log_data_modification('lab')
+def add_lab_result_api(patient_id):
+    """Add lab results for a specific patient"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Validate data
+        errors = []
+        if 'test_name' not in data or not isinstance(data['test_name'], str):
+            errors.append('test_name is required and must be a string')
+
+        if 'result' not in data or not isinstance(data['result'], str):
+            errors.append('result is required and must be a string')
+
+        if 'date' not in data or not isinstance(data['date'], str):
+            errors.append('date is required and must be a string')
+        else:
+            try:
+                datetime.strptime(data['date'], '%Y-%m-%d')
+            except ValueError:
+                errors.append('date must be in YYYY-MM-DD format')
+
+        if errors:
+            return jsonify({'error': 'Validation failed', 'details': errors}), 400
+
+        lab_result = LabResult(
+            patient_id=patient_id,
+            test_name=data['test_name'],
+            result=data['result'],
+            date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+            unit=data.get('unit'),
+            reference_range=data.get('reference_range'),
+            notes=data.get('notes')
+        )
+
+        db.session.add(lab_result)
+        db.session.commit()
+
+        return jsonify({
+            'id': lab_result.id,
+            'patient_id': lab_result.patient_id,
+            'test_name': lab_result.test_name,
+            'result': lab_result.result,
+            'date': lab_result.date.isoformat(),
+            'unit': lab_result.unit,
+            'reference_range': lab_result.reference_range,
+            'notes': lab_result.notes
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error adding lab result: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/patients/<int:patient_id>/immunizations', methods=['POST'])
+@csrf.exempt
+@log_data_modification('immunization')
+def add_immunization_api(patient_id):
+    """Add immunization for a specific patient"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Validate data
+        errors = []
+        if 'vaccine_name' not in data or not isinstance(data['vaccine_name'], str):
+            errors.append('vaccine_name is required and must be a string')
+
+        if 'date' not in data or not isinstance(data['date'], str):
+            errors.append('date is required and must be a string')
+        else:
+            try:
+                datetime.strptime(data['date'], '%Y-%m-%d')
+            except ValueError:
+                errors.append('date must be in YYYY-MM-DD format')
+
+        if errors:
+            return jsonify({'error': 'Validation failed', 'details': errors}), 400
+
+        immunization = Immunization(
+            patient_id=patient_id,
+            vaccine_name=data['vaccine_name'],
+            date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+            provider=data.get('provider'),
+            notes=data.get('notes')
+        )
+
+        db.session.add(immunization)
+        db.session.commit()
+
+        return jsonify({
+            'id': immunization.id,
+            'patient_id': immunization.patient_id,
+            'vaccine_name': immunization.vaccine_name,
+            'date': immunization.date.isoformat(),
+            'provider': immunization.provider,
+            'notes': immunization.notes
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error adding immunization: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/patients/<int:patient_id>/imaging', methods=['POST'])
+@csrf.exempt
+@log_data_modification('imaging')
+def add_imaging_api(patient_id):
+    """Add imaging study for a specific patient"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Validate data
+        errors = []
+        if 'study_type' not in data or not isinstance(data['study_type'], str):
+            errors.append('study_type is required and must be a string')
+
+        if 'date' not in data or not isinstance(data['date'], str):
+            errors.append('date is required and must be a string')
+        else:
+            try:
+                datetime.strptime(data['date'], '%Y-%m-%d')
+            except ValueError:
+                errors.append('date must be in YYYY-MM-DD format')
+
+        if errors:
+            return jsonify({'error': 'Validation failed', 'details': errors}), 400
+
+        imaging_study = ImagingStudy(
+            patient_id=patient_id,
+            study_type=data['study_type'],
+            date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+            radiologist=data.get('radiologist'),
+            notes=data.get('notes')
+        )
+
+        db.session.add(imaging_study)
+        db.session.commit()
+
+        return jsonify({
+            'id': imaging_study.id,
+            'patient_id': imaging_study.patient_id,
+            'study_type': imaging_study.study_type,
+            'date': imaging_study.date.isoformat(),
+            'radiologist': imaging_study.radiologist,
+            'notes': imaging_study.notes
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error adding imaging study: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/patients/<int:patient_id>/consults', methods=['POST'])
+@csrf.exempt
+@log_data_modification('consult')
+def add_consult_api(patient_id):
+    """Add consult report for a specific patient"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Validate data
+        errors = []
+        if 'specialty' not in data or not isinstance(data['specialty'], str):
+            errors.append('specialty is required and must be a string')
+
+        if 'date' not in data or not isinstance(data['date'], str):
+            errors.append('date is required and must be a string')
+        else:
+            try:
+                datetime.strptime(data['date'], '%Y-%m-%d')
+            except ValueError:
+                errors.append('date must be in YYYY-MM-DD format')
+
+        if errors:
+            return jsonify({'error': 'Validation failed', 'details': errors}), 400
+
+        consult_report = ConsultReport(
+            patient_id=patient_id,
+            specialty=data['specialty'],
+            date=datetime.strptime(data['date'], '%Y-%m-%d').date(),
+            consulting_provider=data.get('consulting_provider'),
+            reason_for_consult=data.get('reason_for_consult'),
+            findings=data.get('findings'),
+            recommendations=data.get('recommendations')
+        )
+
+        db.session.add(consult_report)
+        db.session.commit()
+
+        return jsonify({
+            'id': consult_report.id,
+            'patient_id': consult_report.patient_id,
+            'specialty': consult_report.specialty,
+            'date': consult_report.date.isoformat(),
+            'consulting_provider': consult_report.consulting_provider,
+            'reason_for_consult': consult_report.reason_for_consult,
+            'findings': consult_report.findings,
+            'recommendations': consult_report.recommendations
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error adding consult report: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/patients/<int:patient_id>/hospital_summaries', methods=['POST'])
+@csrf.exempt
+@log_data_modification('hospital')
+def add_hospital_summary_api(patient_id):
+    """Add hospital summary for a specific patient"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Validate data
+        errors = []
+        if 'hospital_name' not in data or not isinstance(data['hospital_name'], str):
+            errors.append('hospital_name is required and must be a string')
+
+        if 'admission_date' not in data or not isinstance(data['admission_date'], str):
+            errors.append('admission_date is required and must be a string')
+        else:
+            try:
+                datetime.strptime(data['admission_date'], '%Y-%m-%d')
+            except ValueError:
+                errors.append('admission_date must be in YYYY-MM-DD format')
+
+        if 'discharge_date' not in data or not isinstance(data['discharge_date'], str):
+            errors.append('discharge_date is required and must be a string')
+        else:
+            try:
+                datetime.strptime(data['discharge_date'], '%Y-%m-%d')
+            except ValueError:
+                errors.append('discharge_date must be in YYYY-MM-DD format')
+
+        if errors:
+            return jsonify({'error': 'Validation failed', 'details': errors}), 400
+
+        hospital_summary = HospitalSummary(
+            patient_id=patient_id,
+            hospital_name=data['hospital_name'],
+            admission_date=datetime.strptime(data['admission_date'], '%Y-%m-%d').date(),
+            discharge_date=datetime.strptime(data['discharge_date'], '%Y-%m-%d').date(),
+            reason_for_admission=data.get('reason_for_admission'),
+            summary=data.get('summary')
+        )
+
+        db.session.add(hospital_summary)
+        db.session.commit()
+
+        return jsonify({
+            'id': hospital_summary.id,
+            'patient_id': hospital_summary.patient_id,
+            'hospital_name': hospital_summary.hospital_name,
+            'admission_date': hospital_summary.admission_date.isoformat(),
+            'discharge_date': hospital_summary.discharge_date.isoformat(),
+            'reason_for_admission': hospital_summary.reason_for_admission,
+            'summary': hospital_summary.summary
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error adding hospital summary: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/patients/<int:patient_id>/documents', methods=['POST'])
+@csrf.exempt
+@log_data_modification('document')
+def add_document_api(patient_id):
+    """Add medical document for a specific patient"""
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # Validate data
+        errors = []
+        if 'filename' not in data or not isinstance(data['filename'], str):
+            errors.append('filename is required and must be a string')
+
+        if 'document_type' not in data or not isinstance(data['document_type'], str):
+            errors.append('document_type is required and must be a string')
+
+        if 'document_date' not in data or not isinstance(data['document_date'], str):
+            errors.append('document_date is required and must be a string')
+        else:
+            try:
+                datetime.strptime(data['document_date'], '%Y-%m-%d')
+            except ValueError:
+                errors.append('document_date must be in YYYY-MM-DD format')
+
+        if errors:
+            return jsonify({'error': 'Validation failed', 'details': errors}), 400
+
+        document = MedicalDocument(
+            patient_id=patient_id,
+            filename=data['filename'],
+            document_type=data['document_type'],
+            document_date=datetime.strptime(data['document_date'], '%Y-%m-%d').date(),
+            provider=data.get('provider'),
+            source_system=data.get('source_system'),
+            content=data.get('content')
+        )
+
+        db.session.add(document)
+        db.session.commit()
+
+        return jsonify({
+            'id': document.id,
+            'patient_id': document.patient_id,
+            'filename': document.filename,
+            'document_type': document.document_type,
+            'document_date': document.document_date.isoformat(),
+            'provider': document.provider,
+            'source_system': document.source_system,
+            'content': document.content
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error adding medical document: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
