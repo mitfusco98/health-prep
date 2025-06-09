@@ -107,217 +107,263 @@ def process_csv_upload(csv_file):
     """
     return process_csv_data(csv_file)
 
+class CSVProcessor:
+    """Handles different types of CSV imports with clear separation of concerns"""
+    
+    def __init__(self):
+        self.processors = {
+            'patients': self._process_patients_csv,
+            'conditions': self._process_conditions_csv,
+            'lab_results': self._process_lab_results_csv,
+            'visits': self._process_visits_csv
+        }
+    
+    def process(self, csv_file):
+        """Main entry point for CSV processing"""
+        try:
+            csv_data = csv.DictReader(io.StringIO(csv_file.decode('utf-8')))
+            headers = [header.lower() for header in csv_data.fieldnames]
+            
+            # Validate basic requirements
+            if not self._validate_basic_headers(headers):
+                return {'success': False, 'error': 'Invalid CSV format - missing required columns'}
+            
+            # Determine CSV type and process
+            csv_type = self._determine_csv_type(headers)
+            if csv_type not in self.processors:
+                return {'success': False, 'error': f'Unsupported CSV format: {csv_type}'}
+            
+            # Re-read CSV data for processing
+            csv_data = csv.DictReader(io.StringIO(csv_file.decode('utf-8')))
+            return self.processors[csv_type](csv_data)
+            
+        except Exception as e:
+            logging.error(f"Error processing CSV: {str(e)}")
+            return {'success': False, 'error': str(e)}
+    
+    def _validate_basic_headers(self, headers):
+        """Validate that CSV has minimum required headers"""
+        has_mrn = any(header in headers for header in ['mrn', 'patient_mrn'])
+        has_data = any(header in headers for header in ['first_name', 'condition_name', 'test_name', 'visit_date'])
+        return has_mrn and has_data
+    
+    def _determine_csv_type(self, headers):
+        """Determine the type of CSV based on headers"""
+        if 'mrn' in headers and 'first_name' in headers and 'last_name' in headers:
+            return 'patients'
+        elif 'patient_mrn' in headers and 'condition_name' in headers:
+            return 'conditions'
+        elif 'patient_mrn' in headers and 'test_name' in headers and 'test_date' in headers:
+            return 'lab_results'
+        elif 'patient_mrn' in headers and 'visit_date' in headers:
+            return 'visits'
+        return 'unknown'
+    
+    def _process_patients_csv(self, csv_data):
+        """Process patient data CSV"""
+        processed_count = 0
+        
+        for row in csv_data:
+            try:
+                patient = self._create_or_update_patient(row)
+                if patient:
+                    processed_count += 1
+                    evaluate_screening_needs(patient)
+            except Exception as e:
+                logging.error(f"Error processing patient row: {str(e)}")
+                continue
+        
+        return {'success': True, 'processed': processed_count}
+    
+    def _process_conditions_csv(self, csv_data):
+        """Process conditions data CSV"""
+        processed_count = 0
+        
+        for row in csv_data:
+            try:
+                if self._create_condition_for_patient(row):
+                    processed_count += 1
+            except Exception as e:
+                logging.error(f"Error processing condition row: {str(e)}")
+                continue
+        
+        return {'success': True, 'processed': processed_count}
+    
+    def _process_lab_results_csv(self, csv_data):
+        """Process lab results data CSV"""
+        processed_count = 0
+        
+        for row in csv_data:
+            try:
+                if self._create_lab_result_for_patient(row):
+                    processed_count += 1
+            except Exception as e:
+                logging.error(f"Error processing lab result row: {str(e)}")
+                continue
+        
+        return {'success': True, 'processed': processed_count}
+    
+    def _process_visits_csv(self, csv_data):
+        """Process visits data CSV"""
+        processed_count = 0
+        
+        for row in csv_data:
+            try:
+                if self._create_visit_for_patient(row):
+                    processed_count += 1
+            except Exception as e:
+                logging.error(f"Error processing visit row: {str(e)}")
+                continue
+        
+        return {'success': True, 'processed': processed_count}
+    
+    def _create_or_update_patient(self, row):
+        """Create or update a patient from CSV row"""
+        existing_patient = Patient.query.filter_by(mrn=row['mrn']).first()
+        
+        if existing_patient:
+            return self._update_existing_patient(existing_patient, row)
+        else:
+            return self._create_new_patient(row)
+    
+    def _update_existing_patient(self, patient, row):
+        """Update existing patient with new data"""
+        patient.first_name = row.get('first_name', patient.first_name)
+        patient.last_name = row.get('last_name', patient.last_name)
+        
+        if 'date_of_birth' in row and row['date_of_birth']:
+            patient.date_of_birth = self._parse_date(row['date_of_birth'])
+        
+        patient.sex = row.get('sex', patient.sex)
+        patient.phone = row.get('phone', patient.phone)
+        patient.email = row.get('email', patient.email)
+        patient.address = row.get('address', patient.address)
+        patient.insurance = row.get('insurance', patient.insurance)
+        
+        db.session.commit()
+        return patient
+    
+    def _create_new_patient(self, row):
+        """Create new patient from CSV row"""
+        dob = self._parse_date(row.get('date_of_birth'))
+        
+        new_patient = Patient(
+            first_name=row.get('first_name', ''),
+            last_name=row.get('last_name', ''),
+            date_of_birth=dob,
+            sex=row.get('sex', ''),
+            mrn=row['mrn'],
+            phone=row.get('phone', ''),
+            email=row.get('email', ''),
+            address=row.get('address', ''),
+            insurance=row.get('insurance', '')
+        )
+        
+        db.session.add(new_patient)
+        db.session.commit()
+        return new_patient
+    
+    def _create_condition_for_patient(self, row):
+        """Create condition for patient from CSV row"""
+        patient = Patient.query.filter_by(mrn=row['patient_mrn']).first()
+        if not patient:
+            return False
+        
+        # Check if condition already exists
+        existing_condition = Condition.query.filter_by(
+            patient_id=patient.id,
+            name=row['condition_name']
+        ).first()
+        
+        if existing_condition:
+            return False
+        
+        diagnosed_date = self._parse_date(row.get('diagnosed_date'))
+        
+        condition = Condition(
+            patient_id=patient.id,
+            name=row['condition_name'],
+            code=row.get('code', ''),
+            diagnosed_date=diagnosed_date,
+            is_active=row.get('is_active', 'true').lower() in ('true', 'yes', '1'),
+            notes=row.get('notes', '')
+        )
+        
+        db.session.add(condition)
+        db.session.commit()
+        evaluate_screening_needs(patient)
+        return True
+    
+    def _create_lab_result_for_patient(self, row):
+        """Create lab result for patient from CSV row"""
+        patient = Patient.query.filter_by(mrn=row['patient_mrn']).first()
+        if not patient:
+            return False
+        
+        test_date = self._parse_date(row.get('test_date'))
+        if not test_date:
+            return False
+        
+        lab_result = LabResult(
+            patient_id=patient.id,
+            test_name=row['test_name'],
+            test_date=test_date,
+            result_value=row.get('result_value', ''),
+            unit=row.get('unit', ''),
+            reference_range=row.get('reference_range', ''),
+            is_abnormal=row.get('is_abnormal', 'false').lower() in ('true', 'yes', '1'),
+            notes=row.get('notes', '')
+        )
+        
+        db.session.add(lab_result)
+        db.session.commit()
+        return True
+    
+    def _create_visit_for_patient(self, row):
+        """Create visit for patient from CSV row"""
+        patient = Patient.query.filter_by(mrn=row['patient_mrn']).first()
+        if not patient:
+            return False
+        
+        visit_date = self._parse_date(row.get('visit_date'))
+        if not visit_date:
+            return False
+        
+        visit = Visit(
+            patient_id=patient.id,
+            visit_date=visit_date,
+            visit_type=row.get('visit_type', 'Office Visit'),
+            provider=row.get('provider', ''),
+            reason=row.get('reason', ''),
+            notes=row.get('notes', '')
+        )
+        
+        db.session.add(visit)
+        db.session.commit()
+        return True
+    
+    def _parse_date(self, date_str):
+        """Parse date string with multiple format support"""
+        if not date_str:
+            return None
+        
+        formats = ['%Y-%m-%d', '%m/%d/%Y']
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str, fmt).date()
+            except ValueError:
+                continue
+        return None
+
+# Create global processor instance
+_csv_processor = CSVProcessor()
+
 def process_csv_data(csv_file):
     """
-    Process CSV data to import patients, conditions, lab results, and visits.
-
-    This function handles CSV data with various formats, including:
-    - Patients data: mrn, first_name, last_name, date_of_birth, sex, phone, email, address, insurance
-    - Conditions data: patient_mrn, condition_name, code, diagnosed_date, is_active, notes
-    - Lab results data: patient_mrn, test_name, test_date, result_value, unit, reference_range, is_abnormal, notes
-    - Visits data: patient_mrn, visit_date, visit_type, provider, reason, notes
-
-    Returns a dictionary with success status, number of processed records, and error messages if any.
+    Process CSV data using the new processor class.
+    Maintains backward compatibility with existing interface.
     """
-    result = {'success': False, 'processed': 0, 'error': None}
-
-    try:
-        csv_data = csv.DictReader(io.StringIO(csv_file.decode('utf-8')))
-        headers = [header.lower() for header in csv_data.fieldnames]
-
-        # Check for minimal required headers and determine data type
-        if not any(header in headers for header in ['mrn', 'patient_mrn']):
-            return {'success': False, 'error': 'MRN column is required'}
-
-        if not any(header in headers for header in ['first_name', 'condition_name', 'test_name', 'visit_date']):
-            return {'success': False, 'error': 'At least first_name, condition_name, test_name or visit_date column is required'}
-
-    except Exception as e:
-        logging.error(f"Error processing CSV: {str(e)}")
-        return {'success': False, 'error': str(e)}
-
-    try:
-        csv_data = csv.DictReader(io.StringIO(csv_file.decode('utf-8')))
-        headers = [header.lower() for header in csv_data.fieldnames]
-
-        # Process CSV data based on detected format
-        processed_count = 0
-
-        if 'mrn' in headers and 'first_name' in headers and 'last_name' in headers:
-            # Process as patient data
-            for row in csv_data:
-                # Check if patient already exists
-                existing_patient = Patient.query.filter_by(mrn=row['mrn']).first()
-
-                if existing_patient:
-                    # Update existing patient
-                    existing_patient.first_name = row.get('first_name', existing_patient.first_name)
-                    existing_patient.last_name = row.get('last_name', existing_patient.last_name)
-
-                    if 'date_of_birth' in row and row['date_of_birth']:
-                        try:
-                            existing_patient.date_of_birth = datetime.strptime(row['date_of_birth'], '%Y-%m-%d').date()
-                        except ValueError:
-                            try:
-                                existing_patient.date_of_birth = datetime.strptime(row['date_of_birth'], '%m/%d/%Y').date()
-                            except ValueError:
-                                pass  # Keep existing date if format is invalid
-
-                    existing_patient.sex = row.get('sex', existing_patient.sex)
-                    existing_patient.phone = row.get('phone', existing_patient.phone)
-                    existing_patient.email = row.get('email', existing_patient.email)
-                    existing_patient.address = row.get('address', existing_patient.address)
-                    existing_patient.insurance = row.get('insurance', existing_patient.insurance)
-
-                    db.session.commit()
-                    processed_count += 1
-
-                    # Re-evaluate screening needs
-                    evaluate_screening_needs(existing_patient)
-                else:
-                    # Create new patient
-                    try:
-                        dob = None
-                        if 'date_of_birth' in row and row['date_of_birth']:
-                            try:
-                                dob = datetime.strptime(row['date_of_birth'], '%Y-%m-%d').date()
-                            except ValueError:
-                                dob = datetime.strptime(row['date_of_birth'], '%m/%d/%Y').date()
-
-                        new_patient = Patient(
-                            first_name=row.get('first_name', ''),
-                            last_name=row.get('last_name', ''),
-                            date_of_birth=dob,
-                            sex=row.get('sex', ''),
-                            mrn=row['mrn'],
-                            phone=row.get('phone', ''),
-                            email=row.get('email', ''),
-                            address=row.get('address', ''),
-                            insurance=row.get('insurance', '')
-                        )
-
-                        db.session.add(new_patient)
-                        db.session.commit()
-                        processed_count += 1
-
-                        # Evaluate screening needs for new patient
-                        evaluate_screening_needs(new_patient)
-                    except Exception as e:
-                        logging.error(f"Error creating patient from CSV: {str(e)}")
-                        continue
-
-        elif 'patient_mrn' in headers and 'condition_name' in headers:
-            # Process as conditions data
-            for row in csv_data:
-                patient = Patient.query.filter_by(mrn=row['patient_mrn']).first()
-                if patient:
-                    # Check if condition already exists for this patient
-                    existing_condition = Condition.query.filter_by(
-                        patient_id=patient.id,
-                        name=row['condition_name']
-                    ).first()
-
-                    if not existing_condition:
-                        # Parse diagnosed date if available
-                        diagnosed_date = None
-                        if 'diagnosed_date' in row and row['diagnosed_date']:
-                            try:
-                                diagnosed_date = datetime.strptime(row['diagnosed_date'], '%Y-%m-%d').date()
-                            except ValueError:
-                                try:
-                                    diagnosed_date = datetime.strptime(row['diagnosed_date'], '%m/%d/%Y').date()
-                                except ValueError:
-                                    pass
-
-                        # Create new condition
-                        condition = Condition(
-                            patient_id=patient.id,
-                            name=row['condition_name'],
-                            code=row.get('code', ''),
-                            diagnosed_date=diagnosed_date,
-                            is_active=row.get('is_active', 'true').lower() in ('true', 'yes', '1'),
-                            notes=row.get('notes', '')
-                        )
-
-                        db.session.add(condition)
-                        db.session.commit()
-                        processed_count += 1
-
-                        # Re-evaluate screening needs
-                        evaluate_screening_needs(patient)
-
-        elif 'patient_mrn' in headers and 'test_name' in headers and 'test_date' in headers:
-            # Process as lab results data
-            for row in csv_data:
-                patient = Patient.query.filter_by(mrn=row['patient_mrn']).first()
-                if patient:
-                    # Parse test date
-                    test_date = None
-                    if row['test_date']:
-                        try:
-                            test_date = datetime.strptime(row['test_date'], '%Y-%m-%d')
-                        except ValueError:
-                            try:
-                                test_date = datetime.strptime(row['test_date'], '%m/%d/%Y')
-                            except ValueError:
-                                continue
-
-                    if test_date:
-                        # Create new lab result
-                        lab_result = LabResult(
-                            patient_id=patient.id,
-                            test_name=row['test_name'],
-                            test_date=test_date,
-                            result_value=row.get('result_value', ''),
-                            unit=row.get('unit', ''),
-                            reference_range=row.get('reference_range', ''),
-                            is_abnormal=row.get('is_abnormal', 'false').lower() in ('true', 'yes', '1'),
-                            notes=row.get('notes', '')
-                        )
-
-                        db.session.add(lab_result)
-                        db.session.commit()
-                        processed_count += 1
-
-        elif 'patient_mrn' in headers and 'visit_date' in headers:
-            # Process as visits data
-            for row in csv_data:
-                patient = Patient.query.filter_by(mrn=row['patient_mrn']).first()
-                if patient:
-                    # Parse visit date
-                    visit_date = None
-                    if row['visit_date']:
-                        try:
-                            visit_date = datetime.strptime(row['visit_date'], '%Y-%m-%d')
-                        except ValueError:
-                            try:
-                                visit_date = datetime.strptime(row['visit_date'], '%m/%d/%Y')
-                            except ValueError:
-                                continue
-
-                    if visit_date:
-                        # Create new visit
-                        visit = Visit(
-                            patient_id=patient.id,
-                            visit_date=visit_date,
-                            visit_type=row.get('visit_type', 'Office Visit'),
-                            provider=row.get('provider', ''),
-                            reason=row.get('reason', ''),
-                            notes=row.get('notes', '')
-                        )
-
-                        db.session.add(visit)
-                        db.session.commit()
-                        processed_count += 1
-
-        result['success'] = True
-        result['processed'] = processed_count
-
-    except Exception as e:
-        logging.error(f"Error processing CSV: {str(e)}")
-        result['error'] = str(e)
-
-    return result
+    return _csv_processor.process(csv_file)
 
 def evaluate_screening_needs(patient):
     """Evaluate and update screening recommendations for a patient"""
@@ -357,25 +403,217 @@ def evaluate_screening_needs(patient):
 
     db.session.commit()
 
+class PatientPrepData:
+    """Container for all patient data needed for prep sheet generation"""
+    
+    def __init__(self, patient):
+        self.patient = patient
+        self.recent_vitals = []
+        self.recent_labs = []
+        self.recent_imaging = []
+        self.recent_consults = []
+        self.recent_hospital = []
+        self.active_conditions = []
+        self.screenings = []
+        self.last_visit_date = None
+        self.past_appointments = []
+    
+    @classmethod
+    def from_patient_id(cls, patient_id):
+        """Factory method to create PrepData from patient ID"""
+        from models import Patient, Vital, LabResult, ImagingStudy, ConsultReport, HospitalSummary, Condition, Screening, Appointment
+        
+        patient = Patient.query.get(patient_id)
+        if not patient:
+            return None
+        
+        prep_data = cls(patient)
+        
+        # Load recent data (last 6 months)
+        six_months_ago = datetime.now() - timedelta(days=180)
+        
+        prep_data.recent_vitals = Vital.query.filter(
+            Vital.patient_id == patient_id,
+            Vital.date >= six_months_ago
+        ).order_by(Vital.date.desc()).limit(5).all()
+        
+        prep_data.recent_labs = LabResult.query.filter(
+            LabResult.patient_id == patient_id,
+            LabResult.test_date >= six_months_ago
+        ).order_by(LabResult.test_date.desc()).limit(10).all()
+        
+        prep_data.active_conditions = Condition.query.filter(
+            Condition.patient_id == patient_id,
+            Condition.is_active == True
+        ).all()
+        
+        prep_data.screenings = Screening.query.filter(
+            Screening.patient_id == patient_id
+        ).all()
+        
+        return prep_data
+
+class PrepSheetGenerator:
+    """Generates preparation sheets with clear separation of concerns"""
+    
+    def __init__(self):
+        self.alert_generators = [
+            self._generate_lab_alerts,
+            self._generate_hospital_alerts,
+            self._generate_screening_alerts
+        ]
+        
+        self.action_generators = [
+            self._generate_screening_actions,
+            self._generate_condition_monitoring_actions
+        ]
+    
+    def generate(self, prep_data):
+        """Generate preparation sheet from patient data"""
+        prep_sheet = {
+            'summary': self._generate_summary(prep_data),
+            'alerts': self._generate_all_alerts(prep_data),
+            'action_items': self._generate_all_actions(prep_data),
+            'past_appointments': prep_data.past_appointments or []
+        }
+        return prep_sheet
+    
+    def _generate_summary(self, prep_data):
+        """Generate patient summary text"""
+        patient = prep_data.patient
+        age_str = f"{patient.age} year old" if patient.age else ""
+        
+        # Build condition summary
+        condition_names = [c.name for c in prep_data.active_conditions[:3]]
+        condition_str = ", ".join(condition_names)
+        if len(prep_data.active_conditions) > 3:
+            condition_str += f", and {len(prep_data.active_conditions) - 3} other conditions"
+        
+        # Build base summary
+        if condition_str:
+            summary = f"{patient.full_name} is a {age_str} {patient.sex.lower()} with {condition_str}."
+        else:
+            summary = f"{patient.full_name} is a {age_str} {patient.sex.lower()} with no documented active conditions."
+        
+        # Add last visit information
+        if prep_data.last_visit_date:
+            days_since = (datetime.now().date() - prep_data.last_visit_date.date()).days
+            summary += f" Last visit was {days_since} days ago on {prep_data.last_visit_date.strftime('%Y-%m-%d')}."
+        
+        return summary
+    
+    def _generate_all_alerts(self, prep_data):
+        """Generate all alerts from different sources"""
+        alerts = []
+        for generator in self.alert_generators:
+            alerts.extend(generator(prep_data))
+        return alerts
+    
+    def _generate_all_actions(self, prep_data):
+        """Generate all action items from different sources"""
+        actions = []
+        for generator in self.action_generators:
+            actions.extend(generator(prep_data))
+        return actions
+    
+    def _generate_lab_alerts(self, prep_data):
+        """Generate alerts for abnormal lab results"""
+        alerts = []
+        for lab in prep_data.recent_labs:
+            if lab.is_abnormal:
+                alerts.append({
+                    'description': f"Abnormal {lab.test_name}",
+                    'date': lab.test_date,
+                    'details': f"Result: {lab.result_value} {lab.unit} (Reference range: {lab.reference_range})"
+                })
+        return alerts
+    
+    def _generate_hospital_alerts(self, prep_data):
+        """Generate alerts for recent hospitalizations"""
+        alerts = []
+        for stay in prep_data.recent_hospital:
+            days_hospitalized = (stay.discharge_date - stay.admission_date).days if stay.discharge_date else 'ongoing'
+            alerts.append({
+                'description': f"Recent hospitalization",
+                'date': stay.admission_date,
+                'details': f"Admitted to {stay.hospital_name} for {days_hospitalized} days with {stay.admitting_diagnosis}"
+            })
+        return alerts
+    
+    def _generate_screening_alerts(self, prep_data):
+        """Generate alerts for overdue screenings"""
+        alerts = []
+        today = datetime.now().date()
+        
+        for screening in prep_data.screenings:
+            if screening.due_date and screening.due_date < today:
+                days_overdue = (today - screening.due_date).days
+                alerts.append({
+                    'description': f"Overdue {screening.screening_type}",
+                    'date': screening.due_date,
+                    'details': f"Overdue by {days_overdue} days. Priority: {screening.priority}"
+                })
+        return alerts
+    
+    def _generate_screening_actions(self, prep_data):
+        """Generate action items for due screenings"""
+        actions = []
+        today = datetime.now().date()
+        
+        for screening in prep_data.screenings:
+            if screening.due_date and screening.due_date <= today + timedelta(days=90):
+                actions.append({
+                    'description': f"Schedule {screening.screening_type}",
+                    'priority': screening.priority,
+                    'details': f"Due by {screening.due_date.strftime('%Y-%m-%d')}. Frequency: {screening.frequency}"
+                })
+        return actions
+    
+    def _generate_condition_monitoring_actions(self, prep_data):
+        """Generate monitoring actions based on active conditions"""
+        actions = []
+        condition_monitoring = {
+            'diabetes': {'test': 'Check A1C', 'priority': 'High', 'details': 'Routine monitoring for diabetes management'},
+            'pre-diabetes': {'test': 'Check A1C', 'priority': 'High', 'details': 'Routine monitoring for diabetes management'},
+            'hypertension': {'test': 'Check blood pressure', 'priority': 'High', 'details': 'Routine monitoring for hypertension management'},
+            'high blood pressure': {'test': 'Check blood pressure', 'priority': 'High', 'details': 'Routine monitoring for hypertension management'},
+            'hyperlipidemia': {'test': 'Check lipid panel', 'priority': 'Medium', 'details': 'Routine monitoring for hyperlipidemia management'},
+            'high cholesterol': {'test': 'Check lipid panel', 'priority': 'Medium', 'details': 'Routine monitoring for hyperlipidemia management'}
+        }
+        
+        for condition in prep_data.active_conditions:
+            condition_key = condition.name.lower()
+            if condition_key in condition_monitoring:
+                monitoring = condition_monitoring[condition_key]
+                actions.append({
+                    'description': monitoring['test'],
+                    'priority': monitoring['priority'],
+                    'details': monitoring['details']
+                })
+        
+        return actions
+
+# Global generator instance
+_prep_sheet_generator = PrepSheetGenerator()
+
 def generate_prep_sheet(patient, recent_vitals, recent_labs, recent_imaging, recent_consults, recent_hospital, active_conditions, screenings, last_visit_date=None, past_appointments=None):
     """
     Generate a preparation sheet summary for a patient
-
-    Args:
-        patient: Patient object
-        recent_vitals: List of recent Vital objects
-        recent_labs: List of recent LabResult objects
-        recent_imaging: List of recent ImagingStudy objects
-        recent_consults: List of recent ConsultReport objects
-        recent_hospital: List of recent HospitalSummary objects
-        active_conditions: List of active Condition objects
-        screenings: List of Screening objects
-        last_visit_date: Date of last visit if available
-        past_appointments: List of past appointments (max 3)
-
-    Returns:
-        dict: Preparation sheet data
+    Maintains backward compatibility with existing interface.
     """
+    # Create prep data container from individual parameters
+    prep_data = PatientPrepData(patient)
+    prep_data.recent_vitals = recent_vitals
+    prep_data.recent_labs = recent_labs
+    prep_data.recent_imaging = recent_imaging
+    prep_data.recent_consults = recent_consults
+    prep_data.recent_hospital = recent_hospital
+    prep_data.active_conditions = active_conditions
+    prep_data.screenings = screenings
+    prep_data.last_visit_date = last_visit_date
+    prep_data.past_appointments = past_appointments
+    
+    return _prep_sheet_generator.generate(prep_data)
     # Initialize prep sheet data
     prep_sheet = {
         'summary': '',

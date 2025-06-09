@@ -459,78 +459,166 @@ def validate_uploaded_file(file):
 
     return True
 
-def sanitize_input(value, max_length=None, allow_html=False, field_type='general'):
-    """Sanitize user input to prevent XSS and other injection attacks"""
-    import re
-    import html
-    import logging
-
-    if not value:
+class InputSanitizer:
+    """Handles input sanitization with field-specific strategies"""
+    
+    def __init__(self):
+        self.field_validators = {
+            'email': EmailFieldValidator(),
+            'phone': PhoneFieldValidator(),
+            'name': NameFieldValidator(),
+            'mrn': MrnFieldValidator(),
+            'medical': MedicalFieldValidator(),
+            'text': TextFieldValidator(),
+            'date': DateFieldValidator()
+        }
+        
+        self.dangerous_patterns = [
+            r'(union\s+select)', r'(drop\s+table)', r'(delete\s+from)',
+            r'(insert\s+into)', r'(update\s+\w+\s+set)', r'(exec\s*\()',
+            r'(script\s*>)', r'(javascript:)', r'(vbscript:)',
+            r'(onload\s*=)', r'(onerror\s*=)', r'(\bor\b\s+1\s*=\s*1)',
+            r'(\band\b\s+1\s*=\s*1)', r'(;\s*drop)', r'(;\s*delete)',
+            r'(;\s*insert)', r'(;\s*update)', r'(--\s*)', r'(/\*.*?\*/)',
+            r'(xp_cmdshell)', r'(sp_executesql)', r'(eval\s*\()',
+            r'(<iframe)', r'(<object)', r'(<embed)', r'(<form)',
+            r'(data:text/html)', r'(data:application)', r'(\bvoid\s*\()'
+        ]
+    
+    def sanitize(self, value, max_length=None, allow_html=False, field_type='general'):
+        """Main sanitization method"""
+        if not value:
+            return value
+        
+        # Convert to string and strip whitespace
+        value = str(value).strip()
+        original_value = value
+        
+        # Apply length constraints
+        if max_length and len(value) > max_length:
+            value = value[:max_length]
+            logging.warning(f"Input truncated from {len(original_value)} to {max_length} characters")
+        
+        # Remove control characters
+        value = self._remove_control_characters(value)
+        
+        # HTML escaping
+        if not allow_html:
+            import html
+            value = html.escape(value)
+        
+        # Remove dangerous patterns
+        value = self._remove_dangerous_patterns(value)
+        
+        # Field-specific validation
+        if field_type in self.field_validators:
+            validator = self.field_validators[field_type]
+            validated_value = validator.validate(value)
+            if validated_value is None:
+                logging.warning(f"Field validation failed for {field_type}: {value}")
+                return None
+            value = validated_value
+        
+        # Log significant changes
+        if original_value != value and len(original_value) > 0:
+            logging.info(f"Input sanitized: '{original_value[:50]}...' -> '{value[:50]}...'")
+        
+        return value
+    
+    def _remove_control_characters(self, value):
+        """Remove null bytes and control characters"""
+        import re
+        return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', value)
+    
+    def _remove_dangerous_patterns(self, value):
+        """Remove patterns that could indicate injection attacks"""
+        import re
+        
+        for pattern in self.dangerous_patterns:
+            old_value = value
+            value = re.sub(pattern, '', value, flags=re.IGNORECASE | re.DOTALL)
+            if old_value != value:
+                logging.warning(f"Dangerous pattern removed: {pattern}")
+        
         return value
 
-    # Convert to string if not already
-    value = str(value).strip()
+class FieldValidator:
+    """Base class for field-specific validators"""
+    
+    def validate(self, value):
+        """Override in subclasses"""
+        return value
 
-    # Log potential attack attempts
-    original_value = value
-
-    # Enforce maximum length
-    if max_length and len(value) > max_length:
-        value = value[:max_length]
-        logging.warning(f"Input truncated from {len(original_value)} to {max_length} characters")
-
-    # Remove or escape HTML unless explicitly allowed
-    if not allow_html:
-        value = html.escape(value)
-
-    # Remove potentially dangerous characters
-    # Remove null bytes and other control characters
-    value = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', value)
-
-    # Enhanced dangerous patterns
-    dangerous_patterns = [
-        r'(union\s+select)', r'(drop\s+table)', r'(delete\s+from)',
-        r'(insert\s+into)', r'(update\s+\w+\s+set)', r'(exec\s*\()',
-        r'(script\s*>)', r'(javascript:)', r'(vbscript:)',
-        r'(onload\s*=)', r'(onerror\s*=)', r'(\bor\b\s+1\s*=\s*1)',
-        r'(\band\b\s+1\s*=\s*1)', r'(;\s*drop)', r'(;\s*delete)',
-        r'(;\s*insert)', r'(;\s*update)', r'(--\s*)', r'(/\*.*?\*/)',
-        r'(xp_cmdshell)', r'(sp_executesql)', r'(eval\s*\()',
-        r'(<iframe)', r'(<object)', r'(<embed)', r'(<form)',
-        r'(data:text/html)', r'(data:application)', r'(\bvoid\s*\()'
-    ]
-
-    for pattern in dangerous_patterns:
-        old_value = value
-        value = re.sub(pattern, '', value, flags=re.IGNORECASE | re.DOTALL)
-        if old_value != value:
-            logging.warning(f"Dangerous pattern removed: {pattern}")
-
-    # Field-specific validation
-    if field_type == 'email':
+class EmailFieldValidator(FieldValidator):
+    """Validates email field format"""
+    
+    def validate(self, value):
+        import re
         if value and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', value):
-            logging.warning(f"Invalid email format: {value}")
             return None
-    elif field_type == 'phone':
-        # Remove all non-digit characters for phone validation
+        return value
+
+class PhoneFieldValidator(FieldValidator):
+    """Validates phone number format"""
+    
+    def validate(self, value):
+        import re
+        if not value:
+            return value
+        
         digits_only = re.sub(r'\D', '', value)
-        if value and (len(digits_only) < 10 or len(digits_only) > 15):
-            logging.warning(f"Invalid phone format: {value}")
+        if len(digits_only) < 10 or len(digits_only) > 15:
             return None
-    elif field_type == 'name':
+        return value
+
+class NameFieldValidator(FieldValidator):
+    """Validates name field format"""
+    
+    def validate(self, value):
+        import re
         if value and not re.match(r'^[a-zA-Z\s\-\'\.]+$', value):
-            logging.warning(f"Invalid name format: {value}")
             return None
-    elif field_type == 'mrn':
+        return value
+
+class MrnFieldValidator(FieldValidator):
+    """Validates MRN field format"""
+    
+    def validate(self, value):
+        import re
         if value and not re.match(r'^[A-Za-z0-9\-]+$', value):
-            logging.warning(f"Invalid MRN format: {value}")
             return None
+        return value
 
-    # Log if significant changes were made
-    if original_value != value and len(original_value) > 0:
-        logging.info(f"Input sanitized: '{original_value[:50]}...' -> '{value[:50]}...'")
+class MedicalFieldValidator(FieldValidator):
+    """Validates medical terms (allows numbers and some special chars)"""
+    
+    def validate(self, value):
+        # Medical terms can be more flexible
+        return value
 
-    return value
+class TextFieldValidator(FieldValidator):
+    """Validates general text fields"""
+    
+    def validate(self, value):
+        # General text validation
+        return value
+
+class DateFieldValidator(FieldValidator):
+    """Validates date field format"""
+    
+    def validate(self, value):
+        # Date validation could be added here
+        return value
+
+# Global sanitizer instance
+_input_sanitizer = InputSanitizer()
+
+def sanitize_input(value, max_length=None, allow_html=False, field_type='general'):
+    """
+    Sanitize user input to prevent XSS and other injection attacks
+    Maintains backward compatibility with existing interface.
+    """
+    return _input_sanitizer.sanitize(value, max_length, allow_html, field_type)
 
 def validate_mrn(mrn):
     """Validate Medical Record Number format"""
