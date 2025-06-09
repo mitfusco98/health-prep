@@ -160,27 +160,27 @@ def api_patient_detail(patient_id):
         include_visits = request.args.get('include_visits', 'false').lower() == 'true'
         include_screenings = request.args.get('include_screenings', 'false').lower() == 'true'
         include_alerts = request.args.get('include_alerts', 'false').lower() == 'true'
-        
+
         # Always load basic conditions (lightweight)
         conditions = Condition.query.filter_by(patient_id=patient_id_int, is_active=True).limit(10).all()
-        
+
         # Conditionally load heavy data
         recent_vitals = []
         recent_visits = []
         screenings = []
         alerts = []
-        
+
         if include_vitals:
             recent_vitals = Vital.query.filter_by(patient_id=patient_id_int)\
                 .order_by(Vital.date.desc()).limit(5).all()
-        
+
         if include_visits:
             recent_visits = Visit.query.filter_by(patient_id=patient_id_int)\
                 .order_by(Visit.visit_date.desc()).limit(5).all()
-        
+
         if include_screenings:
             screenings = Screening.query.filter_by(patient_id=patient_id_int).limit(20).all()
-        
+
         if include_alerts:
             alerts = PatientAlert.query.filter_by(patient_id=patient_id_int, is_active=True).limit(10).all()
 
@@ -316,10 +316,10 @@ def api_patient_vitals(patient_id):
     try:
         patient_id_int = int(patient_id)
         limit = min(int(request.args.get('limit', 10)), 50)  # Max 50 records
-        
+
         vitals = Vital.query.filter_by(patient_id=patient_id_int)\
             .order_by(Vital.date.desc()).limit(limit).all()
-        
+
         vitals_data = [{
             'id': v.id,
             'date': v.date.isoformat() if v.date else None,
@@ -333,9 +333,9 @@ def api_patient_vitals(patient_id):
             'respiratory_rate': v.respiratory_rate,
             'oxygen_saturation': v.oxygen_saturation
         } for v in vitals]
-        
+
         return jsonify({'vitals': vitals_data}), 200
-        
+
     except Exception as e:
         logger.error(f"Error fetching patient vitals: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
@@ -350,11 +350,11 @@ def api_patient_visits(patient_id):
         patient_id_int = int(patient_id)
         page = int(request.args.get('page', 1))
         per_page = min(int(request.args.get('per_page', 10)), 25)  # Max 25 per page
-        
+
         pagination = Visit.query.filter_by(patient_id=patient_id_int)\
             .order_by(Visit.visit_date.desc())\
             .paginate(page=page, per_page=per_page, error_out=False)
-        
+
         visits_data = [{
             'id': v.id,
             'visit_date': v.visit_date.isoformat() if v.visit_date else None,
@@ -363,7 +363,7 @@ def api_patient_visits(patient_id):
             'reason': v.reason,
             'notes': v.notes[:200] + '...' if v.notes and len(v.notes) > 200 else v.notes  # Truncate long notes
         } for v in pagination.items]
-        
+
         return jsonify({
             'visits': visits_data,
             'pagination': {
@@ -375,7 +375,7 @@ def api_patient_visits(patient_id):
                 'has_prev': pagination.has_prev
             }
         }), 200
-        
+
     except Exception as e:
         logger.error(f"Error fetching patient visits: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
@@ -388,7 +388,7 @@ def api_patient_documents_summary(patient_id):
     """Get lightweight document summary without full content"""
     try:
         patient_id_int = int(patient_id)
-        
+
         documents = MedicalDocument.query.filter_by(patient_id=patient_id_int)\
             .with_entities(
                 MedicalDocument.id,
@@ -398,7 +398,7 @@ def api_patient_documents_summary(patient_id):
                 MedicalDocument.provider,
                 MedicalDocument.source_system
             ).order_by(MedicalDocument.document_date.desc()).limit(50).all()
-        
+
         documents_data = [{
             'id': doc.id,
             'filename': doc.filename,
@@ -407,22 +407,12 @@ def api_patient_documents_summary(patient_id):
             'provider': doc.provider,
             'source_system': doc.source_system
         } for doc in documents]
-        
+
         return jsonify({'documents': documents_data}), 200
-        
+
     except Exception as e:
         logger.error(f"Error fetching patient documents summary: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
-
-            errors.append('mrn must be alphanumeric with optional hyphens, 3-20 characters')
-
-    if 'address' in data and data['address'] and len(data['address']) > 500:
-        errors.append('address must be maximum 500 characters')
-
-    if 'insurance' in data and data['insurance'] and len(data['insurance']) > 200:
-        errors.append('insurance must be maximum 200 characters')
-
-    return errors
 
 @app.route('/api/patients', methods=['POST'])
 @csrf.exempt
@@ -444,7 +434,7 @@ def api_create_patient():
         total_size = sum(len(str(value)) for value in data.values() if value is not None)
         if total_size > 100000:  # 100KB total data
             return jsonify({'error': 'Request too large. Total data exceeds maximum size.'}), 413
-            
+
         for field, value in data.items():
             if isinstance(value, str) and len(value) > 50000:  # 50KB per field
                 return jsonify({'error': 'Request too large. Field values exceed maximum length.'}), 413
@@ -605,13 +595,13 @@ def api_cache_stats():
     """Get cache statistics (admin only)"""
     try:
         stats = cache_manager.get_stats()
-        
+
         return jsonify({
             'cache_type': 'redis' if cache_manager.redis_client else 'memory',
             'stats': stats,
             'timestamp': datetime.now().isoformat()
         }), 200
-        
+
     except Exception as e:
         logger.error(f"Error getting cache stats: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
@@ -624,21 +614,21 @@ def api_cache_clear():
     """Clear cache (admin only)"""
     try:
         pattern = request.json.get('pattern', '*') if request.json else '*'
-        
+
         if pattern == '*':
             cache_manager.clear_all()
             message = 'All cache cleared'
         else:
             invalidate_cache_pattern(pattern)
             message = f'Cache cleared for pattern: {pattern}'
-        
+
         logger.info(f"Cache cleared by admin {g.current_user.username}: {pattern}")
-        
+
         return jsonify({
             'success': True,
             'message': message
         }), 200
-        
+
     except Exception as e:
         logger.error(f"Error clearing cache: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
@@ -650,12 +640,12 @@ def api_config():
     """Get frontend configuration"""
     try:
         from config import get_config
-        
+
         config = get_config()
         frontend_config = config.get_frontend_config()
-        
+
         return jsonify(frontend_config), 200
-        
+
     except Exception as e:
         logger.error(f"Error getting frontend config: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
