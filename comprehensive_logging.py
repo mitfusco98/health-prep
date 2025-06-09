@@ -110,17 +110,22 @@ def log_patient_operation(operation_type):
                             elif key in ['alert_type', 'description', 'details', 'severity', 'start_date', 'end_date', 'text', 'priority']:
                                 form_changes[f'alert_{key}'] = str(value)[:100]
                                 # Store alert-specific data with detailed field names
-                                if key == 'text' or key == 'description':
+                                if key in ['text', 'description']:
                                     log_details['alert_text'] = str(value)[:200]
+                                    log_details['description'] = str(value)[:200]  # Also store as description
                                 elif key == 'alert_type':
                                     log_details['alert_type'] = str(value)[:50]
-                                elif key == 'priority':
+                                elif key in ['priority', 'severity']:
                                     log_details['priority'] = str(value)[:20]
+                                    log_details['severity'] = str(value)[:20]
                                 elif key == 'start_date':
                                     log_details['alert_date'] = str(value)[:20]
+                                    log_details['start_date'] = str(value)[:20]
                                     log_details['alert_time'] = current_time
-                                elif key == 'severity':
-                                    log_details['severity'] = str(value)[:20]
+                                elif key == 'end_date':
+                                    log_details['end_date'] = str(value)[:20]
+                                elif key == 'details':
+                                    log_details['details'] = str(value)[:200]
                             elif key in ['screening_type', 'due_date', 'last_completed', 'priority', 'notes']:
                                 form_changes[f'screening_{key}'] = str(value)[:100]
                             elif key in ['appointment_date', 'appointment_time', 'note', 'status']:
