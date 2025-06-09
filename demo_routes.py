@@ -64,7 +64,7 @@ from forms import (PatientForm, ConditionForm, VitalForm,
                   VisitForm, LabResultForm, ImagingStudyForm, ConsultReportForm, 
                   HospitalSummaryForm, ScreeningForm, CSVUploadForm, DocumentUploadForm,
                   AppointmentForm, ImmunizationForm, PatientAlertForm)
-from comprehensive_logging import log_patient_operation, log_admin_operation, log_data_modification
+from comprehensive_logging import log_patient_operation, log_admin_operation, log_data_modification, log_page_access
 from models import (Patient, Condition, Vital, Visit, LabResult, ImagingStudy, 
                    ConsultReport, HospitalSummary, Screening, MedicalDocument, DocumentType,
                    Appointment, Immunization, PatientAlert)
@@ -94,6 +94,7 @@ def redirect_to_home():
 
 @app.route('/home')
 @app.route('/home/date/<date_str>')
+@log_page_access('home_dashboard')
 def index(date_str=None):
     """Application home page - Demo version with sample patients"""
     # Get stats for the dashboard

@@ -1,4 +1,3 @@
-"""Enhanced medical data logging for all subsections with form submission details."""
 """
 Comprehensive logging decorators for healthcare application
 Logs all edits, deletions, views, and page accesses with detailed context
@@ -37,7 +36,7 @@ def log_patient_operation(operation_type):
                     'add': 'add', 'add_patient': 'add', 'patient_add': 'add', 'create': 'add', 'new': 'add',
                     'add_appointment': 'add', 'edit_appointment': 'edit', 'delete_appointment': 'delete'
                 }
-
+                
                 standardized_operation = standardized_ops.get(operation_type.lower(), operation_type)
 
                 # Extract patient ID from URL parameters or form data
@@ -100,11 +99,11 @@ def log_patient_operation(operation_type):
                     form_changes = {}
                     current_date = datetime.now().strftime('%Y-%m-%d')
                     current_time = datetime.now().strftime('%H:%M:%S')
-
+                    
                     for key, value in request.form.items():
                         if key.lower() not in sensitive_fields:
                             sanitized_form[key] = str(value)[:200]  # Truncate long values
-
+                            
                             # Track specific field changes for different types
                             if key in ['first_name', 'last_name', 'date_of_birth', 'sex', 'mrn', 'phone', 'email', 'address', 'insurance']:
                                 form_changes[f'demographics_{key}'] = str(value)[:100]
@@ -216,11 +215,11 @@ def log_patient_operation(operation_type):
                                     log_details['discharge_date'] = str(value)[:20]
                                 elif key == 'admitting_diagnosis':
                                     log_details['admitting_diagnosis'] = str(value)[:200]
-
+                    
                     # Ensure alert data always has time component when date is present
                     if 'alert_date' in log_details and 'alert_time' not in log_details:
                         log_details['alert_time'] = current_time
-
+                    
                     log_details['form_data'] = sanitized_form
                     if form_changes:
                         log_details['form_changes'] = form_changes
@@ -377,7 +376,7 @@ def log_admin_operation(operation_type):
 
                 AdminLog.log_event(
                     event_type=f'admin_{operation_type}_error',
-                    user_id=user_id,
+                    user_id=session.get('user_id'),
                     event_details=json.dumps(error_details),
                     request_id=str(uuid.uuid4()),
                     ip_address=request.remote_addr,
@@ -396,289 +395,266 @@ def log_admin_operation(operation_type):
 
 def log_data_modification(data_type):
     """
-    Enhanced decorator for logging data modifications with comprehensive details
+    Decorator to log data modifications (conditions, vitals, documents, etc.)
 
     Args:
-        data_type: Type of data being modified (e.g., 'vital', 'condition', 'lab', etc.)
+        data_type: String describing the type of data (condition, vital, document, etc.)
     """
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            from flask import request, g, session
-            from models import AdminLog
-            from app import db
-            import json
+            start_time = datetime.now()
 
-            # Get patient info from URL or form
-            patient_id = kwargs.get('patient_id') or request.view_args.get('patient_id')
-
-            # Determine action type from HTTP method and route
-            method = request.method
-            action = 'view'
-            if method == 'POST':
-                if 'edit' in request.endpoint or 'update' in request.endpoint or request.form.get('_method') == 'PUT':
-                    action = 'edit'
-                elif 'delete' in request.endpoint or request.form.get('_method') == 'DELETE':
-                    action = 'delete'
-                else:
-                    action = 'add'
-            elif method == 'DELETE':
-                action = 'delete'
-            elif method == 'PUT':
-                action = 'edit'
-
-            # Get form data
-            form_data = {}
-            if request.form:
-                form_data = request.form.to_dict()
-            elif request.json:
-                form_data = request.json
-
-            # Get patient name if patient_id exists
-            patient_name = 'Unknown'
-            if patient_id:
-                try:
-                    from models import Patient
-                    patient = Patient.query.get(patient_id)
-                    if patient:
-                        patient_name = patient.full_name
-                except:
-                    pass
-
-            current_time = datetime.now().strftime('%H:%M:%S')
-            current_date = datetime.now().strftime('%Y-%m-%d')
-
-            # Build comprehensive log details
-            log_details = {
-                'action': action,
-                'data_type': data_type,
-                'patient_id': patient_id,
-                'patient_name': patient_name,
-                'endpoint': request.endpoint,
-                'method': method,
-                'timestamp': datetime.now().isoformat(),
-                'date': current_date,
-                'time': current_time
-            }
-
-            # Process form data based on data type
-            if form_data:
-                # Remove sensitive data
-                sanitized_form = {k: v for k, v in form_data.items() 
-                                if k not in ['csrf_token', 'password', 'confirm_password']}
-
-                form_changes = {}
-
-                # Data type specific field processing
-                if data_type == 'vital':
-                    for key, value in sanitized_form.items():
-                        if key in ['date', 'weight', 'height', 'temperature', 'blood_pressure_systolic', 
-                                  'blood_pressure_diastolic', 'pulse', 'respiratory_rate', 'oxygen_saturation', 'bmi']:
-                            form_changes[f'vital_{key}'] = str(value)[:50]
-                            if key == 'date':
-                                log_details['vital_date'] = str(value)[:20]
-                                log_details['vital_time'] = current_time
-                            elif key == 'weight':
-                                log_details['weight'] = str(value)[:10] + ' lbs'
-                            elif key == 'height':
-                                log_details['height'] = str(value)[:10] + ' in'
-                            elif key == 'temperature':
-                                log_details['temperature'] = str(value)[:10] + ' °F'
-                            elif key in ['blood_pressure_systolic', 'blood_pressure_diastolic']:
-                                log_details[key] = str(value)[:10]
-                            elif key == 'pulse':
-                                log_details['pulse'] = str(value)[:10] + ' bpm'
-
-                elif data_type == 'condition':
-                    for key, value in sanitized_form.items():
-                        if key in ['name', 'diagnosed_date', 'is_active', 'notes', 'code']:
-                            form_changes[f'condition_{key}'] = str(value)[:100]
-                            if key == 'name':
-                                log_details['condition_name'] = str(value)[:100]
-                            elif key == 'diagnosed_date':
-                                log_details['diagnosis_date'] = str(value)[:20]
-                                log_details['diagnosis_time'] = current_time
-                            elif key == 'code':
-                                log_details['condition_code'] = str(value)[:20]
-                            elif key == 'is_active':
-                                log_details['condition_status'] = 'Active' if str(value).lower() in ['true', '1', 'on'] else 'Inactive'
-
-                elif data_type == 'lab':
-                    for key, value in sanitized_form.items():
-                        if key in ['test_name', 'test_date', 'result_value', 'unit', 'reference_range', 'is_abnormal', 'notes']:
-                            form_changes[f'lab_{key}'] = str(value)[:100]
-                            if key == 'test_name':
-                                log_details['test_name'] = str(value)[:100]
-                            elif key == 'test_date':
-                                log_details['test_date'] = str(value)[:20]
-                                log_details['test_time'] = current_time
-                            elif key == 'result_value':
-                                log_details['result'] = str(value)[:50]
-                            elif key == 'reference_range':
-                                log_details['reference_range'] = str(value)[:50]
-                            elif key == 'unit':
-                                log_details['unit'] = str(value)[:20]
-                            elif key == 'is_abnormal':
-                                log_details['abnormal_flag'] = 'Yes' if str(value).lower() in ['true', '1', 'on'] else 'No'
-
-                elif data_type == 'immunization':
-                    for key, value in sanitized_form.items():
-                        if key in ['vaccine_name', 'administration_date', 'dose_number', 'manufacturer', 'lot_number', 'notes']:
-                            form_changes[f'immunization_{key}'] = str(value)[:100]
-                            if key == 'vaccine_name':
-                                log_details['vaccine_name'] = str(value)[:100]
-                            elif key == 'administration_date':
-                                log_details['immunization_date'] = str(value)[:20]
-                                log_details['immunization_time'] = current_time
-                            elif key == 'lot_number':
-                                log_details['lot_number'] = str(value)[:50]
-                            elif key == 'manufacturer':
-                                log_details['manufacturer'] = str(value)[:100]
-                            elif key == 'dose_number':
-                                log_details['dose_number'] = str(value)[:10]
-
-                elif data_type == 'imaging':
-                    for key, value in sanitized_form.items():
-                        if key in ['study_type', 'body_site', 'study_date', 'findings', 'impression']:
-                            form_changes[f'imaging_{key}'] = str(value)[:100]
-                            if key == 'study_type':
-                                log_details['study_type'] = str(value)[:100]
-                            elif key == 'study_date':
-                                log_details['study_date'] = str(value)[:20]
-                                log_details['study_time'] = current_time
-                            elif key == 'body_site':
-                                log_details['body_site'] = str(value)[:100]
-                            elif key == 'findings':
-                                log_details['findings'] = str(value)[:200]
-                            elif key == 'impression':
-                                log_details['impression'] = str(value)[:200]
-
-                elif data_type == 'consult':
-                    for key, value in sanitized_form.items():
-                        if key in ['specialist', 'specialty', 'report_date', 'reason', 'findings', 'recommendations']:
-                            form_changes[f'consult_{key}'] = str(value)[:100]
-                            if key == 'specialist':
-                                log_details['specialist'] = str(value)[:100]
-                            elif key in ['specialty', 'speciality']:
-                                log_details['specialty'] = str(value)[:50]
-                            elif key in ['report_date', 'consult_date']:
-                                log_details['consult_date'] = str(value)[:20]
-                                log_details['consult_time'] = current_time
-                            elif key in ['reason', 'referral_reason']:
-                                log_details['referral_reason'] = str(value)[:200]
-                            elif key == 'findings':
-                                log_details['findings'] = str(value)[:200]
-                            elif key == 'recommendations':
-                                log_details['recommendations'] = str(value)[:200]
-
-                elif data_type == 'hospital':
-                    for key, value in sanitized_form.items():
-                        if key in ['hospital_name', 'facility', 'admission_date', 'discharge_date', 'admitting_diagnosis', 'discharge_diagnosis', 'procedures']:
-                            form_changes[f'hospital_{key}'] = str(value)[:100]
-                            if key in ['hospital_name', 'facility']:
-                                log_details['hospital_name'] = str(value)[:100]
-                            elif key == 'admission_date':
-                                log_details['admission_date'] = str(value)[:20]
-                                log_details['admission_time'] = current_time
-                            elif key == 'discharge_date':
-                                log_details['discharge_date'] = str(value)[:20]
-                            elif key == 'admitting_diagnosis':
-                                log_details['admitting_diagnosis'] = str(value)[:200]
-                            elif key == 'discharge_diagnosis':
-                                log_details['discharge_diagnosis'] = str(value)[:200]
-                            elif key == 'procedures':
-                                log_details['procedures'] = str(value)[:200]
-
-                elif data_type == 'document':
-                    # Handle file uploads differently
-                    file_info = {}
-                    if 'file' in request.files:
-                        file = request.files['file']
-                        if file and file.filename:
-                            file_info = {
-                                'file_name': file.filename,
-                                'file_type': file.content_type,
-                                'file_size': len(file.read()) if hasattr(file, 'read') else 0
-                            }
-                            file.seek(0)  # Reset file pointer
-
-                    for key, value in sanitized_form.items():
-                        if key in ['document_name', 'filename', 'document_type', 'document_date', 'provider', 'source_system', 'notes']:
-                            form_changes[f'document_{key}'] = str(value)[:100]
-                            if key in ['document_name', 'filename']:
-                                log_details['file_name'] = str(value)[:100]
-                            elif key == 'document_type':
-                                log_details['document_type'] = str(value)[:50]
-                            elif key == 'document_date':
-                                log_details['document_date'] = str(value)[:20]
-                                log_details['document_time'] = current_time
-                            elif key == 'provider':
-                                log_details['provider'] = str(value)[:100]
-                            elif key == 'source_system':
-                                log_details['source_system'] = str(value)[:100]
-
-                    # Add file info if available
-                    if file_info:
-                        log_details.update(file_info)
-
-                elif data_type == 'visit':
-                    for key, value in sanitized_form.items():
-                        if key in ['visit_date', 'visit_type', 'provider', 'reason', 'notes']:
-                            form_changes[f'visit_{key}'] = str(value)[:100]
-                            if key == 'visit_date':
-                                log_details['visit_date'] = str(value)[:20]
-                                log_details['visit_time'] = current_time
-                            elif key == 'visit_type':
-                                log_details['visit_type'] = str(value)[:50]
-                            elif key == 'provider':
-                                log_details['provider'] = str(value)[:100]
-                            elif key == 'reason':
-                                log_details['visit_reason'] = str(value)[:200]
-
-                elif data_type == 'alert':
-                    for key, value in sanitized_form.items():
-                        if key in ['alert_type', 'description', 'details', 'start_date', 'end_date', 'severity', 'priority', 'is_active']:
-                            form_changes[f'alert_{key}'] = str(value)[:100]
-                            if key == 'description':
-                                log_details['description'] = str(value)[:200]
-                            elif key == 'alert_type':
-                                log_details['alert_type'] = str(value)[:50]
-                            elif key in ['priority', 'severity']:
-                                log_details['severity'] = str(value)[:20]
-                            elif key == 'start_date':
-                                log_details['alert_date'] = str(value)[:20]
-                                log_details['start_date'] = str(value)[:20]
-                                log_details['alert_time'] = current_time
-                            elif key == 'end_date':
-                                log_details['end_date'] = str(value)[:20]
-                            elif key == 'details':
-                                log_details['details'] = str(value)[:200]
-                            elif key == 'is_active':
-                                log_details['alert_status'] = 'Active' if str(value).lower() in ['true', '1', 'on'] else 'Inactive'
-
-                # Ensure alert data always has time component when date is present
-                if 'alert_date' in log_details and 'alert_time' not in log_details:
-                    log_details['alert_time'] = current_time
-
-                log_details['form_data'] = sanitized_form
-                if form_changes:
-                    log_details['form_changes'] = form_changes
-
-            # Execute the original function
             try:
-                result = f(*args, **kwargs)
-                log_details['status'] = 'success'
-            except Exception as e:
-                log_details['status'] = 'error'
-                log_details['error'] = str(e)[:200]
-                raise
-            finally:
-                # Log the event
-                try:
-                    user_id = getattr(g, 'current_user', {}).get('id') if hasattr(g, 'current_user') else None
+                # Get user information
+                user_id = session.get('user_id')
+                username = session.get('username', 'Unknown')
 
+                # Extract relevant IDs from URL parameters or form data
+                record_id = None
+                patient_id = None
+
+                if 'id' in kwargs:
+                    record_id = kwargs['id']
+                elif request.view_args and 'id' in request.view_args:
+                    record_id = request.view_args['id']
+
+                if 'patient_id' in kwargs:
+                    patient_id = kwargs['patient_id']
+                elif request.form and 'patient_id' in request.form:
+                    patient_id = request.form['patient_id']
+
+                # Execute the original function
+                result = f(*args, **kwargs)
+
+                # Calculate execution time
+                end_time = datetime.now()
+                execution_time = (end_time - start_time).total_seconds() * 1000
+
+                # Log the operation
+                log_details = {
+                    'data_type': data_type,
+                    'record_id': record_id,
+                    'patient_id': patient_id,
+                    'function_name': f.__name__,
+                    'endpoint': request.endpoint,
+                    'route': request.path,
+                    'method': request.method,
+                    'execution_time_ms': execution_time,
+                    'user_id': user_id,
+                    'username': username,
+                    'ip_address': request.remote_addr,
+                    'user_agent': request.headers.get('User-Agent', ''),
+                    'timestamp': datetime.now().isoformat(),
+                    'success': True
+                }
+
+                # Add form data for modifications and capture specific details
+                if request.method in ['POST', 'PUT', 'PATCH'] and request.form:
+                    sanitized_form = {}
+                    sensitive_fields = ['password', 'csrf_token']
+                    current_date = datetime.now().strftime('%Y-%m-%d')
+                    current_time = datetime.now().strftime('%H:%M:%S')
+                    
+                    for key, value in request.form.items():
+                        if key.lower() not in sensitive_fields:
+                            sanitized_form[key] = str(value)[:200]
+                    log_details['modified_data'] = sanitized_form
+                    
+                    # Capture specific details based on data type with enhanced information
+                    if data_type == 'alert':
+                        log_details['action'] = 'add' if request.method == 'POST' else 'edit'
+                        log_details['alert_text'] = request.form.get('text', request.form.get('description', ''))[:200]
+                        log_details['alert_date'] = request.form.get('start_date', current_date)
+                        log_details['alert_time'] = current_time
+                        log_details['priority'] = request.form.get('priority', '')
+                        log_details['alert_type'] = request.form.get('alert_type', '')
+                        log_details['severity'] = request.form.get('severity', '')
+                    elif data_type == 'condition':
+                        log_details['action'] = 'add' if request.method == 'POST' else 'edit'
+                        log_details['condition_name'] = request.form.get('name', request.form.get('condition_name', request.form.get('diagnosis', '')))
+                        log_details['diagnosis_date'] = request.form.get('diagnosed_date', request.form.get('diagnosis_date', current_date))
+                        log_details['diagnosis_time'] = current_time
+                        log_details['severity'] = request.form.get('severity', '')
+                        log_details['status'] = request.form.get('status', 'Active' if request.form.get('is_active') else 'Inactive')
+                        log_details['code'] = request.form.get('code', '')
+                    elif data_type == 'vital':
+                        log_details['action'] = 'add' if request.method == 'POST' else 'edit'
+                        log_details['vital_date'] = request.form.get('date', request.form.get('vital_date', request.form.get('measurement_date', current_date)))
+                        log_details['vital_time'] = current_time
+                        log_details['blood_pressure'] = request.form.get('blood_pressure', '')
+                        if not log_details['blood_pressure'] and request.form.get('blood_pressure_systolic') and request.form.get('blood_pressure_diastolic'):
+                            log_details['blood_pressure'] = f"{request.form.get('blood_pressure_systolic')}/{request.form.get('blood_pressure_diastolic')}"
+                        log_details['heart_rate'] = request.form.get('heart_rate', request.form.get('pulse', ''))
+                        log_details['temperature'] = request.form.get('temperature', '')
+                        log_details['weight'] = request.form.get('weight', '')
+                        log_details['height'] = request.form.get('height', '')
+                        log_details['oxygen_saturation'] = request.form.get('oxygen_saturation', '')
+                        log_details['respiratory_rate'] = request.form.get('respiratory_rate', '')
+                    elif data_type in ['lab', 'test']:
+                        log_details['action'] = 'add' if request.method == 'POST' else 'edit'
+                        log_details['test_name'] = request.form.get('test_name', request.form.get('lab_name', ''))
+                        log_details['test_date'] = request.form.get('test_date', request.form.get('lab_date', current_date))
+                        log_details['test_time'] = current_time
+                        log_details['result_value'] = request.form.get('result_value', request.form.get('result', request.form.get('value', '')))
+                        log_details['unit'] = request.form.get('unit', '')
+                        log_details['reference_range'] = request.form.get('reference_range', '')
+                        log_details['is_abnormal'] = bool(request.form.get('is_abnormal'))
+                    elif data_type == 'immunization':
+                        log_details['action'] = 'add' if request.method == 'POST' else 'edit'
+                        log_details['vaccine_name'] = request.form.get('vaccine_name', request.form.get('immunization_name', ''))
+                        log_details['vaccination_date'] = request.form.get('administration_date', request.form.get('vaccination_date', request.form.get('immunization_date', current_date)))
+                        log_details['vaccination_time'] = current_time
+                        log_details['lot_number'] = request.form.get('lot_number', '')
+                        log_details['dose_number'] = request.form.get('dose_number', '')
+                        log_details['manufacturer'] = request.form.get('manufacturer', '')
+                    elif data_type == 'imaging':
+                        log_details['action'] = 'add' if request.method == 'POST' else 'edit'
+                        log_details['imaging_type'] = request.form.get('study_type', request.form.get('imaging_type', ''))
+                        log_details['imaging_date'] = request.form.get('study_date', request.form.get('imaging_date', current_date))
+                        log_details['imaging_time'] = current_time
+                        log_details['body_site'] = request.form.get('body_site', request.form.get('location', ''))
+                        log_details['findings'] = request.form.get('findings', '')[:200]
+                        log_details['impression'] = request.form.get('impression', '')[:200]
+                    elif data_type == 'consult':
+                        log_details['action'] = 'add' if request.method == 'POST' else 'edit'
+                        log_details['specialist'] = request.form.get('specialist', request.form.get('consultant', ''))
+                        log_details['specialty'] = request.form.get('specialty', request.form.get('speciality', ''))
+                        log_details['consult_date'] = request.form.get('report_date', request.form.get('consult_date', current_date))
+                        log_details['consult_time'] = current_time
+                        log_details['referral_reason'] = request.form.get('reason', request.form.get('referral_reason', ''))[:200]
+                        log_details['findings'] = request.form.get('findings', '')[:200]
+                        log_details['recommendations'] = request.form.get('recommendations', '')[:200]
+                    elif data_type == 'hospital':
+                        log_details['action'] = 'add' if request.method == 'POST' else 'edit'
+                        log_details['hospital_name'] = request.form.get('hospital_name', request.form.get('facility', ''))
+                        log_details['admission_date'] = request.form.get('admission_date', current_date)
+                        log_details['admission_time'] = current_time
+                        log_details['discharge_date'] = request.form.get('discharge_date', '')
+                        log_details['admitting_diagnosis'] = request.form.get('admitting_diagnosis', '')[:200]
+                        log_details['discharge_diagnosis'] = request.form.get('discharge_diagnosis', '')[:200]
+                        log_details['procedures'] = request.form.get('procedures', '')[:200]
+
+                # Capture file upload details for document operations
+                if data_type == 'document':
+                    log_details['action'] = 'add' if request.method == 'POST' else 'edit'
+                    log_details['upload_date'] = datetime.now().strftime('%Y-%m-%d')
+                    log_details['upload_time'] = datetime.now().strftime('%H:%M:%S')
+                    
+                    # Get file details from form data
+                    log_details['document_name'] = request.form.get('document_name', '')
+                    log_details['source_system'] = request.form.get('source_system', '')
+                    log_details['document_type'] = request.form.get('document_type', '')
+                    log_details['document_date'] = request.form.get('document_date', '')
+                    log_details['provider'] = request.form.get('provider', '')
+                    
+                    # Capture file upload details if files are present
+                    if request.files:
+                        for file_key, file_obj in request.files.items():
+                            if file_obj and file_obj.filename:
+                                log_details['file_name'] = file_obj.filename
+                                log_details['file_type'] = file_obj.content_type or 'unknown'
+                                # Try to get file size
+                                try:
+                                    file_obj.seek(0, 2)  # Seek to end
+                                    file_size = file_obj.tell()
+                                    file_obj.seek(0)  # Reset to beginning
+                                    log_details['file_size'] = f"{file_size} bytes"
+                                except:
+                                    log_details['file_size'] = 'unknown'
+                                break
+                    else:
+                        # If no file uploaded, note it was a text-only document
+                        log_details['file_name'] = log_details.get('document_name', 'Text Document')
+                        log_details['file_type'] = 'text/plain'
+
+                # Create admin log entry
+                AdminLog.log_event(
+                    event_type=f'data_modification',
+                    user_id=user_id,
+                    event_details=json.dumps(log_details),
+                    request_id=str(uuid.uuid4()),
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent', '')
+                )
+
+                db.session.commit()
+
+                return result
+
+            except Exception as e:
+                # Log errors
+                error_details = {
+                    'data_type': data_type,
+                    'function_name': f.__name__,
+                    'error_message': str(e),
+                    'user_id': session.get('user_id'),
+                    'username': session.get('username', 'Unknown'),
+                    'timestamp': datetime.now().isoformat(),
+                    'success': False
+                }
+
+                AdminLog.log_event(
+                    event_type=f'data_modification_error',
+                    user_id=session.get('user_id'),
+                    event_details=json.dumps(error_details),
+                    request_id=str(uuid.uuid4()),
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get('User-Agent', '')
+                )
+
+                try:
+                    db.session.commit()
+                except:
+                    db.session.rollback()
+
+                raise
+
+        return decorated_function
+    return decorator
+
+def log_page_access(page_type):
+    """
+    Decorator to log page access
+
+    Args:
+        page_type: String describing the page type (dashboard, patient_list, etc.)
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            try:
+                # Get user information
+                user_id = session.get('user_id')
+                username = session.get('username', 'Unknown')
+
+                # Execute the original function
+                result = f(*args, **kwargs)
+
+                # Log the page access
+                log_details = {
+                    'page_type': page_type,
+                    'function_name': f.__name__,
+                    'endpoint': request.endpoint,
+                    'route': request.path,
+                    'method': request.method,
+                    'user_id': user_id,
+                    'username': username,
+                    'ip_address': request.remote_addr,
+                    'user_agent': request.headers.get('User-Agent', ''),
+                    'timestamp': datetime.now().isoformat(),
+                    'referer': request.headers.get('Referer', ''),
+                    'success': True
+                }
+
+                # Add query parameters
+                if request.args:
+                    log_details['query_params'] = dict(request.args)
+
+                # Create admin log entry (only for significant page accesses)
+                if page_type in ['admin_dashboard', 'patient_list', 'patient_detail', 'screening_list']:
                     AdminLog.log_event(
-                        event_type='data_modification',
+                        event_type=f'page_access',
                         user_id=user_id,
                         event_details=json.dumps(log_details),
                         request_id=str(uuid.uuid4()),
@@ -686,15 +662,18 @@ def log_data_modification(data_type):
                         user_agent=request.headers.get('User-Agent', '')
                     )
 
-                    try:
-                        db.session.commit()
-                    except Exception as commit_error:
-                        logger.warning(f"Failed to commit admin log: {str(commit_error)}")
-                        db.session.rollback()
-                except Exception as log_error:
-                    logger.error(f"Failed to log data modification: {str(log_error)}")
+                    db.session.commit()
 
-            return result
+                return result
+
+            except Exception as e:
+                logger.error(f"Error logging page access for {page_type}: {str(e)}")
+                # Don't let logging errors break the application
+                try:
+                    db.session.rollback()
+                except:
+                    pass
+                raise
 
         return decorated_function
     return decorator

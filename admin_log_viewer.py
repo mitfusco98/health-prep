@@ -100,7 +100,7 @@ def admin_logs():
                 'event_type': log.event_type,
                 'user': log.user.username if log.user else 'Anonymous',
                 'ip_address': log.ip_address,
-                'details': format_log_details(log.event_details_dict),
+                'details': format_log_details(log),
                 'request_id': log.request_id
             }
             processed_logs.append(log_data)
@@ -260,190 +260,370 @@ def admin_log_stats():
     except Exception as e:
         return jsonify({'error': f'Stats generation failed: {str(e)}'}), 500
 
-def format_log_details(log_or_details):
-    """Format log details for display with enhanced medical data formatting"""
-    if not log_or_details:
-        return "No details available"
+def format_log_details(log):
+    """
+    Format event details for display in admin logs
+    Show Patient ID, Patient Name, Appointment ID, and form changes
+    """
+    # Parse event details if it's JSON
+    if log.event_details:
+        try:
+            # Try parsing as JSON first
+            if log.event_details.startswith('{'):
+                event_data = json.loads(log.event_details)
+            else:
+                # If not JSON, try to evaluate as Python dict
+                event_data = eval(log.event_details)
 
-    try:
-        # Handle AdminLog object vs raw details
-        if hasattr(log_or_details, 'event_details_dict'):
-            # This is an AdminLog object
-            data = log_or_details.event_details_dict
-        elif isinstance(log_or_details, str):
-            # This is a JSON string
-            data = json.loads(log_or_details)
-        else:
-            # This is already a dictionary
-            data = log_or_details
+            if isinstance(event_data, dict):
+                # Get standardized action from event_data or event_type
+                action = event_data.get('action', log.event_type)
 
-        formatted = []
+                # Map event types to standard actions
+                if log.event_type == 'appointment_addition':
+                    action = "add"
+                elif log.event_type == 'appointment_deletion':
+                    action = "delete"
+                elif action not in ['view', 'edit', 'delete', 'add']:
+                    # Map legacy event types
+                    if 'edit' in action.lower() or 'update' in action.lower():
+                        action = "edit"
+                    elif 'delete' in action.lower() or 'remove' in action.lower():
+                        action = "delete"
+                    elif 'add' in action.lower() or 'create' in action.lower():
+                        action = "add"
+                    else:
+                        action = "view"
 
-        # Format common fields first
-        if 'action' in data:
-            formatted.append(f"Action: {data['action'].title()}")
-        if 'patient_name' in data:
-            formatted.append(f"Patient: {data['patient_name']}")
-        if 'patient_id' in data:
-            formatted.append(f"Patient ID: {data['patient_id']}")
+                formatted_details = []
 
-        # Format data type specific information
-        data_type = data.get('data_type', '')
-        if data_type:
-            formatted.append(f"Data Type: {data_type.title()}")
+                # Start with standardized action
+                action_badge_color = {
+                    'view': 'bg-secondary', 
+                    'edit': 'bg-warning', 
+                    'delete': 'bg-danger', 
+                    'add': 'bg-success'
+                }.get(action, 'bg-dark')
+                formatted_details.append(f"<span class='badge {action_badge_color}'>Action: {action.title()}</span>")
 
-            # Add specific details based on data type
-            if data_type == 'vital':
-                if 'vital_date' in data:
-                    formatted.append(f"Vital Date: {data['vital_date']}")
-                if 'vital_time' in data:
-                    formatted.append(f"Vital Time: {data['vital_time']}")
-                if 'weight' in data:
-                    formatted.append(f"Weight: {data['weight']}")
-                if 'height' in data:
-                    formatted.append(f"Height: {data['height']}")
-                if 'temperature' in data:
-                    formatted.append(f"Temperature: {data['temperature']}")
-                if 'pulse' in data:
-                    formatted.append(f"Pulse: {data['pulse']}")
+                # Show Patient information prominently
+                patient_name = event_data.get('patient_name')
+                patient_id = event_data.get('patient_id')
 
-            elif data_type == 'condition':
-                if 'condition_name' in data:
-                    formatted.append(f"Condition: {data['condition_name']}")
-                if 'diagnosis_date' in data:
-                    formatted.append(f"Diagnosis Date: {data['diagnosis_date']}")
-                if 'diagnosis_time' in data:
-                    formatted.append(f"Diagnosis Time: {data['diagnosis_time']}")
-                if 'condition_code' in data:
-                    formatted.append(f"ICD Code: {data['condition_code']}")
-                if 'condition_status' in data:
-                    formatted.append(f"Status: {data['condition_status']}")
+                if patient_name and patient_name != 'Unknown':
+                    formatted_details.append(f"<span class='badge bg-info'>Patient: {patient_name}</span>")
+                if patient_id:
+                    formatted_details.append(f"<span class='badge bg-primary'>Patient ID: {patient_id}</span>")
 
-            elif data_type == 'lab':
-                if 'test_name' in data:
-                    formatted.append(f"Test: {data['test_name']}")
-                if 'test_date' in data:
-                    formatted.append(f"Test Date: {data['test_date']}")
-                if 'test_time' in data:
-                    formatted.append(f"Test Time: {data['test_time']}")
-                if 'result' in data:
-                    formatted.append(f"Result: {data['result']}")
-                if 'unit' in data:
-                    formatted.append(f"Unit: {data['unit']}")
-                if 'reference_range' in data:
-                    formatted.append(f"Reference: {data['reference_range']}")
-                if 'abnormal_flag' in data:
-                    formatted.append(f"Abnormal: {data['abnormal_flag']}")
+                # Show Appointment ID if present
+                appointment_id = event_data.get('appointment_id')
+                if appointment_id:
+                    formatted_details.append(f"<span class='badge bg-success'>Appointment ID: {appointment_id}</span>")
+                
+                # Show appointment details for add/delete operations
+                if action in ['add', 'delete'] and appointment_id:
+                    appointment_date = event_data.get('appointment_date')
+                    appointment_time = event_data.get('appointment_time')
+                    appointment_note = event_data.get('note')
+                    
+                    if appointment_date:
+                        formatted_details.append(f"<span class='badge bg-info'>Date: {appointment_date}</span>")
+                    if appointment_time and appointment_time != 'N/A':
+                        formatted_details.append(f"<span class='badge bg-info'>Time: {appointment_time}</span>")
+                    if appointment_note:
+                        formatted_details.append(f"<span class='badge bg-secondary'>Note: {appointment_note}</span>")
 
-            elif data_type == 'immunization':
-                if 'vaccine_name' in data:
-                    formatted.append(f"Vaccine: {data['vaccine_name']}")
-                if 'immunization_date' in data:
-                    formatted.append(f"Date: {data['immunization_date']}")
-                if 'immunization_time' in data:
-                    formatted.append(f"Time: {data['immunization_time']}")
-                if 'manufacturer' in data:
-                    formatted.append(f"Manufacturer: {data['manufacturer']}")
-                if 'lot_number' in data:
-                    formatted.append(f"Lot Number: {data['lot_number']}")
-                if 'dose_number' in data:
-                    formatted.append(f"Dose: {data['dose_number']}")
+                # Get data type from event_details for enhanced logging
+                data_type = event_data.get('data_type', '')
+                
+                # Show alert details for add/edit/delete operations
+                if 'alert' in log.event_type.lower() or 'alert' in action.lower() or data_type == 'alert':
+                    alert_text = event_data.get('alert_text') or event_data.get('text')
+                    alert_date = event_data.get('alert_date') or event_data.get('date_created')
+                    alert_time = event_data.get('alert_time') or event_data.get('time_created')
+                    alert_priority = event_data.get('priority')
+                    alert_type = event_data.get('alert_type')
+                    
+                    if alert_text:
+                        # Truncate long alert text for display
+                        display_text = alert_text[:100] + "..." if len(alert_text) > 100 else alert_text
+                        formatted_details.append(f"<span class='badge bg-warning'>Alert Text: {display_text}</span>")
+                    if alert_date:
+                        formatted_details.append(f"<span class='badge bg-info'>Alert Date: {alert_date}</span>")
+                    if alert_time:
+                        formatted_details.append(f"<span class='badge bg-info'>Alert Time: {alert_time}</span>")
+                    if alert_priority:
+                        formatted_details.append(f"<span class='badge bg-danger'>Priority: {alert_priority}</span>")
+                    if alert_type:
+                        formatted_details.append(f"<span class='badge bg-secondary'>Type: {alert_type}</span>")
 
-            elif data_type == 'imaging':
-                if 'study_type' in data:
-                    formatted.append(f"Study: {data['study_type']}")
-                if 'study_date' in data:
-                    formatted.append(f"Study Date: {data['study_date']}")
-                if 'study_time' in data:
-                    formatted.append(f"Study Time: {data['study_time']}")
-                if 'body_site' in data:
-                    formatted.append(f"Body Site: {data['body_site']}")
-                if 'findings' in data:
-                    formatted.append(f"Findings: {data['findings'][:100]}...")
+                # Show medical data details (documents, conditions, vitals, etc.)
+                medical_data_types = ['document', 'condition', 'vital', 'lab', 'imaging', 'consult', 'hospital', 'immunization']
+                is_medical_data = (any(data_type_check in log.event_type.lower() for data_type_check in medical_data_types) or 
+                                 data_type in medical_data_types)
+                
+                if is_medical_data:
+                    # Document-specific details (file-based submissions)
+                    if 'document' in log.event_type.lower() or data_type == 'document':
+                        file_name = event_data.get('file_name') or event_data.get('filename') or event_data.get('document_name')
+                        file_type = event_data.get('file_type') or event_data.get('document_type')
+                        upload_date = event_data.get('upload_date') or event_data.get('document_date')
+                        upload_time = event_data.get('upload_time') or event_data.get('time_uploaded')
+                        file_size = event_data.get('file_size')
+                        provider = event_data.get('provider')
+                        
+                        if file_name:
+                            formatted_details.append(f"<span class='badge bg-primary'>File: {file_name}</span>")
+                        if file_type:
+                            formatted_details.append(f"<span class='badge bg-secondary'>Type: {file_type}</span>")
+                        if upload_date:
+                            formatted_details.append(f"<span class='badge bg-info'>Date: {upload_date}</span>")
+                        if upload_time:
+                            formatted_details.append(f"<span class='badge bg-info'>Time: {upload_time}</span>")
+                        if provider:
+                            formatted_details.append(f"<span class='badge bg-success'>Provider: {provider}</span>")
+                        if file_size:
+                            formatted_details.append(f"<span class='badge bg-light text-dark'>Size: {file_size}</span>")
+                    
+                    # Lab/Test results details (test name + results)
+                    elif 'lab' in log.event_type.lower() or 'test' in log.event_type.lower() or data_type == 'lab':
+                        test_name = event_data.get('test_name') or event_data.get('lab_name')
+                        test_date = event_data.get('test_date') or event_data.get('lab_date')
+                        test_time = event_data.get('test_time') or event_data.get('lab_time')
+                        result_value = event_data.get('result_value') or event_data.get('result') or event_data.get('value')
+                        unit = event_data.get('unit')
+                        reference_range = event_data.get('reference_range')
+                        is_abnormal = event_data.get('is_abnormal')
+                        
+                        if test_name:
+                            formatted_details.append(f"<span class='badge bg-primary'>Test: {test_name}</span>")
+                        if test_date:
+                            formatted_details.append(f"<span class='badge bg-info'>Date: {test_date}</span>")
+                        if test_time:
+                            formatted_details.append(f"<span class='badge bg-info'>Time: {test_time}</span>")
+                        if result_value:
+                            badge_class = 'bg-danger' if is_abnormal else 'bg-success'
+                            formatted_details.append(f"<span class='badge {badge_class}'>Result: {result_value}</span>")
+                        if unit:
+                            formatted_details.append(f"<span class='badge bg-secondary'>Unit: {unit}</span>")
+                        if reference_range:
+                            formatted_details.append(f"<span class='badge bg-light text-dark'>Range: {reference_range}</span>")
+                    
+                    # Medical Condition details (condition name + diagnosis info)
+                    elif 'condition' in log.event_type.lower() or data_type == 'condition':
+                        condition_name = event_data.get('condition_name') or event_data.get('name') or event_data.get('diagnosis')
+                        diagnosis_date = event_data.get('diagnosis_date') or event_data.get('diagnosed_date') or event_data.get('condition_date')
+                        diagnosis_time = event_data.get('diagnosis_time') or event_data.get('condition_time')
+                        code = event_data.get('code') or event_data.get('icd_code')
+                        is_active = event_data.get('is_active') or event_data.get('status')
+                        severity = event_data.get('severity')
+                        notes = event_data.get('notes')
+                        
+                        if condition_name:
+                            formatted_details.append(f"<span class='badge bg-primary'>Condition: {condition_name}</span>")
+                        if diagnosis_date:
+                            formatted_details.append(f"<span class='badge bg-info'>Date: {diagnosis_date}</span>")
+                        if diagnosis_time:
+                            formatted_details.append(f"<span class='badge bg-info'>Time: {diagnosis_time}</span>")
+                        if code:
+                            formatted_details.append(f"<span class='badge bg-secondary'>Code: {code}</span>")
+                        if is_active is not None:
+                            status_text = 'Active' if is_active else 'Inactive'
+                            status_class = 'bg-success' if is_active else 'bg-warning'
+                            formatted_details.append(f"<span class='badge {status_class}'>Status: {status_text}</span>")
+                        if severity:
+                            formatted_details.append(f"<span class='badge bg-warning'>Severity: {severity}</span>")
+                        if notes and len(notes.strip()) > 0:
+                            truncated_notes = notes[:50] + "..." if len(notes) > 50 else notes
+                            formatted_details.append(f"<span class='badge bg-light text-dark'>Notes: {truncated_notes}</span>")
+                    
+                    # Vital signs details (measurement values + date/time)
+                    elif 'vital' in log.event_type.lower() or data_type == 'vital':
+                        vital_date = event_data.get('vital_date') or event_data.get('date') or event_data.get('measurement_date')
+                        vital_time = event_data.get('vital_time') or event_data.get('time') or event_data.get('measurement_time')
+                        blood_pressure = event_data.get('blood_pressure')
+                        systolic = event_data.get('blood_pressure_systolic')
+                        diastolic = event_data.get('blood_pressure_diastolic')
+                        heart_rate = event_data.get('heart_rate') or event_data.get('pulse')
+                        temperature = event_data.get('temperature')
+                        weight = event_data.get('weight')
+                        height = event_data.get('height')
+                        bmi = event_data.get('bmi')
+                        oxygen_saturation = event_data.get('oxygen_saturation')
+                        
+                        if vital_date:
+                            formatted_details.append(f"<span class='badge bg-info'>Date: {vital_date}</span>")
+                        if vital_time:
+                            formatted_details.append(f"<span class='badge bg-info'>Time: {vital_time}</span>")
+                        if blood_pressure:
+                            formatted_details.append(f"<span class='badge bg-success'>BP: {blood_pressure}</span>")
+                        elif systolic and diastolic:
+                            formatted_details.append(f"<span class='badge bg-success'>BP: {systolic}/{diastolic}</span>")
+                        if heart_rate:
+                            formatted_details.append(f"<span class='badge bg-success'>HR: {heart_rate} bpm</span>")
+                        if temperature:
+                            formatted_details.append(f"<span class='badge bg-success'>Temp: {temperature}°</span>")
+                        if weight:
+                            formatted_details.append(f"<span class='badge bg-success'>Weight: {weight}</span>")
+                        if height:
+                            formatted_details.append(f"<span class='badge bg-success'>Height: {height}</span>")
+                        if bmi:
+                            formatted_details.append(f"<span class='badge bg-success'>BMI: {bmi}</span>")
+                        if oxygen_saturation:
+                            formatted_details.append(f"<span class='badge bg-success'>O2 Sat: {oxygen_saturation}%</span>")
+                    
+                    # Immunization details (vaccine name + administration info)
+                    elif 'immunization' in log.event_type.lower() or data_type == 'immunization':
+                        vaccine_name = event_data.get('vaccine_name') or event_data.get('immunization_name')
+                        vaccination_date = event_data.get('vaccination_date') or event_data.get('administration_date') or event_data.get('immunization_date')
+                        vaccination_time = event_data.get('vaccination_time') or event_data.get('administration_time') or event_data.get('immunization_time')
+                        dose_number = event_data.get('dose_number') or event_data.get('dose')
+                        manufacturer = event_data.get('manufacturer')
+                        lot_number = event_data.get('lot_number')
+                        notes = event_data.get('notes')
+                        
+                        if vaccine_name:
+                            formatted_details.append(f"<span class='badge bg-primary'>Vaccine: {vaccine_name}</span>")
+                        if vaccination_date:
+                            formatted_details.append(f"<span class='badge bg-info'>Date: {vaccination_date}</span>")
+                        if vaccination_time:
+                            formatted_details.append(f"<span class='badge bg-info'>Time: {vaccination_time}</span>")
+                        if dose_number:
+                            formatted_details.append(f"<span class='badge bg-secondary'>Dose: {dose_number}</span>")
+                        if manufacturer:
+                            formatted_details.append(f"<span class='badge bg-success'>Manufacturer: {manufacturer}</span>")
+                        if lot_number:
+                            formatted_details.append(f"<span class='badge bg-warning'>Lot: {lot_number}</span>")
+                        if notes and len(notes.strip()) > 0:
+                            truncated_notes = notes[:50] + "..." if len(notes) > 50 else notes
+                            formatted_details.append(f"<span class='badge bg-light text-dark'>Notes: {truncated_notes}</span>")
+                    
+                    # Imaging Study details (study type + findings)
+                    elif 'imaging' in log.event_type.lower() or data_type == 'imaging':
+                        study_type = event_data.get('study_type') or event_data.get('imaging_type')
+                        study_date = event_data.get('study_date') or event_data.get('imaging_date')
+                        study_time = event_data.get('study_time') or event_data.get('imaging_time')
+                        body_site = event_data.get('body_site') or event_data.get('location')
+                        findings = event_data.get('findings')
+                        impression = event_data.get('impression')
+                        
+                        if study_type:
+                            formatted_details.append(f"<span class='badge bg-primary'>Study: {study_type}</span>")
+                        if study_date:
+                            formatted_details.append(f"<span class='badge bg-info'>Date: {study_date}</span>")
+                        if study_time:
+                            formatted_details.append(f"<span class='badge bg-info'>Time: {study_time}</span>")
+                        if body_site:
+                            formatted_details.append(f"<span class='badge bg-secondary'>Site: {body_site}</span>")
+                        if findings and len(findings.strip()) > 0:
+                            truncated_findings = findings[:50] + "..." if len(findings) > 50 else findings
+                            formatted_details.append(f"<span class='badge bg-success'>Findings: {truncated_findings}</span>")
+                        if impression and len(impression.strip()) > 0:
+                            truncated_impression = impression[:50] + "..." if len(impression) > 50 else impression
+                            formatted_details.append(f"<span class='badge bg-warning'>Impression: {truncated_impression}</span>")
+                    
+                    # Consultation Report details (specialist + report info)
+                    elif 'consult' in log.event_type.lower() or data_type == 'consult':
+                        specialist = event_data.get('specialist') or event_data.get('consultant')
+                        specialty = event_data.get('specialty') or event_data.get('speciality')
+                        report_date = event_data.get('report_date') or event_data.get('consult_date')
+                        report_time = event_data.get('report_time') or event_data.get('consult_time')
+                        reason = event_data.get('reason') or event_data.get('referral_reason')
+                        findings = event_data.get('findings')
+                        recommendations = event_data.get('recommendations')
+                        
+                        if specialist:
+                            formatted_details.append(f"<span class='badge bg-primary'>Specialist: {specialist}</span>")
+                        if specialty:
+                            formatted_details.append(f"<span class='badge bg-secondary'>Specialty: {specialty}</span>")
+                        if report_date:
+                            formatted_details.append(f"<span class='badge bg-info'>Date: {report_date}</span>")
+                        if report_time:
+                            formatted_details.append(f"<span class='badge bg-info'>Time: {report_time}</span>")
+                        if reason:
+                            formatted_details.append(f"<span class='badge bg-warning'>Reason: {reason}</span>")
+                        if findings and len(findings.strip()) > 0:
+                            truncated_findings = findings[:50] + "..." if len(findings) > 50 else findings
+                            formatted_details.append(f"<span class='badge bg-success'>Findings: {truncated_findings}</span>")
+                        if recommendations and len(recommendations.strip()) > 0:
+                            truncated_recommendations = recommendations[:50] + "..." if len(recommendations) > 50 else recommendations
+                            formatted_details.append(f"<span class='badge bg-light text-dark'>Recommendations: {truncated_recommendations}</span>")
+                    
+                    # Hospital Summary details (admission + discharge info)
+                    elif 'hospital' in log.event_type.lower() or data_type == 'hospital':
+                        hospital_name = event_data.get('hospital_name') or event_data.get('facility')
+                        admission_date = event_data.get('admission_date')
+                        admission_time = event_data.get('admission_time')
+                        discharge_date = event_data.get('discharge_date')
+                        discharge_time = event_data.get('discharge_time')
+                        admitting_diagnosis = event_data.get('admitting_diagnosis')
+                        discharge_diagnosis = event_data.get('discharge_diagnosis')
+                        procedures = event_data.get('procedures')
+                        
+                        if hospital_name:
+                            formatted_details.append(f"<span class='badge bg-primary'>Hospital: {hospital_name}</span>")
+                        if admission_date:
+                            formatted_details.append(f"<span class='badge bg-info'>Admission: {admission_date}</span>")
+                        if admission_time:
+                            formatted_details.append(f"<span class='badge bg-info'>Admission Time: {admission_time}</span>")
+                        if discharge_date:
+                            formatted_details.append(f"<span class='badge bg-success'>Discharge: {discharge_date}</span>")
+                        if discharge_time:
+                            formatted_details.append(f"<span class='badge bg-success'>Discharge Time: {discharge_time}</span>")
+                        if admitting_diagnosis:
+                            formatted_details.append(f"<span class='badge bg-warning'>Admit Dx: {admitting_diagnosis}</span>")
+                        if discharge_diagnosis:
+                            formatted_details.append(f"<span class='badge bg-secondary'>Discharge Dx: {discharge_diagnosis}</span>")
+                        if procedures and len(procedures.strip()) > 0:
+                            truncated_procedures = procedures[:50] + "..." if len(procedures) > 50 else procedures
+                            formatted_details.append(f"<span class='badge bg-light text-dark'>Procedures: {truncated_procedures}</span>")
 
-            elif data_type == 'consult':
-                if 'specialist' in data:
-                    formatted.append(f"Specialist: {data['specialist']}")
-                if 'specialty' in data:
-                    formatted.append(f"Specialty: {data['specialty']}")
-                if 'consult_date' in data:
-                    formatted.append(f"Consult Date: {data['consult_date']}")
-                if 'consult_time' in data:
-                    formatted.append(f"Consult Time: {data['consult_time']}")
-                if 'referral_reason' in data:
-                    formatted.append(f"Reason: {data['referral_reason']}")
+                # Show page address/endpoint
+                page_address = None
+                if 'endpoint' in event_data:
+                    page_address = event_data['endpoint']
+                elif 'route' in event_data:
+                    page_address = event_data['route']
 
-            elif data_type == 'hospital':
-                if 'hospital_name' in data:
-                    formatted.append(f"Hospital: {data['hospital_name']}")
-                if 'admission_date' in data:
-                    formatted.append(f"Admission: {data['admission_date']}")
-                if 'admission_time' in data:
-                    formatted.append(f"Admission Time: {data['admission_time']}")
-                if 'discharge_date' in data:
-                    formatted.append(f"Discharge: {data['discharge_date']}")
-                if 'admitting_diagnosis' in data:
-                    formatted.append(f"Diagnosis: {data['admitting_diagnosis']}")
+                if page_address:
+                    formatted_details.append(f"<span class='badge bg-dark'>Page: {page_address}</span>")
 
-            elif data_type == 'document':
-                if 'file_name' in data:
-                    formatted.append(f"File: {data['file_name']}")
-                if 'document_type' in data:
-                    formatted.append(f"Type: {data['document_type']}")
-                if 'document_date' in data:
-                    formatted.append(f"Document Date: {data['document_date']}")
-                if 'document_time' in data:
-                    formatted.append(f"Document Time: {data['document_time']}")
-                if 'provider' in data:
-                    formatted.append(f"Provider: {data['provider']}")
-                if 'file_type' in data:
-                    formatted.append(f"File Type: {data['file_type']}")
-                if 'file_size' in data:
-                    formatted.append(f"File Size: {data['file_size']} bytes")
+                # Show form changes for any edit action
+                if action == "edit" and 'form_changes' in event_data:
+                    changes = event_data['form_changes']
+                    if changes:
+                        formatted_details.append("<div class='mt-1'><strong>Changes Made:</strong></div>")
+                        for change_key, change_value in changes.items():
+                            # Clean up the key for display (remove prefixes like 'appointment_', 'demographics_', etc.)
+                            display_key = change_key.replace('appointment_', '').replace('demographics_', '').replace('alert_', '').replace('screening_', '')
+                            change_label = display_key.replace('_', ' ').title()
+                            formatted_details.append(f"&nbsp;&nbsp;• {change_label}: <span class='text-primary'>{change_value}</span>")
 
-            elif data_type == 'visit':
-                if 'visit_date' in data:
-                    formatted.append(f"Visit Date: {data['visit_date']}")
-                if 'visit_time' in data:
-                    formatted.append(f"Visit Time: {data['visit_time']}")
-                if 'visit_type' in data:
-                    formatted.append(f"Visit Type: {data['visit_type']}")
-                if 'provider' in data:
-                    formatted.append(f"Provider: {data['provider']}")
-                if 'visit_reason' in data:
-                    formatted.append(f"Reason: {data['visit_reason']}")
+                # Show relevant technical details
+                relevant_details = []
+                for key, value in event_data.items():
+                    if key in ['endpoint', 'route', 'path', 'appointment_id', 'patient_name', 'patient_id', 'form_changes']:
+                        continue  # Already shown above
 
-            elif data_type == 'alert':
-                if 'description' in data:
-                    formatted.append(f"Alert: {data['description']}")
-                if 'alert_type' in data:
-                    formatted.append(f"Type: {data['alert_type']}")
-                if 'alert_date' in data:
-                    formatted.append(f"Alert Date: {data['alert_date']}")
-                if 'alert_time' in data:
-                    formatted.append(f"Alert Time: {data['alert_time']}")
-                if 'severity' in data:
-                    formatted.append(f"Severity: {data['severity']}")
-                if 'alert_status' in data:
-                    formatted.append(f"Status: {data['alert_status']}")
+                    # Include specific technical details
+                    if key in ['method', 'ip_address', 'function_name']:
+                        if key == 'method':
+                            relevant_details.append(f"Method: {value}")
+                        elif key == 'ip_address':
+                            relevant_details.append(f"IP: {value}")
+                        elif key == 'function_name':
+                            relevant_details.append(f"Function: {value}")
 
-        # Format route and method
-        if 'endpoint' in data:
-            formatted.append(f"Page: {data['endpoint']}")
-        if 'function' in data:
-            formatted.append(f"Function: {data['function']}")
-        if 'method' in data:
-            formatted.append(f"Method: {data['method']}")
-        if 'ip_address' in data:
-            formatted.append(f"IP: {data['ip_address']}")
+                if relevant_details:
+                    formatted_details.append("<div class='mt-1'><small class='text-muted'>")
+                    formatted_details.extend(relevant_details)
+                    formatted_details.append("</small></div>")
 
-        # Add status if available
-        if 'status' in data:
-            formatted.append(f"Status: {data['status'].title()}")
-        if 'error' in data:
-            formatted.append(f"Error: {data['error']}")
+                return "<br>".join(formatted_details)
+        except Exception as e:
+            # Log the parsing error but don't show it to users
+            pass
 
-        return "\n".join(formatted)
-
-    except Exception as e:
-        return f"Error formatting details: {str(e)}"
+    # If parsing fails, show simplified format
+    action_type = log.event_type.replace('_', ' ').title()
+    return f"<span class='badge bg-secondary'>{action_type}</span>"
