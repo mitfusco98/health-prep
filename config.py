@@ -167,47 +167,15 @@ class ApplicationConfig:
     
     def __init__(self):
         self.environment = self._get_environment()
-        # Initialize critical config only
         self.database = self._create_database_config()
         self.security = self._create_security_config()
+        self.admin = self._create_admin_config()
+        self.logging = self._create_logging_config()
+        self.rate_limit = self._create_rate_limit_config()
+        self.file_upload = self._create_file_upload_config()
         
-        # Defer non-critical config to lazy loading
-        self._admin = None
-        self._logging = None
-        self._rate_limit = None
-        self._file_upload = None
-        
-        # Skip validation at startup for speed
-        self._validated = False
-    
-    @property
-    def admin(self):
-        if self._admin is None:
-            self._admin = self._create_admin_config()
-        return self._admin
-    
-    @property
-    def logging(self):
-        if self._logging is None:
-            self._logging = self._create_logging_config()
-        return self._logging
-    
-    @property
-    def rate_limit(self):
-        if self._rate_limit is None:
-            self._rate_limit = self._create_rate_limit_config()
-        return self._rate_limit
-    
-    @property
-    def file_upload(self):
-        if self._file_upload is None:
-            self._file_upload = self._create_file_upload_config()
-        return self._file_upload
-    
-    def validate_if_needed(self):
-        if not self._validated:
-            self._validate_configuration()
-            self._validated = True
+        # Validate configuration
+        self._validate_configuration()
     
     def _get_environment(self) -> Environment:
         """Get current environment"""

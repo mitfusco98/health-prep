@@ -25,62 +25,24 @@ def admin_logs():
     try:
         # Get filter parameters
         page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 25, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
         event_type = request.args.get('event_type', '')
         user_filter = request.args.get('user', '')
         date_from = request.args.get('date_from', '')
         date_to = request.args.get('date_to', '')
         search_term = request.args.get('search', '')
-        ip_filter = request.args.get('ip_address', '')
-        sort_order = request.args.get('sort', 'desc')  # desc or asc
-        
-        # Date range shortcuts
-        date_range = request.args.get('date_range', '')
-        if date_range:
-            today = datetime.now().date()
-            if date_range == 'today':
-                date_from = today.strftime('%Y-%m-%d')
-                date_to = today.strftime('%Y-%m-%d')
-            elif date_range == 'yesterday':
-                yesterday = today - timedelta(days=1)
-                date_from = yesterday.strftime('%Y-%m-%d')
-                date_to = yesterday.strftime('%Y-%m-%d')
-            elif date_range == 'week':
-                week_ago = today - timedelta(days=7)
-                date_from = week_ago.strftime('%Y-%m-%d')
-                date_to = today.strftime('%Y-%m-%d')
-            elif date_range == 'month':
-                month_ago = today - timedelta(days=30)
-                date_from = month_ago.strftime('%Y-%m-%d')
-                date_to = today.strftime('%Y-%m-%d')
 
-        # Build query with left join to User table
-        query = AdminLog.query.outerjoin(User, AdminLog.user_id == User.id)
+        # Build query
+        query = AdminLog.query
 
         # Apply filters
         if event_type:
-            if event_type == 'authentication':
-                query = query.filter(AdminLog.event_type.in_(['login_success', 'login_fail', 'logout']))
-            elif event_type == 'patient_operations':
-                query = query.filter(AdminLog.event_type.in_(['view', 'edit', 'delete', 'add']))
-            elif event_type == 'alert_operations':
-                query = query.filter(AdminLog.event_type.in_(['alert_add', 'alert_edit', 'alert_delete']))
-            elif event_type == 'appointment_operations':
-                query = query.filter(AdminLog.event_type.in_(['appointment_addition', 'appointment_deletion', 'appointment_edit']))
-            elif event_type == 'data_modifications':
-                query = query.filter(AdminLog.event_type == 'data_modification')
-            elif event_type == 'admin_actions':
-                query = query.filter(AdminLog.event_type.like('admin_%'))
-            elif event_type == 'errors':
-                query = query.filter(AdminLog.event_type.in_(['error', 'validation_error']))
-            else:
-                query = query.filter(AdminLog.event_type.like(f'%{event_type}%'))
+            query = query.filter(AdminLog.event_type.like(f'%{event_type}%'))
 
         if user_filter:
+            # Join with User table to filter by username
+            query = query.join(User, AdminLog.user_id == User.id, isouter=True)
             query = query.filter(User.username.like(f'%{user_filter}%'))
-
-        if ip_filter:
-            query = query.filter(AdminLog.ip_address.like(f'%{ip_filter}%'))
 
         if date_from:
             try:
@@ -97,21 +59,11 @@ def admin_logs():
                 pass
 
         if search_term:
-            # Search in event_details JSON and other fields
-            query = query.filter(
-                or_(
-                    AdminLog.event_details.like(f'%{search_term}%'),
-                    AdminLog.event_type.like(f'%{search_term}%'),
-                    AdminLog.ip_address.like(f'%{search_term}%'),
-                    User.username.like(f'%{search_term}%')
-                )
-            )
+            # Search in event_details JSON
+            query = query.filter(AdminLog.event_details.like(f'%{search_term}%'))
 
-        # Apply sorting
-        if sort_order == 'asc':
-            query = query.order_by(AdminLog.timestamp.asc())
-        else:
-            query = query.order_by(AdminLog.timestamp.desc())
+        # Order by timestamp (newest first)
+        query = query.order_by(desc(AdminLog.timestamp))
 
         # Paginate
         pagination = query.paginate(
@@ -124,30 +76,20 @@ def admin_logs():
 
         # Get summary statistics
         total_logs = AdminLog.query.count()
-        today = datetime.now().date()
         today_logs = AdminLog.query.filter(
-            AdminLog.timestamp >= today
+            AdminLog.timestamp >= datetime.now().date()
         ).count()
 
         failed_logins_today = AdminLog.query.filter(
             and_(
                 AdminLog.event_type == 'login_fail',
-                AdminLog.timestamp >= today
+                AdminLog.timestamp >= datetime.now().date()
             )
         ).count()
 
-        # Get recent activity (last 24 hours)
-        recent_activity = AdminLog.query.filter(
-            AdminLog.timestamp >= datetime.now() - timedelta(hours=24)
-        ).count()
-
         # Get unique event types for filter dropdown
-        event_types_raw = db.session.query(AdminLog.event_type).distinct().all()
-        event_types = sorted([et[0] for et in event_types_raw])
-
-        # Get unique users for filter dropdown
-        users_raw = db.session.query(User.username).distinct().all()
-        users = sorted([u[0] for u in users_raw if u[0]])
+        event_types = db.session.query(AdminLog.event_type).distinct().all()
+        event_types = [et[0] for et in event_types]
 
         # Process logs for display
         processed_logs = []
@@ -159,8 +101,7 @@ def admin_logs():
                 'user': log.user.username if log.user else 'Anonymous',
                 'ip_address': log.ip_address,
                 'details': format_log_details(log),
-                'request_id': log.request_id,
-                'user_agent': log.user_agent[:100] + '...' if log.user_agent and len(log.user_agent) > 100 else log.user_agent
+                'request_id': log.request_id
             }
             processed_logs.append(log_data)
 
@@ -170,19 +111,14 @@ def admin_logs():
                              total_logs=total_logs,
                              today_logs=today_logs,
                              failed_logins_today=failed_logins_today,
-                             recent_activity=recent_activity,
                              event_types=event_types,
-                             users=users,
                              current_filters={
                                  'event_type': event_type,
                                  'user': user_filter,
                                  'date_from': date_from,
                                  'date_to': date_to,
                                  'search': search_term,
-                                 'ip_address': ip_filter,
-                                 'per_page': per_page,
-                                 'sort': sort_order,
-                                 'date_range': date_range
+                                 'per_page': per_page
                              })
 
     except Exception as e:

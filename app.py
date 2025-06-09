@@ -14,35 +14,21 @@ from flask_limiter.util import get_remote_address
 from flask_compress import Compress
 import time
 
-# Setup minimal logging first - defer structured logging
-logging.basicConfig(level=logging.WARNING)  # Reduced verbosity
+# Import structured logging
+from structured_logging import setup_structured_logging, get_structured_logger, add_correlation_id_to_request
+
+# Import profiler
+from profiler import profiler
+
+# Setup basic logging first (will be replaced with structured logging)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Lazy import globals to speed startup
-config = None
-structured_logger = None
-profiler = None
+# Import unified configuration
+from config import get_config, is_production, is_development
 
-def get_app_config():
-    global config
-    if config is None:
-        from config import get_config
-        config = get_config()
-    return config
-
-def get_structured_logger():
-    global structured_logger
-    if structured_logger is None:
-        from structured_logging import setup_structured_logging
-        structured_logger = setup_structured_logging(app, log_level=get_app_config().logging.log_level)
-    return structured_logger
-
-def get_profiler():
-    global profiler
-    if profiler is None:
-        from profiler import profiler as p
-        profiler = p
-    return profiler
+# Get configuration instance
+config = get_config()
 
 class Base(DeclarativeBase):
     pass
@@ -52,20 +38,15 @@ db = SQLAlchemy(model_class=Base)
 # Create the app
 app = Flask(__name__)
 
-# Defer configuration until first request
-@app.before_first_request
-def setup_app_config():
-    config = get_app_config()
-    app.config.update(config.get_flask_config())
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+# Apply configuration to Flask app
+app.config.update(config.get_flask_config())
 
-# Minimal configuration for startup
-app.config.update({
-    'SECRET_KEY': os.environ.get('SESSION_SECRET', 'dev-key'),
-    'SQLALCHEMY_DATABASE_URI': os.environ.get('DATABASE_URL', 'sqlite:///healthcare.db'),
-    'SQLALCHEMY_TRACK_MODIFICATIONS': False,
-    'WTF_CSRF_ENABLED': True
-})
+# Import logging configuration
+from structured_logging import setup_structured_logging
+
+# Setup structured JSON logging based on environment
+structured_logger = setup_structured_logging(app, log_level=config.logging.log_level)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
@@ -974,74 +955,99 @@ with app.app_context():
     # JWT configuration from unified config system
     JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_DELTA = config.security.jwt_secret_key, config.security.jwt_algorithm, config.security.jwt_expiration_delta
 
-    # Defer expensive operations until first request
-    @app.before_first_request
-    def initialize_background_services():
-        """Initialize database and background services on first request"""
+    # Schedule automatic admin log cleanup
+    def schedule_admin_log_cleanup():
+        """Schedule periodic cleanup of old admin logs"""
+        import threading
+        import time
+        from datetime import datetime, timedelta
+
+        def cleanup_task():
+            while True:
+                try:
+                    # Run cleanup daily at 2 AM
+                    now = datetime.now()
+                    next_run = now.replace(hour=2, minute=0, second=0, microsecond=0)
+                    if next_run <= now:
+                        next_run += timedelta(days=1)
+
+                    sleep_seconds = (next_run - now).total_seconds()
+                    time.sleep(sleep_seconds)
+
+                    # Perform cleanup
+                    with app.app_context():
+                        from admin_log_cleanup import cleanup_old_admin_logs
+                        deleted_count = cleanup_old_admin_logs(10)
+                        if deleted_count > 0:
+                            logger.info(f"Daily cleanup: Removed {deleted_count} old admin log entries")
+
+                except Exception as e:
+                    logger.error(f"Error in admin log cleanup task: {str(e)}")
+                    # Sleep for 1 hour before retrying
+                    time.sleep(3600)
+
+        # Start cleanup thread
+        cleanup_thread = threading.Thread(target=cleanup_task, daemon=True)
+        cleanup_thread.start()
+        logger.info("Admin log cleanup scheduler started")
+
+    # Start the cleanup scheduler
+    schedule_admin_log_cleanup()
+
+    # Create database tables with retry logic
+    max_retries = 5
+    retry_delay = 2
+
+    for attempt in range(max_retries):
         try:
-            # Create database tables
+            logger.info(f"Attempting database connection (attempt {attempt+1}/{max_retries})")
             db.create_all()
             logger.info("Database tables created successfully")
-            
-            # Start cleanup scheduler
-            def schedule_admin_log_cleanup():
-                import threading
-                import time
-                from datetime import datetime, timedelta
-
-                def cleanup_task():
-                    while True:
-                        try:
-                            now = datetime.now()
-                            next_run = now.replace(hour=2, minute=0, second=0, microsecond=0)
-                            if next_run <= now:
-                                next_run += timedelta(days=1)
-
-                            sleep_seconds = (next_run - now).total_seconds()
-                            time.sleep(sleep_seconds)
-
-                            with app.app_context():
-                                from admin_log_cleanup import cleanup_old_admin_logs
-                                deleted_count = cleanup_old_admin_logs(10)
-                                if deleted_count > 0:
-                                    logger.info(f"Daily cleanup: Removed {deleted_count} old admin log entries")
-
-                        except Exception as e:
-                            logger.error(f"Error in admin log cleanup task: {str(e)}")
-                            time.sleep(3600)
-
-                cleanup_thread = threading.Thread(target=cleanup_task, daemon=True)
-                cleanup_thread.start()
-
-            schedule_admin_log_cleanup()
-            
+            break
         except Exception as e:
-            logger.error(f"Database initialization failed: {str(e)}")
-            # Fall back to SQLite if needed
-            if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql"):
-                app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///healthcare.db"
-                try:
+            logger.error(f"Database connection failed: {str(e)}")
+            if attempt < max_retries - 1:
+                structured_logger.logger.info(f"Retrying database connection in {retry_delay} seconds", extra={
+                    'event_type': 'database_retry',
+                    'attempt': attempt + 1,
+                    'max_retries': max_retries,
+                    'retry_delay': retry_delay
+                })
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                structured_logger.logger.error(f"Failed to connect to database after {max_retries} attempts", extra={
+                    'event_type': 'database_connection_failed',
+                    'max_retries': max_retries
+                })
+                # Fall back to SQLite if PostgreSQL fails
+                if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql"):
+                    structured_logger.logger.warning("Falling back to SQLite database", extra={
+                        'event_type': 'database_fallback',
+                        'from': 'postgresql',
+                        'to': 'sqlite'
+                    })
+                    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///healthcare.db"
                     db.create_all()
-                except Exception as fallback_error:
-                    logger.error(f"SQLite fallback failed: {str(fallback_error)}")
+                    structured_logger.logger.info("SQLite database tables created successfully", extra={
+                        'event_type': 'database_initialized',
+                        'database_type': 'sqlite'
+                    })
+                else:
+                    raise
 
-# Defer middleware registration until first request to speed startup
-@app.before_first_request
-def register_middlewares():
-    """Register middleware components on first request"""
-    try:
-        from validation_middleware import register_validation_middleware
-        register_validation_middleware(app)
-        
-        from api_access_middleware import register_api_access_middleware
-        register_api_access_middleware(app)
-        
-        from admin_middleware import register_admin_middleware
-        register_admin_middleware(app)
-        
-        # Log startup after everything is initialized
-        from logging_config import log_application_startup
-        log_application_startup(app, get_structured_logger())
-        
-    except Exception as e:
-        logger.error(f"Middleware registration failed: {str(e)}")
+# Log application startup information
+from logging_config import log_application_startup
+log_application_startup(app, structured_logger)
+
+# Register validation middleware for automatic logging
+from validation_middleware import register_validation_middleware
+register_validation_middleware(app)
+
+# Register API access middleware for data access logging
+from api_access_middleware import register_api_access_middleware
+register_api_access_middleware(app)
+
+# Register admin route protection middleware
+from admin_middleware import register_admin_middleware
+register_admin_middleware(app)

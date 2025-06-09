@@ -69,15 +69,6 @@
                     <h5><i class="fas fa-history"></i> Recent Admin Logs</h5>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="card-title mb-0">Recent Activity</h5>
-                        <div>
-                            <a href="{{ url_for('admin_logs') }}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-list"></i> View All Logs
-                            </a>
-                            <small class="text-muted ms-2">Last 10 events</small>
-                        </div>
-                    </div>
                     {% if recent_admin_logs %}
                     <div class="table-responsive">
                         <table class="table table-sm">
