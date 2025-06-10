@@ -435,7 +435,7 @@ async def validate_uploaded_file_async(file):
 
     # Check filename for malicious patterns (fast check)
     filename = file.filename.lower()
-    if any(char in filename for char in ['..', '/', '\\', ':', '*', '?', '"', '<', '>'], '|' in filename):
+    if any(char in filename for char in ['..', '/', '\\', ':', '*', '?', '"', '<', '>', '|']):
         return False
 
     # Check for executable file extensions (fast check)
