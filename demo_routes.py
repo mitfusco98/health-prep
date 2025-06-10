@@ -714,6 +714,42 @@ def add_screening_type():
         db.session.add(screening_type)
         db.session.commit()
         
+        # Enhanced admin logging for screening type addition
+        from models import AdminLog
+        import json
+        
+        log_details = {
+            'action': 'add',
+            'data_type': 'screening_type',
+            'screening_type_name': screening_type.name,
+            'description': screening_type.description or '',
+            'default_frequency': screening_type.default_frequency or '',
+            'gender_specific': screening_type.gender_specific or 'All Genders',
+            'min_age': screening_type.min_age if screening_type.min_age is not None else 'None',
+            'max_age': screening_type.max_age if screening_type.max_age is not None else 'None',
+            'is_active': screening_type.is_active,
+            'created_date': screening_type.created_at.strftime('%Y-%m-%d') if screening_type.created_at else str(date.today()),
+            'created_time': screening_type.created_at.strftime('%H:%M:%S') if screening_type.created_at else datetime.now().strftime('%H:%M:%S'),
+            'endpoint': 'add_screening_type',
+            'method': 'POST',
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        try:
+            from flask_login import current_user
+            user_id = current_user.id if current_user.is_authenticated else None
+        except:
+            user_id = None
+            
+        AdminLog.log_event(
+            event_type='data_modification',
+            user_id=user_id,
+            event_details=json.dumps(log_details),
+            request_id=f'screening_type_add_{screening_type.id}',
+            ip_address=request.remote_addr or '127.0.0.1',
+            user_agent=request.headers.get('User-Agent', 'Unknown')
+        )
+        
         flash(f'Screening type "{screening_type.name}" has been added successfully.', 'success')
     else:
         for field, errors in form.errors.items():
@@ -751,7 +787,74 @@ def edit_screening_type(screening_type_id):
         screening_type.is_active = form.is_active.data
         
         try:
+            # Store original values for change tracking
+            original_data = {
+                'name': screening_type.name,
+                'description': screening_type.description,
+                'default_frequency': screening_type.default_frequency,
+                'gender_specific': screening_type.gender_specific,
+                'min_age': screening_type.min_age,
+                'max_age': screening_type.max_age,
+                'is_active': screening_type.is_active
+            }
+            
             db.session.commit()
+            
+            # Enhanced admin logging for screening type edit
+            from models import AdminLog
+            import json
+            
+            # Track what changed
+            form_changes = {}
+            if original_data['name'] != screening_type.name:
+                form_changes['name'] = f"{original_data['name']} → {screening_type.name}"
+            if original_data['description'] != screening_type.description:
+                form_changes['description'] = f"{original_data['description'] or 'None'} → {screening_type.description or 'None'}"
+            if original_data['default_frequency'] != screening_type.default_frequency:
+                form_changes['default_frequency'] = f"{original_data['default_frequency'] or 'None'} → {screening_type.default_frequency or 'None'}"
+            if original_data['gender_specific'] != screening_type.gender_specific:
+                form_changes['gender_specific'] = f"{original_data['gender_specific'] or 'All'} → {screening_type.gender_specific or 'All'}"
+            if original_data['min_age'] != screening_type.min_age:
+                form_changes['min_age'] = f"{original_data['min_age'] or 'None'} → {screening_type.min_age or 'None'}"
+            if original_data['max_age'] != screening_type.max_age:
+                form_changes['max_age'] = f"{original_data['max_age'] or 'None'} → {screening_type.max_age or 'None'}"
+            if original_data['is_active'] != screening_type.is_active:
+                form_changes['is_active'] = f"{original_data['is_active']} → {screening_type.is_active}"
+            
+            log_details = {
+                'action': 'edit',
+                'data_type': 'screening_type',
+                'screening_type_id': screening_type.id,
+                'screening_type_name': screening_type.name,
+                'description': screening_type.description or '',
+                'default_frequency': screening_type.default_frequency or '',
+                'gender_specific': screening_type.gender_specific or 'All Genders',
+                'min_age': screening_type.min_age if screening_type.min_age is not None else 'None',
+                'max_age': screening_type.max_age if screening_type.max_age is not None else 'None',
+                'is_active': screening_type.is_active,
+                'updated_date': screening_type.updated_at.strftime('%Y-%m-%d') if screening_type.updated_at else str(date.today()),
+                'updated_time': screening_type.updated_at.strftime('%H:%M:%S') if screening_type.updated_at else datetime.now().strftime('%H:%M:%S'),
+                'form_changes': form_changes,
+                'endpoint': 'edit_screening_type',
+                'method': 'POST',
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            try:
+                from flask_login import current_user
+                user_id = current_user.id if current_user.is_authenticated else None
+            except:
+                user_id = None
+                
+            AdminLog.log_event(
+                event_type='data_modification',
+                user_id=user_id,
+                event_details=json.dumps(log_details),
+                request_id=f'screening_type_edit_{screening_type.id}',
+                ip_address=request.remote_addr or '127.0.0.1',
+                user_agent=request.headers.get('User-Agent', 'Unknown')
+            )
+            
             flash(f'Screening type "{screening_type.name}" has been updated successfully.', 'success')
         except Exception as e:
             db.session.rollback()
@@ -792,9 +895,89 @@ def delete_screening_type(screening_type_id):
         # Instead of deleting, mark as inactive
         screening_type.is_active = False
         db.session.commit()
+        
+        # Enhanced admin logging for screening type deactivation
+        from models import AdminLog
+        import json
+        
+        log_details = {
+            'action': 'deactivate',
+            'data_type': 'screening_type',
+            'screening_type_id': screening_type.id,
+            'screening_type_name': screening_type.name,
+            'description': screening_type.description or '',
+            'default_frequency': screening_type.default_frequency or '',
+            'gender_specific': screening_type.gender_specific or 'All Genders',
+            'min_age': screening_type.min_age if screening_type.min_age is not None else 'None',
+            'max_age': screening_type.max_age if screening_type.max_age is not None else 'None',
+            'is_active': False,
+            'patient_usage_count': patient_screenings,
+            'deactivation_reason': f'Used by {patient_screenings} patient(s)',
+            'deactivated_date': str(date.today()),
+            'deactivated_time': datetime.now().strftime('%H:%M:%S'),
+            'endpoint': 'delete_screening_type',
+            'method': 'GET',
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        try:
+            from flask_login import current_user
+            user_id = current_user.id if current_user.is_authenticated else None
+        except:
+            user_id = None
+            
+        AdminLog.log_event(
+            event_type='data_modification',
+            user_id=user_id,
+            event_details=json.dumps(log_details),
+            request_id=f'screening_type_deactivate_{screening_type.id}',
+            ip_address=request.remote_addr or '127.0.0.1',
+            user_agent=request.headers.get('User-Agent', 'Unknown')
+        )
+        
         flash(f'Screening type "{screening_type.name}" has been marked as inactive because it is used by {patient_screenings} patient(s).', 'warning')
     else:
         name = screening_type.name
+        screening_type_id = screening_type.id
+        
+        # Enhanced admin logging for screening type deletion
+        from models import AdminLog
+        import json
+        
+        log_details = {
+            'action': 'delete',
+            'data_type': 'screening_type',
+            'screening_type_id': screening_type_id,
+            'screening_type_name': name,
+            'description': screening_type.description or '',
+            'default_frequency': screening_type.default_frequency or '',
+            'gender_specific': screening_type.gender_specific or 'All Genders',
+            'min_age': screening_type.min_age if screening_type.min_age is not None else 'None',
+            'max_age': screening_type.max_age if screening_type.max_age is not None else 'None',
+            'is_active': screening_type.is_active,
+            'patient_usage_count': 0,
+            'deleted_date': str(date.today()),
+            'deleted_time': datetime.now().strftime('%H:%M:%S'),
+            'endpoint': 'delete_screening_type',
+            'method': 'GET',
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        try:
+            from flask_login import current_user
+            user_id = current_user.id if current_user.is_authenticated else None
+        except:
+            user_id = None
+            
+        AdminLog.log_event(
+            event_type='data_modification',
+            user_id=user_id,
+            event_details=json.dumps(log_details),
+            request_id=f'screening_type_delete_{screening_type_id}',
+            ip_address=request.remote_addr or '127.0.0.1',
+            user_agent=request.headers.get('User-Agent', 'Unknown')
+        )
+        
         db.session.delete(screening_type)
         db.session.commit()
         flash(f'Screening type "{name}" has been deleted successfully.', 'success')
@@ -3521,6 +3704,48 @@ def add_screening_recommendation():
     db.session.add(screening)
     db.session.commit()
     
+    # Enhanced admin logging for screening addition
+    from models import AdminLog
+    import json
+    
+    # Get patient information for logging
+    patient = Patient.query.get(patient_id)
+    patient_name = patient.full_name if patient else 'Unknown Patient'
+    
+    log_details = {
+        'action': 'add',
+        'data_type': 'screening',
+        'screening_id': screening.id,
+        'patient_id': int(patient_id),
+        'patient_name': patient_name,
+        'screening_type': screening_type,
+        'due_date': due_date.strftime('%Y-%m-%d') if due_date else 'None',
+        'last_completed': last_completed.strftime('%Y-%m-%d') if last_completed else 'None',
+        'priority': priority,
+        'frequency': screening.frequency or 'None',
+        'notes': notes[:100] + '...' if notes and len(notes) > 100 else notes or '',
+        'created_date': screening.created_at.strftime('%Y-%m-%d') if screening.created_at else str(date.today()),
+        'created_time': screening.created_at.strftime('%H:%M:%S') if screening.created_at else datetime.now().strftime('%H:%M:%S'),
+        'endpoint': 'add_screening_recommendation',
+        'method': 'POST',
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    try:
+        from flask_login import current_user
+        user_id = current_user.id if current_user.is_authenticated else None
+    except:
+        user_id = None
+        
+    AdminLog.log_event(
+        event_type='data_modification',
+        user_id=user_id,
+        event_details=json.dumps(log_details),
+        request_id=f'screening_add_{screening.id}',
+        ip_address=request.remote_addr or '127.0.0.1',
+        user_agent=request.headers.get('User-Agent', 'Unknown')
+    )
+    
     flash('Screening recommendation added successfully.', 'success')
     # Add timestamp parameter to force a fresh query (avoid caching)
     timestamp = int(time_module.time())
@@ -3551,10 +3776,81 @@ def edit_screening(patient_id, screening_id):
     else:
         screening.last_completed = None
     
+    # Store original values for change tracking
+    original_data = {
+        'screening_type': screening.screening_type,
+        'due_date': screening.due_date,
+        'last_completed': screening.last_completed,
+        'priority': screening.priority,
+        'notes': screening.notes
+    }
+    
     screening.priority = request.form.get('priority', screening.priority)
     screening.notes = request.form.get('notes', '')
     
     db.session.commit()
+    
+    # Enhanced admin logging for screening edit
+    from models import AdminLog
+    import json
+    
+    # Track what changed
+    form_changes = {}
+    if original_data['screening_type'] != screening.screening_type:
+        form_changes['screening_type'] = f"{original_data['screening_type']} → {screening.screening_type}"
+    if original_data['due_date'] != screening.due_date:
+        old_date = original_data['due_date'].strftime('%Y-%m-%d') if original_data['due_date'] else 'None'
+        new_date = screening.due_date.strftime('%Y-%m-%d') if screening.due_date else 'None'
+        form_changes['due_date'] = f"{old_date} → {new_date}"
+    if original_data['last_completed'] != screening.last_completed:
+        old_completed = original_data['last_completed'].strftime('%Y-%m-%d') if original_data['last_completed'] else 'None'
+        new_completed = screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else 'None'
+        form_changes['last_completed'] = f"{old_completed} → {new_completed}"
+    if original_data['priority'] != screening.priority:
+        form_changes['priority'] = f"{original_data['priority']} → {screening.priority}"
+    if original_data['notes'] != screening.notes:
+        old_notes = original_data['notes'][:50] + '...' if original_data['notes'] and len(original_data['notes']) > 50 else original_data['notes'] or 'None'
+        new_notes = screening.notes[:50] + '...' if screening.notes and len(screening.notes) > 50 else screening.notes or 'None'
+        form_changes['notes'] = f"{old_notes} → {new_notes}"
+    
+    # Get patient information for logging
+    patient = Patient.query.get(patient_id)
+    patient_name = patient.full_name if patient else 'Unknown Patient'
+    
+    log_details = {
+        'action': 'edit',
+        'data_type': 'screening',
+        'screening_id': screening.id,
+        'patient_id': patient_id,
+        'patient_name': patient_name,
+        'screening_type': screening.screening_type,
+        'due_date': screening.due_date.strftime('%Y-%m-%d') if screening.due_date else 'None',
+        'last_completed': screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else 'None',
+        'priority': screening.priority or 'None',
+        'frequency': screening.frequency or 'None',
+        'notes': screening.notes[:100] + '...' if screening.notes and len(screening.notes) > 100 else screening.notes or '',
+        'updated_date': screening.updated_at.strftime('%Y-%m-%d') if screening.updated_at else str(date.today()),
+        'updated_time': screening.updated_at.strftime('%H:%M:%S') if screening.updated_at else datetime.now().strftime('%H:%M:%S'),
+        'form_changes': form_changes,
+        'endpoint': 'edit_screening',
+        'method': 'POST',
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    try:
+        from flask_login import current_user
+        user_id = current_user.id if current_user.is_authenticated else None
+    except:
+        user_id = None
+        
+    AdminLog.log_event(
+        event_type='data_modification',
+        user_id=user_id,
+        event_details=json.dumps(log_details),
+        request_id=f'screening_edit_{screening.id}',
+        ip_address=request.remote_addr or '127.0.0.1',
+        user_agent=request.headers.get('User-Agent', 'Unknown')
+    )
     
     flash('Screening record updated successfully.', 'success')
     
@@ -3573,6 +3869,51 @@ def delete_screening(patient_id, screening_id):
             flash('Invalid request: screening does not belong to this patient.', 'danger')
             timestamp = int(time_module.time())
             return redirect(url_for('screening_list', _t=timestamp))
+        
+        # Enhanced admin logging for screening deletion
+        from models import AdminLog
+        import json
+        
+        # Get patient information for logging
+        patient = Patient.query.get(patient_id)
+        patient_name = patient.full_name if patient else 'Unknown Patient'
+        
+        # Store screening details before deletion
+        log_details = {
+            'action': 'delete',
+            'data_type': 'screening',
+            'screening_id': screening.id,
+            'patient_id': patient_id,
+            'patient_name': patient_name,
+            'screening_type': screening.screening_type,
+            'due_date': screening.due_date.strftime('%Y-%m-%d') if screening.due_date else 'None',
+            'last_completed': screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else 'None',
+            'priority': screening.priority or 'None',
+            'frequency': screening.frequency or 'None',
+            'notes': screening.notes[:100] + '...' if screening.notes and len(screening.notes) > 100 else screening.notes or '',
+            'created_date': screening.created_at.strftime('%Y-%m-%d') if screening.created_at else 'None',
+            'created_time': screening.created_at.strftime('%H:%M:%S') if screening.created_at else 'None',
+            'deleted_date': str(date.today()),
+            'deleted_time': datetime.now().strftime('%H:%M:%S'),
+            'endpoint': 'delete_screening',
+            'method': 'GET' if request.method == 'GET' else 'POST',
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        try:
+            from flask_login import current_user
+            user_id = current_user.id if current_user.is_authenticated else None
+        except:
+            user_id = None
+            
+        AdminLog.log_event(
+            event_type='data_modification',
+            user_id=user_id,
+            event_details=json.dumps(log_details),
+            request_id=f'screening_delete_{screening.id}',
+            ip_address=request.remote_addr or '127.0.0.1',
+            user_agent=request.headers.get('User-Agent', 'Unknown')
+        )
         
         # Delete the screening
         db.session.delete(screening)
