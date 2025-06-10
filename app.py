@@ -422,10 +422,11 @@ def validate_csrf_for_state_changes():
             from flask import abort
             abort(403, description="CSRF token required for form requests")
 
-def validate_uploaded_file(file):
-    """Validate uploaded files for security - optimized for non-blocking validation"""
+async def validate_uploaded_file_async(file):
+    """Async validate uploaded files for security - non-blocking validation"""
     import mimetypes
     import magic
+    import asyncio
 
     # Quick size check without seeking to end (non-blocking)
     if hasattr(file, 'content_length') and file.content_length:
@@ -445,13 +446,17 @@ def validate_uploaded_file(file):
     if any(filename.endswith(ext) for ext in dangerous_extensions):
         return False
 
-    # Optimized MIME type validation - read smaller chunk and cache position
+    # Async MIME type validation - run in thread pool to avoid blocking
     try:
         current_pos = file.tell()
-        file_content = file.read(512)  # Reduced from 1KB to 512 bytes for faster processing
-        file.seek(current_pos)  # Reset to original position
+        file_content = file.read(512)
+        file.seek(current_pos)
 
-        detected_mime = magic.from_buffer(file_content, mime=True)
+        # Run CPU-intensive MIME detection in thread pool
+        loop = asyncio.get_event_loop()
+        detected_mime = await loop.run_in_executor(
+            None, magic.from_buffer, file_content, True
+        )
 
         # Allow only safe MIME types
         safe_mimes = [
@@ -468,6 +473,10 @@ def validate_uploaded_file(file):
         return False
 
     return True
+
+def validate_uploaded_file(file):
+    """Sync wrapper for backward compatibility"""
+    return asyncio.run(validate_uploaded_file_async(file))
 
 class InputSanitizer:
     """Handles input sanitization with field-specific strategies"""
@@ -951,6 +960,23 @@ with app.app_context():
 
     # Import API routes
     import api_routes  # noqa: F401
+    
+    # Initialize async database manager
+    from async_db_utils import init_async_db
+    database_url = app.config.get('SQLALCHEMY_DATABASE_URI')
+    if database_url:
+        try:
+            async_db_manager = init_async_db(database_url)
+            logger.info("Async database manager initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize async database: {e}")
+    
+    # Register async routes
+    try:
+        from async_routes import register_async_routes
+        register_async_routes(app)
+    except Exception as e:
+        logger.warning(f"Failed to register async routes: {e}")
 
     # JWT configuration from unified config system
     JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_DELTA = config.security.jwt_secret_key, config.security.jwt_algorithm, config.security.jwt_expiration_delta

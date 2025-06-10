@@ -96,11 +96,10 @@ def get_today_appointments_optimized():
     appointment_cache.set(cache_key, result)
     return result
 
-def get_home_page_data_optimized():
-    """Optimized data loading for home page using efficient count queries"""
-    from models import Patient, Appointment, MedicalDocument
-    from sqlalchemy import func, text
+async def get_home_page_data_async():
+    """Async optimized data loading for home page"""
     from datetime import date, timedelta
+    import asyncio
     
     cache_key = f"home_page_data_{date.today().isoformat()}"
     cached_result = home_page_cache.get(cache_key)
@@ -108,28 +107,22 @@ def get_home_page_data_optimized():
     if cached_result is not None:
         return cached_result
     
-    # Use efficient aggregate queries with database-level operations
     try:
-        # Use raw SQL for maximum performance on counts
-        with db.engine.connect() as conn:
-            # Get patient count
-            patient_count_result = conn.execute(text("SELECT COUNT(*) FROM patient")).scalar()
-            patient_count = patient_count_result or 0
-            
-            # Get today's appointment count
-            today_apt_result = conn.execute(
-                text("SELECT COUNT(*) FROM appointment WHERE appointment_date = :today"),
-                {"today": date.today()}
-            ).scalar()
-            today_apt_count = today_apt_result or 0
-            
-            # Get recent document count (last 7 days only for better performance)
-            seven_days_ago = date.today() - timedelta(days=7)
-            recent_doc_result = conn.execute(
-                text("SELECT COUNT(*) FROM medical_document WHERE created_at >= :cutoff_date LIMIT 100"),
-                {"cutoff_date": seven_days_ago}
-            ).scalar()
-            recent_doc_count = min(recent_doc_result or 0, 50)  # Cap at 50 for performance
+        # Run all count queries concurrently
+        tasks = [
+            async_db.get_patient_count(),
+            async_db.get_today_appointments_count(),
+            async_db.get_recent_documents_count(7)
+        ]
+        
+        patient_count, today_apt_count, recent_doc_count = await asyncio.gather(
+            *tasks, return_exceptions=True
+        )
+        
+        # Handle any exceptions from concurrent queries
+        patient_count = patient_count if not isinstance(patient_count, Exception) else 0
+        today_apt_count = today_apt_count if not isinstance(today_apt_count, Exception) else 0
+        recent_doc_count = min(recent_doc_count if not isinstance(recent_doc_count, Exception) else 0, 50)
         
         result = {
             'patient_count': patient_count,
@@ -141,13 +134,16 @@ def get_home_page_data_optimized():
         return result
         
     except Exception as e:
-        logger.error(f"Error in get_home_page_data_optimized: {str(e)}")
-        # Return safe defaults if query fails
+        logger.error(f"Error in get_home_page_data_async: {str(e)}")
         return {
             'patient_count': 0,
             'today_appointments': 0,
             'recent_documents': 0
         }
+
+def get_home_page_data_optimized():
+    """Sync wrapper for backward compatibility"""
+    return asyncio.run(get_home_page_data_async())
 <line_number>1</line_number>
 """
 Database and application performance optimizations
