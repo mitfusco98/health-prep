@@ -1,4 +1,3 @@
-
 from functools import wraps
 from flask import flash, redirect, url_for
 import logging
@@ -11,7 +10,7 @@ def with_db_retry(max_retries=2):
         @wraps(func)
         def wrapper(*args, **kwargs):
             from app import db
-            
+
             for attempt in range(max_retries + 1):
                 try:
                     return func(*args, **kwargs)
@@ -25,7 +24,7 @@ def with_db_retry(max_retries=2):
                         'connection pool',
                         'database connection'
                     ])
-                    
+
                     if is_db_error and attempt < max_retries:
                         logger.warning(f"Database connection error on attempt {attempt + 1}, retrying: {str(e)}")
                         try:
@@ -39,7 +38,7 @@ def with_db_retry(max_retries=2):
                     else:
                         # Re-raise the exception if it's not a DB error or we've exhausted retries
                         raise e
-            
+
             return func(*args, **kwargs)
         return wrapper
     return decorator
@@ -61,7 +60,7 @@ def sanitize_db_inputs(func):
                 sanitized_args.append(sanitize_input(arg, max_length=5000))
             else:
                 sanitized_args.append(arg)
-        
+
         # Sanitize string keyword arguments
         sanitized_kwargs = {}
         for key, value in kwargs.items():
@@ -69,7 +68,7 @@ def sanitize_db_inputs(func):
                 sanitized_kwargs[key] = sanitize_input(value, max_length=5000)
             else:
                 sanitized_kwargs[key] = value
-        
+
         return func(*sanitized_args, **sanitized_kwargs)
     return wrapper
 
@@ -93,12 +92,12 @@ def safe_db_operation(func):
         try:
             # Call the original function
             result = func(*args, **kwargs)
-            
+
             # If the function returns a response without committing,
             # ensure we don't leave a dangling transaction
             if not getattr(result, '_db_committed', False):
                 db.session.commit()
-                
+
             return result
         except Exception as e:
             # Roll back the session if there's an error
@@ -119,7 +118,7 @@ def fresh_session_operation(func):
     def wrapper(*args, **kwargs):
         # Close any existing session
         db.session.close()
-        
+
         try:
             # Call the original function
             result = func(*args, **kwargs)
@@ -151,7 +150,7 @@ def get_patient_by_id_or_404(patient_id):
             return None
     except (ValueError, TypeError):
         return None
-    
+
     return Patient.query.get_or_404(patient_id_int)
 
 def get_patient_with_basic_data(patient_id):
@@ -159,11 +158,11 @@ def get_patient_with_basic_data(patient_id):
     patient = get_patient_by_id_or_404(patient_id)
     if not patient:
         return None
-    
+
     # Pre-load commonly accessed relationships
     conditions = Condition.query.filter_by(patient_id=patient_id, is_active=True).limit(10).all()
     alerts = PatientAlert.query.filter_by(patient_id=patient_id, is_active=True).limit(10).all()
-    
+
     return {
         'patient': patient,
         'conditions': conditions,
@@ -173,7 +172,7 @@ def get_patient_with_basic_data(patient_id):
 def search_patients(search_term, page=1, per_page=20, sort_field='created_at', sort_order='desc'):
     """Shared patient search functionality"""
     query = Patient.query
-    
+
     if search_term:
         search_filter = or_(
             Patient.first_name.ilike(f'%{search_term}%'),
@@ -182,7 +181,7 @@ def search_patients(search_term, page=1, per_page=20, sort_field='created_at', s
             func.concat(Patient.first_name, ' ', Patient.last_name).ilike(f'%{search_term}%')
         )
         query = query.filter(search_filter)
-    
+
     # Apply sorting
     if sort_field == 'name':
         sort_column = Patient.first_name
@@ -193,12 +192,12 @@ def search_patients(search_term, page=1, per_page=20, sort_field='created_at', s
         sort_order = 'asc' if sort_order == 'desc' else 'desc'
     else:
         sort_column = Patient.created_at
-    
+
     if sort_order == 'desc':
         query = query.order_by(sort_column.desc())
     else:
         query = query.order_by(sort_column.asc())
-    
+
     return query.paginate(page=page, per_page=per_page, error_out=False)
 
 def get_appointments_for_date(target_date):
@@ -222,22 +221,37 @@ def get_patient_screenings(patient_id, limit=20):
     return Screening.query.filter_by(patient_id=patient_id).limit(limit).all()
 
 def serialize_patient_basic(patient):
-    """Standard patient serialization for API responses"""
+    """Serialize patient data for list views with minimal fields"""
     return {
         'id': patient.id,
         'mrn': patient.mrn,
         'first_name': patient.first_name,
         'last_name': patient.last_name,
-        'full_name': patient.full_name,
-        'date_of_birth': patient.date_of_birth.isoformat() if patient.date_of_birth else None,
         'age': patient.age,
         'sex': patient.sex,
-        'phone': patient.phone,
-        'email': patient.email,
-        'address': patient.address,
-        'insurance': patient.insurance,
-        'created_at': patient.created_at.isoformat() if patient.created_at else None,
-        'updated_at': patient.updated_at.isoformat() if patient.updated_at else None
+        'phone': patient.phone[:12] + '...' if patient.phone and len(patient.phone) > 12 else patient.phone,
+        'created_at': patient.created_at.strftime('%Y-%m-%d') if patient.created_at else None
+    }
+
+def get_patient_summary_lightweight(patient_id):
+    """Get lightweight patient summary with essential data only"""
+    from models import Patient, Condition
+
+    patient = Patient.query.get(patient_id)
+    if not patient:
+        return None
+
+    # Get only active conditions, limited fields
+    conditions = Condition.query.filter_by(patient_id=patient_id, is_active=True)\
+        .with_entities(Condition.name, Condition.code)\
+        .limit(3).all()
+
+    return {
+        'id': patient.id,
+        'name': patient.first_name + ' ' + patient.last_name,
+        'mrn': patient.mrn,
+        'age': patient.age,
+        'conditions': [{'name': c.name, 'code': c.code} for c in conditions]
     }
 
 def serialize_appointment(appointment):

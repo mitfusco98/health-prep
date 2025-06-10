@@ -4,6 +4,44 @@
  * Reduces initial payload size by loading data on demand
  */
 
+class OptimizedAPIClient {
+    constructor(baseURL = '/api') {
+        this.baseURL = baseURL;
+    }
+
+    async fetchPatients(page = 1, fields = ['id', 'mrn', 'first_name', 'last_name', 'age', 'sex']) {
+        const params = new URLSearchParams({
+            page: page,
+            per_page: 20,
+            fields: fields.join(',')
+        });
+        
+        const response = await fetch(`${this.baseURL}/patients?${params}`);
+        return response.json();
+    }
+
+    async fetchPatientDetail(patientId, includes = []) {
+        const params = new URLSearchParams();
+        includes.forEach(include => params.append(`include_${include}`, 'true'));
+        
+        const response = await fetch(`${this.baseURL}/patients/${patientId}?${params}`);
+        return response.json();
+    }
+
+    async fetchAppointments(date, fields = ['id', 'patient_name', 'appointment_time', 'status']) {
+        const params = new URLSearchParams({
+            date: date,
+            fields: fields.join(',')
+        });
+        
+        const response = await fetch(`${this.baseURL}/appointments?${params}`);
+        return response.json();
+    }
+}
+
+// Initialize optimized API client
+const apiClient = new OptimizedAPIClient();
+
 class LazyLoader {
     constructor() {
         this.cache = new Map();

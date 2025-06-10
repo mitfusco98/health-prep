@@ -62,8 +62,17 @@ def api_patients():
         # Use shared search function
         pagination = search_patients(search_term, page, per_page, sort_field, sort_order)
 
-        # Serialize patients using shared function
-        patients_data = [serialize_patient_basic(patient) for patient in pagination.items]
+        # Serialize patients with minimal fields for list view
+        patients_data = [{
+            'id': patient.id,
+            'mrn': patient.mrn,
+            'first_name': patient.first_name,
+            'last_name': patient.last_name,
+            'age': patient.age,
+            'sex': patient.sex,
+            'phone': patient.phone[:12] + '...' if patient.phone and len(patient.phone) > 12 else patient.phone,  # Truncate long phone numbers
+            'created_at': patient.created_at.strftime('%Y-%m-%d') if patient.created_at else None  # Date only, not full timestamp
+        } for patient in pagination.items]
 
         return jsonify({
             'patients': patients_data,
@@ -107,58 +116,61 @@ def api_patient_detail(patient_id):
         include_screenings = request.args.get('include_screenings', 'false').lower() == 'true'
         include_alerts = request.args.get('include_alerts', 'false').lower() == 'true'
 
-        # Always load basic conditions (lightweight)
-        conditions = Condition.query.filter_by(patient_id=patient.id, is_active=True).limit(10).all()
+        # Load only essential condition data
+        conditions = Condition.query.filter_by(patient_id=patient.id, is_active=True)\
+            .with_entities(Condition.id, Condition.name, Condition.code)\
+            .limit(5).all()
 
-        # Conditionally load heavy data using shared functions
-        recent_vitals = get_patient_recent_vitals(patient.id) if include_vitals else []
-        recent_visits = get_patient_recent_visits(patient.id) if include_visits else []
+        # Conditionally load heavy data with minimal fields
+        recent_vitals = []
+        if include_vitals:
+            vitals = Vital.query.filter_by(patient_id=patient.id)\
+                .with_entities(Vital.id, Vital.date, Vital.weight, Vital.height, 
+                              Vital.blood_pressure_systolic, Vital.blood_pressure_diastolic)\
+                .order_by(Vital.date.desc()).limit(3).all()
+            recent_vitals = vitals
+
+        recent_visits = []
+        if include_visits:
+            visits = Visit.query.filter_by(patient_id=patient.id)\
+                .with_entities(Visit.id, Visit.visit_date, Visit.visit_type, Visit.provider)\
+                .order_by(Visit.visit_date.desc()).limit(3).all()
+            recent_visits = visits
+
         screenings = get_patient_screenings(patient.id) if include_screenings else []
-        alerts = PatientAlert.query.filter_by(patient_id=patient.id, is_active=True).limit(10).all() if include_alerts else []
+        alerts = PatientAlert.query.filter_by(patient_id=patient.id, is_active=True)\
+            .with_entities(PatientAlert.id, PatientAlert.alert_type, PatientAlert.description, PatientAlert.severity)\
+            .limit(5).all() if include_alerts else []
 
-        # Serialize patient data
+        # Serialize patient data with essential fields only
         patient_data = {
             'id': patient.id,
             'mrn': patient.mrn,
             'first_name': patient.first_name,
             'last_name': patient.last_name,
-            'full_name': patient.full_name,
-            'date_of_birth': patient.date_of_birth.isoformat() if patient.date_of_birth else None,
             'age': patient.age,
             'sex': patient.sex,
             'phone': patient.phone,
             'email': patient.email,
-            'address': patient.address,
-            'insurance': patient.insurance,
-            'created_at': patient.created_at.isoformat() if patient.created_at else None,
-            'updated_at': patient.updated_at.isoformat() if patient.updated_at else None,
+            # Remove address and insurance from API response for privacy
+            'created_at': patient.created_at.strftime('%Y-%m-%d') if patient.created_at else None,
             'conditions': [{
                 'id': c.id,
                 'name': c.name,
-                'code': c.code,
-                'diagnosed_date': c.diagnosed_date.isoformat() if c.diagnosed_date else None,
-                'notes': c.notes
+                'code': c.code
             } for c in conditions],
             'recent_vitals': [{
                 'id': v.id,
-                'date': v.date.isoformat() if v.date else None,
+                'date': v.date.strftime('%Y-%m-%d') if v.date else None,
                 'weight': v.weight,
                 'height': v.height,
-                'bmi': v.bmi,
-                'temperature': v.temperature,
-                'blood_pressure_systolic': v.blood_pressure_systolic,
-                'blood_pressure_diastolic': v.blood_pressure_diastolic,
-                'pulse': v.pulse,
-                'respiratory_rate': v.respiratory_rate,
-                'oxygen_saturation': v.oxygen_saturation
+                'bp': f"{v.blood_pressure_systolic}/{v.blood_pressure_diastolic}" if v.blood_pressure_systolic and v.blood_pressure_diastolic else None
             } for v in recent_vitals],
             'recent_visits': [{
                 'id': v.id,
-                'visit_date': v.visit_date.isoformat() if v.visit_date else None,
+                'visit_date': v.visit_date.strftime('%Y-%m-%d') if v.visit_date else None,
                 'visit_type': v.visit_type,
-                'provider': v.provider,
-                'reason': v.reason,
-                'notes': v.notes
+                'provider': v.provider
             } for v in recent_visits],
             'screenings': [{
                 'id': s.id,
@@ -492,8 +504,15 @@ def api_appointments():
         # Get appointments for the selected date using shared function
         appointments = get_appointments_for_date(selected_date)
 
-        # Serialize appointments using shared function
-        appointments_data = [serialize_appointment(apt) for apt in appointments]
+        # Serialize appointments with minimal fields
+        appointments_data = [{
+            'id': apt.id,
+            'patient_name': apt.patient.first_name + ' ' + apt.patient.last_name,
+            'patient_mrn': apt.patient.mrn,
+            'appointment_time': apt.appointment_time.strftime('%H:%M'),
+            'status': apt.status,
+            'note': apt.note[:50] + '...' if apt.note and len(apt.note) > 50 else apt.note
+        } for apt in appointments]
 
         return jsonify({
             'date': selected_date.isoformat(),
