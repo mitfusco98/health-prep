@@ -642,6 +642,73 @@ def format_log_details(log):
                             truncated_procedures = procedures[:50] + "..." if len(procedures) > 50 else procedures
                             formatted_details.append(f"<span class='badge bg-light text-dark'>Procedures: {truncated_procedures}</span>")
 
+                # Show screening-related details (screening types and individual screenings)
+                screening_data_types = ['screening_type', 'screening']
+                is_screening_data = (any(screening_type_check in log.event_type.lower() for screening_type_check in ['screening']) or 
+                                   data_type in screening_data_types)
+                
+                if is_screening_data:
+                    # Screening Type details (name, frequency, age criteria, etc.)
+                    if data_type == 'screening_type' or 'screening_type' in log.event_type.lower():
+                        screening_type_name = event_data.get('screening_type_name')
+                        description = event_data.get('description')
+                        default_frequency = event_data.get('default_frequency')
+                        gender_specific = event_data.get('gender_specific')
+                        min_age = event_data.get('min_age')
+                        max_age = event_data.get('max_age')
+                        is_active = event_data.get('is_active')
+                        patient_usage_count = event_data.get('patient_usage_count')
+                        deactivation_reason = event_data.get('deactivation_reason')
+                        
+                        if screening_type_name:
+                            formatted_details.append(f"<span class='badge bg-primary'>Screening Type: {screening_type_name}</span>")
+                        if description and len(description.strip()) > 0:
+                            truncated_desc = description[:60] + "..." if len(description) > 60 else description
+                            formatted_details.append(f"<span class='badge bg-secondary'>Description: {truncated_desc}</span>")
+                        if default_frequency and default_frequency != 'None':
+                            formatted_details.append(f"<span class='badge bg-info'>Frequency: {default_frequency}</span>")
+                        if gender_specific and gender_specific != 'All Genders':
+                            formatted_details.append(f"<span class='badge bg-warning'>Gender: {gender_specific}</span>")
+                        if min_age and min_age != 'None':
+                            formatted_details.append(f"<span class='badge bg-light text-dark'>Min Age: {min_age}</span>")
+                        if max_age and max_age != 'None':
+                            formatted_details.append(f"<span class='badge bg-light text-dark'>Max Age: {max_age}</span>")
+                        if is_active is not None:
+                            status_text = 'Active' if is_active else 'Inactive'
+                            status_class = 'bg-success' if is_active else 'bg-danger'
+                            formatted_details.append(f"<span class='badge {status_class}'>Status: {status_text}</span>")
+                        if patient_usage_count is not None:
+                            formatted_details.append(f"<span class='badge bg-info'>Patient Usage: {patient_usage_count}</span>")
+                        if deactivation_reason:
+                            formatted_details.append(f"<span class='badge bg-warning'>Reason: {deactivation_reason}</span>")
+                    
+                    # Individual Screening details (patient screening recommendations)
+                    elif data_type == 'screening' or ('screening' in log.event_type.lower() and 'screening_type' not in log.event_type.lower()):
+                        screening_id = event_data.get('screening_id')
+                        screening_type = event_data.get('screening_type')
+                        due_date = event_data.get('due_date')
+                        last_completed = event_data.get('last_completed')
+                        priority = event_data.get('priority')
+                        frequency = event_data.get('frequency')
+                        notes = event_data.get('notes')
+                        
+                        if screening_id:
+                            formatted_details.append(f"<span class='badge bg-primary'>Screening ID: {screening_id}</span>")
+                        if screening_type:
+                            formatted_details.append(f"<span class='badge bg-success'>Type: {screening_type}</span>")
+                        if due_date and due_date != 'None':
+                            formatted_details.append(f"<span class='badge bg-warning'>Due Date: {due_date}</span>")
+                        if last_completed and last_completed != 'None':
+                            formatted_details.append(f"<span class='badge bg-info'>Last Completed: {last_completed}</span>")
+                        if priority and priority != 'None':
+                            priority_class = {'High': 'bg-danger', 'Medium': 'bg-warning', 'Low': 'bg-secondary'}.get(priority, 'bg-secondary')
+                            formatted_details.append(f"<span class='badge {priority_class}'>Priority: {priority}</span>")
+                        if frequency and frequency != 'None':
+                            formatted_details.append(f"<span class='badge bg-light text-dark'>Frequency: {frequency}</span>")
+                        if notes and len(notes.strip()) > 0 and notes != 'None':
+                            truncated_notes = notes[:60] + "..." if len(notes) > 60 else notes
+                            formatted_details.append(f"<span class='badge bg-secondary'>Notes: {truncated_notes}</span>")
+
                 # Show page address/endpoint
                 page_address = None
                 if 'endpoint' in event_data:
