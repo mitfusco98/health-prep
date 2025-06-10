@@ -1,16 +1,16 @@
-
 from flask import jsonify, render_template_string
 from app import app
 from profiler import profiler
 from jwt_utils import admin_required
 import json
 
-@app.route('/admin/performance', methods=['GET'])
+
+@app.route("/admin/performance", methods=["GET"])
 @admin_required
 def performance_dashboard():
     """Performance monitoring dashboard"""
     report = profiler.generate_report()
-    
+
     dashboard_html = """
     <!DOCTYPE html>
     <html>
@@ -111,16 +111,20 @@ def performance_dashboard():
     </body>
     </html>
     """
-    
-    return render_template_string(dashboard_html, report=report, report_json=json.dumps(report, indent=2))
 
-@app.route('/admin/performance/api', methods=['GET'])
+    return render_template_string(
+        dashboard_html, report=report, report_json=json.dumps(report, indent=2)
+    )
+
+
+@app.route("/admin/performance/api", methods=["GET"])
 @admin_required
 def performance_api():
     """Get performance data as JSON"""
     return jsonify(profiler.generate_report())
 
-@app.route('/admin/performance/recommendations', methods=['GET'])
+
+@app.route("/admin/performance/recommendations", methods=["GET"])
 @admin_required
 def performance_recommendations():
     """Get performance recommendations"""

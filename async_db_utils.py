@@ -1,4 +1,3 @@
-
 import asyncio
 import asyncpg
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -8,20 +7,19 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class AsyncDatabaseManager:
     def __init__(self, database_url):
         self.engine = create_async_engine(
-            database_url.replace('postgresql://', 'postgresql+asyncpg://'),
+            database_url.replace("postgresql://", "postgresql+asyncpg://"),
             echo=False,
             pool_size=20,
             max_overflow=30,
             pool_pre_ping=True,
-            pool_recycle=3600
+            pool_recycle=3600,
         )
         self.async_session = sessionmaker(
-            self.engine, 
-            class_=AsyncSession, 
-            expire_on_commit=False
+            self.engine, class_=AsyncSession, expire_on_commit=False
         )
 
     @asynccontextmanager
@@ -61,7 +59,7 @@ class AsyncDatabaseManager:
         SELECT COUNT(*) FROM medical_document 
         WHERE created_at >= CURRENT_DATE - INTERVAL '%s days'
         """
-        result = await self.execute_query(query, {'days': days})
+        result = await self.execute_query(query, {"days": days})
         return result[0][0] if result else 0
 
     async def search_patients_async(self, search_term, limit=20):
@@ -75,8 +73,7 @@ class AsyncDatabaseManager:
         """
         search_pattern = f"%{search_term}%"
         result = await self.execute_query(
-            query, 
-            [search_pattern, search_pattern, search_pattern, limit]
+            query, [search_pattern, search_pattern, search_pattern, limit]
         )
         return [dict(row) for row in result]
 
@@ -84,8 +81,10 @@ class AsyncDatabaseManager:
         """Close the async engine"""
         await self.engine.dispose()
 
+
 # Global async database manager
 async_db = None
+
 
 def init_async_db(database_url):
     """Initialize async database manager"""

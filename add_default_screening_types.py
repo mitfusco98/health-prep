@@ -14,7 +14,7 @@ DEFAULT_SCREENING_TYPES = [
         "gender_specific": None,
         "min_age": None,
         "max_age": None,
-        "is_active": True
+        "is_active": True,
     },
     {
         "name": "Lipid Panel",
@@ -23,7 +23,7 @@ DEFAULT_SCREENING_TYPES = [
         "gender_specific": None,
         "min_age": 20,
         "max_age": None,
-        "is_active": True
+        "is_active": True,
     },
     {
         "name": "A1c",
@@ -32,7 +32,7 @@ DEFAULT_SCREENING_TYPES = [
         "gender_specific": None,
         "min_age": 45,
         "max_age": None,
-        "is_active": True
+        "is_active": True,
     },
     {
         "name": "Colonoscopy",
@@ -41,7 +41,7 @@ DEFAULT_SCREENING_TYPES = [
         "gender_specific": None,
         "min_age": 45,
         "max_age": 75,
-        "is_active": True
+        "is_active": True,
     },
     {
         "name": "Pap Smear",
@@ -50,7 +50,7 @@ DEFAULT_SCREENING_TYPES = [
         "gender_specific": "Female",
         "min_age": 21,
         "max_age": 65,
-        "is_active": True
+        "is_active": True,
     },
     {
         "name": "Mammogram",
@@ -59,7 +59,7 @@ DEFAULT_SCREENING_TYPES = [
         "gender_specific": "Female",
         "min_age": 40,
         "max_age": 74,
-        "is_active": True
+        "is_active": True,
     },
     {
         "name": "DEXA Scan",
@@ -68,7 +68,7 @@ DEFAULT_SCREENING_TYPES = [
         "gender_specific": "Female",
         "min_age": 65,
         "max_age": None,
-        "is_active": True
+        "is_active": True,
     },
     {
         "name": "PSA Test",
@@ -77,7 +77,7 @@ DEFAULT_SCREENING_TYPES = [
         "gender_specific": "Male",
         "min_age": 50,
         "max_age": 70,
-        "is_active": True
+        "is_active": True,
     },
     {
         "name": "Blood Pressure",
@@ -86,7 +86,7 @@ DEFAULT_SCREENING_TYPES = [
         "gender_specific": None,
         "min_age": 18,
         "max_age": None,
-        "is_active": True
+        "is_active": True,
     },
     {
         "name": "Eye Exam",
@@ -95,9 +95,10 @@ DEFAULT_SCREENING_TYPES = [
         "gender_specific": None,
         "min_age": 40,
         "max_age": None,
-        "is_active": True
-    }
+        "is_active": True,
+    },
 ]
+
 
 def add_default_screening_types():
     """Add default screening types to the database"""
@@ -105,18 +106,23 @@ def add_default_screening_types():
         # Check if there are already screening types in the database
         existing_count = ScreeningType.query.count()
         if existing_count > 0:
-            print(f"Found {existing_count} existing screening types. Skipping default population.")
+            print(
+                f"Found {existing_count} existing screening types. Skipping default population."
+            )
             return
-        
+
         # Add each default screening type
         for screening_data in DEFAULT_SCREENING_TYPES:
             screening_type = ScreeningType(**screening_data)
             db.session.add(screening_type)
             print(f"Adding screening type: {screening_data['name']}")
-        
+
         # Commit the changes
         db.session.commit()
-        print(f"Successfully added {len(DEFAULT_SCREENING_TYPES)} default screening types")
+        print(
+            f"Successfully added {len(DEFAULT_SCREENING_TYPES)} default screening types"
+        )
+
 
 if __name__ == "__main__":
     add_default_screening_types()

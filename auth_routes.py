@@ -12,7 +12,8 @@ from structured_logging import get_structured_logger
 
 logger = logging.getLogger(__name__)
 
-@app.route('/api/auth/login', methods=['POST'])
+
+@app.route("/api/auth/login", methods=["POST"])
 @csrf.exempt
 def jwt_login():
     """
@@ -39,30 +40,34 @@ def jwt_login():
         try:
             data = request.get_json()
         except Exception as json_error:
-            logger.warning(f"Malformed JSON received from {request.remote_addr}: {str(json_error)}")
-            return jsonify({'error': 'Invalid JSON format'}), 400
+            logger.warning(
+                f"Malformed JSON received from {request.remote_addr}: {str(json_error)}"
+            )
+            return jsonify({"error": "Invalid JSON format"}), 400
 
         if not data:
-            return jsonify({'error': 'JSON data required'}), 400
+            return jsonify({"error": "JSON data required"}), 400
 
         # Validate required fields
-        if not data.get('username') or not data.get('password'):
-            return jsonify({'error': 'Username and password are required'}), 400
+        if not data.get("username") or not data.get("password"):
+            return jsonify({"error": "Username and password are required"}), 400
 
         # Validate field types and lengths
-        if not isinstance(data['username'], str) or not isinstance(data['password'], str):
-            return jsonify({'error': 'Username and password must be strings'}), 400
+        if not isinstance(data["username"], str) or not isinstance(
+            data["password"], str
+        ):
+            return jsonify({"error": "Username and password must be strings"}), 400
 
-        username = data['username'].strip()
-        password = data['password']
+        username = data["username"].strip()
+        password = data["password"]
 
         # Validate username format and length
         if len(username) < 3 or len(username) > 100:
-            return jsonify({'error': 'Username must be 3-100 characters long'}), 400
+            return jsonify({"error": "Username must be 3-100 characters long"}), 400
 
         # Validate password length
         if len(password) < 6 or len(password) > 200:
-            return jsonify({'error': 'Password must be 6-200 characters long'}), 400
+            return jsonify({"error": "Password must be 6-200 characters long"}), 400
 
         # Find user by username or email
         user = User.query.filter(
@@ -75,56 +80,59 @@ def jwt_login():
             import json
 
             failed_login_details = {
-                'attempted_username': username,
-                'login_method': 'web_form',
-                'ip_address': request.remote_addr,
-                'user_agent': request.headers.get('User-Agent', 'Unknown'),
-                'reason': 'invalid_credentials',
-                'timestamp': datetime.now().isoformat()
+                "attempted_username": username,
+                "login_method": "web_form",
+                "ip_address": request.remote_addr,
+                "user_agent": request.headers.get("User-Agent", "Unknown"),
+                "reason": "invalid_credentials",
+                "timestamp": datetime.now().isoformat(),
             }
 
             AdminLog.log_event(
-                event_type='login_fail',
+                event_type="login_fail",
                 user_id=None,
                 event_details=json.dumps(failed_login_details),
                 request_id=str(uuid.uuid4()),
                 ip_address=request.remote_addr,
-                user_agent=request.headers.get('User-Agent', 'Unknown')
+                user_agent=request.headers.get("User-Agent", "Unknown"),
             )
 
             # Log failed login attempt
             from structured_logging import get_structured_logger
-            structured_logger = get_structured_logger('auth')
+
+            structured_logger = get_structured_logger("auth")
             structured_logger.log_authentication_event(
-                event_type='login',
+                event_type="login",
                 username=username,
                 success=False,
-                reason='invalid_credentials'
+                reason="invalid_credentials",
             )
-            return jsonify({'error': 'Invalid username or password'}), 401
+            return jsonify({"error": "Invalid username or password"}), 401
 
         # Generate JWT token with admin role
         access_token = generate_jwt_token(user.id, user.username, user.is_admin)
 
         logger.info(f"Successful JWT login for user: {user.username}")
 
-        response = jsonify({
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'is_admin': user.is_admin
+        response = jsonify(
+            {
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "is_admin": user.is_admin,
+                }
             }
-        })
+        )
 
         # Set the JWT token as an HTTP-only cookie
         response.set_cookie(
-            'auth_token',
+            "auth_token",
             access_token,
             httponly=True,
             secure=False,  # Set to True in production with HTTPS
-            samesite='Lax',
-            path='/'
+            samesite="Lax",
+            path="/",
         )
 
         return response, 200
@@ -135,17 +143,25 @@ def jwt_login():
 
         error_id = str(uuid.uuid4())[:8]
         logger.error(f"JWT Login Error [{error_id}]:")
-        logger.error(f"Username attempted: {data.get('username', 'unknown') if 'data' in locals() else 'unknown'}")
+        logger.error(
+            f"Username attempted: {data.get('username', 'unknown') if 'data' in locals() else 'unknown'}"
+        )
         logger.error(f"Remote Address: {request.remote_addr}")
         logger.error(f"Error: {str(e)}")
         logger.error(f"Stack Trace:\n{traceback.format_exc()}")
 
-        return jsonify({
-            'error': 'Authentication service temporarily unavailable',
-            'error_id': error_id
-        }), 500
+        return (
+            jsonify(
+                {
+                    "error": "Authentication service temporarily unavailable",
+                    "error_id": error_id,
+                }
+            ),
+            500,
+        )
 
-@app.route('/api/auth/register', methods=['POST'])
+
+@app.route("/api/auth/register", methods=["POST"])
 @csrf.exempt
 def jwt_register():
     """
@@ -163,43 +179,53 @@ def jwt_register():
         try:
             data = request.get_json()
         except Exception as json_error:
-            logger.warning(f"Malformed JSON received from {request.remote_addr}: {str(json_error)}")
-            return jsonify({'error': 'Invalid JSON format'}), 400
+            logger.warning(
+                f"Malformed JSON received from {request.remote_addr}: {str(json_error)}"
+            )
+            return jsonify({"error": "Invalid JSON format"}), 400
 
         if not data:
-            return jsonify({'error': 'JSON data required'}), 400
+            return jsonify({"error": "JSON data required"}), 400
 
         # Validate required fields
-        required_fields = ['username', 'email', 'password']
+        required_fields = ["username", "email", "password"]
         for field in required_fields:
             if not data.get(field):
-                return jsonify({'error': f'{field} is required'}), 400
+                return jsonify({"error": f"{field} is required"}), 400
 
         # Validate field types
         for field in required_fields:
             if not isinstance(data[field], str):
-                return jsonify({'error': f'{field} must be a string'}), 400
+                return jsonify({"error": f"{field} must be a string"}), 400
 
-        username = data['username'].strip()
-        email = data['email'].strip()
-        password = data['password']
+        username = data["username"].strip()
+        email = data["email"].strip()
+        password = data["password"]
 
         # Validate username
         if len(username) < 3 or len(username) > 50:
-            return jsonify({'error': 'Username must be 3-50 characters long'}), 400
+            return jsonify({"error": "Username must be 3-50 characters long"}), 400
 
         import re
-        if not re.match(r'^[a-zA-Z0-9_.-]+$', username):
-            return jsonify({'error': 'Username can only contain letters, numbers, dots, hyphens, and underscores'}), 400
+
+        if not re.match(r"^[a-zA-Z0-9_.-]+$", username):
+            return (
+                jsonify(
+                    {
+                        "error": "Username can only contain letters, numbers, dots, hyphens, and underscores"
+                    }
+                ),
+                400,
+            )
 
         # Validate email
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         if not re.match(email_pattern, email) or len(email) > 254:
-            return jsonify({'error': 'Invalid email format'}), 400
+            return jsonify({"error": "Invalid email format"}), 400
 
         # Validate password
         if len(password) < 6 or len(password) > 200:
-            return jsonify({'error': 'Password must be 6-200 characters long'}), 400
+            return jsonify({"error": "Password must be 6-200 characters long"}), 400
 
         # Check if user already exists
         existing_user = User.query.filter(
@@ -207,14 +233,10 @@ def jwt_register():
         ).first()
 
         if existing_user:
-            return jsonify({'error': 'Username or email already exists'}), 409
+            return jsonify({"error": "Username or email already exists"}), 409
 
         # Create new user
-        new_user = User(
-            username=username,
-            email=email,
-            is_admin=False
-        )
+        new_user = User(username=username, email=email, is_admin=False)
         new_user.set_password(password)
 
         db.session.add(new_user)
@@ -225,23 +247,25 @@ def jwt_register():
 
         logger.info(f"New user registered: {new_user.username}")
 
-        response = jsonify({
-            'user': {
-                'id': new_user.id,
-                'username': new_user.username,
-                'email': new_user.email,
-                'is_admin': new_user.is_admin
+        response = jsonify(
+            {
+                "user": {
+                    "id": new_user.id,
+                    "username": new_user.username,
+                    "email": new_user.email,
+                    "is_admin": new_user.is_admin,
+                }
             }
-        })
+        )
 
         # Set the JWT token as an HTTP-only cookie
         response.set_cookie(
-            'auth_token',
+            "auth_token",
             access_token,
             httponly=True,
             secure=False,  # Set to True in production with HTTPS
-            samesite='Lax',
-            path='/'
+            samesite="Lax",
+            path="/",
         )
 
         return response, 201
@@ -252,19 +276,29 @@ def jwt_register():
 
         error_id = str(uuid.uuid4())[:8]
         logger.error(f"JWT Registration Error [{error_id}]:")
-        logger.error(f"Username attempted: {data.get('username', 'unknown') if 'data' in locals() else 'unknown'}")
-        logger.error(f"Email attempted: {data.get('email', 'unknown') if 'data' in locals() else 'unknown'}")
+        logger.error(
+            f"Username attempted: {data.get('username', 'unknown') if 'data' in locals() else 'unknown'}"
+        )
+        logger.error(
+            f"Email attempted: {data.get('email', 'unknown') if 'data' in locals() else 'unknown'}"
+        )
         logger.error(f"Remote Address: {request.remote_addr}")
         logger.error(f"Error: {str(e)}")
         logger.error(f"Stack Trace:\n{traceback.format_exc()}")
 
         db.session.rollback()
-        return jsonify({
-            'error': 'Registration service temporarily unavailable',
-            'error_id': error_id
-        }), 500
+        return (
+            jsonify(
+                {
+                    "error": "Registration service temporarily unavailable",
+                    "error_id": error_id,
+                }
+            ),
+            500,
+        )
 
-@app.route('/api/auth/refresh', methods=['POST'])
+
+@app.route("/api/auth/refresh", methods=["POST"])
 @csrf.exempt
 def jwt_refresh():
     """
@@ -278,30 +312,30 @@ def jwt_refresh():
     """
     try:
         # Get current token from cookie or Authorization header
-        token = request.cookies.get('auth_token')
+        token = request.cookies.get("auth_token")
 
         if not token:
-            auth_header = request.headers.get('Authorization')
-            if auth_header and auth_header.startswith('Bearer '):
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
                 token = auth_header[7:]
 
         if not token:
-            return jsonify({'error': 'Current token required'}), 400
+            return jsonify({"error": "Current token required"}), 400
 
         # Generate new token
         new_token = refresh_token(token)
 
         if not new_token:
-            return jsonify({'error': 'Unable to refresh token'}), 400
+            return jsonify({"error": "Unable to refresh token"}), 400
 
-        response = jsonify({'success': True})
+        response = jsonify({"success": True})
         response.set_cookie(
-            'auth_token',
+            "auth_token",
             new_token,
             httponly=True,
             secure=False,  # Set to True in production with HTTPS
-            samesite='Lax',
-            path='/'
+            samesite="Lax",
+            path="/",
         )
 
         return response, 200
@@ -316,12 +350,18 @@ def jwt_refresh():
         logger.error(f"Error: {str(e)}")
         logger.error(f"Stack Trace:\n{traceback.format_exc()}")
 
-        return jsonify({
-            'error': 'Token refresh service temporarily unavailable',
-            'error_id': error_id
-        }), 500
+        return (
+            jsonify(
+                {
+                    "error": "Token refresh service temporarily unavailable",
+                    "error_id": error_id,
+                }
+            ),
+            500,
+        )
 
-@app.route('/api/auth/verify', methods=['GET'])
+
+@app.route("/api/auth/verify", methods=["GET"])
 @csrf.exempt
 @jwt_required
 def jwt_verify():
@@ -341,15 +381,20 @@ def jwt_verify():
     try:
         from flask import g
 
-        return jsonify({
-            'valid': True,
-            'user': {
-                'id': g.current_user.id,
-                'username': g.current_user.username,
-                'email': g.current_user.email,
-                'is_admin': g.current_user.is_admin
-            }
-        }), 200
+        return (
+            jsonify(
+                {
+                    "valid": True,
+                    "user": {
+                        "id": g.current_user.id,
+                        "username": g.current_user.username,
+                        "email": g.current_user.email,
+                        "is_admin": g.current_user.is_admin,
+                    },
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         import traceback
@@ -361,32 +406,35 @@ def jwt_verify():
         logger.error(f"Error: {str(e)}")
         logger.error(f"Stack Trace:\n{traceback.format_exc()}")
 
-        return jsonify({
-            'error': 'Token verification service temporarily unavailable',
-            'error_id': error_id
-        }), 500
+        return (
+            jsonify(
+                {
+                    "error": "Token verification service temporarily unavailable",
+                    "error_id": error_id,
+                }
+            ),
+            500,
+        )
 
-@app.route('/api/auth/logout', methods=['POST'])
+
+@app.route("/api/auth/logout", methods=["POST"])
 @csrf.exempt
 def jwt_logout():
     """
     Logout endpoint that clears the HTTP-only cookie
     """
     try:
-        response = jsonify({
-            'success': True,
-            'message': 'Logout successful'
-        })
+        response = jsonify({"success": True, "message": "Logout successful"})
 
         # Clear the HTTP-only cookie
         response.set_cookie(
-            'auth_token',
-            '',
+            "auth_token",
+            "",
             max_age=0,
             httponly=True,
             secure=False,  # Set to True in production with HTTPS
-            samesite='Lax',
-            path='/'
+            samesite="Lax",
+            path="/",
         )
 
         return response, 200
@@ -401,7 +449,12 @@ def jwt_logout():
         logger.error(f"Error: {str(e)}")
         logger.error(f"Stack Trace:\n{traceback.format_exc()}")
 
-        return jsonify({
-            'error': 'Logout service temporarily unavailable',
-            'error_id': error_id
-        }), 500
+        return (
+            jsonify(
+                {
+                    "error": "Logout service temporarily unavailable",
+                    "error_id": error_id,
+                }
+            ),
+            500,
+        )

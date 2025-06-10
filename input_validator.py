@@ -1,6 +1,7 @@
 """
 Simple input validation system for POST endpoints with comprehensive error logging
 """
+
 import re
 import uuid
 import logging
@@ -12,7 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 # Import validation functions from shared utilities
-from shared_utilities import validate_email, validate_phone, validate_date_input as validate_date_format, log_validation_error_unified as log_validation_error
+from shared_utilities import (
+    validate_email,
+    validate_phone,
+    validate_date_input as validate_date_format,
+    log_validation_error_unified as log_validation_error,
+)
 
 
 def validate_patient_data(form_data):
@@ -20,36 +26,38 @@ def validate_patient_data(form_data):
     errors = []
 
     # Required fields
-    if not form_data.get('first_name', '').strip():
+    if not form_data.get("first_name", "").strip():
         errors.append("First name is required")
-    elif len(form_data.get('first_name', '')) > 50:
+    elif len(form_data.get("first_name", "")) > 50:
         errors.append("First name must be less than 50 characters")
 
-    if not form_data.get('last_name', '').strip():
+    if not form_data.get("last_name", "").strip():
         errors.append("Last name is required")
-    elif len(form_data.get('last_name', '')) > 50:
+    elif len(form_data.get("last_name", "")) > 50:
         errors.append("Last name must be less than 50 characters")
 
     # Date of birth validation
-    if form_data.get('date_of_birth'):
-        is_valid, date_errors = validate_date_format(form_data['date_of_birth'], "Date of birth")
+    if form_data.get("date_of_birth"):
+        is_valid, date_errors = validate_date_format(
+            form_data["date_of_birth"], "Date of birth"
+        )
         if not is_valid:
             errors.extend(date_errors)
     else:
         errors.append("Date of birth is required")
 
     # Gender validation
-    if form_data.get('gender') not in ['Male', 'Female', 'Other']:
+    if form_data.get("gender") not in ["Male", "Female", "Other"]:
         errors.append("Gender must be Male, Female, or Other")
 
     # Phone number validation
-    phone = form_data.get('phone_number', '').strip()
+    phone = form_data.get("phone_number", "").strip()
     is_valid, phone_errors = validate_phone(phone)
     if not is_valid:
         errors.extend(phone_errors)
 
     # Email validation
-    email = form_data.get('email', '').strip()
+    email = form_data.get("email", "").strip()
     is_valid, email_errors = validate_email(email)
     if not is_valid:
         errors.extend(email_errors)
@@ -63,24 +71,26 @@ def validate_appointment_data(form_data):
 
     # Patient ID validation
     try:
-        patient_id = int(form_data.get('patient_id', 0))
+        patient_id = int(form_data.get("patient_id", 0))
         if patient_id <= 0:
             errors.append("Valid patient must be selected")
     except (ValueError, TypeError):
         errors.append("Valid patient must be selected")
 
     # Date validation
-    if form_data.get('appointment_date'):
-        is_valid, date_errors = validate_date_format(form_data['appointment_date'], "Appointment date")
+    if form_data.get("appointment_date"):
+        is_valid, date_errors = validate_date_format(
+            form_data["appointment_date"], "Appointment date"
+        )
         if not is_valid:
             errors.extend(date_errors)
     else:
         errors.append("Appointment date is required")
 
     # Time validation
-    if form_data.get('appointment_time'):
+    if form_data.get("appointment_time"):
         try:
-            app_time = datetime.strptime(form_data['appointment_time'], '%H:%M').time()
+            app_time = datetime.strptime(form_data["appointment_time"], "%H:%M").time()
             if app_time.hour < 8 or app_time.hour >= 16:
                 errors.append("Appointment time must be between 8:00 AM and 4:00 PM")
             if app_time.minute not in [0, 15, 30, 45]:
@@ -97,14 +107,14 @@ def validate_login_data(form_data):
     """Validate login form data"""
     errors = []
 
-    username = form_data.get('username', '').strip()
-    password = form_data.get('password', '')
+    username = form_data.get("username", "").strip()
+    password = form_data.get("password", "")
 
     if not username:
         errors.append("Username is required")
     elif len(username) < 3:
         errors.append("Username must be at least 3 characters")
-    elif not re.match(r'^[a-zA-Z0-9_]+$', username):
+    elif not re.match(r"^[a-zA-Z0-9_]+$", username):
         errors.append("Username can only contain letters, numbers, and underscores")
 
     if not password:
@@ -120,12 +130,16 @@ def validate_bulk_delete_data(form_data):
     errors = []
 
     # Check for appointment IDs
-    appointment_ids = form_data.get('appointment_ids', '').strip()
-    selected_appointments = form_data.getlist('selected_appointments[]') if hasattr(form_data, 'getlist') else []
+    appointment_ids = form_data.get("appointment_ids", "").strip()
+    selected_appointments = (
+        form_data.getlist("selected_appointments[]")
+        if hasattr(form_data, "getlist")
+        else []
+    )
 
     if appointment_ids:
         try:
-            ids = [int(id.strip()) for id in appointment_ids.split(',') if id.strip()]
+            ids = [int(id.strip()) for id in appointment_ids.split(",") if id.strip()]
             if not ids:
                 errors.append("At least one valid appointment ID is required")
         except ValueError:
@@ -143,10 +157,11 @@ def validate_post_input(validator_func):
     Args:
         validator_func: Function to validate form data, returns list of errors
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if request.method == 'POST':
+            if request.method == "POST":
                 form_data = request.form.to_dict()
 
                 # Run validation
@@ -154,25 +169,23 @@ def validate_post_input(validator_func):
 
                 if validation_errors:
                     # Log validation error
-                    user_id = session.get('user_id')
+                    user_id = session.get("user_id")
                     log_validation_error(
-                        request.endpoint, 
-                        validation_errors, 
-                        form_data, 
-                        user_id
+                        request.endpoint, validation_errors, form_data, user_id
                     )
 
                     # Flash error messages to user
                     for error in validation_errors:
-                        flash(error, 'error')
+                        flash(error, "error")
 
                     # Redirect back to referrer or appropriate page
-                    return redirect(request.referrer or url_for('index'))
+                    return redirect(request.referrer or url_for("index"))
 
             # Continue with original function if validation passes
             return func(*args, **kwargs)
 
         return wrapper
+
     return decorator
 
 

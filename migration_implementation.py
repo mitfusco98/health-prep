@@ -10,25 +10,25 @@ from pathlib import Path
 
 class HealthcareAppMigration:
     """Handles the migration to organized structure"""
-    
+
     def __init__(self, root_dir="."):
         self.root_dir = Path(root_dir)
         self.organized_dir = self.root_dir / "organized"
         self.backup_dir = self.root_dir / "backup_original"
-    
+
     def create_backup(self):
         """Create backup of original files"""
         print("Creating backup of original files...")
-        
+
         if self.backup_dir.exists():
             shutil.rmtree(self.backup_dir)
-        
+
         self.backup_dir.mkdir()
-        
+
         # Backup key files
         files_to_backup = [
             "demo_routes.py",
-            "api_routes.py", 
+            "api_routes.py",
             "auth_routes.py",
             "admin_middleware.py",
             "api_access_middleware.py",
@@ -36,16 +36,16 @@ class HealthcareAppMigration:
             "validators.py",
             "validation_utils.py",
             "input_validator.py",
-            "shared_utilities.py"
+            "shared_utilities.py",
         ]
-        
+
         for file_name in files_to_backup:
             src = self.root_dir / file_name
             if src.exists():
                 dst = self.backup_dir / file_name
                 shutil.copy2(src, dst)
                 print(f"  Backed up: {file_name}")
-    
+
     def create_integration_app(self):
         """Create integrated app.py that uses organized structure"""
         integration_content = '''"""
@@ -109,18 +109,18 @@ def organized_demo():
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
 '''
-        
+
         with open(self.root_dir / "integrated_app.py", "w") as f:
             f.write(integration_content)
-        
+
         print("✅ Created integrated_app.py")
-    
+
     def create_migration_templates(self):
         """Create templates to demonstrate the migration"""
         template_dir = self.root_dir / "templates"
-        
+
         # Migration demo template
-        migration_demo_template = '''<!DOCTYPE html>
+        migration_demo_template = """<!DOCTYPE html>
 <html>
 <head>
     <title>Healthcare App - Migration Demo</title>
@@ -242,13 +242,13 @@ if __name__ == "__main__":
         </div>
     </div>
 </body>
-</html>'''
-        
+</html>"""
+
         with open(template_dir / "migration_demo.html", "w") as f:
             f.write(migration_demo_template)
-        
+
         # Organized demo template
-        organized_demo_template = '''<!DOCTYPE html>
+        organized_demo_template = """<!DOCTYPE html>
 <html>
 <head>
     <title>Organized Services Demo</title>
@@ -299,16 +299,16 @@ if __name__ == "__main__":
         </div>
     </div>
 </body>
-</html>'''
-        
+</html>"""
+
         with open(template_dir / "organized_demo.html", "w") as f:
             f.write(organized_demo_template)
-        
+
         print("✅ Created migration demo templates")
-    
+
     def create_integration_guide(self):
         """Create practical integration guide"""
-        guide_content = '''# Healthcare App Integration Guide
+        guide_content = """# Healthcare App Integration Guide
 
 ## How to Use the Organized Structure
 
@@ -441,30 +441,30 @@ Compare functionality:
 3. Original: Complex validation vs Organized: Consolidated validation
 
 The organized structure provides the same functionality with much better maintainability.
-'''
-        
+"""
+
         with open(self.root_dir / "integration_guide.md", "w") as f:
             f.write(guide_content)
-        
+
         print("✅ Created integration guide")
-    
+
     def run_migration(self):
         """Execute the complete migration process"""
         print("🚀 Starting Healthcare Application Migration...")
-        
+
         try:
             self.create_backup()
             self.create_integration_app()
             self.create_migration_templates()
             self.create_integration_guide()
-            
+
             print("\n✅ Migration completed successfully!")
             print("\nNext steps:")
             print("1. Run: python integrated_app.py")
             print("2. Visit: http://localhost:5000/migration-demo")
             print("3. Compare old vs new structure")
             print("4. Review integration_guide.md for detailed steps")
-            
+
         except Exception as e:
             print(f"❌ Migration failed: {str(e)}")
             raise

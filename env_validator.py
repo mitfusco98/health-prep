@@ -2,6 +2,7 @@
 Environment Variable Validation Utility
 Ensures all required secrets are properly configured
 """
+
 import os
 import sys
 import logging
@@ -9,45 +10,40 @@ from typing import List, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
+
 class EnvironmentValidator:
     """Validates environment variables for security and completeness"""
 
     # Required environment variables
     REQUIRED_VARS = {
-        'JWT_SECRET_KEY': {
-            'min_length': 32,
-            'description': 'JWT signing secret key'
+        "JWT_SECRET_KEY": {"min_length": 32, "description": "JWT signing secret key"},
+        "SESSION_SECRET": {"min_length": 16, "description": "Flask session secret key"},
+        "ADMIN_USERNAME": {
+            "min_length": 3,
+            "description": "Admin username for initial user creation",
         },
-        'SESSION_SECRET': {
-            'min_length': 16,
-            'description': 'Flask session secret key'
+        "ADMIN_PASSWORD": {
+            "min_length": 8,
+            "description": "Admin password for initial user creation",
         },
-        'ADMIN_USERNAME': {
-            'min_length': 3,
-            'description': 'Admin username for initial user creation'
-        },
-        'ADMIN_PASSWORD': {
-            'min_length': 8,
-            'description': 'Admin password for initial user creation'
-        }
     }
 
     # Optional but recommended variables
     OPTIONAL_VARS = {
-        'DATABASE_URL': 'Database connection string',
-        'ADMIN_EMAIL': 'Admin email address',
-        'FLASK_ENV': 'Flask environment setting'
+        "DATABASE_URL": "Database connection string",
+        "ADMIN_EMAIL": "Admin email address",
+        "FLASK_ENV": "Flask environment setting",
     }
 
     # Insecure default values that should not be used
     INSECURE_DEFAULTS = [
-        'dev_secret_key',
-        'your-secret-key-change-in-production',
-        'change-me',
-        'default',
-        'admin',
-        'password',
-        '123456'
+        "dev_secret_key",
+        "your-secret-key-change-in-production",
+        "change-me",
+        "default",
+        "admin",
+        "password",
+        "123456",
     ]
 
     @classmethod
@@ -74,8 +70,10 @@ class EnvironmentValidator:
                 continue
 
             # Check minimum length
-            if len(value) < config['min_length']:
-                issues.append(f"TOO_SHORT: {var_name} must be at least {config['min_length']} characters")
+            if len(value) < config["min_length"]:
+                issues.append(
+                    f"TOO_SHORT: {var_name} must be at least {config['min_length']} characters"
+                )
                 success = False
 
             # Check for insecure defaults
@@ -96,11 +94,16 @@ class EnvironmentValidator:
                 logger.warning(f"  - {issue}")
 
             if not success and strict:
-                logger.error("Validation failed due to missing or insecure required variables")
+                logger.error(
+                    "Validation failed due to missing or insecure required variables"
+                )
                 print("\nEnvironment Variable Validation Failed!")
                 print("=" * 50)
                 for issue in issues:
-                    if any(prefix in issue for prefix in ['MISSING:', 'TOO_SHORT:', 'INSECURE:']):
+                    if any(
+                        prefix in issue
+                        for prefix in ["MISSING:", "TOO_SHORT:", "INSECURE:"]
+                    ):
                         print(f"❌ {issue}")
                     else:
                         print(f"⚠️  {issue}")
@@ -121,15 +124,15 @@ class EnvironmentValidator:
 
         def generate_key(length: int = 32) -> str:
             alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-            return ''.join(secrets.choice(alphabet) for _ in range(length))
+            return "".join(secrets.choice(alphabet) for _ in range(length))
 
         return {
-            'JWT_SECRET_KEY': generate_key(64),
-            'SESSION_SECRET': generate_key(32),
+            "JWT_SECRET_KEY": generate_key(64),
+            "SESSION_SECRET": generate_key(32),
         }
 
     @classmethod
-    def create_env_template(cls, filename: str = '.env.template') -> None:
+    def create_env_template(cls, filename: str = ".env.template") -> None:
         """Create a template .env file with secure examples"""
         secure_keys = cls.generate_secure_keys()
 
@@ -155,24 +158,30 @@ FLASK_DEBUG=true
 # Add additional API keys and secrets here as needed
 """
 
-        with open(filename, 'w') as f:
+        with open(filename, "w") as f:
             f.write(template_content)
 
         print(f"Environment template created: {filename}")
-        print("Copy this file to .env and update the values before starting the application.")
+        print(
+            "Copy this file to .env and update the values before starting the application."
+        )
+
 
 def validate_startup_environment():
     """Validate environment on application startup"""
     return EnvironmentValidator.validate_all(strict=True)
 
+
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description='Environment Variable Validator')
-    parser.add_argument('--generate-template', action='store_true', 
-                       help='Generate a .env template file')
-    parser.add_argument('--validate', action='store_true', 
-                       help='Validate current environment')
+    parser = argparse.ArgumentParser(description="Environment Variable Validator")
+    parser.add_argument(
+        "--generate-template", action="store_true", help="Generate a .env template file"
+    )
+    parser.add_argument(
+        "--validate", action="store_true", help="Validate current environment"
+    )
 
     args = parser.parse_args()
 
@@ -184,31 +193,47 @@ if __name__ == "__main__":
     else:
         parser.print_help()
 
+
 def validate_admin_credentials():
     """Validate admin credentials for security"""
     issues = []
 
-    username = os.getenv('ADMIN_USERNAME')
-    password = os.getenv('ADMIN_PASSWORD')
+    username = os.getenv("ADMIN_USERNAME")
+    password = os.getenv("ADMIN_PASSWORD")
 
     # Check for insecure default usernames
-    insecure_usernames = ['admin', 'administrator', 'root', 'user', 'test']
+    insecure_usernames = ["admin", "administrator", "root", "user", "test"]
     if username and username.lower() in insecure_usernames:
-        issues.append(f"CRITICAL: ADMIN_USERNAME '{username}' is a common default - MUST use a unique username")
+        issues.append(
+            f"CRITICAL: ADMIN_USERNAME '{username}' is a common default - MUST use a unique username"
+        )
         # This is a critical security issue - we should exit
         logger.critical(f"Insecure default username detected: {username}")
 
     # Check for insecure default passwords
-    insecure_passwords = ['password', 'admin', '123456', 'password123', 'admin123', 'test', 'letmein', 'qwerty']
+    insecure_passwords = [
+        "password",
+        "admin",
+        "123456",
+        "password123",
+        "admin123",
+        "test",
+        "letmein",
+        "qwerty",
+    ]
     if password and password.lower() in insecure_passwords:
-        issues.append(f"CRITICAL: ADMIN_PASSWORD is a common default - MUST use a strong, unique password")
+        issues.append(
+            f"CRITICAL: ADMIN_PASSWORD is a common default - MUST use a strong, unique password"
+        )
         # This is a critical security issue - we should exit
         logger.critical(f"Insecure default password detected")
 
     # Check password strength
     if password:
         if len(password) < 8:
-            issues.append("SECURITY: ADMIN_PASSWORD should be at least 8 characters long")
+            issues.append(
+                "SECURITY: ADMIN_PASSWORD should be at least 8 characters long"
+            )
 
         # Check for basic complexity
         has_upper = any(c.isupper() for c in password)
@@ -216,9 +241,12 @@ def validate_admin_credentials():
         has_digit = any(c.isdigit() for c in password)
 
         if not (has_upper and has_lower and has_digit):
-            issues.append("SECURITY: ADMIN_PASSWORD should contain uppercase, lowercase, and numbers")
+            issues.append(
+                "SECURITY: ADMIN_PASSWORD should contain uppercase, lowercase, and numbers"
+            )
 
     return issues
+
 
 def validate_environment():
     """Validate all environment variables and security settings"""
@@ -250,11 +278,15 @@ def validate_environment():
 
     # Report results
     if critical_issues:
-        logger.critical("CRITICAL security issues found - application cannot start safely:")
+        logger.critical(
+            "CRITICAL security issues found - application cannot start safely:"
+        )
         for issue in critical_issues:
             logger.critical(f"  - {issue}")
         # Exit the application for critical security issues
-        raise SystemExit("Critical security issues detected. Please fix environment variables and restart.")
+        raise SystemExit(
+            "Critical security issues detected. Please fix environment variables and restart."
+        )
 
     if issues:
         logger.warning("Environment variable validation issues found:")
