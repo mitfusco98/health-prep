@@ -435,12 +435,12 @@ async def validate_uploaded_file_async(file):
 
     # Check filename for malicious patterns (fast check)
     filename = file.filename.lower()
-    if any(char in filename for char in ['..', '/', '\\', ':', '*', '?', '"', '<', '>', '|']):
+    if any(char in filename for char in ['..', '/', '\\', ':', '*', '?', '"', '<', '>'], '|' in filename):
         return False
 
     # Check for executable file extensions (fast check)
     dangerous_extensions = [
-        '.exe', '.bat', '.cmd', '.com', '.scr', '.pif', '.vbs', '.js', 
+        '.exe', '.bat', '.cmd', '.com', '.scr', '.pif', '.vbs', '.js',
         '.jar', '.app', '.deb', '.rpm', '.dmg', '.pkg', '.sh', '.ps1'
     ]
     if any(filename.endswith(ext) for ext in dangerous_extensions):
@@ -460,7 +460,7 @@ async def validate_uploaded_file_async(file):
 
         # Allow only safe MIME types
         safe_mimes = [
-            'text/plain', 'application/pdf', 'image/jpeg', 'image/png', 
+            'text/plain', 'application/pdf', 'image/jpeg', 'image/png',
             'image/gif', 'text/csv', 'application/vnd.ms-excel',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         ]
@@ -480,7 +480,7 @@ def validate_uploaded_file(file):
 
 class InputSanitizer:
     """Handles input sanitization with field-specific strategies"""
-    
+
     def __init__(self):
         self.field_validators = {
             'email': EmailFieldValidator(),
@@ -491,7 +491,7 @@ class InputSanitizer:
             'text': TextFieldValidator(),
             'date': DateFieldValidator()
         }
-        
+
         self.dangerous_patterns = [
             r'(union\s+select)', r'(drop\s+table)', r'(delete\s+from)',
             r'(insert\s+into)', r'(update\s+\w+\s+set)', r'(exec\s*\()',
@@ -503,32 +503,32 @@ class InputSanitizer:
             r'(<iframe)', r'(<object)', r'(<embed)', r'(<form)',
             r'(data:text/html)', r'(data:application)', r'(\bvoid\s*\()'
         ]
-    
+
     def sanitize(self, value, max_length=None, allow_html=False, field_type='general'):
         """Main sanitization method"""
         if not value:
             return value
-        
+
         # Convert to string and strip whitespace
         value = str(value).strip()
         original_value = value
-        
+
         # Apply length constraints
         if max_length and len(value) > max_length:
             value = value[:max_length]
             logging.warning(f"Input truncated from {len(original_value)} to {max_length} characters")
-        
+
         # Remove control characters
         value = self._remove_control_characters(value)
-        
+
         # HTML escaping
         if not allow_html:
             import html
             value = html.escape(value)
-        
+
         # Remove dangerous patterns
         value = self._remove_dangerous_patterns(value)
-        
+
         # Field-specific validation
         if field_type in self.field_validators:
             validator = self.field_validators[field_type]
@@ -537,40 +537,40 @@ class InputSanitizer:
                 logging.warning(f"Field validation failed for {field_type}: {value}")
                 return None
             value = validated_value
-        
+
         # Log significant changes
         if original_value != value and len(original_value) > 0:
             logging.info(f"Input sanitized: '{original_value[:50]}...' -> '{value[:50]}...'")
-        
+
         return value
-    
+
     def _remove_control_characters(self, value):
         """Remove null bytes and control characters"""
         import re
         return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', value)
-    
+
     def _remove_dangerous_patterns(self, value):
         """Remove patterns that could indicate injection attacks"""
         import re
-        
+
         for pattern in self.dangerous_patterns:
             old_value = value
             value = re.sub(pattern, '', value, flags=re.IGNORECASE | re.DOTALL)
             if old_value != value:
                 logging.warning(f"Dangerous pattern removed: {pattern}")
-        
+
         return value
 
 class FieldValidator:
     """Base class for field-specific validators"""
-    
+
     def validate(self, value):
         """Override in subclasses"""
         return value
 
 class EmailFieldValidator(FieldValidator):
     """Validates email field format"""
-    
+
     def validate(self, value):
         import re
         if value and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', value):
@@ -579,12 +579,12 @@ class EmailFieldValidator(FieldValidator):
 
 class PhoneFieldValidator(FieldValidator):
     """Validates phone number format"""
-    
+
     def validate(self, value):
         import re
         if not value:
             return value
-        
+
         digits_only = re.sub(r'\D', '', value)
         if len(digits_only) < 10 or len(digits_only) > 15:
             return None
@@ -592,7 +592,7 @@ class PhoneFieldValidator(FieldValidator):
 
 class NameFieldValidator(FieldValidator):
     """Validates name field format"""
-    
+
     def validate(self, value):
         import re
         if value and not re.match(r'^[a-zA-Z\s\-\'\.]+$', value):
@@ -601,7 +601,7 @@ class NameFieldValidator(FieldValidator):
 
 class MrnFieldValidator(FieldValidator):
     """Validates MRN field format"""
-    
+
     def validate(self, value):
         import re
         if value and not re.match(r'^[A-Za-z0-9\-]+$', value):
@@ -610,21 +610,21 @@ class MrnFieldValidator(FieldValidator):
 
 class MedicalFieldValidator(FieldValidator):
     """Validates medical terms (allows numbers and some special chars)"""
-    
+
     def validate(self, value):
         # Medical terms can be more flexible
         return value
 
 class TextFieldValidator(FieldValidator):
     """Validates general text fields"""
-    
+
     def validate(self, value):
         # General text validation
         return value
 
 class DateFieldValidator(FieldValidator):
     """Validates date field format"""
-    
+
     def validate(self, value):
         # Date validation could be added here
         return value
@@ -632,12 +632,8 @@ class DateFieldValidator(FieldValidator):
 # Global sanitizer instance
 _input_sanitizer = InputSanitizer()
 
-def sanitize_input(value, max_length=None, allow_html=False, field_type='general'):
-    """
-    Sanitize user input to prevent XSS and other injection attacks
-    Maintains backward compatibility with existing interface.
-    """
-    return _input_sanitizer.sanitize(value, max_length, allow_html, field_type)
+# Import sanitization function from shared utilities
+from shared_utilities import sanitize_user_input as sanitize_input
 
 def validate_mrn(mrn):
     """Validate Medical Record Number format"""
@@ -761,7 +757,7 @@ def validate_session_security():
 
         # Remove timestamps older than 1 minute
         session['request_timestamps'] = [
-            ts for ts in session['request_timestamps'] 
+            ts for ts in session['request_timestamps']
             if current_time - ts < 60
         ]
 
@@ -960,7 +956,7 @@ with app.app_context():
 
     # Import API routes
     import api_routes  # noqa: F401
-    
+
     # Initialize async database manager
     from async_db_utils import init_async_db
     database_url = app.config.get('SQLALCHEMY_DATABASE_URI')
@@ -970,7 +966,7 @@ with app.app_context():
             logger.info("Async database manager initialized")
         except Exception as e:
             logger.warning(f"Failed to initialize async database: {e}")
-    
+
     # Register async routes
     try:
         from async_routes import register_async_routes

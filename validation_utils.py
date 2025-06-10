@@ -11,12 +11,8 @@ import json
 
 logger = logging.getLogger(__name__)
 
-# Validation error logging moved to shared_utilities.py for consistency
-from shared_utilities import log_validation_error_unified
-
-def log_validation_error(schema_name, validation_errors, form_data, user_id=None):
-    """Log validation errors to admin logs - unified implementation"""
-    return log_validation_error_unified(schema_name, validation_errors, form_data, user_id)
+# Import unified logging function from shared utilities
+from shared_utilities import log_validation_error_unified as log_validation_error
 
 
 def validate_input(schema_class, redirect_route=None, flash_errors=True):

@@ -1,20 +1,15 @@
 import re
 from datetime import datetime, date, timedelta
 
-# Required fields validation moved to shared_utilities.py for consistency
-from shared_utilities import validate_required_fields
-
-# String field validation moved to shared_utilities.py for consistency
-from shared_utilities import validate_string_field
-
-# Email validation moved to shared_utilities.py for consistency
-from shared_utilities import validate_email
-
-# Phone validation moved to shared_utilities.py for consistency
-from shared_utilities import validate_phone
-
-# Date validation moved to shared_utilities.py for consistency
-from shared_utilities import validate_date_input as validate_date
+# Import validation functions from shared utilities
+from shared_utilities import (
+    validate_required_fields,
+    validate_string_field,
+    validate_email,
+    validate_phone,
+    validate_date_input as validate_date,
+    sanitize_user_input as sanitize_html_input
+)
 
 def validate_integer(value, field_name, min_value=None, max_value=None, required=False):
     """Validate integer fields with range constraints"""
@@ -56,33 +51,6 @@ def validate_choice(value, field_name, choices, required=False):
         errors.append(f'{field_name} must be one of: {", ".join(choices)}')
 
     return errors
-
-def sanitize_html_input(text, max_length=None):
-    """Remove potentially dangerous HTML/script content"""
-    if not text:
-        return text
-
-    # Remove HTML tags and potential script content
-    import html
-    sanitized = html.escape(str(text).strip())
-
-    # Remove potential XSS patterns
-    dangerous_patterns = [
-        r'<script.*?>.*?</script>',
-        r'javascript:',
-        r'on\w+\s*=',
-        r'<iframe.*?>',
-        r'<object.*?>',
-        r'<embed.*?>'
-    ]
-
-    for pattern in dangerous_patterns:
-        sanitized = re.sub(pattern, '', sanitized, flags=re.IGNORECASE | re.DOTALL)
-
-    if max_length:
-        sanitized = sanitized[:max_length]
-
-    return sanitized
 
 
 import pandas as pd

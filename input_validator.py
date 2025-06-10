@@ -11,12 +11,8 @@ from flask import request, flash, redirect, url_for, session
 logger = logging.getLogger(__name__)
 
 
-# Validation error logging moved to shared_utilities.py for consistency
-from shared_utilities import log_validation_error_unified
-
-def log_validation_error(endpoint, validation_errors, form_data, user_id=None):
-    """Log validation errors to admin logs - unified implementation"""
-    return log_validation_error_unified(endpoint, validation_errors, form_data, user_id)
+# Import validation functions from shared utilities
+from shared_utilities import validate_email, validate_phone, validate_date_input as validate_date_format, log_validation_error_unified as log_validation_error
 
 
 def validate_patient_data(form_data):
@@ -36,14 +32,9 @@ def validate_patient_data(form_data):
 
     # Date of birth validation
     if form_data.get('date_of_birth'):
-        try:
-            dob = datetime.strptime(form_data['date_of_birth'], '%Y-%m-%d').date()
-            if dob > date.today():
-                errors.append("Date of birth cannot be in the future")
-            elif dob.year < 1900:
-                errors.append("Date of birth cannot be before 1900")
-        except ValueError:
-            errors.append("Invalid date of birth format")
+        is_valid, date_errors = validate_date_format(form_data['date_of_birth'], "Date of birth")
+        if not is_valid:
+            errors.extend(date_errors)
     else:
         errors.append("Date of birth is required")
 
@@ -53,13 +44,15 @@ def validate_patient_data(form_data):
 
     # Phone number validation
     phone = form_data.get('phone_number', '').strip()
-    if phone and not re.match(r'^[\+]?[1-9][\d\-\s\(\)]{8,20}$', phone):
-        errors.append("Invalid phone number format")
+    is_valid, phone_errors = validate_phone(phone)
+    if not is_valid:
+        errors.extend(phone_errors)
 
     # Email validation
     email = form_data.get('email', '').strip()
-    if email and not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-        errors.append("Invalid email format")
+    is_valid, email_errors = validate_email(email)
+    if not is_valid:
+        errors.extend(email_errors)
 
     return errors
 
@@ -78,12 +71,9 @@ def validate_appointment_data(form_data):
 
     # Date validation
     if form_data.get('appointment_date'):
-        try:
-            app_date = datetime.strptime(form_data['appointment_date'], '%Y-%m-%d').date()
-            if app_date < date.today():
-                errors.append("Appointment date cannot be in the past")
-        except ValueError:
-            errors.append("Invalid appointment date format")
+        is_valid, date_errors = validate_date_format(form_data['appointment_date'], "Appointment date")
+        if not is_valid:
+            errors.extend(date_errors)
     else:
         errors.append("Appointment date is required")
 

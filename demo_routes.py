@@ -42,24 +42,13 @@ def utility_processor():
         'cache_bust': cache_bust()
     }
 
-# Template filters using shared utility functions for consistency
+# Import template filter functions from shared utilities
 from shared_utilities import format_datetime_display, format_date_of_birth, format_timestamp_to_est
 
 # Register template filters using consolidated functions
-@app.template_filter('datetime')
-def format_datetime(value, format='%B %d, %Y'):
-    """Format a datetime object to a readable string."""
-    return format_datetime_display(value, format)
-
-@app.template_filter('dob')
-def format_dob(value):
-    """Format a date object to MM/DD/YYYY format for date of birth."""
-    return format_date_of_birth(value)
-
-@app.template_filter('timestamp_to_est')
-def timestamp_to_est(utc_timestamp):
-    """Convert UTC timestamp to EST and format for display."""
-    return format_timestamp_to_est(utc_timestamp)
+app.template_filter('datetime')(format_datetime_display)
+app.template_filter('dob')(format_date_of_birth)
+app.template_filter('timestamp_to_est')(format_timestamp_to_est)
 from forms import (PatientForm, ConditionForm, VitalForm, 
                   VisitForm, LabResultForm, ImagingStudyForm, ConsultReportForm, 
                   HospitalSummaryForm, ScreeningForm, CSVUploadForm, DocumentUploadForm,
