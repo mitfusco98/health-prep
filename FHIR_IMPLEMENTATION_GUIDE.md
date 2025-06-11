@@ -1,18 +1,25 @@
-# FHIR Patient Mapping Implementation Guide
+# FHIR Mapping Implementation Guide
 
 ## Overview
 
-Your healthcare application now has complete FHIR R4 Patient resource conversion capabilities. This implementation converts your internal Patient objects (with fields: id, first_name, last_name, dob, sex, mrn) into standard FHIR Patient resources for healthcare interoperability.
+Your healthcare application now has complete FHIR R4 conversion capabilities for both Patient and Encounter resources. This implementation converts your internal data objects into standard FHIR resources for healthcare interoperability:
+
+- **Patient objects** (id, first_name, last_name, dob, sex, mrn) → FHIR Patient resources
+- **Appointment objects** (appointment_id, patient_id, date, time, note, status) → FHIR Encounter resources
 
 ## Quick Integration
 
 ### Simple Usage
 ```python
-from fhir_utils import patient_to_fhir
+from fhir_utils import patient_to_fhir, appointment_to_fhir
 
-# Convert any patient to FHIR
+# Convert patient to FHIR
 patient = Patient.query.get(patient_id)
-fhir_resource = patient_to_fhir(patient)
+fhir_patient = patient_to_fhir(patient)
+
+# Convert appointment to FHIR Encounter
+appointment = Appointment.query.get(appointment_id)
+fhir_encounter = appointment_to_fhir(appointment)
 ```
 
 ### Add FHIR API Endpoints
@@ -27,6 +34,9 @@ This creates:
 - `GET /fhir/Patient/{id}` - Single patient as FHIR resource
 - `GET /fhir/Patient?identifier={mrn}` - Search by MRN
 - `GET /fhir/Patient` - All patients as FHIR Bundle
+- `GET /fhir/Encounter/{id}` - Single appointment as FHIR Encounter
+- `GET /fhir/Encounter?subject=Patient/{id}` - Patient's encounters
+- `GET /fhir/Encounter?date=2024-06-15` - Encounters by date
 
 ## Files Created
 
@@ -34,14 +44,16 @@ This creates:
 - `constants.py` - FHIR R4 standard constants and mappings
 - `base_mapper.py` - Base utilities for FHIR resource creation
 - `patient_mapper.py` - Patient-specific FHIR conversion logic
+- `encounter_mapper.py` - Appointment to Encounter FHIR conversion logic
 - `__init__.py` - Module initialization
 
 ### Integration Files
-- `fhir_utils.py` - Ready-to-use utility functions
+- `fhir_utils.py` - Ready-to-use utility functions for both resources
 - `fhir_integration.py` - Advanced integration features
-- `test_fhir_conversion.py` - Comprehensive test suite
+- `test_fhir_conversion.py` - Patient conversion test suite
+- `test_fhir_encounter_conversion.py` - Encounter conversion test suite
 
-## Field Mapping
+## Patient Field Mapping
 
 | Internal Field | FHIR Field | Notes |
 |---|---|---|
@@ -56,6 +68,18 @@ This creates:
 | `address` | `address` | Parsed into FHIR address components |
 | `insurance` | `extension` | Custom extension |
 | `created_at` | `extension` | Custom extension |
+| `updated_at` | `meta.lastUpdated` | FHIR metadata |
+
+## Appointment Field Mapping
+
+| Internal Field | FHIR Encounter Field | Notes |
+|---|---|---|
+| `id` | `identifier.value` | Appointment ID as identifier |
+| `patient_id` | `subject.reference` | Patient/{patient_id} reference |
+| `appointment_date + appointment_time` | `period.start` | Combined datetime in ISO format |
+| `status` | `status` | OOO→planned, waiting→arrived, provider→in-progress, seen→finished |
+| `note` | `reasonCode.text` | Free text reason for encounter |
+| `created_at` | `extension` | Custom appointment scheduled timestamp |
 | `updated_at` | `meta.lastUpdated` | FHIR metadata |
 
 ## Example FHIR Output
