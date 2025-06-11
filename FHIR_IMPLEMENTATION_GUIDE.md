@@ -2,16 +2,17 @@
 
 ## Overview
 
-Your healthcare application now has complete FHIR R4 conversion capabilities for both Patient and Encounter resources. This implementation converts your internal data objects into standard FHIR resources for healthcare interoperability:
+Your healthcare application now has complete FHIR R4 conversion capabilities for Patient, Encounter, and DocumentReference resources. This implementation converts your internal data objects into standard FHIR resources for healthcare interoperability:
 
 - **Patient objects** (id, first_name, last_name, dob, sex, mrn) → FHIR Patient resources
 - **Appointment objects** (appointment_id, patient_id, date, time, note, status) → FHIR Encounter resources
+- **Medical Document objects** (id, patient_id, filename, upload_date, section, tags) → FHIR DocumentReference resources
 
 ## Quick Integration
 
 ### Simple Usage
 ```python
-from fhir_utils import patient_to_fhir, appointment_to_fhir
+from fhir_utils import patient_to_fhir, appointment_to_fhir, document_to_fhir
 
 # Convert patient to FHIR
 patient = Patient.query.get(patient_id)
@@ -20,6 +21,10 @@ fhir_patient = patient_to_fhir(patient)
 # Convert appointment to FHIR Encounter
 appointment = Appointment.query.get(appointment_id)
 fhir_encounter = appointment_to_fhir(appointment)
+
+# Convert document to FHIR DocumentReference
+document = MedicalDocument.query.get(document_id)
+fhir_document_ref = document_to_fhir(document)
 ```
 
 ### Add FHIR API Endpoints
@@ -37,6 +42,9 @@ This creates:
 - `GET /fhir/Encounter/{id}` - Single appointment as FHIR Encounter
 - `GET /fhir/Encounter?subject=Patient/{id}` - Patient's encounters
 - `GET /fhir/Encounter?date=2024-06-15` - Encounters by date
+- `GET /fhir/DocumentReference/{id}` - Single document as FHIR DocumentReference
+- `GET /fhir/DocumentReference?subject=Patient/{id}` - Patient's documents
+- `GET /fhir/DocumentReference?type=Lab%20Results` - Documents by type
 
 ## Files Created
 
@@ -52,6 +60,7 @@ This creates:
 - `fhir_integration.py` - Advanced integration features
 - `test_fhir_conversion.py` - Patient conversion test suite
 - `test_fhir_encounter_conversion.py` - Encounter conversion test suite
+- `test_fhir_document_conversion.py` - DocumentReference conversion test suite
 
 ## Patient Field Mapping
 
@@ -80,6 +89,24 @@ This creates:
 | `status` | `status` | OOO→planned, waiting→arrived, provider→in-progress, seen→finished |
 | `note` | `reasonCode.text` | Free text reason for encounter |
 | `created_at` | `extension` | Custom appointment scheduled timestamp |
+| `updated_at` | `meta.lastUpdated` | FHIR metadata |
+
+## Medical Document Field Mapping
+
+| Internal Field | FHIR DocumentReference Field | Notes |
+|---|---|---|
+| `id` | `identifier.value` | Document ID as official identifier |
+| `patient_id` | `subject.reference` | Patient/{patient_id} reference |
+| `filename` | `content.attachment.title` | Original filename as document title |
+| `document_name` | `content.attachment.title` | Preferred over filename if available |
+| `document_type` | `type.coding` | Maps to LOINC codes (Lab Results→11502-2, etc.) |
+| `mime_type` | `content.attachment.contentType` | MIME type for content format |
+| `document_date` | `date` | Document creation/authoring date |
+| `provider` | `author.display` | Document author/provider |
+| `source_system` | `authenticator.display` | Source EHR/system identifier |
+| `is_processed` | `docStatus` | preliminary/final based on processing status |
+| `doc_metadata` | `extension` | Custom extension for metadata JSON |
+| `created_at` | `content.attachment.creation` | File creation timestamp |
 | `updated_at` | `meta.lastUpdated` | FHIR metadata |
 
 ## Example FHIR Output
