@@ -104,3 +104,49 @@ class FHIR_CONSTANTS:
         'ENTERED_IN_ERROR': 'entered-in-error',
         'SUSPENDED': 'suspended'
     }
+    
+    # FHIR Encounter status mapping
+    ENCOUNTER_STATUS_MAPPING = {
+        'OOO': 'planned',          # Out of office/scheduled
+        'waiting': 'arrived',      # Patient has arrived
+        'provider': 'in-progress', # Provider is seeing patient
+        'seen': 'finished'         # Encounter completed
+    }
+    
+    # FHIR Encounter class codes
+    ENCOUNTER_CLASS = {
+        'AMBULATORY': {
+            'system': 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
+            'code': 'AMB',
+            'display': 'ambulatory'
+        },
+        'INPATIENT': {
+            'system': 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
+            'code': 'IMP',
+            'display': 'inpatient encounter'
+        },
+        'EMERGENCY': {
+            'system': 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
+            'code': 'EMER',
+            'display': 'emergency'
+        }
+    }
+    
+    # FHIR Encounter type codes
+    ENCOUNTER_TYPE = {
+        'CHECKUP': {
+            'system': 'http://snomed.info/sct',
+            'code': '185349003',
+            'display': 'Encounter for check up'
+        },
+        'FOLLOWUP': {
+            'system': 'http://snomed.info/sct',
+            'code': '185389009',
+            'display': 'Follow-up encounter'
+        },
+        'CONSULTATION': {
+            'system': 'http://snomed.info/sct',
+            'code': '11429006',
+            'display': 'Consultation'
+        }
+    }

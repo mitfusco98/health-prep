@@ -8,7 +8,8 @@ FHIR R4 is the current standard for healthcare data exchange.
 """
 
 from .patient_mapper import PatientMapper
+from .encounter_mapper import EncounterMapper
 from .base_mapper import BaseFHIRMapper
 from .constants import FHIR_CONSTANTS
 
-__all__ = ['PatientMapper', 'BaseFHIRMapper', 'FHIR_CONSTANTS']
+__all__ = ['PatientMapper', 'EncounterMapper', 'BaseFHIRMapper', 'FHIR_CONSTANTS']
