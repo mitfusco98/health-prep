@@ -150,3 +150,100 @@ class FHIR_CONSTANTS:
             'display': 'Consultation'
         }
     }
+    
+    # FHIR DocumentReference status codes
+    DOCUMENT_STATUS = {
+        'CURRENT': 'current',
+        'SUPERSEDED': 'superseded',
+        'ENTERED_IN_ERROR': 'entered-in-error'
+    }
+    
+    # FHIR DocumentReference docStatus codes
+    DOC_STATUS = {
+        'PRELIMINARY': 'preliminary',
+        'FINAL': 'final',
+        'AMENDED': 'amended',
+        'CANCELLED': 'cancelled'
+    }
+    
+    # Document type mappings to FHIR coding
+    DOCUMENT_TYPE_MAPPING = {
+        'Lab Results': {
+            'system': 'http://loinc.org',
+            'code': '11502-2',
+            'display': 'Laboratory report'
+        },
+        'Imaging': {
+            'system': 'http://loinc.org',
+            'code': '18748-4',
+            'display': 'Diagnostic imaging study'
+        },
+        'Progress Notes': {
+            'system': 'http://loinc.org',
+            'code': '11506-3',
+            'display': 'Progress note'
+        },
+        'Discharge Summary': {
+            'system': 'http://loinc.org',
+            'code': '18842-5',
+            'display': 'Discharge summary'
+        },
+        'Consultation': {
+            'system': 'http://loinc.org',
+            'code': '11488-4',
+            'display': 'Consultation note'
+        },
+        'Operative Note': {
+            'system': 'http://loinc.org',
+            'code': '11504-8',
+            'display': 'Surgical operation note'
+        },
+        'Pathology': {
+            'system': 'http://loinc.org',
+            'code': '11526-1',
+            'display': 'Pathology study'
+        },
+        'Radiology': {
+            'system': 'http://loinc.org',
+            'code': '18726-0',
+            'display': 'Radiology studies'
+        },
+        'Other': {
+            'system': 'http://loinc.org',
+            'code': '34133-9',
+            'display': 'Summarization of episode note'
+        }
+    }
+    
+    # Document category mappings
+    DOCUMENT_CATEGORY = {
+        'CLINICAL': {
+            'system': 'http://hl7.org/fhir/us/core/CodeSystem/us-core-documentreference-category',
+            'code': 'clinical-note',
+            'display': 'Clinical Note'
+        },
+        'LABORATORY': {
+            'system': 'http://hl7.org/fhir/us/core/CodeSystem/us-core-documentreference-category',
+            'code': 'laboratory',
+            'display': 'Laboratory'
+        },
+        'IMAGING': {
+            'system': 'http://hl7.org/fhir/us/core/CodeSystem/us-core-documentreference-category',
+            'code': 'imaging',
+            'display': 'Imaging'
+        }
+    }
+    
+    # Content attachment formats
+    CONTENT_FORMAT = {
+        'PDF': {
+            'system': 'http://ihe.net/fhir/ihe.formatcode.fhir/CodeSystem/formatcode',
+            'code': 'urn:ihe:iti:xds:2017:mimeTypeSufficient',
+            'display': 'mimeType Sufficient'
+        },
+        'TEXT': {
+            'system': 'http://ihe.net/fhir/ihe.formatcode.fhir/CodeSystem/formatcode',
+            'code': 'urn:ihe:iti:xds:2017:mimeTypeSufficient',
+            'display': 'mimeType Sufficient'
+        }
+    }

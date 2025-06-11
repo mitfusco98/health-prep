@@ -7,6 +7,7 @@ Ready-to-use utility functions for FHIR patient and encounter conversion in your
 from flask import jsonify
 from fhir_mapping.patient_mapper import PatientMapper
 from fhir_mapping.encounter_mapper import EncounterMapper
+from fhir_mapping.document_reference_mapper import DocumentReferenceMapper
 
 
 def patient_to_fhir(patient):
@@ -123,6 +124,54 @@ def create_encounter_bundle(appointments):
     return mapper.create_encounter_bundle(appointments)
 
 
+def document_to_fhir(document):
+    """
+    Convert your MedicalDocument object to FHIR DocumentReference resource
+    
+    Usage:
+        from fhir_utils import document_to_fhir
+        
+        document = MedicalDocument.query.get(document_id)
+        fhir_document_ref = document_to_fhir(document)
+    
+    Args:
+        document: Your MedicalDocument model instance
+        
+    Returns:
+        dict: Complete FHIR DocumentReference resource
+    """
+    mapper = DocumentReferenceMapper()
+    return mapper.to_fhir(document)
+
+
+def fhir_to_document_data(fhir_document_ref):
+    """
+    Convert FHIR DocumentReference resource to internal document data
+    
+    Args:
+        fhir_document_ref: FHIR DocumentReference resource dictionary
+        
+    Returns:
+        dict: Document data for your internal model
+    """
+    mapper = DocumentReferenceMapper()
+    return mapper.from_fhir(fhir_document_ref)
+
+
+def create_document_bundle(documents):
+    """
+    Create FHIR Bundle from multiple documents
+    
+    Args:
+        documents: List of MedicalDocument model instances
+        
+    Returns:
+        dict: FHIR Bundle resource containing DocumentReferences
+    """
+    mapper = DocumentReferenceMapper()
+    return mapper.create_document_bundle(documents)
+
+
 def add_fhir_routes(app):
     """
     Add FHIR API endpoints to your Flask application
@@ -136,8 +185,10 @@ def add_fhir_routes(app):
         GET /fhir/Patient - Search/list patients as FHIR Bundle
         GET /fhir/Encounter/{id} - Get single appointment as FHIR Encounter
         GET /fhir/Encounter - Search/list appointments as FHIR Bundle
+        GET /fhir/DocumentReference/{id} - Get single document as FHIR DocumentReference
+        GET /fhir/DocumentReference - Search/list documents as FHIR Bundle
     """
-    from models import Patient, Appointment
+    from models import Patient, Appointment, MedicalDocument
     
     @app.route('/fhir/Patient/<int:patient_id>')
     def get_fhir_patient(patient_id):
@@ -210,4 +261,45 @@ def add_fhir_routes(app):
             appointments = Appointment.query.all()
         
         bundle = create_encounter_bundle(appointments)
+        return jsonify(bundle)
+    
+    @app.route('/fhir/DocumentReference/<int:document_id>')
+    def get_fhir_document_reference(document_id):
+        """Get document as FHIR DocumentReference resource"""
+        document = MedicalDocument.query.get_or_404(document_id)
+        fhir_document_ref = document_to_fhir(document)
+        return jsonify(fhir_document_ref)
+    
+    @app.route('/fhir/DocumentReference')
+    def get_fhir_document_references():
+        """Get documents as FHIR DocumentReference Bundle"""
+        from flask import request
+        from datetime import datetime, date
+        
+        # Handle search by patient ID
+        patient_id = request.args.get('subject')
+        if patient_id and patient_id.startswith('Patient/'):
+            patient_id = patient_id.split('/')[1]
+            documents = MedicalDocument.query.filter_by(patient_id=int(patient_id)).all()
+        # Handle search by document type
+        elif request.args.get('type'):
+            doc_type = request.args.get('type')
+            documents = MedicalDocument.query.filter_by(document_type=doc_type).all()
+        # Handle search by date
+        elif request.args.get('date'):
+            from datetime import timedelta
+            try:
+                search_date_str = request.args.get('date')
+                search_date = datetime.strptime(search_date_str, '%Y-%m-%d').date()
+                documents = MedicalDocument.query.filter(
+                    MedicalDocument.document_date >= search_date,
+                    MedicalDocument.document_date < search_date + timedelta(days=1)
+                ).all()
+            except ValueError:
+                return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+        else:
+            # Return all documents
+            documents = MedicalDocument.query.all()
+        
+        bundle = create_document_bundle(documents)
         return jsonify(bundle)
