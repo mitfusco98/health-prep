@@ -298,12 +298,174 @@ class MedicalDocument(db.Model):
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+    
+    # === DUAL STORAGE: Internal + FHIR Keys ===
+    # Internal keys (for backward compatibility)
+    tag = db.Column(db.String(100))  # Internal document tag
+    section = db.Column(db.String(100))  # Document section classification
+    matched_screening = db.Column(db.String(100))  # Matched screening type
+    
+    # FHIR-style keys (for Epic/FHIR exports)
+    fhir_code_system = db.Column(db.String(255))  # e.g., "http://loinc.org"
+    fhir_code_code = db.Column(db.String(50))  # e.g., "11502-2" (code.coding.code)
+    fhir_code_display = db.Column(db.String(255))  # e.g., "Laboratory report"
+    fhir_category_system = db.Column(db.String(255))  # e.g., "http://terminology.hl7.org/CodeSystem/observation-category"
+    fhir_category_code = db.Column(db.String(50))  # e.g., "laboratory" (category)
+    fhir_category_display = db.Column(db.String(255))  # e.g., "Laboratory"
+    fhir_effective_datetime = db.Column(db.DateTime)  # effectiveDateTime for FHIR
 
     # Relationship with Patient is already defined in the Patient model
+
+    def set_dual_storage_keys(self, internal_data=None, fhir_data=None):
+        """
+        Set both internal and FHIR keys for dual storage compatibility
+        
+        Args:
+            internal_data: Dict with keys like {'tag': 'lab', 'section': 'results', 'matched_screening': 'diabetes'}
+            fhir_data: Dict with FHIR coding structure like {
+                'code': {'system': 'http://loinc.org', 'code': '11502-2', 'display': 'Laboratory report'},
+                'category': {'system': '...', 'code': 'laboratory', 'display': 'Laboratory'},
+                'effectiveDateTime': datetime_obj
+            }
+        """
+        # Set internal keys
+        if internal_data:
+            self.tag = internal_data.get('tag')
+            self.section = internal_data.get('section')
+            self.matched_screening = internal_data.get('matched_screening')
+        
+        # Set FHIR keys
+        if fhir_data:
+            if 'code' in fhir_data and fhir_data['code']:
+                self.fhir_code_system = fhir_data['code'].get('system')
+                self.fhir_code_code = fhir_data['code'].get('code')
+                self.fhir_code_display = fhir_data['code'].get('display')
+            
+            if 'category' in fhir_data and fhir_data['category']:
+                self.fhir_category_system = fhir_data['category'].get('system')
+                self.fhir_category_code = fhir_data['category'].get('code')
+                self.fhir_category_display = fhir_data['category'].get('display')
+            
+            if 'effectiveDateTime' in fhir_data:
+                self.fhir_effective_datetime = fhir_data['effectiveDateTime']
+
+    def get_internal_keys(self):
+        """Get internal keys as dictionary"""
+        return {
+            'tag': self.tag,
+            'section': self.section,
+            'matched_screening': self.matched_screening
+        }
+    
+    def get_fhir_keys(self):
+        """Get FHIR keys as structured dictionary"""
+        return {
+            'code': {
+                'system': self.fhir_code_system,
+                'code': self.fhir_code_code,
+                'display': self.fhir_code_display
+            } if self.fhir_code_code else None,
+            'category': {
+                'system': self.fhir_category_system,
+                'code': self.fhir_category_code,
+                'display': self.fhir_category_display
+            } if self.fhir_category_code else None,
+            'effectiveDateTime': self.fhir_effective_datetime
+        }
 
     def __repr__(self):
         display_name = self.document_name if self.document_name else self.filename
         return f'<MedicalDocument "{display_name}" ({self.document_type}) for Patient {self.patient_id}>'
+
+
+class PrepSheet(db.Model):
+    """Preparation sheet documents with dual storage for internal and FHIR keys"""
+    
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"), nullable=False)
+    appointment_date = db.Column(db.Date, nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(500))  # Path to generated file
+    content = db.Column(db.Text)  # Generated prep sheet content
+    prep_data = db.Column(db.Text)  # JSON of prep sheet data
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+    
+    # === DUAL STORAGE: Internal + FHIR Keys ===
+    # Internal keys (for backward compatibility)
+    tag = db.Column(db.String(100))  # Internal prep sheet tag
+    section = db.Column(db.String(100))  # Prep sheet section classification
+    matched_screening = db.Column(db.String(100))  # Associated screening types
+    
+    # FHIR-style keys (for Epic/FHIR exports)
+    fhir_code_system = db.Column(db.String(255))  # e.g., "http://loinc.org"
+    fhir_code_code = db.Column(db.String(50))  # e.g., "75492-9" (code.coding.code)
+    fhir_code_display = db.Column(db.String(255))  # e.g., "Preventive care note"
+    fhir_category_system = db.Column(db.String(255))  # e.g., "http://terminology.hl7.org/CodeSystem/observation-category"
+    fhir_category_code = db.Column(db.String(50))  # e.g., "survey" (category)
+    fhir_category_display = db.Column(db.String(255))  # e.g., "Survey"
+    fhir_effective_datetime = db.Column(db.DateTime)  # effectiveDateTime for FHIR
+    
+    # Relationship
+    patient = db.relationship("Patient", backref=db.backref("prep_sheets", lazy=True))
+    
+    def set_dual_storage_keys(self, internal_data=None, fhir_data=None):
+        """
+        Set both internal and FHIR keys for dual storage compatibility
+        
+        Args:
+            internal_data: Dict with keys like {'tag': 'prep', 'section': 'preventive', 'matched_screening': 'annual'}
+            fhir_data: Dict with FHIR coding structure
+        """
+        # Set internal keys
+        if internal_data:
+            self.tag = internal_data.get('tag')
+            self.section = internal_data.get('section')
+            self.matched_screening = internal_data.get('matched_screening')
+        
+        # Set FHIR keys
+        if fhir_data:
+            if 'code' in fhir_data and fhir_data['code']:
+                self.fhir_code_system = fhir_data['code'].get('system')
+                self.fhir_code_code = fhir_data['code'].get('code')
+                self.fhir_code_display = fhir_data['code'].get('display')
+            
+            if 'category' in fhir_data and fhir_data['category']:
+                self.fhir_category_system = fhir_data['category'].get('system')
+                self.fhir_category_code = fhir_data['category'].get('code')
+                self.fhir_category_display = fhir_data['category'].get('display')
+            
+            if 'effectiveDateTime' in fhir_data:
+                self.fhir_effective_datetime = fhir_data['effectiveDateTime']
+
+    def get_internal_keys(self):
+        """Get internal keys as dictionary"""
+        return {
+            'tag': self.tag,
+            'section': self.section,
+            'matched_screening': self.matched_screening
+        }
+    
+    def get_fhir_keys(self):
+        """Get FHIR keys as structured dictionary"""
+        return {
+            'code': {
+                'system': self.fhir_code_system,
+                'code': self.fhir_code_code,
+                'display': self.fhir_code_display
+            } if self.fhir_code_code else None,
+            'category': {
+                'system': self.fhir_category_system,
+                'code': self.fhir_category_code,
+                'display': self.fhir_category_display
+            } if self.fhir_category_code else None,
+            'effectiveDateTime': self.fhir_effective_datetime
+        }
+
+    def __repr__(self):
+        return f'<PrepSheet "{self.filename}" for Patient {self.patient_id} on {self.appointment_date}>'
 
 
 class EHRConnection(db.Model):
