@@ -299,79 +299,115 @@ class MedicalDocument(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
     
-    # === DUAL STORAGE: Internal + FHIR Keys ===
-    # Internal keys (for backward compatibility)
-    tag = db.Column(db.String(100))  # Internal document tag
-    section = db.Column(db.String(100))  # Document section classification
-    matched_screening = db.Column(db.String(100))  # Matched screening type
-    
-    # FHIR-style keys (for Epic/FHIR exports)
-    fhir_code_system = db.Column(db.String(255))  # e.g., "http://loinc.org"
-    fhir_code_code = db.Column(db.String(50))  # e.g., "11502-2" (code.coding.code)
-    fhir_code_display = db.Column(db.String(255))  # e.g., "Laboratory report"
-    fhir_category_system = db.Column(db.String(255))  # e.g., "http://terminology.hl7.org/CodeSystem/observation-category"
-    fhir_category_code = db.Column(db.String(50))  # e.g., "laboratory" (category)
-    fhir_category_display = db.Column(db.String(255))  # e.g., "Laboratory"
-    fhir_effective_datetime = db.Column(db.DateTime)  # effectiveDateTime for FHIR
-
     # Relationship with Patient is already defined in the Patient model
-
-    def set_dual_storage_keys(self, internal_data=None, fhir_data=None):
-        """
-        Set both internal and FHIR keys for dual storage compatibility
-        
-        Args:
-            internal_data: Dict with keys like {'tag': 'lab', 'section': 'results', 'matched_screening': 'diabetes'}
-            fhir_data: Dict with FHIR coding structure like {
-                'code': {'system': 'http://loinc.org', 'code': '11502-2', 'display': 'Laboratory report'},
-                'category': {'system': '...', 'code': 'laboratory', 'display': 'Laboratory'},
-                'effectiveDateTime': datetime_obj
-            }
-        """
-        # Set internal keys
-        if internal_data:
-            self.tag = internal_data.get('tag')
-            self.section = internal_data.get('section')
-            self.matched_screening = internal_data.get('matched_screening')
-        
-        # Set FHIR keys
-        if fhir_data:
-            if 'code' in fhir_data and fhir_data['code']:
-                self.fhir_code_system = fhir_data['code'].get('system')
-                self.fhir_code_code = fhir_data['code'].get('code')
-                self.fhir_code_display = fhir_data['code'].get('display')
-            
-            if 'category' in fhir_data and fhir_data['category']:
-                self.fhir_category_system = fhir_data['category'].get('system')
-                self.fhir_category_code = fhir_data['category'].get('code')
-                self.fhir_category_display = fhir_data['category'].get('display')
-            
-            if 'effectiveDateTime' in fhir_data:
-                self.fhir_effective_datetime = fhir_data['effectiveDateTime']
-
-    def get_internal_keys(self):
-        """Get internal keys as dictionary"""
-        return {
-            'tag': self.tag,
-            'section': self.section,
-            'matched_screening': self.matched_screening
-        }
     
-    def get_fhir_keys(self):
-        """Get FHIR keys as structured dictionary"""
-        return {
-            'code': {
-                'system': self.fhir_code_system,
-                'code': self.fhir_code_code,
-                'display': self.fhir_code_display
-            } if self.fhir_code_code else None,
-            'category': {
-                'system': self.fhir_category_system,
-                'code': self.fhir_category_code,
-                'display': self.fhir_category_display
-            } if self.fhir_category_code else None,
-            'effectiveDateTime': self.fhir_effective_datetime
+    def extract_fhir_metadata(self):
+        """Extract FHIR-compatible metadata from document using existing doc_metadata field"""
+        if not self.doc_metadata:
+            return {}
+        
+        try:
+            metadata = json.loads(self.doc_metadata)
+            fhir_data = {}
+            
+            # Extract FHIR codes if available
+            if 'fhir_primary_code' in metadata:
+                fhir_data = metadata['fhir_primary_code']
+            
+            # Map document type to FHIR if no existing FHIR data
+            if not fhir_data and self.document_type:
+                fhir_data = self._map_document_type_to_fhir()
+            
+            return fhir_data
+            
+        except (json.JSONDecodeError, KeyError):
+            return self._map_document_type_to_fhir()
+    
+    def _map_document_type_to_fhir(self):
+        """Map document type to FHIR coding for Epic compatibility"""
+        type_mappings = {
+            'Lab Report': {
+                'code': {
+                    'coding': [{
+                        'system': 'http://loinc.org',
+                        'code': '11502-2',
+                        'display': 'Laboratory report'
+                    }]
+                },
+                'category': [{
+                    'coding': [{
+                        'system': 'http://terminology.hl7.org/CodeSystem/observation-category',
+                        'code': 'laboratory',
+                        'display': 'Laboratory'
+                    }]
+                }]
+            },
+            'Radiology Report': {
+                'code': {
+                    'coding': [{
+                        'system': 'http://loinc.org',
+                        'code': '18748-4',
+                        'display': 'Diagnostic imaging study'
+                    }]
+                },
+                'category': [{
+                    'coding': [{
+                        'system': 'http://terminology.hl7.org/CodeSystem/observation-category',
+                        'code': 'imaging',
+                        'display': 'Imaging'
+                    }]
+                }]
+            },
+            'Clinical Note': {
+                'code': {
+                    'coding': [{
+                        'system': 'http://loinc.org',
+                        'code': '11506-3',
+                        'display': 'Progress note'
+                    }]
+                },
+                'category': [{
+                    'coding': [{
+                        'system': 'http://terminology.hl7.org/CodeSystem/observation-category',
+                        'code': 'exam',
+                        'display': 'Exam'
+                    }]
+                }]
+            },
+            'Discharge Summary': {
+                'code': {
+                    'coding': [{
+                        'system': 'http://loinc.org',
+                        'code': '18842-5',
+                        'display': 'Discharge summary'
+                    }]
+                },
+                'category': [{
+                    'coding': [{
+                        'system': 'http://terminology.hl7.org/CodeSystem/observation-category',
+                        'code': 'exam',
+                        'display': 'Exam'
+                    }]
+                }]
+            }
         }
+        
+        return type_mappings.get(self.document_type, {
+            'code': {
+                'coding': [{
+                    'system': 'http://loinc.org',
+                    'code': '34133-9',
+                    'display': 'Summarization of episode note'
+                }]
+            },
+            'category': [{
+                'coding': [{
+                    'system': 'http://terminology.hl7.org/CodeSystem/observation-category',
+                    'code': 'exam',
+                    'display': 'Exam'
+                }]
+            }]
+        })
 
     def __repr__(self):
         display_name = self.document_name if self.document_name else self.filename

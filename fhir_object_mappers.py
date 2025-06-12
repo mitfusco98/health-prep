@@ -218,21 +218,24 @@ class FHIRObjectMapper:
                 "display": document.source_system
             }
         
-        # Add FHIR metadata from doc_metadata if available
-        if document.doc_metadata:
-            try:
-                metadata = json.loads(document.doc_metadata)
-                if 'fhir_primary_code' in metadata:
-                    # Use existing FHIR codes from enhanced parser
-                    fhir_doc_ref["type"] = metadata['fhir_primary_code']['code']
-                    
-                # Add custom extensions
+        # Use document's FHIR metadata extraction method
+        try:
+            fhir_metadata = document.extract_fhir_metadata()
+            if fhir_metadata:
+                # Override type and category with extracted FHIR data
+                if 'code' in fhir_metadata:
+                    fhir_doc_ref["type"] = fhir_metadata['code']
+                if 'category' in fhir_metadata:
+                    fhir_doc_ref["category"] = fhir_metadata['category']
+                
+                # Add metadata as extension
                 fhir_doc_ref["extension"] = [{
                     "url": f"{self.base_url}/StructureDefinition/document-metadata",
-                    "valueString": json.dumps(metadata)
+                    "valueString": json.dumps(fhir_metadata)
                 }]
-            except (json.JSONDecodeError, KeyError):
-                pass
+        except Exception:
+            # Fallback to basic type mapping if extraction fails
+            pass
         
         return fhir_doc_ref
     
