@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Document Upload - {{ patient.first_name }} {{ patient.last_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Enhanced Document Upload</h3>
+                        <p class="text-muted mb-0">Patient: {{ patient.first_name }} {{ patient.last_name }} (MRN: {{ patient.mrn }})</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <strong>Dual Storage System:</strong> Documents are saved with both internal keys (for legacy compatibility) 
+                            and FHIR-style keys (for Epic and external system integration). All actions are logged with timestamps.
+                        </div>
+
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="file" class="form-label">Select Document File *</label>
+                                <input type="file" class="form-control" id="file" name="file" required>
+                                <div class="form-text">Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="document_name" class="form-label">Document Name *</label>
+                                <input type="text" class="form-control" id="document_name" name="document_name" 
+                                       placeholder="e.g., Lab Results - HbA1c" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="document_type" class="form-label">Document Type *</label>
+                                <select class="form-select" id="document_type" name="document_type" required>
+                                    <option value="">Select document type...</option>
+                                    <option value="Lab Report">Lab Report</option>
+                                    <option value="Radiology Report">Radiology Report</option>
+                                    <option value="Clinical Note">Clinical Note</option>
+                                    <option value="Discharge Summary">Discharge Summary</option>
+                                    <option value="Consultation">Consultation</option>
+                                    <option value="Operative Report">Operative Report</option>
+                                    <option value="Pathology Report">Pathology Report</option>
+                                    <option value="Medication List">Medication List</option>
+                                    <option value="Referral">Referral</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="provider" class="form-label">Provider/Author</label>
+                                <input type="text" class="form-control" id="provider" name="provider" 
+                                       placeholder="e.g., Dr. Smith, Cardiology">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="document_date" class="form-label">Document Date</label>
+                                <input type="date" class="form-control" id="document_date" name="document_date" 
+                                       value="{{ today }}">
+                                <div class="form-text">Leave blank to use upload date</div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-upload"></i> Upload with Dual Storage
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" 
+                                       class="btn btn-secondary w-100">
+                                        <i class="fas fa-arrow-left"></i> Back to Patient
+                                    </a>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5>Dual Storage Benefits</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Internal Keys (Legacy Support)</h6>
+                                <ul class="list-unstyled">
+                                    <li><code>tag</code> - Simple document classification</li>
+                                    <li><code>section</code> - Document categorization</li>
+                                    <li><code>matched_screening</code> - Screening associations</li>
+                                    <li><code>document_type</code> - Internal type mapping</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>FHIR-Style Keys (Standards Compliance)</h6>
+                                <ul class="list-unstyled">
+                                    <li><code>code.coding.code</code> - LOINC/SNOMED codes</li>
+                                    <li><code>category</code> - FHIR observation categories</li>
+                                    <li><code>effectiveDateTime</code> - ISO datetime format</li>
+                                    <li><code>type</code> - FHIR document types</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-fill document name from filename
+        document.getElementById('file').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name;
+            if (fileName && !document.getElementById('document_name').value) {
+                const nameWithoutExt = fileName.split('.').slice(0, -1).join('.');
+                document.getElementById('document_name').value = nameWithoutExt;
+            }
+        });
+
+        // Auto-select document type based on filename
+        document.getElementById('file').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name?.toLowerCase();
+            if (fileName) {
+                const typeSelect = document.getElementById('document_type');
+                if (fileName.includes('lab') || fileName.includes('hba1c') || fileName.includes('lipid')) {
+                    typeSelect.value = 'Lab Report';
+                } else if (fileName.includes('xray') || fileName.includes('ct') || fileName.includes('mri')) {
+                    typeSelect.value = 'Radiology Report';
+                } else if (fileName.includes('discharge')) {
+                    typeSelect.value = 'Discharge Summary';
+                } else if (fileName.includes('consult')) {
+                    typeSelect.value = 'Consultation';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
