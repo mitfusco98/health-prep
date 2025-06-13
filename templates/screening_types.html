@@ -32,10 +32,15 @@
                                 <tr>
                                     <td>
                                         <strong>{{ screening_type.name }}</strong>
-                                        {% if screening_type.description %}
-                                            <br>
-                                            <small class="text-muted">{{ screening_type.description }}</small>
-                                        {% endif %}
+                                        <br>
+                                        <div class="keyword-tags mt-1" id="keywords-{{ screening_type.id }}">
+                                            <!-- Keywords will be loaded here dynamically -->
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-1 manage-keywords-btn" 
+                                                data-screening-id="{{ screening_type.id }}"
+                                                data-screening-name="{{ screening_type.name }}">
+                                            <i class="fas fa-tags me-1"></i>Manage Keywords
+                                        </button>
                                     </td>
                                     <td>{{ screening_type.default_frequency }}</td>
                                     <td>
@@ -69,7 +74,7 @@
                                                 data-bs-target="#editScreeningTypeModal"
                                                 data-id="{{ screening_type.id }}"
                                                 data-name="{{ screening_type.name }}"
-                                                data-description="{{ screening_type.description or '' }}"
+                                                data-description=""
                                                 data-frequency="{{ screening_type.default_frequency or '' }}"
                                                 data-gender="{{ screening_type.gender_specific or '' }}"
                                                 data-min-age="{{ screening_type.min_age or '' }}"
@@ -146,9 +151,29 @@
                     </div>
                     
                     <div class="form-group mb-3">
-                        {{ add_form.description.label(class="form-label") }}
-                        {{ add_form.description(class="form-control", rows=3) }}
-                        <small class="form-text text-muted">{{ add_form.description.description }}</small>
+                        <label class="form-label">Document Keywords</label>
+                        <div class="keyword-input-container">
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" id="addKeywordInput" placeholder="Enter keyword (e.g., 'mammogram', 'glucose')">
+                                <select class="form-select" id="addSectionSelect" style="max-width: 150px;">
+                                    <option value="labs">Labs</option>
+                                    <option value="imaging">Imaging</option>
+                                    <option value="procedures">Procedures</option>
+                                    <option value="vitals">Vitals</option>
+                                    <option value="consults">Consults</option>
+                                    <option value="medications">Medications</option>
+                                    <option value="general" selected>General</option>
+                                </select>
+                                <button type="button" class="btn btn-outline-primary" id="addKeywordBtn">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                            <div id="addKeywordsList" class="keywords-display mb-2">
+                                <!-- Keywords will appear here as tags -->
+                            </div>
+                            <input type="hidden" name="keywords_json" id="addKeywordsData">
+                        </div>
+                        <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used for document matching when FHIR codes are not available.</small>
                     </div>
                     
                     <div class="row mb-3">
@@ -220,9 +245,29 @@
                     </div>
                     
                     <div class="form-group mb-3">
-                        {{ edit_form.description.label(class="form-label") }}
-                        {{ edit_form.description(class="form-control", rows=3) }}
-                        <small class="form-text text-muted">{{ edit_form.description.description }}</small>
+                        <label class="form-label">Document Keywords</label>
+                        <div class="keyword-input-container">
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" id="editKeywordInput" placeholder="Enter keyword (e.g., 'mammogram', 'glucose')">
+                                <select class="form-select" id="editSectionSelect" style="max-width: 150px;">
+                                    <option value="labs">Labs</option>
+                                    <option value="imaging">Imaging</option>
+                                    <option value="procedures">Procedures</option>
+                                    <option value="vitals">Vitals</option>
+                                    <option value="consults">Consults</option>
+                                    <option value="medications">Medications</option>
+                                    <option value="general" selected>General</option>
+                                </select>
+                                <button type="button" class="btn btn-outline-primary" id="editKeywordBtn">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            </div>
+                            <div id="editKeywordsList" class="keywords-display mb-2">
+                                <!-- Keywords will appear here as tags -->
+                            </div>
+                            <input type="hidden" name="keywords_json" id="editKeywordsData">
+                        </div>
+                        <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used for document matching when FHIR codes are not available.</small>
                     </div>
                     
                     <div class="row mb-3">
@@ -285,17 +330,347 @@
         </div>
     </div>
 </div>
+
+<!-- Keyword Management Modal -->
+<div class="modal fade" id="keywordManagementModal" tabindex="-1" aria-labelledby="keywordManagementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="keywordManagementModalLabel">Manage Keywords for <span id="modalScreeningName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Keywords help identify documents related to this screening type. They're used when FHIR codes aren't available.
+                </div>
+                
+                <div class="keyword-input-container">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" id="manageKeywordInput" placeholder="Enter keyword (e.g., 'mammogram', 'glucose')">
+                        <select class="form-select" id="manageSectionSelect" style="max-width: 150px;">
+                            <option value="labs">Labs</option>
+                            <option value="imaging">Imaging</option>
+                            <option value="procedures">Procedures</option>
+                            <option value="vitals">Vitals</option>
+                            <option value="consults">Consults</option>
+                            <option value="medications">Medications</option>
+                            <option value="general" selected>General</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" id="manageAddKeywordBtn">
+                            <i class="fas fa-plus"></i> Add Keyword
+                        </button>
+                    </div>
+                    
+                    <div id="manageKeywordsList" class="keywords-display">
+                        <!-- Keywords will appear here as removable tags -->
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Common Keywords by Section:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Labs:</strong> glucose, cholesterol, hemoglobin, hba1c, creatinine<br>
+                            <strong>Imaging:</strong> mammogram, x-ray, ct scan, mri, ultrasound<br>
+                            <strong>Procedures:</strong> colonoscopy, biopsy, endoscopy
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Vitals:</strong> blood pressure, heart rate, weight, height<br>
+                            <strong>Consults:</strong> cardiology, oncology, neurology<br>
+                            <strong>Medications:</strong> insulin, metformin, lisinopril
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveKeywordsBtn">Save Keywords</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
+<style>
+.keywords-display {
+    min-height: 60px;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+.keyword-tag {
+    display: inline-block;
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 15px;
+    padding: 4px 12px;
+    margin: 2px;
+    font-size: 0.875rem;
+}
+
+.keyword-tag .section-label {
+    background-color: #007bff;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    margin-right: 6px;
+}
+
+.keyword-tag .remove-btn {
+    margin-left: 6px;
+    color: #dc3545;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.keyword-tag .remove-btn:hover {
+    color: #c82333;
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle edit button clicks
+    let currentScreeningId = null;
+    let currentKeywords = [];
+
+    // Keyword management functionality
+    class KeywordManager {
+        constructor(prefix) {
+            this.prefix = prefix;
+            this.keywords = [];
+            this.setupEventListeners();
+        }
+
+        setupEventListeners() {
+            const addBtn = document.getElementById(this.prefix + 'KeywordBtn');
+            const input = document.getElementById(this.prefix + 'KeywordInput');
+            
+            if (addBtn) {
+                addBtn.addEventListener('click', () => this.addKeyword());
+            }
+            
+            if (input) {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.addKeyword();
+                    }
+                });
+            }
+        }
+
+        addKeyword() {
+            const input = document.getElementById(this.prefix + 'KeywordInput');
+            const sectionSelect = document.getElementById(this.prefix + 'SectionSelect');
+            
+            const keyword = input.value.trim();
+            const section = sectionSelect.value;
+            
+            if (!keyword) return;
+            
+            // Check for duplicates
+            const exists = this.keywords.some(k => 
+                k.keyword.toLowerCase() === keyword.toLowerCase() && k.section === section
+            );
+            
+            if (exists) {
+                alert('This keyword already exists for this section');
+                return;
+            }
+            
+            // Add keyword
+            this.keywords.push({
+                keyword: keyword,
+                section: section,
+                weight: 1.0,
+                case_sensitive: false,
+                exact_match: false,
+                description: ''
+            });
+            
+            input.value = '';
+            this.renderKeywords();
+            this.updateHiddenField();
+        }
+
+        removeKeyword(index) {
+            this.keywords.splice(index, 1);
+            this.renderKeywords();
+            this.updateHiddenField();
+        }
+
+        renderKeywords() {
+            const container = document.getElementById(this.prefix + 'KeywordsList');
+            container.innerHTML = '';
+            
+            this.keywords.forEach((keyword, index) => {
+                const tag = document.createElement('span');
+                tag.className = 'keyword-tag';
+                tag.innerHTML = `
+                    <span class="section-label">${keyword.section}</span>
+                    ${keyword.keyword}
+                    <span class="remove-btn" onclick="keywordManagers['${this.prefix}'].removeKeyword(${index})">&times;</span>
+                `;
+                container.appendChild(tag);
+            });
+        }
+
+        updateHiddenField() {
+            const hiddenField = document.getElementById(this.prefix + 'KeywordsData');
+            if (hiddenField) {
+                hiddenField.value = JSON.stringify(this.keywords);
+            }
+        }
+
+        setKeywords(keywords) {
+            this.keywords = keywords || [];
+            this.renderKeywords();
+            this.updateHiddenField();
+        }
+    }
+
+    // Initialize keyword managers
+    window.keywordManagers = {
+        'add': new KeywordManager('add'),
+        'edit': new KeywordManager('edit'),
+        'manage': new KeywordManager('manage')
+    };
+
+    // Load keywords for a screening type
+    function loadKeywords(screeningId) {
+        fetch(`/api/screening-keywords/${screeningId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    keywordManagers.manage.setKeywords(data.keywords);
+                } else {
+                    keywordManagers.manage.setKeywords([]);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading keywords:', error);
+                keywordManagers.manage.setKeywords([]);
+            });
+    }
+
+    // Save keywords for a screening type
+    function saveKeywords(screeningId, keywords) {
+        return fetch(`/api/screening-keywords/${screeningId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ keywords: keywords })
+        });
+    }
+
+    // Handle manage keywords button clicks
+    document.querySelectorAll('.manage-keywords-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            currentScreeningId = this.getAttribute('data-screening-id');
+            const screeningName = this.getAttribute('data-screening-name');
+            
+            document.getElementById('modalScreeningName').textContent = screeningName;
+            loadKeywords(currentScreeningId);
+            
+            const modal = new bootstrap.Modal(document.getElementById('keywordManagementModal'));
+            modal.show();
+        });
+    });
+
+    // Handle save keywords button
+    document.getElementById('saveKeywordsBtn').addEventListener('click', function() {
+        if (!currentScreeningId) return;
+        
+        const keywords = keywordManagers.manage.keywords;
+        
+        saveKeywords(currentScreeningId, keywords)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the keywords display on the main page
+                    updateKeywordsDisplay(currentScreeningId, keywords);
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('keywordManagementModal'));
+                    modal.hide();
+                    
+                    // Show success message
+                    showAlert('Keywords saved successfully', 'success');
+                } else {
+                    showAlert('Error saving keywords: ' + data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving keywords:', error);
+                showAlert('Error saving keywords', 'danger');
+            });
+    });
+
+    // Update keywords display on main page
+    function updateKeywordsDisplay(screeningId, keywords) {
+        const container = document.getElementById(`keywords-${screeningId}`);
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        if (keywords.length === 0) {
+            container.innerHTML = '<small class="text-muted">No keywords defined</small>';
+            return;
+        }
+        
+        // Group keywords by section
+        const bySection = {};
+        keywords.forEach(k => {
+            if (!bySection[k.section]) bySection[k.section] = [];
+            bySection[k.section].push(k.keyword);
+        });
+        
+        // Display keywords by section
+        Object.entries(bySection).forEach(([section, sectionKeywords]) => {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-secondary me-1 mb-1';
+            badge.innerHTML = `${section}: ${sectionKeywords.slice(0, 3).join(', ')}${sectionKeywords.length > 3 ? '...' : ''}`;
+            container.appendChild(badge);
+        });
+    }
+
+    // Load existing keywords on page load
+    document.querySelectorAll('.keyword-tags').forEach(container => {
+        const screeningId = container.id.split('-')[1];
+        loadKeywords(screeningId).then(() => {
+            updateKeywordsDisplay(screeningId, keywordManagers.manage.keywords);
+        });
+    });
+
+    // Utility function to show alerts
+    function showAlert(message, type) {
+        const alertContainer = document.querySelector('.container');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        alertContainer.insertBefore(alert, alertContainer.firstChild);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+
+    // Handle edit button clicks (updated to remove description field)
     document.querySelectorAll('.edit-screening-btn').forEach(button => {
         button.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
             const name = this.getAttribute('data-name');
-            const description = this.getAttribute('data-description');
             const frequency = this.getAttribute('data-frequency');
             const gender = this.getAttribute('data-gender');
             const minAge = this.getAttribute('data-min-age');
@@ -307,12 +682,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Populate form fields
             document.querySelector('#editScreeningForm #name').value = name;
-            document.querySelector('#editScreeningForm #description').value = description;
             document.querySelector('#editScreeningForm #default_frequency').value = frequency;
             document.querySelector('#editScreeningForm #gender_specific').value = gender;
             document.querySelector('#editScreeningForm #min_age').value = minAge;
             document.querySelector('#editScreeningForm #max_age').value = maxAge;
             document.querySelector('#editScreeningForm #is_active').checked = active === "checked";
+            
+            // Load keywords for this screening
+            loadKeywords(id).then(() => {
+                keywordManagers.edit.setKeywords(keywordManagers.manage.keywords);
+            });
         });
     });
     
