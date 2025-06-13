@@ -164,6 +164,83 @@ def validate_screening_data(form_data: Dict[str, str]) -> Dict[str, List[str]]:
     return errors
 
 
+def validate_vital_data(form_data: Dict[str, str]) -> List[str]:
+    """Validate vital signs form data"""
+    errors = []
+
+    # Date validation
+    date_val = form_data.get("date", "").strip()
+    if not date_val:
+        errors.append("Date is required")
+    elif not validate_date(date_val):
+        errors.append("Invalid date format (YYYY-MM-DD expected)")
+    else:
+        try:
+            vital_date = datetime.strptime(date_val, "%Y-%m-%d").date()
+            if vital_date > date.today():
+                errors.append("Vital signs date cannot be in the future")
+        except ValueError:
+            errors.append("Invalid date format")
+
+    # Numeric field validations
+    numeric_fields = {
+        "blood_pressure_systolic": {"min": 50, "max": 300},
+        "blood_pressure_diastolic": {"min": 30, "max": 200},
+        "heart_rate": {"min": 30, "max": 300},
+        "temperature": {"min": 90.0, "max": 110.0},
+        "weight": {"min": 0.5, "max": 1000.0},
+        "height": {"min": 10.0, "max": 120.0},
+    }
+
+    for field, limits in numeric_fields.items():
+        value = form_data.get(field, "").strip()
+        if value:  # Only validate if value is provided (optional fields)
+            try:
+                num_val = float(value)
+                if num_val < limits["min"] or num_val > limits["max"]:
+                    errors.append(
+                        f"{field.replace('_', ' ').title()} must be between {limits['min']} and {limits['max']}"
+                    )
+            except ValueError:
+                errors.append(f"{field.replace('_', ' ').title()} must be a valid number")
+
+    return errors
+
+
+def validate_condition_data(form_data: Dict[str, str]) -> List[str]:
+    """Validate condition form data"""
+    errors = []
+
+    # Required fields
+    condition_name = form_data.get("condition_name", "").strip()
+    if not condition_name:
+        errors.append("Condition name is required")
+
+    # Date validation
+    diagnosis_date = form_data.get("diagnosis_date", "").strip()
+    if diagnosis_date and not validate_date(diagnosis_date):
+        errors.append("Invalid diagnosis date format (YYYY-MM-DD expected)")
+    elif diagnosis_date:
+        try:
+            diag_date = datetime.strptime(diagnosis_date, "%Y-%m-%d").date()
+            if diag_date > date.today():
+                errors.append("Diagnosis date cannot be in the future")
+        except ValueError:
+            errors.append("Invalid diagnosis date format")
+
+    # Severity validation
+    severity = form_data.get("severity", "").strip()
+    if severity and severity not in ["mild", "moderate", "severe"]:
+        errors.append("Severity must be mild, moderate, or severe")
+
+    # Status validation
+    status = form_data.get("status", "").strip()
+    if status and status not in ["active", "inactive", "resolved"]:
+        errors.append("Status must be active, inactive, or resolved")
+
+    return errors
+
+
 def sanitize_input(text: str) -> str:
     """Sanitize user input by removing potentially harmful characters"""
     if not text:
