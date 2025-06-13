@@ -628,6 +628,9 @@ class ScreeningType(db.Model):
     # === FHIR TRIGGER CONDITIONS ===
     trigger_conditions = db.Column(db.Text)  # JSON array of condition codes that trigger this screening
     
+    # === DOCUMENT SECTION MAPPINGS ===
+    document_section_mappings = db.Column(db.Text)  # JSON mapping of document sections to FHIR categories
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -692,6 +695,99 @@ class ScreeningType(db.Model):
                         return True
                 else:
                     return True
+        
+        return False
+    
+    def set_document_section_mappings(self, mappings_dict):
+        """
+        Set document section to FHIR category mappings
+        
+        Args:
+            mappings_dict: Dictionary mapping document sections to FHIR categories like {
+                "labs": {
+                    "fhir_category": {
+                        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                        "code": "laboratory",
+                        "display": "Laboratory"
+                    }
+                },
+                "imaging": {
+                    "fhir_category": {
+                        "system": "http://terminology.hl7.org/CodeSystem/observation-category", 
+                        "code": "imaging",
+                        "display": "Imaging"
+                    }
+                },
+                "consults": {
+                    "fhir_category": {
+                        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                        "code": "exam", 
+                        "display": "Exam"
+                    }
+                }
+            }
+        """
+        if mappings_dict:
+            import json
+            self.document_section_mappings = json.dumps(mappings_dict)
+        else:
+            self.document_section_mappings = None
+    
+    def get_document_section_mappings(self):
+        """Get document section mappings as dictionary"""
+        if not self.document_section_mappings:
+            return {}
+        
+        try:
+            import json
+            return json.loads(self.document_section_mappings)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    
+    def get_fhir_category_for_section(self, section_name):
+        """
+        Get FHIR category for a document section
+        
+        Args:
+            section_name: Name of the document section (e.g., "labs", "imaging")
+            
+        Returns:
+            dict: FHIR category structure or None if not mapped
+        """
+        mappings = self.get_document_section_mappings()
+        section_mapping = mappings.get(section_name.lower())
+        
+        if section_mapping and 'fhir_category' in section_mapping:
+            return section_mapping['fhir_category']
+        
+        return None
+    
+    def matches_document_section(self, document_section, document_type=None):
+        """
+        Check if a document section matches this screening type's criteria
+        
+        Args:
+            document_section: The document section to check
+            document_type: Optional document type for additional context
+            
+        Returns:
+            bool: True if document section matches screening criteria
+        """
+        mappings = self.get_document_section_mappings()
+        
+        if not mappings:
+            return False
+        
+        # Direct section match
+        if document_section.lower() in mappings:
+            return True
+        
+        # Check for document type mapping
+        if document_type:
+            for section, config in mappings.items():
+                if 'document_types' in config:
+                    if document_type.lower() in [dt.lower() for dt in config['document_types']]:
+                        return True
         
         return False
 
