@@ -171,7 +171,7 @@
                             <div id="addKeywordsList" class="keywords-display mb-2">
                                 <!-- Keywords will appear here as tags -->
                             </div>
-                            <input type="hidden" name="keywords_json" id="addKeywordsData">
+                            <input type="hidden" name="keywords_json" id="addKeywordsData" value="[]">
                         </div>
                         <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used for document matching when FHIR codes are not available.</small>
                     </div>
@@ -265,7 +265,7 @@
                             <div id="editKeywordsList" class="keywords-display mb-2">
                                 <!-- Keywords will appear here as tags -->
                             </div>
-                            <input type="hidden" name="keywords_json" id="editKeywordsData">
+                            <input type="hidden" name="keywords_json" id="editKeywordsData" value="[]">
                         </div>
                         <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used for document matching when FHIR codes are not available.</small>
                     </div>
@@ -673,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
 
-    // Handle edit button clicks (updated to remove description field)
+    // Handle edit button clicks
     document.querySelectorAll('.edit-screening-btn').forEach(button => {
         button.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
@@ -688,17 +688,27 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('editScreeningForm').action = "{{ url_for('edit_screening_type', screening_type_id=0) }}".replace("0", id);
             
             // Populate form fields
-            document.querySelector('#editScreeningForm #name').value = name;
-            document.querySelector('#editScreeningForm #default_frequency').value = frequency;
-            document.querySelector('#editScreeningForm #gender_specific').value = gender;
-            document.querySelector('#editScreeningForm #min_age').value = minAge;
-            document.querySelector('#editScreeningForm #max_age').value = maxAge;
-            document.querySelector('#editScreeningForm #is_active').checked = active === "checked";
+            document.querySelector('#editScreeningForm input[name="name"]').value = name;
+            document.querySelector('#editScreeningForm select[name="default_frequency"]').value = frequency || '';
+            document.querySelector('#editScreeningForm select[name="gender_specific"]').value = gender || '';
+            document.querySelector('#editScreeningForm input[name="min_age"]').value = minAge || '';
+            document.querySelector('#editScreeningForm input[name="max_age"]').value = maxAge || '';
+            document.querySelector('#editScreeningForm input[name="is_active"]').checked = active === "checked";
             
             // Load keywords for this screening
-            loadKeywords(id).then(() => {
-                keywordManagers.edit.setKeywords(keywordManagers.manage.keywords);
-            });
+            fetch(`/api/screening-keywords/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        keywordManagers.edit.setKeywords(data.keywords);
+                    } else {
+                        keywordManagers.edit.setKeywords([]);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading keywords:', error);
+                    keywordManagers.edit.setKeywords([]);
+                });
         });
     });
     

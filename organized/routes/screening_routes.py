@@ -53,7 +53,6 @@ def add_screening_type():
     if request.method == "POST":
         screening_type = ScreeningType(
             name=request.form.get("name"),
-            description=request.form.get("description"),
             default_frequency=request.form.get("default_frequency"),
             gender_specific=(
                 request.form.get("gender_specific")
@@ -67,6 +66,29 @@ def add_screening_type():
 
         try:
             db.session.add(screening_type)
+            db.session.flush()  # Get the ID without committing
+            
+            # Handle keywords if provided
+            keywords_json = request.form.get("keywords_json")
+            if keywords_json:
+                try:
+                    from screening_keyword_manager import ScreeningKeywordManager
+                    keywords = json.loads(keywords_json)
+                    manager = ScreeningKeywordManager()
+                    
+                    for keyword_data in keywords:
+                        manager.add_keyword_rule(
+                            screening_type_id=screening_type.id,
+                            keyword=keyword_data.get('keyword', ''),
+                            section=keyword_data.get('section', 'general'),
+                            weight=keyword_data.get('weight', 1.0),
+                            case_sensitive=keyword_data.get('case_sensitive', False),
+                            exact_match=keyword_data.get('exact_match', False),
+                            description=keyword_data.get('description', '')
+                        )
+                except (json.JSONDecodeError, Exception) as e:
+                    print(f"Error processing keywords: {str(e)}")
+            
             db.session.commit()
             flash(
                 f'Screening type "{screening_type.name}" has been added successfully.',
@@ -86,7 +108,6 @@ def edit_screening_type(screening_type_id):
 
     if request.method == "POST":
         screening_type.name = request.form.get("name")
-        screening_type.description = request.form.get("description")
         screening_type.default_frequency = request.form.get("default_frequency")
         screening_type.gender_specific = (
             request.form.get("gender_specific")
@@ -98,6 +119,33 @@ def edit_screening_type(screening_type_id):
         screening_type.is_active = bool(request.form.get("is_active"))
 
         try:
+            # Handle keywords if provided
+            keywords_json = request.form.get("keywords_json")
+            if keywords_json:
+                try:
+                    from screening_keyword_manager import ScreeningKeywordManager
+                    keywords = json.loads(keywords_json)
+                    manager = ScreeningKeywordManager()
+                    
+                    # Clear existing keywords and add new ones
+                    config = manager.get_keyword_config(screening_type_id)
+                    if config:
+                        config.keyword_rules = []
+                        manager._save_keyword_config(config)
+                    
+                    for keyword_data in keywords:
+                        manager.add_keyword_rule(
+                            screening_type_id=screening_type_id,
+                            keyword=keyword_data.get('keyword', ''),
+                            section=keyword_data.get('section', 'general'),
+                            weight=keyword_data.get('weight', 1.0),
+                            case_sensitive=keyword_data.get('case_sensitive', False),
+                            exact_match=keyword_data.get('exact_match', False),
+                            description=keyword_data.get('description', '')
+                        )
+                except (json.JSONDecodeError, Exception) as e:
+                    print(f"Error processing keywords: {str(e)}")
+            
             db.session.commit()
             flash(
                 f'Screening type "{screening_type.name}" has been updated successfully.',
