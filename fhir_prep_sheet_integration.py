@@ -24,6 +24,7 @@ from screening_rules import (
 
 try:
     from models import Patient, Appointment, MedicalDocument
+    from fhir_condition_screening_matcher import ConditionScreeningMatcher, add_condition_triggered_screenings_to_prep_sheet
 except ImportError:
     Patient = Appointment = MedicalDocument = None
 

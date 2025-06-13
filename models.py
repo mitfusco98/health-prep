@@ -624,12 +624,76 @@ class ScreeningType(db.Model):
         db.Integer
     )  # Maximum age for this screening, null if no maximum
     is_active = db.Column(db.Boolean, default=True)
+    
+    # === FHIR TRIGGER CONDITIONS ===
+    trigger_conditions = db.Column(db.Text)  # JSON array of condition codes that trigger this screening
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
     # Don't specify a relationship here since the original Screening table doesn't have a foreign key
+
+    def set_trigger_conditions(self, conditions_list):
+        """
+        Set trigger conditions as JSON array
+        
+        Args:
+            conditions_list: List of condition codes like [
+                {
+                    "system": "http://snomed.info/sct",
+                    "code": "73211009",
+                    "display": "Diabetes mellitus"
+                },
+                {
+                    "system": "http://hl7.org/fhir/sid/icd-10-cm",
+                    "code": "E11.9",
+                    "display": "Type 2 diabetes mellitus without complications"
+                }
+            ]
+        """
+        if conditions_list:
+            import json
+            self.trigger_conditions = json.dumps(conditions_list)
+        else:
+            self.trigger_conditions = None
+    
+    def get_trigger_conditions(self):
+        """Get trigger conditions as list of dictionaries"""
+        if not self.trigger_conditions:
+            return []
+        
+        try:
+            import json
+            return json.loads(self.trigger_conditions)
+        except (json.JSONDecodeError, TypeError):
+            return []
+    
+    def matches_condition_code(self, condition_code, code_system=None):
+        """
+        Check if a condition code matches any of the trigger conditions
+        
+        Args:
+            condition_code: The code to check (e.g., "73211009", "E11.9")
+            code_system: Optional system URL to match against
+            
+        Returns:
+            bool: True if condition matches any trigger condition
+        """
+        trigger_conditions = self.get_trigger_conditions()
+        
+        for trigger in trigger_conditions:
+            # Direct code match
+            if trigger.get('code') == condition_code:
+                # If system is provided, also check system match
+                if code_system and trigger.get('system'):
+                    if code_system == trigger.get('system'):
+                        return True
+                else:
+                    return True
+        
+        return False
 
     def __repr__(self):
         return f"<ScreeningType {self.name}>"
