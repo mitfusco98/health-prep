@@ -685,7 +685,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const active = this.getAttribute('data-active');
             
             // Update form action URL
-            document.getElementById('editScreeningForm').action = "{{ url_for('screening.edit_screening_type', screening_type_id=0) }}".replace("0", id);
+            document.getElementById('editScreeningForm').action = "/screenings/types/" + id + "/edit";
             
             // Populate form fields
             document.querySelector('#editScreeningForm input[name="name"]').value = name;
@@ -719,7 +719,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const name = this.getAttribute('data-name');
             
             // Update form action URL
-            document.getElementById('deleteScreeningForm').action = "{{ url_for('screening.delete_screening_type', screening_type_id=0) }}".replace("0", id);
+            document.getElementById('deleteScreeningForm').action = "/screenings/types/" + id + "/delete";
             
             // Update modal text
             document.getElementById('deleteScreeningName').textContent = name;
