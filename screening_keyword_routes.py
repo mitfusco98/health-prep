@@ -3,16 +3,14 @@ API Routes for Screening Keyword Management
 Handles loading and saving user-defined keywords for screening types
 """
 
-from flask import Blueprint, request, jsonify
+from flask import request, jsonify
+from app import app, db
 from models import ScreeningType
 from screening_keyword_manager import ScreeningKeywordManager
 import json
 
-# Create blueprint for screening keyword routes
-screening_keyword_bp = Blueprint('screening_keyword', __name__)
 
-
-@screening_keyword_bp.route('/api/screening-keywords/<int:screening_id>', methods=['GET'])
+@app.route('/api/screening-keywords/<int:screening_id>', methods=['GET'])
 def get_screening_keywords(screening_id):
     """Get keyword configuration for a screening type"""
     try:
@@ -44,10 +42,9 @@ def get_screening_keywords(screening_id):
         }), 500
 
 
-@screening_keyword_bp.route('/api/screening-keywords/<int:screening_id>', methods=['POST'])
+@app.route('/api/screening-keywords/<int:screening_id>', methods=['POST'])
 def save_screening_keywords(screening_id):
     """Save keyword configuration for a screening type"""
-    from app import db
     try:
         data = request.get_json()
         keywords = data.get('keywords', [])
@@ -99,7 +96,7 @@ def save_screening_keywords(screening_id):
         }), 500
 
 
-@screening_keyword_bp.route('/api/screening-keywords/<int:screening_id>/suggestions/<section>', methods=['GET'])
+@app.route('/api/screening-keywords/<int:screening_id>/suggestions/<section>', methods=['GET'])
 def get_keyword_suggestions(screening_id, section):
     """Get keyword suggestions for a specific section"""
     try:
@@ -119,7 +116,7 @@ def get_keyword_suggestions(screening_id, section):
         }), 500
 
 
-@screening_keyword_bp.route('/api/screening-keywords/<int:screening_id>/test', methods=['POST'])
+@app.route('/api/screening-keywords/<int:screening_id>/test', methods=['POST'])
 def test_keyword_matching(screening_id):
     """Test keyword matching against a sample document"""
     try:

@@ -1350,12 +1350,3 @@ register_api_access_middleware(app)
 from admin_middleware import register_admin_middleware
 
 register_admin_middleware(app)
-
-# Register organized blueprints
-from organized import register_organized_blueprints
-register_organized_blueprints(app)
-
-# Register screening keyword API routes
-import screening_keyword_routes
-from screening_keyword_routes import screening_keyword_bp
-app.register_blueprint(screening_keyword_bp)

@@ -129,7 +129,7 @@
                 <h5 class="modal-title" id="addScreeningTypeModalLabel">Add New Screening Type</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('screening.add_screening_type') }}">
+            <form method="POST" action="{{ url_for('add_screening_type') }}">
                 <div class="modal-body">
                     {{ add_form.hidden_tag() }}
                     
@@ -171,7 +171,7 @@
                             <div id="addKeywordsList" class="keywords-display mb-2">
                                 <!-- Keywords will appear here as tags -->
                             </div>
-                            <input type="hidden" name="keywords_json" id="addKeywordsData" value="[]">
+                            <input type="hidden" name="keywords_json" id="addKeywordsData">
                         </div>
                         <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used for document matching when FHIR codes are not available.</small>
                     </div>
@@ -223,7 +223,7 @@
                 <h5 class="modal-title" id="editScreeningTypeModalLabel">Edit Screening Type</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('screening.edit_screening_type', screening_type_id=0) }}" id="editScreeningForm">
+            <form method="POST" action="{{ url_for('edit_screening_type', screening_type_id=0) }}" id="editScreeningForm">
                 <div class="modal-body">
                     {{ edit_form.hidden_tag() }}
                     
@@ -265,7 +265,7 @@
                             <div id="editKeywordsList" class="keywords-display mb-2">
                                 <!-- Keywords will appear here as tags -->
                             </div>
-                            <input type="hidden" name="keywords_json" id="editKeywordsData" value="[]">
+                            <input type="hidden" name="keywords_json" id="editKeywordsData">
                         </div>
                         <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used for document matching when FHIR codes are not available.</small>
                     </div>
@@ -323,7 +323,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="POST" action="{{ url_for('screening.delete_screening_type', screening_type_id=0) }}" id="deleteScreeningForm">
+                <form method="POST" action="{{ url_for('delete_screening_type', screening_type_id=0) }}" id="deleteScreeningForm">
                     <button type="submit" class="btn btn-danger">Delete</button>
                 </form>
             </div>
@@ -673,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
 
-    // Handle edit button clicks
+    // Handle edit button clicks (updated to remove description field)
     document.querySelectorAll('.edit-screening-btn').forEach(button => {
         button.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
@@ -685,30 +685,20 @@ document.addEventListener('DOMContentLoaded', function() {
             const active = this.getAttribute('data-active');
             
             // Update form action URL
-            document.getElementById('editScreeningForm').action = "/screenings/types/" + id + "/edit";
+            document.getElementById('editScreeningForm').action = "{{ url_for('edit_screening_type', screening_type_id=0) }}".replace("0", id);
             
             // Populate form fields
-            document.querySelector('#editScreeningForm input[name="name"]').value = name;
-            document.querySelector('#editScreeningForm select[name="default_frequency"]').value = frequency || '';
-            document.querySelector('#editScreeningForm select[name="gender_specific"]').value = gender || '';
-            document.querySelector('#editScreeningForm input[name="min_age"]').value = minAge || '';
-            document.querySelector('#editScreeningForm input[name="max_age"]').value = maxAge || '';
-            document.querySelector('#editScreeningForm input[name="is_active"]').checked = active === "checked";
+            document.querySelector('#editScreeningForm #name').value = name;
+            document.querySelector('#editScreeningForm #default_frequency').value = frequency;
+            document.querySelector('#editScreeningForm #gender_specific').value = gender;
+            document.querySelector('#editScreeningForm #min_age').value = minAge;
+            document.querySelector('#editScreeningForm #max_age').value = maxAge;
+            document.querySelector('#editScreeningForm #is_active').checked = active === "checked";
             
             // Load keywords for this screening
-            fetch(`/api/screening-keywords/${id}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        keywordManagers.edit.setKeywords(data.keywords);
-                    } else {
-                        keywordManagers.edit.setKeywords([]);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading keywords:', error);
-                    keywordManagers.edit.setKeywords([]);
-                });
+            loadKeywords(id).then(() => {
+                keywordManagers.edit.setKeywords(keywordManagers.manage.keywords);
+            });
         });
     });
     
@@ -719,7 +709,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const name = this.getAttribute('data-name');
             
             // Update form action URL
-            document.getElementById('deleteScreeningForm').action = "/screenings/types/" + id + "/delete";
+            document.getElementById('deleteScreeningForm').action = "{{ url_for('delete_screening_type', screening_type_id=0) }}".replace("0", id);
             
             // Update modal text
             document.getElementById('deleteScreeningName').textContent = name;
