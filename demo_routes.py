@@ -949,7 +949,7 @@ def add_screening_type():
     if form.validate_on_submit():
         screening_type = ScreeningType(
             name=form.name.data,
-            description=form.description.data,
+            description="",  # No longer using description field
             default_frequency=form.default_frequency.data,
             gender_specific=(
                 form.gender_specific.data if form.gender_specific.data else None
@@ -1063,7 +1063,7 @@ def edit_screening_type(screening_type_id):
 
         # Update the screening type with form data
         screening_type.name = form.name.data
-        screening_type.description = form.description.data
+        screening_type.description = ""  # No longer using description field
         screening_type.default_frequency = form.default_frequency.data
         screening_type.gender_specific = (
             form.gender_specific.data if form.gender_specific.data else None
@@ -1076,8 +1076,9 @@ def edit_screening_type(screening_type_id):
         keywords_json = request.form.get('keywords_json')
         if keywords_json:
             try:
+                import json as json_module
                 from screening_keyword_manager import ScreeningKeywordManager
-                keywords = json.loads(keywords_json)
+                keywords = json_module.loads(keywords_json)
                 manager = ScreeningKeywordManager()
                 
                 # Clear existing keywords for this screening type

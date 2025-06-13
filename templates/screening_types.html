@@ -19,7 +19,7 @@
                     <table class="table table-striped table-hover">
                         <thead>
                             <tr>
-                                <th>Name</th>
+                                <th>Name & Keywords</th>
                                 <th>Frequency</th>
                                 <th>Gender Specific</th>
                                 <th>Age Range</th>
@@ -31,16 +31,19 @@
                             {% for screening_type in screening_types %}
                                 <tr>
                                     <td>
-                                        <strong>{{ screening_type.name }}</strong>
-                                        <br>
-                                        <div class="keyword-tags mt-1" id="keywords-{{ screening_type.id }}">
-                                            <!-- Keywords will be loaded here dynamically -->
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <strong>{{ screening_type.name }}</strong>
+                                                <div class="keyword-tags mt-2" id="keywords-{{ screening_type.id }}">
+                                                    <small class="text-muted">Loading keywords...</small>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-primary ms-2 manage-keywords-btn" 
+                                                    data-screening-id="{{ screening_type.id }}"
+                                                    data-screening-name="{{ screening_type.name }}">
+                                                <i class="fas fa-tags me-1"></i>Keywords
+                                            </button>
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-1 manage-keywords-btn" 
-                                                data-screening-id="{{ screening_type.id }}"
-                                                data-screening-name="{{ screening_type.name }}">
-                                            <i class="fas fa-tags me-1"></i>Manage Keywords
-                                        </button>
                                     </td>
                                     <td>{{ screening_type.default_frequency }}</td>
                                     <td>
