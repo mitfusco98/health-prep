@@ -241,6 +241,51 @@ def validate_condition_data(form_data: Dict[str, str]) -> List[str]:
     return errors
 
 
+def validate_document_data(form_data: Dict[str, str]) -> Dict[str, List[str]]:
+    """Validate document form data"""
+    errors = {}
+
+    # Required fields
+    required = ["document_type"]
+    missing = validate_required_fields(form_data, required)
+    if missing:
+        errors["required"] = [f"Field '{field}' is required" for field in missing]
+
+    # Document type validation
+    document_type = form_data.get("document_type", "").strip()
+    valid_types = [
+        "Lab Results",
+        "Imaging Study", 
+        "Consultation Report",
+        "Hospital Summary",
+        "Insurance Document",
+        "Prescription",
+        "Medical History",
+        "Other",
+    ]
+    if document_type and document_type not in valid_types:
+        errors["document_type"] = [f'Document type must be one of: {", ".join(valid_types)}']
+
+    # Date validation
+    date_created = form_data.get("date_created", "").strip()
+    if date_created and not validate_date(date_created):
+        errors["date_created"] = ["Invalid date format (YYYY-MM-DD expected)"]
+    elif date_created:
+        try:
+            doc_date = datetime.strptime(date_created, "%Y-%m-%d").date()
+            if doc_date > date.today():
+                errors["date_created"] = ["Document date cannot be in the future"]
+        except ValueError:
+            pass  # Already handled above
+
+    # Description length validation
+    description = form_data.get("description", "").strip()
+    if description and len(description) > 500:
+        errors["description"] = ["Description must be 500 characters or less"]
+
+    return errors
+
+
 def sanitize_input(text: str) -> str:
     """Sanitize user input by removing potentially harmful characters"""
     if not text:
