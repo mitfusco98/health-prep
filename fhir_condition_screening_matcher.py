@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Set
 from datetime import datetime
 
 from app import db
-from models import Patient, MedicalCondition, ScreeningType, Screening
+from models import Patient, Condition, ScreeningType, Screening
 from fhir_object_mappers import FHIRObjectMapper
 
 
@@ -37,7 +37,7 @@ class ConditionScreeningMatcher:
         condition_codes = []
         
         # Get all medical conditions for the patient
-        conditions = MedicalCondition.query.filter_by(patient_id=patient_id).all()
+        conditions = Condition.query.filter_by(patient_id=patient_id).all()
         
         for condition in conditions:
             # Convert condition to FHIR format
@@ -51,8 +51,8 @@ class ConditionScreeningMatcher:
                         'code': coding.get('code'),
                         'display': coding.get('display'),
                         'condition_id': condition.id,
-                        'condition_name': condition.condition_name,
-                        'diagnosis_date': condition.diagnosis_date.isoformat() if condition.diagnosis_date else None
+                        'condition_name': condition.name,
+                        'diagnosis_date': condition.diagnosed_date.isoformat() if condition.diagnosed_date else None
                     })
         
         return condition_codes
