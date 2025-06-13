@@ -12,6 +12,7 @@ import ehr_routes  # noqa: F401
 import checklist_routes  # noqa: F401
 import api_routes  # noqa: F401
 import performance_routes  # noqa: F401
+import screening_keyword_routes  # noqa: F401
 
 # Import modular route files
 from routes import patient_routes  # noqa: F401

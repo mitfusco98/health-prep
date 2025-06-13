@@ -642,9 +642,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load existing keywords on page load
     document.querySelectorAll('.keyword-tags').forEach(container => {
         const screeningId = container.id.split('-')[1];
-        loadKeywords(screeningId).then(() => {
-            updateKeywordsDisplay(screeningId, keywordManagers.manage.keywords);
-        });
+        fetch(`/api/screening-keywords/${screeningId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateKeywordsDisplay(screeningId, data.keywords);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading keywords for screening', screeningId, ':', error);
+            });
     });
 
     // Utility function to show alerts

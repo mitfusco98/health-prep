@@ -941,6 +941,8 @@ def add_screening_type_form():
 def add_screening_type():
     """Add a new screening type"""
     from forms import ScreeningTypeForm
+    from screening_keyword_manager import ScreeningKeywordManager
+    import json
 
     form = ScreeningTypeForm()
 
@@ -959,6 +961,26 @@ def add_screening_type():
 
         db.session.add(screening_type)
         db.session.commit()
+
+        # Handle keywords if provided
+        keywords_json = request.form.get('keywords_json')
+        if keywords_json:
+            try:
+                keywords = json.loads(keywords_json)
+                manager = ScreeningKeywordManager()
+                
+                for keyword_data in keywords:
+                    manager.add_keyword_rule(
+                        screening_type_id=screening_type.id,
+                        keyword=keyword_data.get('keyword', ''),
+                        section=keyword_data.get('section', 'general'),
+                        weight=keyword_data.get('weight', 1.0),
+                        case_sensitive=keyword_data.get('case_sensitive', False),
+                        exact_match=keyword_data.get('exact_match', False),
+                        description=keyword_data.get('description', '')
+                    )
+            except Exception as e:
+                print(f"Error adding keywords: {str(e)}")
 
         # Enhanced admin logging for screening type addition
         from models import AdminLog
@@ -1049,6 +1071,33 @@ def edit_screening_type(screening_type_id):
         screening_type.min_age = form.min_age.data
         screening_type.max_age = form.max_age.data
         screening_type.is_active = form.is_active.data
+
+        # Handle keywords if provided
+        keywords_json = request.form.get('keywords_json')
+        if keywords_json:
+            try:
+                from screening_keyword_manager import ScreeningKeywordManager
+                keywords = json.loads(keywords_json)
+                manager = ScreeningKeywordManager()
+                
+                # Clear existing keywords for this screening type
+                config = manager.get_keyword_config(screening_type_id)
+                if config:
+                    config.keyword_rules = []
+                
+                # Add new keywords
+                for keyword_data in keywords:
+                    manager.add_keyword_rule(
+                        screening_type_id=screening_type_id,
+                        keyword=keyword_data.get('keyword', ''),
+                        section=keyword_data.get('section', 'general'),
+                        weight=keyword_data.get('weight', 1.0),
+                        case_sensitive=keyword_data.get('case_sensitive', False),
+                        exact_match=keyword_data.get('exact_match', False),
+                        description=keyword_data.get('description', '')
+                    )
+            except Exception as e:
+                print(f"Error updating keywords: {str(e)}")
 
         try:
             # Store original values for change tracking
