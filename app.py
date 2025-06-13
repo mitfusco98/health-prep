@@ -1350,3 +1350,31 @@ register_api_access_middleware(app)
 from admin_middleware import register_admin_middleware
 
 register_admin_middleware(app)
+
+# Import and register blueprints after app creation
+from organized.routes.admin_routes import admin_bp
+from organized.routes.api_routes import api_bp
+from organized.routes.appointment_routes import appointment_bp
+from organized.routes.auth_routes import auth_bp
+from organized.routes.checklist_routes import checklist_bp
+from organized.routes.document_routes import document_bp
+from organized.routes.ehr_routes import ehr_bp
+from organized.routes.medical_routes import medical_bp
+from organized.routes.patient_routes import patient_bp
+from organized.routes.performance_routes import performance_bp
+from organized.routes.screening_routes import screening_bp
+
+app.register_blueprint(admin_bp)
+app.register_blueprint(api_bp)
+app.register_blueprint(appointment_bp)
+app.register_blueprint(auth_bp)
+app.register_blueprint(checklist_bp)
+app.register_blueprint(document_bp)
+app.register_blueprint(ehr_bp)
+app.register_blueprint(medical_bp)
+app.register_blueprint(patient_bp)
+app.register_blueprint(performance_bp)
+app.register_blueprint(screening_bp)
+
+# Register screening keyword API routes
+import screening_keyword_routes
