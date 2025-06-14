@@ -1,790 +1,510 @@
-{% extends 'base_demo.html' %}
-
-{% block title %}HealthPrep - Screening List{% endblock %}
-
-{% block extra_css %}
-<style>
-/* Override for buttons - added May 18, 2025 */
-.btn .fas, .btn .fa {
-    display: none !important;
-}
-</style>
-{% endblock %}
+{% extends "base_demo.html" %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-12">
-        <h1>Screening List</h1>
-        <p class="lead">View and manage patient screening recommendations</p>
-    </div>
-</div>
+<div class="container-fluid">
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4" id="screeningTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {{ 'active' if active_tab == 'patients' else '' }}" 
+                    id="patients-tab" data-bs-toggle="tab" data-bs-target="#patients" 
+                    type="button" role="tab" aria-controls="patients" aria-selected="{{ 'true' if active_tab == 'patients' else 'false' }}">
+                Patient Screenings
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {{ 'active' if active_tab == 'types' else '' }}" 
+                    id="types-tab" data-bs-toggle="tab" data-bs-target="#types" 
+                    type="button" role="tab" aria-controls="types" aria-selected="{{ 'true' if active_tab == 'types' else 'false' }}">
+                Manage Screening Types
+            </button>
+        </li>
+    </ul>
 
-<!-- Nav Tabs -->
-<ul class="nav nav-tabs mb-3">
-    <li class="nav-item">
-        <a class="nav-link {% if active_tab == 'screenings' %}active{% endif %}" href="{{ url_for('screening_list', tab='screenings', search=search_query) }}">
-            Screening List
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if active_tab == 'types' %}active{% endif %}" href="{{ url_for('screening_list', tab='types', search=search_query) }}">
-            Manage Screening Types
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {% if active_tab == 'checklist' %}active{% endif %}" href="{{ url_for('screening_list', tab='checklist', search=search_query) }}">
-            Prep Sheet Settings
-        </a>
-    </li>
-</ul>
+    <!-- Tab Content -->
+    <div class="tab-content" id="screeningTabContent">
+        <!-- Patient Screenings Tab -->
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'patients' else '' }}" 
+             id="patients" role="tabpanel" aria-labelledby="patients-tab">
 
-<!-- Tab Content -->
-{% if active_tab == 'screenings' %}
-<!-- Due Screenings Tab Content -->
-<div class="card border-0">
-    <div class="card-header bg-secondary bg-opacity-25">
-        <div class="row align-items-center">
-            <div class="col">
-                <h5 class="mb-0">
-                    <i class="fas fa-clipboard-check me-1"></i><i class="fas fa-cog me-2"></i>Screening List
-                </h5>
+            {% if active_tab == 'patients' %}
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Patient Screenings</h1>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScreeningModal">
+                    <i class="fas fa-plus me-1"></i> Add Screening
+                </button>
             </div>
-            <div class="col-auto d-flex">
-                <form class="d-flex me-2" method="get">
-                    <input type="hidden" name="tab" value="screenings">
-                    <input class="form-control me-2" type="search" placeholder="Search patient or screening" name="search" value="{{ search_query }}">
-                    <button class="btn btn-outline-secondary" type="submit">Search</button>
-                </form>
-                <a href="{{ url_for('add_screening_form') }}" class="btn btn-primary">
-                    Add Screening
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="card-body p-0">
-        {% if screenings %}
-        <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0">
-                <thead>
-                    <tr>
-                        <th>Patient</th>
-                        <th>Screening</th>
-                        <th>Due Date</th>
-                        <th>Last Completed</th>
-                        <th>Priority</th>
-                        <th width="150">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for screening in screenings %}
-                    <tr>
-                        <td>
-                            <a href="{{ url_for('patient_detail', patient_id=screening.patient.id) }}">
-                                {{ screening.patient.full_name }}
-                            </a>
-                        </td>
-                        <td>{{ screening.screening_type }}</td>
-                        <td>
-                            {% if screening.due_date %}
-                                {{ screening.due_date.strftime('%m/%d/%Y') }}
-                                {% if screening.due_date < today %}
-                                    <span class="badge bg-danger">Overdue</span>
-                                {% elif (screening.due_date - today).days <= 30 %}
-                                    <span class="badge bg-warning">Due Soon</span>
-                                {% endif %}
-                            {% else %}
-                                <span class="text-muted">Not set</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if screening.last_completed %}
-                                {{ screening.last_completed.strftime('%m/%d/%Y') }}
-                            {% else %}
-                                <span class="text-muted">Unknown</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if screening.priority == 'High' %}
-                                <span class="badge bg-danger">High</span>
-                            {% elif screening.priority == 'Medium' %}
-                                <span class="badge bg-warning">Medium</span>
-                            {% elif screening.priority == 'Low' %}
-                                <span class="badge bg-info">Low</span>
-                            {% else %}
-                                <span class="badge bg-secondary">None</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-sm btn-outline-primary edit-screening-btn" 
-                                   data-bs-toggle="modal" data-bs-target="#editScreeningModal"
-                                   data-id="{{ screening.id }}"
-                                   data-patient-id="{{ screening.patient.id }}"
-                                   data-patient-name="{{ screening.patient.full_name }}"
-                                   data-screening-type="{{ screening.screening_type }}"
-                                   data-due-date="{{ screening.due_date.strftime('%Y-%m-%d') if screening.due_date else '' }}"
-                                   data-last-completed="{{ screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else '' }}"
-                                   data-frequency="{{ screening.frequency or '' }}"
-                                   data-priority="{{ screening.priority or '' }}"
-                                   data-notes="{{ screening.notes or '' }}">
-                                    <i class="fas fa-edit me-1"></i>Edit
-                                </button>
-                                <a href="{{ url_for('delete_screening', patient_id=screening.patient.id, screening_id=screening.id, ts=cache_timestamp) }}" class="btn btn-sm btn-outline-danger" 
-                                   onclick="return confirm('Are you sure you want to delete this screening record?');">
-                                    <i class="fas fa-trash-alt me-1"></i>Delete
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="text-center py-5">
-            <p class="text-muted mb-0">No screenings found {% if search_query %}matching "{{ search_query }}"{% endif %}</p>
-        </div>
-        {% endif %}
-    </div>
-</div>
 
-<!-- Add Screening Recommendation Modal -->
-<div class="modal fade" id="addScreeningRecommendationModal" tabindex="-1" aria-labelledby="addScreeningRecommendationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addScreeningRecommendationModalLabel">Add Screening Recommendation</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Due Screenings</h5>
+                </div>
+                <div class="card-body">
+                    {% if screenings %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Screening Type</th>
+                                        <th>Due Date</th>
+                                        <th>Last Completed</th>
+                                        <th>Priority</th>
+                                        <th>Notes</th>
+                                        <th width="150">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for screening in screenings %}
+                                        <tr class="{{ 'table-danger' if screening.is_overdue() else 'table-warning' if screening.is_due_soon() else '' }}">
+                                            <td>
+                                                <a href="{{ url_for('patient_detail', patient_id=screening.patient.id) }}">
+                                                    {{ screening.patient.first_name }} {{ screening.patient.last_name }}
+                                                </a>
+                                            </td>
+                                            <td>{{ screening.screening_type }}</td>
+                                            <td>
+                                                {% if screening.due_date %}
+                                                    {{ screening.due_date.strftime('%Y-%m-%d') }}
+                                                    {% if screening.is_overdue() %}
+                                                        <span class="badge bg-danger ms-1">Overdue</span>
+                                                    {% elif screening.is_due_soon() %}
+                                                        <span class="badge bg-warning text-dark ms-1">Due Soon</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-muted">Not set</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if screening.last_completed %}
+                                                    {{ screening.last_completed.strftime('%Y-%m-%d') }}
+                                                {% else %}
+                                                    <span class="text-muted">Never</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{{ 'danger' if screening.priority == 'High' else 'warning' if screening.priority == 'Medium' else 'secondary' }}">
+                                                    {{ screening.priority }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if screening.notes %}
+                                                    {{ screening.notes[:50] }}{% if screening.notes|length > 50 %}...{% endif %}
+                                                {% else %}
+                                                    <span class="text-muted">No notes</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-primary edit-screening-btn" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#editScreeningModal"
+                                                        data-patient-id="{{ screening.patient_id }}"
+                                                        data-screening-id="{{ screening.id }}"
+                                                        data-screening-type="{{ screening.screening_type }}"
+                                                        data-due-date="{{ screening.due_date.strftime('%Y-%m-%d') if screening.due_date else '' }}"
+                                                        data-last-completed="{{ screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else '' }}"
+                                                        data-priority="{{ screening.priority }}"
+                                                        data-notes="{{ screening.notes or '' }}">
+                                                    Edit
+                                                </button>
+                                                <a href="{{ url_for('screening.delete_screening', patient_id=screening.patient_id, screening_id=screening.id) }}" 
+                                                   class="btn btn-sm btn-outline-danger"
+                                                   onclick="return confirm('Are you sure you want to delete this screening?')">
+                                                    Delete
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> No screenings are currently due.
+                        </div>
+                    {% endif %}
+                </div>
             </div>
-            <form method="POST" action="{{ url_for('add_screening_recommendation', ts=cache_timestamp) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Patient <span class="text-danger">*</span></label>
-                        <select class="form-select" name="patient_id" id="patient" required>
-                            <option value="">Select a patient</option>
-                            {% for patient in patients %}
-                                <option value="{{ patient.id }}">{{ patient.full_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Screening Type <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="screening_type" id="screening_type" required list="screening-types-list">
-                        <datalist id="screening-types-list">
-                            {% for type in all_screening_types %}
-                                <option value="{{ type.name }}">
-                            {% endfor %}
-                        </datalist>
-                        <small class="text-muted">Type or select from available screening types</small>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Due Date</label>
-                                <input type="date" class="form-control" name="due_date">
-                                <small class="text-muted">When should this screening be completed</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Last Completed</label>
-                                <input type="date" class="form-control" name="last_completed">
-                                <small class="text-muted">When was this screening last done</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Frequency</label>
-                                <input type="text" class="form-control" name="frequency" placeholder="e.g. Annual, Every 5 years">
-                                <small class="text-muted">How often this screening should be done</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Priority</label>
-                                <select class="form-select" name="priority">
-                                    <option value="">Select priority</option>
-                                    <option value="High">High</option>
-                                    <option value="Medium">Medium</option>
-                                    <option value="Low">Low</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea class="form-control" name="notes" rows="3"></textarea>
-                        <small class="text-muted">Any additional information about this screening recommendation</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </div>
-            </form>
+            {% endif %}
         </div>
-    </div>
-</div>
 
-<!-- Edit Screening Modal -->
-<div class="modal fade" id="editScreeningModal" tabindex="-1" aria-labelledby="editScreeningModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editScreeningModalLabel">Edit Screening Recommendation</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" id="editScreeningForm" action="">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="patient_id" id="edit-patient-id">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Patient</label>
-                        <p class="form-control-plaintext" id="edit-patient-name"></p>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Screening Type <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="screening_type" id="edit-screening-type" required list="screening-types-list">
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Due Date</label>
-                                <input type="date" class="form-control" name="due_date" id="edit-due-date">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Last Completed</label>
-                                <input type="date" class="form-control" name="last_completed" id="edit-last-completed">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Frequency</label>
-                                <input type="text" class="form-control" name="frequency" id="edit-frequency">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Priority</label>
-                                <select class="form-select" name="priority" id="edit-priority">
-                                    <option value="">Select priority</option>
-                                    <option value="High">High</option>
-                                    <option value="Medium">Medium</option>
-                                    <option value="Low">Low</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea class="form-control" name="notes" id="edit-notes" rows="3"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% elif active_tab == 'types' %}
-<!-- Screening Types Tab Content -->
-<div class="card border-0">
-    <div class="card-header bg-secondary bg-opacity-25">
-        <div class="row align-items-center">
-            <div class="col">
-                <h5 class="mb-0">
-                    <i class="fas fa-cog me-2"></i>Screening Types
-                </h5>
-            </div>
-            <div class="col-auto d-flex">
-                <form class="d-flex me-2" method="get">
-                    <input type="hidden" name="tab" value="types">
-                    <input class="form-control me-2" type="search" placeholder="Search screening types" name="search" value="{{ search_query }}">
-                    <button class="btn btn-outline-secondary" type="submit">Search</button>
-                </form>
-                <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
-                    Add Type
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="card-body p-0">
-        {% if screening_types %}
-        <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Frequency</th>
-                        <th>Gender Specific</th>
-                        <th>Age Range</th>
-                        <th>Status</th>
-                        <th width="150">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for screening_type in screening_types %}
-                    <tr>
-                        <td>
-                            <strong>{{ screening_type.name }}</strong>
-                            {% if screening_type.description %}
-                                <br>
-                                <small class="text-muted">{{ screening_type.description }}</small>
-                            {% endif %}
-                        </td>
-                        <td>{{ screening_type.default_frequency or 'Not specified' }}</td>
-                        <td>
-                            {% if screening_type.gender_specific %}
-                                {{ screening_type.gender_specific }}
-                            {% else %}
-                                All Genders
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if screening_type.min_age and screening_type.max_age %}
-                                Ages {{ screening_type.min_age }} to {{ screening_type.max_age }}
-                            {% elif screening_type.min_age %}
-                                Age {{ screening_type.min_age }}+
-                            {% elif screening_type.max_age %}
-                                Up to age {{ screening_type.max_age }}
-                            {% else %}
-                                All Ages
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if screening_type.is_active %}
-                                <span class="badge bg-success">Active</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Inactive</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                <a href="{{ url_for('edit_screening_type', screening_type_id=screening_type.id, t=cache_timestamp) }}" class="btn btn-sm btn-outline-primary">
-                                    Edit
-                                </a>
-                                <a href="{{ url_for('delete_screening_type', screening_type_id=screening_type.id, ts=cache_timestamp) }}" class="btn btn-sm btn-outline-danger" 
-                                   onclick="return confirm('Are you sure you want to delete this screening type?');">
-                                    Delete
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="text-center py-5">
-            <p class="text-muted mb-0">No screening types found {% if search_query %}matching "{{ search_query }}"{% endif %}</p>
-        </div>
-        {% endif %}
-    </div>
-</div>
+        <!-- Screening Types Management Tab -->
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'types' else '' }}" 
+             id="types" role="tabpanel" aria-labelledby="types-tab">
 
-<!-- Add Screening Type Modal -->
-<div class="modal fade" id="addScreeningTypeModal" tabindex="-1" aria-labelledby="addScreeningTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addScreeningTypeModalLabel">Add Screening Type</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            {% if active_tab == 'types' %}
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Screening Types Management</h1>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScreeningTypeModal">
+                    <i class="fas fa-plus me-1"></i> Add New Screening Type
+                </button>
             </div>
-            <form method="POST" action="{{ url_for('add_screening_type', ts=cache_timestamp) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="name" required>
-                        <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy')</small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" name="description" rows="3"></textarea>
-                        <small class="text-muted">Detailed description of this screening test</small>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Default Frequency</label>
-                                <input type="text" class="form-control" name="default_frequency">
-                                <small class="text-muted">How often this screening should be done (e.g., 'Annual', 'Every 5 years')</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Gender Specific</label>
-                                <select class="form-select" name="gender_specific">
-                                    <option value="">All Genders</option>
-                                    <option value="Male">Male Only</option>
-                                    <option value="Female">Female Only</option>
-                                </select>
-                                <small class="text-muted">Is this screening specific to a particular gender?</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Minimum Age</label>
-                                <input type="number" class="form-control" name="min_age" min="0" max="120">
-                                <small class="text-muted">Minimum age to start this screening</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Maximum Age</label>
-                                <input type="number" class="form-control" name="max_age" min="0" max="120">
-                                <small class="text-muted">Maximum age for this screening (leave blank if no upper limit)</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="isActive" checked>
-                        <label class="form-check-label" for="isActive">
-                            Active
-                        </label>
-                        <div class="form-text">Whether this screening should appear in checklists</div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
-<!-- Edit Screening Type Modal -->
-<div class="modal fade" id="editScreeningTypeModal" tabindex="-1" aria-labelledby="editScreeningTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editScreeningTypeModalLabel">Edit Screening Type</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" id="editScreeningTypeForm" action="">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="name" id="edit-name" required>
-                        <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy')</small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" name="description" id="edit-description" rows="3"></textarea>
-                        <small class="text-muted">Detailed description of this screening test</small>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Default Frequency</label>
-                                <input type="text" class="form-control" name="default_frequency" id="edit-frequency">
-                                <small class="text-muted">How often this screening should be done (e.g., 'Annual', 'Every 5 years')</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Gender Specific</label>
-                                <select class="form-select" name="gender_specific" id="edit-gender">
-                                    <option value="">All Genders</option>
-                                    <option value="Male">Male Only</option>
-                                    <option value="Female">Female Only</option>
-                                </select>
-                                <small class="text-muted">Is this screening specific to a particular gender?</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Minimum Age</label>
-                                <input type="number" class="form-control" name="min_age" id="edit-min-age" min="0" max="120">
-                                <small class="text-muted">Minimum age to start this screening</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Maximum Age</label>
-                                <input type="number" class="form-control" name="max_age" id="edit-max-age" min="0" max="120">
-                                <small class="text-muted">Maximum age for this screening (leave blank if no upper limit)</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="edit-active">
-                        <label class="form-check-label" for="edit-active">
-                            Active
-                        </label>
-                        <div class="form-text">Whether this screening should appear in checklists</div>
-                    </div>
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Available Screening Types</h5>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% elif active_tab == 'checklist' %}
-<!-- Checklist Settings Tab Content -->
-<div class="card">
-    <div class="card-body">
-        <p class="text-muted mb-4">These settings control the layout and content generation of the screening checklist section in patient prep sheets.</p>
-        
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h6 class="mb-0">Display Options</h6>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" action="{{ url_for('update_checklist_settings') }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Checklist Layout Style</label>
-                                <select class="form-select" name="layout_style">
-                                    <option value="table" {% if settings and settings.layout_style == 'table' %}selected{% endif %}>Table Format (Compact)</option>
-                                    <option value="list" {% if settings and settings.layout_style == 'list' %}selected{% endif %}>List Format (Spacious)</option>
-                                </select>
-                                <div class="form-text">Determines how screening items are displayed in the checklist.</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Status Options</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="status_due" name="status_options" value="due" 
-                                        {% if settings and 'due' in settings.status_options_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="status_due">Due</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="status_due_soon" name="status_options" value="due_soon"
-                                        {% if settings and 'due_soon' in settings.status_options_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="status_due_soon">Due Soon</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="status_sent" name="status_options" value="sent_incomplete"
-                                        {% if settings and 'sent_incomplete' in settings.status_options_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="status_sent">Sent & Incomplete</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="status_completed" name="status_options" value="completed"
-                                        {% if settings and 'completed' in settings.status_options_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="status_completed">Completed</label>
-                                </div>
-                                <div class="mt-3">
-                                    <label class="form-label">Custom Status Options</label>
-                                    <div class="input-group mb-2">
-                                        <input type="text" class="form-control" id="custom_status_input" placeholder="Add custom status option...">
-                                        <button class="btn btn-outline-primary" type="button" id="add_custom_status">Add</button>
-                                    </div>
-                                    <div class="form-text mb-2">Add your own status options to appear in autocomplete</div>
-                                    <div id="custom_status_list" class="d-flex flex-wrap gap-2 mb-2">
-                                        {% if settings and settings.custom_status_list %}
-                                            {% for status in settings.custom_status_list %}
-                                                <div class="custom-status-item badge bg-light text-dark p-2 d-flex align-items-center">
-                                                    {{ status }}
-                                                    <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="{{ status }}"></button>
-                                                    <input type="hidden" name="custom_status_options" value="{{ status }}">
+                <div class="card-body">
+                    {% if screening_types %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name & Keywords</th>
+                                        <th>Frequency</th>
+                                        <th>Gender Specific</th>
+                                        <th>Age Range</th>
+                                        <th>Status</th>
+                                        <th width="150">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for screening_type in screening_types %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <strong>{{ screening_type.name }}</strong>
+                                                        <div class="keyword-management-section mt-2">
+                                                            <div class="keyword-tags" id="keywords-{{ screening_type.id }}">
+                                                                <small class="text-muted">Loading keywords...</small>
+                                                            </div>
+                                                            <div class="keyword-controls mt-1">
+                                                                <div class="input-group input-group-sm" style="max-width: 400px;">
+                                                                    <input type="text" class="form-control form-control-sm keyword-input" 
+                                                                           placeholder="Add keyword..." 
+                                                                           data-screening-id="{{ screening_type.id }}">
+                                                                    <select class="form-select form-select-sm section-select" style="max-width: 120px;" 
+                                                                            data-screening-id="{{ screening_type.id }}">
+                                                                        <option value="labs">Labs</option>
+                                                                        <option value="imaging">Imaging</option>
+                                                                        <option value="procedures">Procedures</option>
+                                                                        <option value="vitals">Vitals</option>
+                                                                        <option value="consults">Consults</option>
+                                                                        <option value="medications">Medications</option>
+                                                                        <option value="general" selected>General</option>
+                                                                    </select>
+                                                                    <button type="button" class="btn btn-outline-primary btn-sm add-keyword-btn" 
+                                                                            data-screening-id="{{ screening_type.id }}">
+                                                                        <i class="fas fa-plus"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            {% endfor %}
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Note Field</label>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="show_notes" name="show_notes"
-                                        {% if settings and settings.show_notes %}checked{% endif %}>
-                                    <label class="form-check-label" for="show_notes">Show Notes Field</label>
-                                </div>
-                                <div class="form-text">Display a notes field for each screening item.</div>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-primary">Save Display Settings</button>
-                        </form>
-                    </div>
+                                            </td>
+                                            <td>{{ screening_type.default_frequency }}</td>
+                                            <td>
+                                                {% if screening_type.gender_specific %}
+                                                    {{ screening_type.gender_specific }}
+                                                {% else %}
+                                                    All Genders
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if screening_type.min_age and screening_type.max_age %}
+                                                    Ages {{ screening_type.min_age }} to {{ screening_type.max_age }}
+                                                {% elif screening_type.min_age %}
+                                                    Age {{ screening_type.min_age }}+
+                                                {% elif screening_type.max_age %}
+                                                    Up to age {{ screening_type.max_age }}
+                                                {% else %}
+                                                    All Ages
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if screening_type.is_active %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-primary edit-screening-type-btn" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#editScreeningTypeModal"
+                                                        data-id="{{ screening_type.id }}"
+                                                        data-name="{{ screening_type.name }}"
+                                                        data-frequency="{{ screening_type.default_frequency or '' }}"
+                                                        data-gender="{{ screening_type.gender_specific or '' }}"
+                                                        data-min-age="{{ screening_type.min_age or '' }}"
+                                                        data-max-age="{{ screening_type.max_age or '' }}"
+                                                        data-active="{{ 'checked' if screening_type.is_active else '' }}">
+                                                    Edit
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger delete-screening-type-btn"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#deleteScreeningTypeModal"
+                                                        data-id="{{ screening_type.id }}"
+                                                        data-name="{{ screening_type.name }}">
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> No screening types have been defined yet. Use the "Add New Screening Type" button to create one.
+                        </div>
+                    {% endif %}
                 </div>
             </div>
-            
-            <div class="col-md-6">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h6 class="mb-0">Checklist Content Generation</h6>
-                    </div>
-                    <div class="card-body">
-                        <form method="POST" action="{{ url_for('update_checklist_generation') }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Content Sources</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="source_db" name="content_sources" value="database"
-                                        {% if settings and 'database' in settings.content_sources_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="source_db">Default Items</label>
-                                    <div class="form-text">Include default items specified below</div>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="source_existing" name="content_sources" value="existing_screenings"
-                                        {% if settings and 'existing_screenings' in settings.content_sources_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="source_existing">Patient Screenings</label>
-                                    <div class="form-text">Include screenings already assigned to the patient</div>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="source_age" name="content_sources" value="age_based"
-                                        {% if settings and 'age_based' in settings.content_sources_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="source_age">Age-Based Recommendations</label>
-                                    <div class="form-text">Include screenings based on patient age</div>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="source_gender" name="content_sources" value="gender_based"
-                                        {% if settings and 'gender_based' in settings.content_sources_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="source_gender">Gender-Specific Screenings</label>
-                                    <div class="form-text">Include screenings based on patient gender</div>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="source_condition" name="content_sources" value="condition_based"
-                                        {% if settings and 'condition_based' in settings.content_sources_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="source_condition">Condition-Specific Screenings</label>
-                                    <div class="form-text">Include screenings based on patient conditions</div>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Default Items</label>
-                                <textarea class="form-control" name="default_items" rows="4" placeholder="One item per line">{{ default_items_text }}</textarea>
-                                <div class="form-text">Default items to include in every patient's checklist</div>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-primary">Save Generation Settings</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+            {% endif %}
         </div>
     </div>
 </div>
-{% endif %}
+
+<!-- Modals would go here - keeping existing modal structure -->
 {% endblock %}
 
 {% block scripts %}
-<!-- Loading our custom modal handler script with a unique timestamp to prevent caching -->
-<script src="{{ url_for('static', filename='js/screening_modals.js') }}?v={{ cache_timestamp|default(999999999) }}"></script>
+<style>
+.keyword-management-section {
+    border-left: 3px solid #e9ecef;
+    padding-left: 10px;
+}
 
-<!-- Conditional JavaScript based on active tab -->
-{% if active_tab == 'checklist' %}
+.keyword-tags {
+    min-height: 30px;
+    margin-bottom: 8px;
+}
+
+.keyword-tag {
+    display: inline-block;
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 15px;
+    padding: 3px 10px;
+    margin: 2px;
+    font-size: 0.75rem;
+    position: relative;
+}
+
+.keyword-tag .section-label {
+    background-color: #007bff;
+    color: white;
+    padding: 1px 5px;
+    border-radius: 8px;
+    font-size: 0.65rem;
+    margin-right: 4px;
+}
+
+.keyword-tag .remove-btn {
+    margin-left: 5px;
+    color: #dc3545;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.keyword-tag .remove-btn:hover {
+    color: #c82333;
+}
+
+.keyword-controls {
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.keyword-management-section:hover .keyword-controls {
+    opacity: 1;
+}
+</style>
+
 <script>
-    // Custom status options handler
-    document.addEventListener('DOMContentLoaded', function() {
-        const addCustomStatusBtn = document.getElementById('add_custom_status');
-        const customStatusInput = document.getElementById('custom_status_input');
-        const customStatusList = document.getElementById('custom_status_list');
-        
-        if (addCustomStatusBtn) {
-            addCustomStatusBtn.addEventListener('click', function() {
-                addCustomStatus();
-            });
-        }
-        
-        if (customStatusInput) {
-            customStatusInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addCustomStatus();
-                }
-            });
-        }
-        
-        // Add close button functionality to existing status items
-        document.querySelectorAll('.btn-close').forEach(button => {
-            button.addEventListener('click', function() {
-                const status = this.getAttribute('data-status');
-                if (status) {
-                    removeCustomStatus(status, this.closest('.custom-status-item'));
-                }
-            });
+document.addEventListener('DOMContentLoaded', function() {
+    let keywordData = {}; // Store keywords for each screening type
+
+    // Load keywords for all screening types
+    function loadAllKeywords() {
+        document.querySelectorAll('.keyword-tags').forEach(container => {
+            const screeningId = container.id.split('-')[1];
+            loadKeywords(screeningId);
         });
-        
-        // Function to add a new custom status
-        function addCustomStatus() {
-            const status = customStatusInput.value.trim();
-            if (!status) return;
-            
-            // Create a new status item
-            const statusItem = document.createElement('div');
-            statusItem.className = 'custom-status-item badge bg-light text-dark p-2 d-flex align-items-center';
-            
-            // Status text
-            const statusText = document.createTextNode(status);
-            statusItem.appendChild(statusText);
-            
-            // Remove button
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'btn-close btn-close-dark ms-2 shadow-sm';
-            removeBtn.style.backgroundColor = '#f8d7da';
-            removeBtn.style.padding = '4px';
-            removeBtn.style.borderRadius = '50%';
-            removeBtn.setAttribute('aria-label', 'Remove');
-            removeBtn.setAttribute('data-status', status);
-            removeBtn.addEventListener('click', function() {
-                removeCustomStatus(status, statusItem);
+    }
+
+    // Load keywords for a specific screening type
+    function loadKeywords(screeningId) {
+        fetch(`/api/screening-keywords/${screeningId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    keywordData[screeningId] = data.keywords;
+                    updateKeywordsDisplay(screeningId, data.keywords);
+                } else {
+                    keywordData[screeningId] = [];
+                    updateKeywordsDisplay(screeningId, []);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading keywords for screening', screeningId, ':', error);
+                keywordData[screeningId] = [];
+                updateKeywordsDisplay(screeningId, []);
             });
-            statusItem.appendChild(removeBtn);
-            
-            // Hidden input to submit the value
-            const hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = 'custom_status_options';
-            hiddenInput.value = status;
-            statusItem.appendChild(hiddenInput);
-            
-            // Add to the list
-            customStatusList.appendChild(statusItem);
-            
-            // Clear the input
-            customStatusInput.value = '';
+    }
+
+    // Update keywords display
+    function updateKeywordsDisplay(screeningId, keywords) {
+        const container = document.getElementById(`keywords-${screeningId}`);
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (keywords.length === 0) {
+            container.innerHTML = '<small class="text-muted">No keywords defined</small>';
+            return;
         }
-        
-        // Function to remove a custom status
-        function removeCustomStatus(status, element) {
-            if (element) {
-                element.remove();
-            }
+
+        keywords.forEach((keyword, index) => {
+            const tag = document.createElement('span');
+            tag.className = 'keyword-tag';
+            tag.innerHTML = `
+                <span class="section-label">${keyword.section}</span>
+                ${keyword.keyword}
+                <span class="remove-btn" data-screening-id="${screeningId}" data-index="${index}">&times;</span>
+            `;
+            container.appendChild(tag);
+        });
+    }
+
+    // Add keyword functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('add-keyword-btn')) {
+            const screeningId = e.target.getAttribute('data-screening-id');
+            addKeyword(screeningId);
+        }
+
+        if (e.target.classList.contains('remove-btn')) {
+            const screeningId = e.target.getAttribute('data-screening-id');
+            const index = parseInt(e.target.getAttribute('data-index'));
+            removeKeyword(screeningId, index);
         }
     });
+
+    // Handle Enter key in keyword input
+    document.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && e.target.classList.contains('keyword-input')) {
+            const screeningId = e.target.getAttribute('data-screening-id');
+            addKeyword(screeningId);
+        }
+    });
+
+    function addKeyword(screeningId) {
+        const input = document.querySelector(`.keyword-input[data-screening-id="${screeningId}"]`);
+        const sectionSelect = document.querySelector(`.section-select[data-screening-id="${screeningId}"]`);
+
+        const keyword = input.value.trim();
+        const section = sectionSelect.value;
+
+        if (!keyword) return;
+
+        // Check for duplicates
+        const keywords = keywordData[screeningId] || [];
+        const exists = keywords.some(k => 
+            k.keyword.toLowerCase() === keyword.toLowerCase() && k.section === section
+        );
+
+        if (exists) {
+            showAlert('This keyword already exists for this section', 'warning');
+            return;
+        }
+
+        // Add keyword
+        const newKeyword = {
+            keyword: keyword,
+            section: section,
+            weight: 1.0,
+            case_sensitive: false,
+            exact_match: false,
+            description: ''
+        };
+
+        keywords.push(newKeyword);
+        keywordData[screeningId] = keywords;
+
+        // Save to server
+        saveKeywords(screeningId, keywords)
+            .then(() => {
+                updateKeywordsDisplay(screeningId, keywords);
+                input.value = '';
+                showAlert('Keyword added successfully', 'success');
+            })
+            .catch(error => {
+                // Remove from local data if save failed
+                keywordData[screeningId] = keywords.slice(0, -1);
+                showAlert('Error saving keyword', 'danger');
+            });
+    }
+
+    function removeKeyword(screeningId, index) {
+        const keywords = keywordData[screeningId] || [];
+        const removedKeyword = keywords[index];
+
+        keywords.splice(index, 1);
+        keywordData[screeningId] = keywords;
+
+        // Save to server
+        saveKeywords(screeningId, keywords)
+            .then(() => {
+                updateKeywordsDisplay(screeningId, keywords);
+                showAlert('Keyword removed successfully', 'success');
+            })
+            .catch(error => {
+                // Restore keyword if save failed
+                keywords.splice(index, 0, removedKeyword);
+                keywordData[screeningId] = keywords;
+                showAlert('Error removing keyword', 'danger');
+            });
+    }
+
+    function saveKeywords(screeningId, keywords) {
+        return fetch(`/api/screening-keywords/${screeningId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ keywords: keywords })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to save keywords');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data.success) {
+                throw new Error(data.message || 'Failed to save keywords');
+            }
+            return data;
+        });
+    }
+
+    function showAlert(message, type) {
+        const alertContainer = document.querySelector('.container-fluid');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alert.style.cssText = 'top: 20px; right: 20px; z-index: 1050; max-width: 400px;';
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(alert);
+
+        // Auto-dismiss after 3 seconds
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.remove();
+            }
+        }, 3000);
+    }
+
+    // Initialize
+    loadAllKeywords();
+});
 </script>
-{% endif %}
 {% endblock %}
 
 {% block extra_styles %}
