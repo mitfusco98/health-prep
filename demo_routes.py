@@ -903,6 +903,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     return response
 
 
+@app.route("/screening-types", methods=["GET"])
 @app.route("/admin/screening-types", methods=["GET"])
 def screening_types():
     """Admin interface for managing screening types"""
