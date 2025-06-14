@@ -331,23 +331,31 @@
             <table class="table table-hover table-striped mb-0">
                 <thead>
                     <tr>
-                        <th>Name</th>
+                        <th>Name & Keywords</th>
                         <th>Frequency</th>
                         <th>Gender Specific</th>
                         <th>Age Range</th>
                         <th>Status</th>
-                        <th width="150">Actions</th>
+                        <th width="200">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for screening_type in screening_types %}
                     <tr>
                         <td>
-                            <strong>{{ screening_type.name }}</strong>
-                            {% if screening_type.description %}
-                                <br>
-                                <small class="text-muted">{{ screening_type.description }}</small>
-                            {% endif %}
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ screening_type.name }}</strong>
+                                    <div id="keywords-display-{{ screening_type.id }}" class="mt-1">
+                                        <small class="text-muted">Loading keywords...</small>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                        onclick="openKeywordManager({{ screening_type.id }}, '{{ screening_type.name }}')"
+                                        title="Manage Keywords">
+                                    <i class="fas fa-tags"></i> Keywords
+                                </button>
+                            </div>
                         </td>
                         <td>{{ screening_type.default_frequency or 'Not specified' }}</td>
                         <td>
@@ -417,9 +425,18 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" name="description" rows="3"></textarea>
-                        <small class="text-muted">Detailed description of this screening test</small>
+                        <label class="form-label">Keywords for Document Matching</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div id="add-form-keywords-container">
+                                <div class="d-flex mb-2">
+                                    <input type="text" class="form-control me-2" id="add-form-keyword-input" placeholder="Enter keyword">
+                                    <button type="button" class="btn btn-outline-primary" onclick="addKeywordToForm('add-form')">Add</button>
+                                </div>
+                                <div id="add-form-keywords-list" class="keywords-list"></div>
+                            </div>
+                        </div>
+                        <small class="text-muted">Keywords help identify relevant documents for this screening type</small>
+                        <input type="hidden" name="keywords" id="add-form-keywords-data">
                     </div>
                     
                     <div class="row mb-3">
@@ -495,9 +512,18 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" name="description" id="edit-description" rows="3"></textarea>
-                        <small class="text-muted">Detailed description of this screening test</small>
+                        <label class="form-label">Keywords for Document Matching</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div id="edit-form-keywords-container">
+                                <div class="d-flex mb-2">
+                                    <input type="text" class="form-control me-2" id="edit-form-keyword-input" placeholder="Enter keyword">
+                                    <button type="button" class="btn btn-outline-primary" onclick="addKeywordToForm('edit-form')">Add</button>
+                                </div>
+                                <div id="edit-form-keywords-list" class="keywords-list"></div>
+                            </div>
+                        </div>
+                        <small class="text-muted">Keywords help identify relevant documents for this screening type</small>
+                        <input type="hidden" name="keywords" id="edit-form-keywords-data">
                     </div>
                     
                     <div class="row mb-3">
@@ -836,51 +862,251 @@
     }
 </style>
 
-<!-- Inline script to force modal functionality -->
+<!-- Keyword Management Modal -->
+<div class="modal fade" id="keywordManagerModal" tabindex="-1" aria-labelledby="keywordManagerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="keywordManagerModalLabel">Manage Keywords</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong>Document Matching Strategy:</strong> Keywords help identify relevant documents for screening types. 
+                    The system uses FHIR codes first, then filename/section detection, and finally these user-defined keywords as fallback.
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Add New Keyword</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="newKeywordInput" placeholder="Enter keyword">
+                        <button class="btn btn-primary" type="button" onclick="addKeyword()">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Current Keywords</label>
+                    <div id="keywordsList" class="border rounded p-3 min-height-100 bg-light">
+                        <div class="text-muted text-center">Loading keywords...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveKeywords()">Save Keywords</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Keyword Management JavaScript -->
 <script>
-    // This script will execute immediately to force modals on this page
-    console.log('Forcing modal setup');
+let currentScreeningTypeId = null;
+let currentKeywords = [];
+
+// Load keywords for display in the table
+function loadKeywordsForDisplay() {
+    document.querySelectorAll('[id^="keywords-display-"]').forEach(element => {
+        const screeningTypeId = element.id.replace('keywords-display-', '');
+        fetch(`/api/screening-keywords/${screeningTypeId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.keywords.length > 0) {
+                    const keywordTags = data.keywords.map(keyword => 
+                        `<span class="badge bg-secondary me-1">${keyword}</span>`
+                    ).join('');
+                    element.innerHTML = `<small class="text-muted">Keywords: ${keywordTags}</small>`;
+                } else {
+                    element.innerHTML = '<small class="text-muted">No keywords defined</small>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading keywords:', error);
+                element.innerHTML = '<small class="text-muted text-danger">Error loading keywords</small>';
+            });
+    });
+}
+
+// Open keyword manager modal
+function openKeywordManager(screeningTypeId, screeningName) {
+    currentScreeningTypeId = screeningTypeId;
+    document.getElementById('keywordManagerModalLabel').textContent = `Manage Keywords - ${screeningName}`;
     
-    // Force a refresh of the page elements
-    setTimeout(function() {
-        const addBtn = document.getElementById('openAddScreeningModal');
-        const addTypeBtn = document.getElementById('openAddTypeModal');
-        
-        if (addBtn) {
-            console.log('Add button found, adding click handler');
-            addBtn.onclick = function() {
-                const modal = document.getElementById('addScreeningRecommendationModal');
-                if (modal) {
-                    modal.style.display = 'block';
-                    modal.classList.add('show');
-                    document.body.classList.add('modal-open');
-                    document.body.style.overflow = 'hidden';
-                    
-                    // Create backdrop
-                    const backdrop = document.createElement('div');
-                    backdrop.className = 'modal-backdrop fade show';
-                    document.body.appendChild(backdrop);
-                }
-            };
+    // Load existing keywords
+    fetch(`/api/screening-keywords/${screeningTypeId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentKeywords = data.keywords || [];
+                displayKeywords();
+            } else {
+                console.error('Error loading keywords:', data.error);
+                currentKeywords = [];
+                displayKeywords();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading keywords:', error);
+            currentKeywords = [];
+            displayKeywords();
+        });
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('keywordManagerModal'));
+    modal.show();
+}
+
+// Display keywords in the modal
+function displayKeywords() {
+    const container = document.getElementById('keywordsList');
+    if (currentKeywords.length === 0) {
+        container.innerHTML = '<div class="text-muted text-center">No keywords defined yet</div>';
+        return;
+    }
+    
+    const keywordsHtml = currentKeywords.map((keyword, index) => 
+        `<span class="badge bg-primary me-2 mb-2">
+            ${keyword}
+            <button type="button" class="btn-close btn-close-white ms-1" 
+                    onclick="removeKeyword(${index})" aria-label="Remove"></button>
+        </span>`
+    ).join('');
+    
+    container.innerHTML = keywordsHtml;
+}
+
+// Add keyword
+function addKeyword() {
+    const input = document.getElementById('newKeywordInput');
+    const keyword = input.value.trim();
+    
+    if (keyword && !currentKeywords.includes(keyword)) {
+        currentKeywords.push(keyword);
+        displayKeywords();
+        input.value = '';
+    }
+}
+
+// Remove keyword
+function removeKeyword(index) {
+    currentKeywords.splice(index, 1);
+    displayKeywords();
+}
+
+// Save keywords
+function saveKeywords() {
+    fetch(`/api/screening-keywords/${currentScreeningTypeId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrf_token]').value
+        },
+        body: JSON.stringify({ keywords: currentKeywords })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('keywordManagerModal'));
+            modal.hide();
+            
+            // Refresh keyword display
+            loadKeywordsForDisplay();
+            
+            // Show success message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = `
+                Keywords updated successfully!
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container').insertBefore(alert, document.querySelector('.container').firstChild);
+        } else {
+            alert('Error saving keywords: ' + data.error);
         }
-        
-        if (addTypeBtn) {
-            console.log('Add Type button found, adding click handler');
-            addTypeBtn.onclick = function() {
-                const modal = document.getElementById('addScreeningTypeModal');
-                if (modal) {
-                    modal.style.display = 'block';
-                    modal.classList.add('show');
-                    document.body.classList.add('modal-open');
-                    document.body.style.overflow = 'hidden';
-                    
-                    // Create backdrop
-                    const backdrop = document.createElement('div');
-                    backdrop.className = 'modal-backdrop fade show';
-                    document.body.appendChild(backdrop);
-                }
-            };
+    })
+    .catch(error => {
+        console.error('Error saving keywords:', error);
+        alert('Error saving keywords. Please try again.');
+    });
+}
+
+// Add keyword to form (for add/edit modals)
+function addKeywordToForm(formPrefix) {
+    const input = document.getElementById(`${formPrefix}-keyword-input`);
+    const keyword = input.value.trim();
+    
+    if (keyword) {
+        const container = document.getElementById(`${formPrefix}-keywords-list`);
+        const keywordElement = document.createElement('span');
+        keywordElement.className = 'badge bg-primary me-2 mb-2';
+        keywordElement.innerHTML = `
+            ${keyword}
+            <button type="button" class="btn-close btn-close-white ms-1" 
+                    onclick="removeFormKeyword(this)" aria-label="Remove"></button>
+        `;
+        container.appendChild(keywordElement);
+        input.value = '';
+        updateFormKeywordsData(formPrefix);
+    }
+}
+
+// Remove keyword from form
+function removeFormKeyword(button) {
+    const keywordElement = button.closest('.badge');
+    const formPrefix = keywordElement.closest('[id$="-keywords-container"]').id.replace('-keywords-container', '');
+    keywordElement.remove();
+    updateFormKeywordsData(formPrefix);
+}
+
+// Update hidden form data
+function updateFormKeywordsData(formPrefix) {
+    const container = document.getElementById(`${formPrefix}-keywords-list`);
+    const keywords = Array.from(container.querySelectorAll('.badge')).map(badge => 
+        badge.textContent.trim()
+    );
+    document.getElementById(`${formPrefix}-keywords-data`).value = JSON.stringify(keywords);
+}
+
+// Handle Enter key in keyword inputs
+document.addEventListener('DOMContentLoaded', function() {
+    // Load keywords for display when page loads
+    if (document.querySelector('[id^="keywords-display-"]')) {
+        loadKeywordsForDisplay();
+    }
+    
+    // Handle Enter key in main keyword input
+    document.getElementById('newKeywordInput')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addKeyword();
         }
-    }, 500);
+    });
+    
+    // Handle Enter key in form keyword inputs
+    document.querySelectorAll('[id$="-keyword-input"]').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const formPrefix = this.id.replace('-keyword-input', '');
+                addKeywordToForm(formPrefix);
+            }
+        });
+    });
+});
 </script>
+
+<style>
+.keywords-list {
+    min-height: 60px;
+}
+.min-height-100 {
+    min-height: 100px;
+}
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+</style>
 {% endblock %}
