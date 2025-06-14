@@ -1205,8 +1205,7 @@ with app.app_context():
     import auth_routes  # noqa: F401
 
     # Import API routes
-    from api_routes import *
-    from screening_keyword_routes import *
+    import api_routes  # noqa: F401
 
     # Initialize async database manager
     from async_db_utils import init_async_db
