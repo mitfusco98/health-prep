@@ -45,17 +45,19 @@
                     </div>
                 </div>
                 
-                <div class="form-group mb-3">
-                    {{ form.description.label(class="form-label") }}
-                    {{ form.description(class="form-control", rows=3) }}
-                    <small class="form-text text-muted">{{ form.description.description }}</small>
-                    {% if form.description.errors %}
-                    <div class="invalid-feedback d-block">
-                        {% for error in form.description.errors %}
-                            {{ error }}
-                        {% endfor %}
+                <div class="mb-3">
+                    <label class="form-label">Keywords for Document Matching</label>
+                    <div class="border rounded p-3 bg-light">
+                        <div id="edit-form-keywords-container">
+                            <div class="d-flex mb-2">
+                                <input type="text" class="form-control me-2" id="edit-form-keyword-input" placeholder="Enter keyword">
+                                <button type="button" class="btn btn-outline-primary" onclick="addKeywordToForm('edit-form')">Add</button>
+                            </div>
+                            <div id="edit-form-keywords-list" class="keywords-list"></div>
+                        </div>
                     </div>
-                    {% endif %}
+                    <small class="text-muted">Keywords help identify relevant documents for this screening type</small>
+                    <input type="hidden" name="keywords" id="edit-form-keywords-data">
                 </div>
                 
                 <div class="row mb-3">
@@ -124,4 +126,96 @@
         </div>
     </div>
 </div>
+
+<script>
+// Add keyword to form (for add/edit modals)
+function addKeywordToForm(formPrefix) {
+    const input = document.getElementById(`${formPrefix}-keyword-input`);
+    const keyword = input.value.trim();
+    
+    if (keyword) {
+        const container = document.getElementById(`${formPrefix}-keywords-list`);
+        const keywordElement = document.createElement('span');
+        keywordElement.className = 'badge bg-primary me-2 mb-2';
+        keywordElement.innerHTML = `
+            ${keyword}
+            <button type="button" class="btn-close btn-close-white ms-1" 
+                    onclick="removeFormKeyword(this)" aria-label="Remove"></button>
+        `;
+        container.appendChild(keywordElement);
+        input.value = '';
+        updateFormKeywordsData(formPrefix);
+    }
+}
+
+// Remove keyword from form
+function removeFormKeyword(button) {
+    const keywordElement = button.closest('.badge');
+    const formPrefix = keywordElement.closest('[id$="-keywords-container"]').id.replace('-keywords-container', '');
+    keywordElement.remove();
+    updateFormKeywordsData(formPrefix);
+}
+
+// Update hidden form data
+function updateFormKeywordsData(formPrefix) {
+    const container = document.getElementById(`${formPrefix}-keywords-list`);
+    const keywords = Array.from(container.querySelectorAll('.badge')).map(badge => 
+        badge.textContent.trim()
+    );
+    document.getElementById(`${formPrefix}-keywords-data`).value = JSON.stringify(keywords);
+}
+
+// Load existing keywords for editing
+function loadExistingKeywords() {
+    const screeningTypeId = {{ screening_type.id }};
+    
+    fetch(`/api/screening-keywords/${screeningTypeId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.keywords.length > 0) {
+                const container = document.getElementById('edit-form-keywords-list');
+                data.keywords.forEach(keyword => {
+                    const keywordElement = document.createElement('span');
+                    keywordElement.className = 'badge bg-primary me-2 mb-2';
+                    keywordElement.innerHTML = `
+                        ${keyword}
+                        <button type="button" class="btn-close btn-close-white ms-1" 
+                                onclick="removeFormKeyword(this)" aria-label="Remove"></button>
+                    `;
+                    container.appendChild(keywordElement);
+                });
+                updateFormKeywordsData('edit-form');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading existing keywords:', error);
+        });
+}
+
+// Handle Enter key in keyword inputs
+document.addEventListener('DOMContentLoaded', function() {
+    // Load existing keywords when page loads
+    loadExistingKeywords();
+    
+    // Handle Enter key in form keyword inputs
+    document.querySelectorAll('[id$="-keyword-input"]').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const formPrefix = this.id.replace('-keyword-input', '');
+                addKeywordToForm(formPrefix);
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.keywords-list {
+    min-height: 60px;
+}
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+</style>
 {% endblock %}
