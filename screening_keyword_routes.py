@@ -142,9 +142,7 @@ def test_keyword_matching(screening_id):
             'message': str(e)
         }), 500
 
-I found no code that matches the code to be replaced. I will return the original code.
 
-```python
 """
 API Routes for Screening Keyword Management
 Handles loading and saving user-defined keywords for screening types
