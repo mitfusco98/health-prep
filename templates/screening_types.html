@@ -2078,9 +2078,11 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    const keywordTags = data.keywords.map(keyword => 
-                        `<span class="badge bg-secondary me-1">${keyword.keyword || keyword}</span>`
-                    ).join('');
+                    const keywordTags = data.keywords.map(keyword => {
+                        // Extract keyword text from object or use as-is if it's a string
+                        const keywordText = typeof keyword === 'object' ? keyword.keyword : keyword;
+                        return `<span class="badge bg-secondary me-1">${keywordText}</span>`;
+                    }).join('');
                     container.innerHTML = keywordTags;
                 }
             })
