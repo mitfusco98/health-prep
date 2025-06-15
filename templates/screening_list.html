@@ -168,7 +168,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label">Screening Type <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="screening_type" id="screening_type" required list="screening-types-list">
@@ -179,7 +179,7 @@
                         </datalist>
                         <small class="text-muted">Type or select from available screening types</small>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -196,7 +196,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -217,7 +217,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label">Notes</label>
                         <textarea class="form-control" name="notes" rows="3"></textarea>
@@ -249,12 +249,12 @@
                         <label class="form-label">Patient</label>
                         <p class="form-control-plaintext" id="edit-patient-name"></p>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label">Screening Type <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="screening_type" id="edit-screening-type" required list="screening-types-list">
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -269,7 +269,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -289,7 +289,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label">Notes</label>
                         <textarea class="form-control" name="notes" id="edit-notes" rows="3"></textarea>
@@ -423,7 +423,7 @@
                         <input type="text" class="form-control" name="name" required>
                         <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy')</small>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label">Keywords for Document Matching</label>
                         <div class="border rounded p-3 bg-light">
@@ -438,7 +438,7 @@
                         <small class="text-muted">Keywords help identify relevant documents for this screening type</small>
                         <input type="hidden" name="keywords" id="add-form-keywords-data">
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -459,7 +459,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -476,7 +476,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="is_active" id="isActive" checked>
                         <label class="form-check-label" for="isActive">
@@ -510,7 +510,7 @@
                         <input type="text" class="form-control" name="name" id="edit-name" required>
                         <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy')</small>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label">Keywords for Document Matching</label>
                         <div class="keywords-container">
@@ -525,7 +525,7 @@
                         <small class="keywords-help-text">Keywords help identify relevant documents for this screening type</small>
                         <input type="hidden" name="keywords" id="edit-form-keywords-data">
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -546,7 +546,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -563,7 +563,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="is_active" id="edit-active">
                         <label class="form-check-label" for="edit-active">
@@ -585,7 +585,7 @@
 <div class="card">
     <div class="card-body">
         <p class="text-muted mb-4">These settings control the layout and content generation of the screening checklist section in patient prep sheets.</p>
-        
+
         <div class="row">
             <div class="col-md-6">
                 <div class="card mb-4">
@@ -595,7 +595,7 @@
                     <div class="card-body">
                         <form method="POST" action="{{ url_for('update_checklist_settings') }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Checklist Layout Style</label>
                                 <select class="form-select" name="layout_style">
@@ -604,7 +604,7 @@
                                 </select>
                                 <div class="form-text">Determines how screening items are displayed in the checklist.</div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Status Options</label>
                                 <div class="form-check">
@@ -647,7 +647,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Note Field</label>
                                 <div class="form-check form-switch">
@@ -657,13 +657,13 @@
                                 </div>
                                 <div class="form-text">Display a notes field for each screening item.</div>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary">Save Display Settings</button>
                         </form>
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header">
@@ -672,7 +672,7 @@
                     <div class="card-body">
                         <form method="POST" action="{{ url_for('update_checklist_generation') }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Content Sources</label>
                                 <div class="form-check">
@@ -688,7 +688,7 @@
                                     <div class="form-text">Include screenings already assigned to the patient</div>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="source_age" name="content_sources" value="age_based"
+                                    <input class="form-check-input type="checkbox" id="source_age" name="content_sources" value="age_based"
                                         {% if settings and 'age_based' in settings.content_sources_list %}checked{% endif %}>
                                     <label class="form-check-label" for="source_age">Age-Based Recommendations</label>
                                     <div class="form-text">Include screenings based on patient age</div>
@@ -706,13 +706,13 @@
                                     <div class="form-text">Include screenings based on patient conditions</div>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Default Items</label>
                                 <textarea class="form-control" name="default_items" rows="4" placeholder="One item per line">{{ default_items_text }}</textarea>
                                 <div class="form-text">Default items to include in every patient's checklist</div>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary">Save Generation Settings</button>
                         </form>
                     </div>
@@ -736,13 +736,13 @@
         const addCustomStatusBtn = document.getElementById('add_custom_status');
         const customStatusInput = document.getElementById('custom_status_input');
         const customStatusList = document.getElementById('custom_status_list');
-        
+
         if (addCustomStatusBtn) {
             addCustomStatusBtn.addEventListener('click', function() {
                 addCustomStatus();
             });
         }
-        
+
         if (customStatusInput) {
             customStatusInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
@@ -751,7 +751,7 @@
                 }
             });
         }
-        
+
         // Add close button functionality to existing status items
         document.querySelectorAll('.btn-close').forEach(button => {
             button.addEventListener('click', function() {
@@ -761,20 +761,20 @@
                 }
             });
         });
-        
+
         // Function to add a new custom status
         function addCustomStatus() {
             const status = customStatusInput.value.trim();
             if (!status) return;
-            
+
             // Create a new status item
             const statusItem = document.createElement('div');
             statusItem.className = 'custom-status-item badge bg-light text-dark p-2 d-flex align-items-center';
-            
+
             // Status text
             const statusText = document.createTextNode(status);
             statusItem.appendChild(statusText);
-            
+
             // Remove button
             const removeBtn = document.createElement('button');
             removeBtn.className = 'btn-close btn-close-dark ms-2 shadow-sm';
@@ -787,21 +787,21 @@
                 removeCustomStatus(status, statusItem);
             });
             statusItem.appendChild(removeBtn);
-            
+
             // Hidden input to submit the value
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
             hiddenInput.name = 'custom_status_options';
             hiddenInput.value = status;
             statusItem.appendChild(hiddenInput);
-            
+
             // Add to the list
             customStatusList.appendChild(statusItem);
-            
+
             // Clear the input
             customStatusInput.value = '';
         }
-        
+
         // Function to remove a custom status
         function removeCustomStatus(status, element) {
             if (element) {
@@ -824,13 +824,13 @@
     .table tbody tr.table-warning {
         background-color: transparent !important;
     }
-    
+
     /* Add some extra styling to make badges stand out better */
     .badge {
         font-size: 0.8rem;
         padding: 0.25rem 0.5rem;
     }
-    
+
     /* Modal styling */
     .modal {
         position: fixed;
@@ -842,7 +842,7 @@
         overflow: hidden;
         outline: 0;
     }
-    
+
     .modal-backdrop {
         position: fixed;
         top: 0;
@@ -852,11 +852,11 @@
         height: 100vh;
         background-color: #000;
     }
-    
+
     .modal-backdrop.fade {
         opacity: 0;
     }
-    
+
     .modal-backdrop.show {
         opacity: 0.5;
     }
@@ -875,7 +875,7 @@
                     <strong>Document Matching Strategy:</strong> Keywords help identify relevant documents for screening types. 
                     The system uses FHIR codes first, then filename/section detection, and finally these user-defined keywords as fallback.
                 </div>
-                
+
                 <div class="mb-3">
                     <label class="form-label">Add New Keyword</label>
                     <div class="input-group">
@@ -885,7 +885,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <div class="mb-3">
                     <label class="form-label">Current Keywords</label>
                     <div id="keywordsList" class="border rounded p-3 min-height-100 bg-light">
@@ -933,7 +933,7 @@ function loadKeywordsForDisplay() {
 function openKeywordManager(screeningTypeId, screeningName) {
     currentScreeningTypeId = screeningTypeId;
     document.getElementById('keywordManagerModalLabel').textContent = `Manage Keywords - ${screeningName}`;
-    
+
     // Load existing keywords
     fetch(`/api/screening-keywords/${screeningTypeId}`)
         .then(response => response.json())
@@ -952,7 +952,7 @@ function openKeywordManager(screeningTypeId, screeningName) {
             currentKeywords = [];
             displayKeywords();
         });
-    
+
     // Show modal
     const modal = new bootstrap.Modal(document.getElementById('keywordManagerModal'));
     modal.show();
@@ -965,7 +965,7 @@ function displayKeywords() {
         container.innerHTML = '<div class="text-muted text-center">No keywords defined yet</div>';
         return;
     }
-    
+
     const keywordsHtml = currentKeywords.map((keyword, index) => 
         `<span class="badge bg-primary me-2 mb-2">
             ${keyword}
@@ -973,7 +973,7 @@ function displayKeywords() {
                     onclick="removeKeyword(${index})" aria-label="Remove"></button>
         </span>`
     ).join('');
-    
+
     container.innerHTML = keywordsHtml;
 }
 
@@ -981,7 +981,7 @@ function displayKeywords() {
 function addKeyword() {
     const input = document.getElementById('newKeywordInput');
     const keyword = input.value.trim();
-    
+
     if (keyword && !currentKeywords.includes(keyword)) {
         currentKeywords.push(keyword);
         displayKeywords();
@@ -1011,10 +1011,10 @@ function saveKeywords() {
             // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('keywordManagerModal'));
             modal.hide();
-            
+
             // Refresh keyword display
             loadKeywordsForDisplay();
-            
+
             // Show success message
             const alert = document.createElement('div');
             alert.className = 'alert alert-success alert-dismissible fade show';
@@ -1037,7 +1037,7 @@ function saveKeywords() {
 function addKeywordToForm(formPrefix) {
     const input = document.getElementById(`${formPrefix}-keyword-input`);
     const keyword = input.value.trim();
-    
+
     if (keyword) {
         const container = document.getElementById(`${formPrefix}-keywords-list`);
         const keywordElement = document.createElement('span');
@@ -1076,7 +1076,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.querySelector('[id^="keywords-display-"]')) {
         loadKeywordsForDisplay();
     }
-    
+
     // Handle Enter key in main keyword input
     document.getElementById('newKeywordInput')?.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
@@ -1084,7 +1084,7 @@ document.addEventListener('DOMContentLoaded', function() {
             addKeyword();
         }
     });
-    
+
     // Handle Enter key in form keyword inputs
     document.querySelectorAll('[id$="-keyword-input"]').forEach(input => {
         input.addEventListener('keypress', function(e) {
