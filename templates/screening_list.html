@@ -997,13 +997,23 @@ function removeKeyword(index) {
 
 // Save keywords
 function saveKeywords() {
+    // Convert simple keyword list to proper format for the API
+    const keywordObjects = currentKeywords.map(keyword => ({
+        keyword: keyword,
+        section: 'general',
+        weight: 1.0,
+        case_sensitive: false,
+        exact_match: false,
+        description: `Keyword for screening type`
+    }));
+    
     fetch(`/api/screening-keywords/${currentScreeningTypeId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': document.querySelector('[name=csrf_token]').value
         },
-        body: JSON.stringify({ keywords: currentKeywords })
+        body: JSON.stringify({ keywords: keywordObjects })
     })
     .then(response => response.json())
     .then(data => {
@@ -1064,10 +1074,15 @@ function removeFormKeyword(button) {
 // Update hidden form data
 function updateFormKeywordsData(formPrefix) {
     const container = document.getElementById(`${formPrefix}-keywords-list`);
-    const keywords = Array.from(container.querySelectorAll('.badge')).map(badge => 
-        badge.textContent.trim()
-    );
-    document.getElementById(`${formPrefix}-keywords-data`).value = JSON.stringify(keywords);
+    const keywords = Array.from(container.querySelectorAll('.badge')).map(badge => {
+        // Get just the text content, excluding the close button
+        const text = badge.childNodes[0].textContent || badge.textContent;
+        return text.trim();
+    });
+    const hiddenInput = document.getElementById(`${formPrefix}-keywords-data`);
+    if (hiddenInput) {
+        hiddenInput.value = JSON.stringify(keywords);
+    }
 }
 
 // Handle Enter key in keyword inputs

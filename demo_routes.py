@@ -1093,7 +1093,13 @@ def edit_screening_type(screening_type_id):
         if keywords_data and keywords_data.strip():
             try:
                 import json as json_module
+                import html
                 from screening_keyword_manager import ScreeningKeywordManager
+                
+                # Fix HTML entity encoding issues
+                keywords_data = html.unescape(keywords_data)
+                keywords_data = keywords_data.replace('&quot;', '"').replace('&#x27;', "'")
+                
                 keywords = json_module.loads(keywords_data)
                 manager = ScreeningKeywordManager()
                 
