@@ -914,9 +914,11 @@ function loadKeywordsForDisplay() {
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.keywords.length > 0) {
-                    const keywordTags = data.keywords.map(keyword => 
-                        `<span class="badge bg-info text-dark me-1 mb-1">${keyword}</span>`
-                    ).join('');
+                    const keywordTags = data.keywords.map(keyword => {
+                        // Extract keyword text from object or use as-is if it's a string
+                        const keywordText = typeof keyword === 'object' && keyword.keyword ? keyword.keyword : keyword;
+                        return `<span class="badge bg-info text-dark me-1 mb-1">${keywordText}</span>`;
+                    }).join('');
 
                     element.innerHTML = keywordTags.length > 0 ? keywordTags : 
                         '<em class="text-muted">No keywords defined</em>';
@@ -968,13 +970,15 @@ function displayKeywords() {
         return;
     }
 
-    const keywordsHtml = currentKeywords.map((keyword, index) => 
-        `<span class="badge bg-primary me-2 mb-2">
-            ${keyword}
+    const keywordsHtml = currentKeywords.map((keyword, index) => {
+        // Extract keyword text from object or use as-is if it's a string
+        const keywordText = typeof keyword === 'object' && keyword.keyword ? keyword.keyword : keyword;
+        return `<span class="badge bg-primary me-2 mb-2">
+            ${keywordText}
             <button type="button" class="btn-close btn-close-white ms-1" 
                     onclick="removeKeyword(${index})" aria-label="Remove"></button>
-        </span>`
-    ).join('');
+        </span>`;
+    }).join('');
 
     container.innerHTML = keywordsHtml;
 }
@@ -984,10 +988,18 @@ function addKeyword() {
     const input = document.getElementById('newKeywordInput');
     const keyword = input.value.trim();
 
-    if (keyword && !currentKeywords.includes(keyword)) {
-        currentKeywords.push(keyword);
-        displayKeywords();
-        input.value = '';
+    if (keyword) {
+        // Check if keyword already exists (handling both string and object formats)
+        const exists = currentKeywords.some(existing => {
+            const existingText = typeof existing === 'object' && existing.keyword ? existing.keyword : existing;
+            return existingText === keyword;
+        });
+
+        if (!exists) {
+            currentKeywords.push(keyword);
+            displayKeywords();
+            input.value = '';
+        }
     }
 }
 
