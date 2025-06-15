@@ -513,16 +513,16 @@
                     
                     <div class="mb-3">
                         <label class="form-label">Keywords for Document Matching</label>
-                        <div class="border rounded p-3 bg-light">
-                            <div id="edit-form-keywords-container">
+                        <div class="keywords-container">
+                            <div id="edit-form-keywords-container" class="keywords-form-group">
                                 <div class="d-flex mb-2">
-                                    <input type="text" class="form-control me-2" id="edit-form-keyword-input" placeholder="Enter keyword">
-                                    <button type="button" class="btn btn-outline-primary" onclick="addKeywordToForm('edit-form')">Add</button>
+                                    <input type="text" class="keywords-input me-2" id="edit-form-keyword-input" placeholder="Enter keyword">
+                                    <button type="button" class="keywords-btn" onclick="addKeywordToForm('edit-form')">Add</button>
                                 </div>
-                                <div id="edit-form-keywords-list" class="keywords-list"></div>
+                                <div id="edit-form-keywords-list" class="keywords-display"></div>
                             </div>
                         </div>
-                        <small class="text-muted">Keywords help identify relevant documents for this screening type</small>
+                        <small class="keywords-help-text">Keywords help identify relevant documents for this screening type</small>
                         <input type="hidden" name="keywords" id="edit-form-keywords-data">
                     </div>
                     
