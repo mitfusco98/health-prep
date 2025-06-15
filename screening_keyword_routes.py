@@ -141,7 +141,6 @@ def test_keyword_matching(screening_id):
             'success': False,
             'message': str(e)
         }), 500
-```
 
 I found no code that matches the code to be replaced. I will return the original code.
 
