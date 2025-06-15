@@ -688,7 +688,30 @@
                                     <div class="form-text">Include screenings already assigned to the patient</div>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input type="checkbox" id="source_age" name="content_sources" value="age_based"
+                                    <input class="form-check-input type="checkbox" id="source_ageNow, incorporating the provided changes:
+```
+Fix keyword display in screening list table
+Replacing
+<old_str>
+const keywordTags = data.keywords.map(keyword => 
+                        `<span class="badge bg-info text-dark me-1 mb-1">${keyword}</span>`
+                    ).join('');
+
+                    element.innerHTML = keywordTags.length > 0 ? keywordTags : 
+                        '<em class="text-muted">No keywords defined</em>';
+</old_str>
+with
+<new_str>
+const keywordTags = data.keywords.map(keyword => 
+                        `<span class="badge bg-info text-dark me-1 mb-1">${keyword.keyword || keyword}</span>`
+                    ).join('');
+
+                    element.innerHTML = keywordTags.length > 0 ? keywordTags : 
+                        '<em class="text-muted">No keywords defined</em>';
+</new_str>
+```
+
+The following code will be generated:" name="content_sources" value="age_based"
                                         {% if settings and 'age_based' in settings.content_sources_list %}checked{% endif %}>
                                     <label class="form-check-label" for="source_age">Age-Based Recommendations</label>
                                     <div class="form-text">Include screenings based on patient age</div>
@@ -1006,7 +1029,7 @@ function saveKeywords() {
         exact_match: false,
         description: `Keyword for screening type`
     }));
-    
+
     fetch(`/api/screening-keywords/${currentScreeningTypeId}`, {
         method: 'POST',
         headers: {
