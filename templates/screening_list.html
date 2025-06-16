@@ -908,35 +908,37 @@ let currentKeywords = [];
 
 // Load keywords for display in the table
 function loadKeywordsForDisplay() {
-    document.querySelectorAll('[id^="keywords-display-"]').forEach(element => {
+    const elements = document.querySelectorAll('[id^="keywords-display-"]');
+    console.log(`Found ${elements.length} keyword display elements to load`);
+    
+    elements.forEach(element => {
         const screeningTypeId = element.id.replace('keywords-display-', '');
-        // Add cache busting parameter
-        const timestamp = new Date().getTime();
-        fetch(`/api/screening-keywords/${screeningTypeId}?_t=${timestamp}`)
+        console.log(`Loading keywords for screening ${screeningTypeId}`);
+        
+        fetch(`/api/screening-keywords/${screeningTypeId}`)
             .then(response => {
+                console.log(`API response status for screening ${screeningTypeId}: ${response.status}`);
                 if (!response.ok) {
-                    console.warn(`Failed to load keywords for screening ${screeningTypeId}: ${response.status}`);
-                    return { success: false, keywords: [] };
+                    throw new Error(`HTTP ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
-                console.log(`Keywords data for screening ${screeningTypeId}:`, data);
+                console.log(`Received keywords data for screening ${screeningTypeId}:`, data);
                 if (data.success && data.keywords && data.keywords.length > 0) {
-                    const keywordTags = data.keywords.map(keyword => {
-                        // Handle both string and object formats
-                        const keywordText = typeof keyword === 'string' ? keyword : 
-                                           (keyword.keyword || keyword.toString());
-                        return `<span class="badge bg-secondary me-1">${keywordText}</span>`;
-                    }).join('');
+                    const keywordTags = data.keywords.map(keyword => 
+                        `<span class="badge bg-secondary me-1">${keyword}</span>`
+                    ).join('');
                     element.innerHTML = `<small class="text-muted">Keywords: ${keywordTags}</small>`;
+                    console.log(`Successfully updated keywords display for screening ${screeningTypeId}`);
                 } else {
                     element.innerHTML = '<small class="text-muted">No keywords defined</small>';
+                    console.log(`No keywords found for screening ${screeningTypeId}`);
                 }
             })
             .catch(error => {
-                console.error('Error loading keywords for screening', screeningTypeId, ':', error);
-                element.innerHTML = '<small class="text-muted">No keywords defined</small>';
+                console.error(`Error loading keywords for screening ${screeningTypeId}:`, error);
+                element.innerHTML = '<small class="text-muted text-danger">Error loading keywords</small>';
             });
     });
 }
