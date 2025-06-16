@@ -915,7 +915,8 @@ function loadKeywordsForDisplay() {
         fetch(`/api/screening-keywords/${screeningTypeId}?_t=${timestamp}`)
             .then(response => {
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    console.warn(`Failed to load keywords for screening ${screeningTypeId}: ${response.status}`);
+                    return { success: false, keywords: [] };
                 }
                 return response.json();
             })
@@ -935,7 +936,7 @@ function loadKeywordsForDisplay() {
             })
             .catch(error => {
                 console.error('Error loading keywords for screening', screeningTypeId, ':', error);
-                element.innerHTML = '<small class="text-muted text-danger">Error loading keywords</small>';
+                element.innerHTML = '<small class="text-muted">No keywords defined</small>';
             });
     });
 }

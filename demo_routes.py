@@ -1090,30 +1090,35 @@ def edit_screening_type(screening_type_id):
 
         # Handle keywords if provided
         keywords_data = request.form.get('keywords')
+        print(f"Keywords data received: {keywords_data}")
+        
+        from screening_keyword_manager import ScreeningKeywordManager
+        manager = ScreeningKeywordManager()
+        
+        # Always clear existing keywords first
+        config = manager.get_keyword_config(screening_type_id)
+        if config:
+            config.keyword_rules.clear()
+            manager._save_keyword_config(config)
+        
         if keywords_data and keywords_data.strip():
             try:
                 import json as json_module
                 import html
-                from screening_keyword_manager import ScreeningKeywordManager
                 
                 # Fix HTML entity encoding issues
                 keywords_data = html.unescape(keywords_data)
                 keywords_data = keywords_data.replace('&quot;', '"').replace('&#x27;', "'")
                 
                 keywords = json_module.loads(keywords_data)
-                manager = ScreeningKeywordManager()
-                
-                # Completely clear existing keywords for this screening type
-                config = manager.get_keyword_config(screening_type_id)
-                if config:
-                    config.keyword_rules.clear()
-                    manager._save_config(config)  # Force save to database
+                print(f"Parsed keywords: {keywords}")
                 
                 # Add new keywords - handle both simple keyword list and complex objects from form
                 if isinstance(keywords, list):
+                    success_count = 0
                     for keyword in keywords:
                         if isinstance(keyword, str) and keyword.strip():
-                            manager.add_keyword_rule(
+                            success = manager.add_keyword_rule(
                                 screening_type_id=screening_type_id,
                                 keyword=keyword.strip(),
                                 section='general',
@@ -1122,8 +1127,10 @@ def edit_screening_type(screening_type_id):
                                 exact_match=False,
                                 description=f'Keyword for {screening_type.name}'
                             )
+                            if success:
+                                success_count += 1
                         elif isinstance(keyword, dict) and keyword.get('keyword'):
-                            manager.add_keyword_rule(
+                            success = manager.add_keyword_rule(
                                 screening_type_id=screening_type_id,
                                 keyword=keyword['keyword'].strip(),
                                 section=keyword.get('section', 'general'),
@@ -1132,10 +1139,15 @@ def edit_screening_type(screening_type_id):
                                 exact_match=keyword.get('exact_match', False),
                                 description=keyword.get('description', f'Keyword for {screening_type.name}')
                             )
+                            if success:
+                                success_count += 1
+                    print(f"Successfully added {success_count} keywords")
             except json_module.JSONDecodeError as e:
                 print(f"Error parsing keywords JSON: {str(e)} - Data: '{keywords_data[:100]}...'")
             except Exception as e:
                 print(f"Error updating keywords: {str(e)}")
+        else:
+            print("No keywords data provided or empty")
 
         try:
             # Store original values for change tracking

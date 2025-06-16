@@ -242,6 +242,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     keywordsField.value = '[]';
                 }
             }
+            
+            // Force a small delay to ensure data is set
+            setTimeout(() => {
+                console.log('Final keywords value before submit:', keywordsField ? keywordsField.value : 'no field');
+            }, 100);
         });
     }
 });

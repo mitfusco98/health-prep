@@ -172,7 +172,48 @@ class ScreeningKeywordManager:
 
     def get_keyword_config(self, screening_type_id: int) -> Optional[ScreeningKeywordConfig]:
         """Get keyword configuration for a screening type"""
-        return self.configs.get(screening_type_id)
+        # Check in-memory cache first
+        if screening_type_id in self.configs:
+            return self.configs[screening_type_id]
+        
+        # Load from database
+        screening_type = ScreeningType.query.get(screening_type_id)
+        if not screening_type:
+            return None
+            
+        if screening_type.document_section_mappings:
+            try:
+                config_data = json.loads(screening_type.document_section_mappings)
+                
+                # Reconstruct keyword rules
+                keyword_rules = []
+                for rule_data in config_data.get('keyword_rules', []):
+                    keyword_rules.append(KeywordRule(
+                        keyword=rule_data['keyword'],
+                        section=rule_data['section'],
+                        weight=rule_data['weight'],
+                        case_sensitive=rule_data['case_sensitive'],
+                        exact_match=rule_data['exact_match'],
+                        description=rule_data['description']
+                    ))
+                
+                config = ScreeningKeywordConfig(
+                    screening_type_id=screening_type_id,
+                    screening_name=screening_type.name,
+                    keyword_rules=keyword_rules,
+                    section_weights=config_data.get('section_weights', self.default_section_weights.copy()),
+                    fallback_enabled=config_data.get('fallback_enabled', True),
+                    confidence_threshold=config_data.get('confidence_threshold', 0.3)
+                )
+                
+                # Cache it
+                self.configs[screening_type_id] = config
+                return config
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"Error loading keyword config for screening {screening_type_id}: {e}")
+                return None
+        
+        return None
 
     def _save_config(self, config: ScreeningKeywordConfig) -> bool:
         """Force save a configuration to storage"""
@@ -376,10 +417,14 @@ class ScreeningKeywordManager:
             # Save as JSON in document_section_mappings field
             config_json = json.dumps(config.to_dict())
             screening_type.document_section_mappings = config_json
+            
+            # Also cache it in memory
+            self.configs[config.screening_type_id] = config
 
             db.session.commit()
             return True
-        except Exception:
+        except Exception as e:
+            print(f"Error saving keyword config: {e}")
             db.session.rollback()
             return False
 
