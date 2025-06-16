@@ -168,7 +168,12 @@ function updateFormKeywordsData(formPrefix) {
         }
         return clone.textContent.trim();
     }).filter(keyword => keyword !== '');
-    document.getElementById(`${formPrefix}-keywords-data`).value = JSON.stringify(keywords);
+    
+    const hiddenInput = document.getElementById(`${formPrefix}-keywords-data`);
+    if (hiddenInput) {
+        hiddenInput.value = JSON.stringify(keywords);
+        console.log('Updated keywords data:', keywords); // Debug log
+    }
 }
 
 // Load existing keywords for editing
@@ -202,7 +207,7 @@ function loadExistingKeywords() {
         });
 }
 
-// Handle Enter key in keyword inputs
+// Handle Enter key in keyword inputs and form submission
 document.addEventListener('DOMContentLoaded', function() {
     // Load existing keywords when page loads
     loadExistingKeywords();
@@ -217,6 +222,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    // Handle form submission to ensure keywords are included
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            updateFormKeywordsData('edit-form');
+            console.log('Form submitting with keywords:', document.getElementById('edit-form-keywords-data').value);
+        });
+    }
 });
 </script>
 

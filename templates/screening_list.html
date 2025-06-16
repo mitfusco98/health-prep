@@ -911,19 +911,27 @@ function loadKeywordsForDisplay() {
     document.querySelectorAll('[id^="keywords-display-"]').forEach(element => {
         const screeningTypeId = element.id.replace('keywords-display-', '');
         fetch(`/api/screening-keywords/${screeningTypeId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
-                if (data.success && data.keywords.length > 0) {
-                    const keywordTags = data.keywords.map(keyword => 
-                        `<span class="badge bg-secondary me-1">${keyword}</span>`
-                    ).join('');
+                if (data.success && data.keywords && data.keywords.length > 0) {
+                    const keywordTags = data.keywords.map(keyword => {
+                        // Handle both string and object formats
+                        const keywordText = typeof keyword === 'string' ? keyword : 
+                                           (keyword.keyword || keyword.toString());
+                        return `<span class="badge bg-secondary me-1">${keywordText}</span>`;
+                    }).join('');
                     element.innerHTML = `<small class="text-muted">Keywords: ${keywordTags}</small>`;
                 } else {
                     element.innerHTML = '<small class="text-muted">No keywords defined</small>';
                 }
             })
             .catch(error => {
-                console.error('Error loading keywords:', error);
+                console.error('Error loading keywords for screening', screeningTypeId, ':', error);
                 element.innerHTML = '<small class="text-muted text-danger">Error loading keywords</small>';
             });
     });
