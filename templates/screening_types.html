@@ -45,7 +45,7 @@
                                             </button>
                                         </div>
                                     </td>
-                                    <td>{{ screening_type.default_frequency }}</td>
+                                    <td>{{ screening_type.formatted_frequency }}</td>
                                     <td>
                                         {% if screening_type.gender_specific %}
                                             {{ screening_type.gender_specific }}
@@ -78,7 +78,8 @@
                                                 data-id="{{ screening_type.id }}"
                                                 data-name="{{ screening_type.name }}"
                                                 data-description=""
-                                                data-frequency="{{ screening_type.default_frequency or '' }}"
+                                                data-frequency-number="{{ screening_type.frequency_number or '' }}"
+                                                data-frequency-unit="{{ screening_type.frequency_unit or '' }}"
                                                 data-gender="{{ screening_type.gender_specific or '' }}"
                                                 data-min-age="{{ screening_type.min_age or '' }}"
                                                 data-max-age="{{ screening_type.max_age or '' }}"
@@ -137,19 +138,29 @@
                     {{ add_form.hidden_tag() }}
                     
                     <div class="row mb-3">
-                        <div class="col-md-8">
+                        <div class="col-md-12">
                             <div class="form-group">
                                 {{ add_form.name.label(class="form-label") }}
                                 {{ add_form.name(class="form-control") }}
                                 <small class="form-text text-muted">{{ add_form.name.description }}</small>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                {{ add_form.default_frequency.label(class="form-label") }}
-                                {{ add_form.default_frequency(class="form-control") }}
-                                <small class="form-text text-muted">{{ add_form.default_frequency.description }}</small>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Frequency</label>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ add_form.frequency_number(class="form-control", placeholder="1") }}
+                                    <small class="form-text text-muted">Number</small>
+                                </div>
+                                <div class="col-md-8">
+                                    {{ add_form.frequency_unit(class="form-select") }}
+                                    <small class="form-text text-muted">Time unit</small>
+                                </div>
                             </div>
+                            <small class="form-text text-muted">Set how often this screening should be performed</small>
                         </div>
                     </div>
                     
@@ -231,19 +242,29 @@
                     {{ edit_form.hidden_tag() }}
                     
                     <div class="row mb-3">
-                        <div class="col-md-8">
+                        <div class="col-md-12">
                             <div class="form-group">
                                 {{ edit_form.name.label(class="form-label") }}
                                 {{ edit_form.name(class="form-control") }}
                                 <small class="form-text text-muted">{{ edit_form.name.description }}</small>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                {{ edit_form.default_frequency.label(class="form-label") }}
-                                {{ edit_form.default_frequency(class="form-control") }}
-                                <small class="form-text text-muted">{{ edit_form.default_frequency.description }}</small>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Frequency</label>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    {{ edit_form.frequency_number(class="form-control", placeholder="1") }}
+                                    <small class="form-text text-muted">Number</small>
+                                </div>
+                                <div class="col-md-8">
+                                    {{ edit_form.frequency_unit(class="form-select") }}
+                                    <small class="form-text text-muted">Time unit</small>
+                                </div>
                             </div>
+                            <small class="form-text text-muted">Set how often this screening should be performed</small>
                         </div>
                     </div>
                     
@@ -676,12 +697,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
 
-    // Handle edit button clicks (updated to remove description field)
+    // Handle edit button clicks (updated to use structured frequency fields)
     document.querySelectorAll('.edit-screening-btn').forEach(button => {
         button.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
             const name = this.getAttribute('data-name');
-            const frequency = this.getAttribute('data-frequency');
+            const frequencyNumber = this.getAttribute('data-frequency-number');
+            const frequencyUnit = this.getAttribute('data-frequency-unit');
             const gender = this.getAttribute('data-gender');
             const minAge = this.getAttribute('data-min-age');
             const maxAge = this.getAttribute('data-max-age');
@@ -692,7 +714,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Populate form fields
             document.querySelector('#editScreeningForm #name').value = name;
-            document.querySelector('#editScreeningForm #default_frequency').value = frequency;
+            document.querySelector('#editScreeningForm #frequency_number').value = frequencyNumber;
+            document.querySelector('#editScreeningForm #frequency_unit').value = frequencyUnit;
             document.querySelector('#editScreeningForm #gender_specific').value = gender;
             document.querySelector('#editScreeningForm #min_age').value = minAge;
             document.querySelector('#editScreeningForm #max_age').value = maxAge;

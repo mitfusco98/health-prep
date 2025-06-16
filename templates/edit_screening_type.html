@@ -32,22 +32,8 @@
                 </div>
                 
                 <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.default_frequency.label(class="form-label") }}
-                            {{ form.default_frequency(class="form-control", placeholder="Optional text description") }}
-                            <small class="form-text text-muted">Legacy text field (optional)</small>
-                            {% if form.default_frequency.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.default_frequency.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Structured Frequency <span class="text-danger">*</span></label>
+                    <div class="col-md-12">
+                        <label class="form-label">Frequency</label>
                         <div class="row">
                             <div class="col-md-4">
                                 {{ form.frequency_number(class="form-control", placeholder="1") }}
@@ -72,6 +58,7 @@
                                 {% endif %}
                             </div>
                         </div>
+                        <small class="form-text text-muted">Set how often this screening should be performed</small>
                     </div>
                 </div>
                 
