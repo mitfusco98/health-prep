@@ -912,15 +912,23 @@ let currentKeywords = [];
 // Load keywords for display in the table
 function loadKeywordsForDisplay() {
     const elements = document.querySelectorAll('[id^="keywords-display-"]');
-    console.log(`Found ${elements.length} keyword display elements to load`);
+    console.log(`loadKeywordsForDisplay: Found ${elements.length} keyword display elements to load`);
+    
+    if (elements.length === 0) {
+        console.log('loadKeywordsForDisplay: No elements found, checking if page is loaded correctly');
+        return;
+    }
     
     elements.forEach(element => {
         const screeningTypeId = element.id.replace('keywords-display-', '');
-        console.log(`Loading keywords for screening ${screeningTypeId}`);
+        console.log(`loadKeywordsForDisplay: Loading keywords for screening ${screeningTypeId}`);
+        
+        // Set loading state immediately
+        element.innerHTML = '<small class="text-muted">Loading keywords...</small>';
         
         fetch(`/api/screening-keywords/${screeningTypeId}`)
             .then(response => {
-                console.log(`API response status for screening ${screeningTypeId}: ${response.status}`);
+                console.log(`loadKeywordsForDisplay: API response status for screening ${screeningTypeId}: ${response.status}`);
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
                 }
@@ -928,12 +936,14 @@ function loadKeywordsForDisplay() {
             })
             .then(data => {
                 console.log(`Received keywords data for screening ${screeningTypeId}:`, data);
-                if (data.success && data.keywords && data.keywords.length > 0) {
-                    const keywordTags = data.keywords.map(keyword => 
-                        `<span class="badge bg-secondary me-1">${keyword}</span>`
-                    ).join('');
-                    element.innerHTML = `<small class="text-muted">Keywords: ${keywordTags}</small>`;
-                    console.log(`Successfully updated keywords display for screening ${screeningTypeId}`);
+                if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
+                    const keywordTags = data.keywords.map(keyword => {
+                        // Handle both string keywords and object keywords
+                        const keywordText = typeof keyword === 'string' ? keyword : (keyword.keyword || keyword);
+                        return `<span class="badge bg-secondary me-1 mb-1">${keywordText}</span>`;
+                    }).join('');
+                    element.innerHTML = `<small class="text-muted d-block">Keywords:</small><div>${keywordTags}</div>`;
+                    console.log(`Successfully updated keywords display for screening ${screeningTypeId} with ${data.keywords.length} keywords`);
                 } else {
                     element.innerHTML = '<small class="text-muted">No keywords defined</small>';
                     console.log(`No keywords found for screening ${screeningTypeId}`);
@@ -1118,12 +1128,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (keywordDisplays.length > 0) {
         console.log('Loading keywords for display...');
-        // Add a delay to ensure elements are fully rendered
+        // Load immediately and also set up a fallback
+        loadKeywordsForDisplay();
+        
+        // Add a delay as fallback to ensure elements are fully rendered
         setTimeout(() => {
+            console.log('Fallback keyword loading...');
             loadKeywordsForDisplay();
-        }, 500);
+        }, 1000);
     } else {
         console.log('No keyword display elements found');
+        // Try again after a delay in case the page hasn't fully loaded
+        setTimeout(() => {
+            const retryDisplays = document.querySelectorAll('[id^="keywords-display-"]');
+            console.log(`Retry found ${retryDisplays.length} keyword display elements`);
+            if (retryDisplays.length > 0) {
+                loadKeywordsForDisplay();
+            }
+        }, 2000);
     }
 
     // Handle Enter key in main keyword input
