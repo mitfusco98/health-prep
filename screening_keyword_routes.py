@@ -18,7 +18,8 @@ def get_screening_keywords(screening_id):
         config = manager.get_keyword_config(screening_id)
 
         if config:
-            keywords = [rule.to_dict() for rule in config.keyword_rules]
+            # Return simple keyword strings for display
+            keywords = [rule.keyword for rule in config.keyword_rules]
             return jsonify({
                 'success': True,
                 'keywords': keywords,
