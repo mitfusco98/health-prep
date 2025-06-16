@@ -3,7 +3,7 @@ import logging
 import secrets
 from datetime import timedelta
 
-from flask import Flask, request, session, render_template, jsonify, g
+from flask import Flask, request, session, render_template, jsonify, g, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.orm import DeclarativeBase
@@ -12,6 +12,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_compress import Compress
+from functools import wraps
 import time
 
 # Import structured logging
@@ -92,6 +93,19 @@ app.config["COMPRESS_MIN_SIZE"] = 1000  # Only compress responses larger than 1K
 db.init_app(app)
 
 # User authentication disabled for demo version
+
+def login_required(f):
+    """
+    Decorator to require user login for protected routes.
+    For demo purposes, this just checks if user_id is in session.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('user_id'):
+            flash('Please log in to access this page.', 'info')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 # Add request-level transaction handling
@@ -1219,6 +1233,8 @@ def detect_automated_attacks():
 with app.app_context():
     # Import models
     import models  # noqa: F401
+    from models import ScreeningType
+    from forms import ScreeningTypeForm
 
     # Import JWT authentication routes
     import auth_routes  # noqa: F401
