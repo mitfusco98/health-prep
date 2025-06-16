@@ -319,6 +319,9 @@
                     <input class="form-control me-2" type="search" placeholder="Search screening types" name="search" value="{{ search_query }}">
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </form>
+                <button type="button" class="btn btn-outline-info me-2" onclick="loadKeywordsForDisplay()" title="Refresh keyword display">
+                    <i class="fas fa-sync"></i> Refresh Keywords
+                </button>
                 <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
                     Add Type
                 </a>
@@ -1115,7 +1118,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (keywordDisplays.length > 0) {
         console.log('Loading keywords for display...');
-        loadKeywordsForDisplay();
+        // Add a delay to ensure elements are fully rendered
+        setTimeout(() => {
+            loadKeywordsForDisplay();
+        }, 500);
     } else {
         console.log('No keyword display elements found');
     }
