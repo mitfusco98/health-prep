@@ -352,6 +352,23 @@ class ScreeningTypeForm(FlaskForm):
         validators=[Optional()],
         description="How often this screening should be done (e.g., 'Annual', 'Every 5 years')",
     )
+    frequency_number = IntegerField(
+        "Frequency Number",
+        validators=[Optional(), NumberRange(min=1, max=999)],
+        description="Number for frequency (e.g., 1, 3, 6)",
+    )
+    frequency_unit = SelectField(
+        "Frequency Unit",
+        choices=[
+            ("", "Select unit"),
+            ("days", "Days"),
+            ("weeks", "Weeks"),
+            ("months", "Months"),
+            ("years", "Years")
+        ],
+        validators=[Optional()],
+        description="Time unit for frequency",
+    )
     gender_specific = SelectField(
         "Gender Specific",
         choices=[("", "All Genders"), ("Male", "Male Only"), ("Female", "Female Only")],

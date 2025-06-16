@@ -55,6 +55,8 @@ def add_screening_type():
             name=request.form.get("name"),
             description=request.form.get("description"),
             default_frequency=request.form.get("default_frequency"),
+            frequency_number=request.form.get("frequency_number", type=int),
+            frequency_unit=request.form.get("frequency_unit"),
             gender_specific=(
                 request.form.get("gender_specific")
                 if request.form.get("gender_specific")
@@ -88,6 +90,8 @@ def edit_screening_type(screening_type_id):
         screening_type.name = request.form.get("name")
         screening_type.description = request.form.get("description")
         screening_type.default_frequency = request.form.get("default_frequency")
+        screening_type.frequency_number = request.form.get("frequency_number", type=int)
+        screening_type.frequency_unit = request.form.get("frequency_unit")
         screening_type.gender_specific = (
             request.form.get("gender_specific")
             if request.form.get("gender_specific")

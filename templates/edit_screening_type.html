@@ -15,7 +15,7 @@
                 {{ form.hidden_tag() }}
                 
                 <div class="row mb-3">
-                    <div class="col-md-8">
+                    <div class="col-md-12">
                         <div class="form-group">
                             {{ form.name.label(class="form-label") }}
                             {{ form.name(class="form-control") }}
@@ -29,11 +29,14 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="col-md-4">
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
                         <div class="form-group">
                             {{ form.default_frequency.label(class="form-label") }}
-                            {{ form.default_frequency(class="form-control") }}
-                            <small class="form-text text-muted">{{ form.default_frequency.description }}</small>
+                            {{ form.default_frequency(class="form-control", placeholder="Optional text description") }}
+                            <small class="form-text text-muted">Legacy text field (optional)</small>
                             {% if form.default_frequency.errors %}
                             <div class="invalid-feedback d-block">
                                 {% for error in form.default_frequency.errors %}
@@ -41,6 +44,33 @@
                                 {% endfor %}
                             </div>
                             {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Structured Frequency <span class="text-danger">*</span></label>
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form.frequency_number(class="form-control", placeholder="1") }}
+                                <small class="form-text text-muted">Number</small>
+                                {% if form.frequency_number.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.frequency_number.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-8">
+                                {{ form.frequency_unit(class="form-select") }}
+                                <small class="form-text text-muted">Time unit</small>
+                                {% if form.frequency_unit.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.frequency_unit.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>

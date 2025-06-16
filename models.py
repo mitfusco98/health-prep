@@ -615,7 +615,9 @@ class ScreeningType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     description = db.Column(db.Text)
-    default_frequency = db.Column(db.String(50))  # e.g., "Annual", "Every 3 years"
+    default_frequency = db.Column(db.String(50))  # e.g., "Annual", "Every 3 years" - kept for backward compatibility
+    frequency_number = db.Column(db.Integer)  # e.g., 1, 3, 6
+    frequency_unit = db.Column(db.String(20))  # e.g., "days", "weeks", "months", "years"
     gender_specific = db.Column(db.String(10))  # "Male" or "Female" or None for all
     min_age = db.Column(
         db.Integer
@@ -685,6 +687,47 @@ class ScreeningType(db.Model):
             bool: True if condition matches any trigger condition
         """
         trigger_conditions = self.get_trigger_conditions()
+
+    
+    @property
+    def formatted_frequency(self):
+        """Return a formatted frequency string from structured fields"""
+        if self.frequency_number and self.frequency_unit:
+            if self.frequency_number == 1:
+                # Handle singular forms
+                unit_singular = {
+                    'days': 'day',
+                    'weeks': 'week', 
+                    'months': 'month',
+                    'years': 'year'
+                }
+                return f"Every {unit_singular.get(self.frequency_unit, self.frequency_unit)}"
+            else:
+                return f"Every {self.frequency_number} {self.frequency_unit}"
+        elif self.default_frequency:
+            return self.default_frequency
+        else:
+            return "Not specified"
+    
+    @property
+    def frequency_in_days(self):
+        """Convert structured frequency to approximate days for calculations"""
+        if not self.frequency_number or not self.frequency_unit:
+            return None
+            
+        multipliers = {
+            'days': 1,
+            'weeks': 7,
+            'months': 30,  # Approximate
+            'years': 365   # Approximate
+        }
+        
+        multiplier = multipliers.get(self.frequency_unit)
+        if multiplier:
+            return self.frequency_number * multiplier
+        return None
+
+
         
         for trigger in trigger_conditions:
             # Direct code match

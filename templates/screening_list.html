@@ -424,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             </div>
                         </td>
-                        <td>{{ screening_type.default_frequency or 'Not specified' }}</td>
+                        <td>{{ screening_type.formatted_frequency }}</td>
                         <td>
                             {% if screening_type.gender_specific %}
                                 {{ screening_type.gender_specific }}
