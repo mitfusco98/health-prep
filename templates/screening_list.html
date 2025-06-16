@@ -344,27 +344,32 @@
                     {% for screening_type in screening_types %}
                     <tr>
                         <td>
-                            <div class="d-flex justify-content-between align-items-start">
+                            <div>
                                 <div>
                                     <strong>{{ screening_type.name }}</strong>
                                 </div>
-                                <div class="position-relative">
-                                    <button type="button" class="btn btn-sm btn-outline-info keywords-btn" 
-                                            id="keywords-btn-{{ screening_type.id }}"
-                                            onclick="toggleKeywordDisplay({{ screening_type.id }}, '{{ screening_type.name }}')"
-                                            title="View Keywords">
-                                        <i class="fas fa-tags"></i> <span id="keywords-text-{{ screening_type.id }}">Keywords</span>
-                                    </button>
-                                    <div id="keywords-dropdown-{{ screening_type.id }}" class="keywords-dropdown" style="display: none;">
-                                        <div class="keywords-dropdown-content">
-                                            <div class="keywords-dropdown-header">
-                                                <strong>{{ screening_type.name }} Keywords</strong>
-                                                <button type="button" class="btn btn-sm btn-link" onclick="openKeywordManager({{ screening_type.id }}, '{{ screening_type.name }}')">
-                                                    <i class="fas fa-edit"></i> Edit
-                                                </button>
-                                            </div>
-                                            <div id="keywords-list-{{ screening_type.id }}" class="keywords-list-content">
-                                                Loading keywords...
+                                <div class="mt-1">
+                                    <div id="keywords-display-{{ screening_type.id }}" class="keywords-display-inline mb-1">
+                                        <small class="text-muted">Loading keywords...</small>
+                                    </div>
+                                    <div class="position-relative d-inline-block">
+                                        <button type="button" class="btn btn-sm btn-outline-info keywords-btn" 
+                                                id="keywords-btn-{{ screening_type.id }}"
+                                                onclick="toggleKeywordDisplay({{ screening_type.id }}, '{{ screening_type.name }}')"
+                                                title="View Keywords">
+                                            <i class="fas fa-tags"></i> <span id="keywords-text-{{ screening_type.id }}">Manage</span>
+                                        </button>
+                                        <div id="keywords-dropdown-{{ screening_type.id }}" class="keywords-dropdown" style="display: none;">
+                                            <div class="keywords-dropdown-content">
+                                                <div class="keywords-dropdown-header">
+                                                    <strong>{{ screening_type.name }} Keywords</strong>
+                                                    <button type="button" class="btn btn-sm btn-link" onclick="openKeywordManager({{ screening_type.id }}, '{{ screening_type.name }}')">
+                                                        <i class="fas fa-edit"></i> Edit
+                                                    </button>
+                                                </div>
+                                                <div id="keywords-list-{{ screening_type.id }}" class="keywords-list-content">
+                                                    Loading keywords...
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -956,10 +961,15 @@ function loadKeywordsForDisplay(screeningTypeId) {
     listContainer.innerHTML = 'Loading keywords...';
     
     fetch(`/api/screening-keywords/${screeningTypeId}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            console.log(`Keywords loaded for screening ${screeningTypeId}:`, data);
-            if (data.success && data.keywords && data.keywords.length > 0) {
+            console.log(`Keywords loaded for dropdown screening ${screeningTypeId}:`, data);
+            if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
                 const keywordsHtml = data.keywords.map(keyword => 
                     `<span class="badge bg-primary me-1 mb-1">${keyword}</span>`
                 ).join('');
@@ -969,7 +979,7 @@ function loadKeywordsForDisplay(screeningTypeId) {
             }
         })
         .catch(error => {
-            console.error('Error loading keywords:', error);
+            console.error('Error loading keywords for dropdown:', error);
             listContainer.innerHTML = '<em class="text-danger">Error loading keywords</em>';
         });
 }
@@ -1140,17 +1150,8 @@ function updateFormKeywordsData(formPrefix) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded - checking for keyword displays...');
 
-    // Load keywords for buttons on the types tab
-    if (window.location.href.includes('tab=types') || document.querySelector('.keywords-btn')) {
-        console.log('Loading keywords for buttons...');
-        loadKeywordsForButtons();
-
-        // Add a delay as fallback to ensure elements are fully rendered
-        setTimeout(() => {
-            console.log('Fallback keyword loading for buttons...');
-            loadKeywordsForButtons();
-        }, 1000);
-    }
+    // Initialize keyword display
+    initializeKeywordDisplay();
 
     // Handle Enter key in main keyword input
     document.getElementById('newKeywordInput')?.addEventListener('keypress', function(e) {
@@ -1208,23 +1209,31 @@ function loadKeywordsForButtons() {
             .then(data => {
                 console.log(`Received keywords data for screening ${screeningTypeId}:`, data);
                 if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
-                    // Show first few keywords in button text
-                    const keywordCount = data.keywords.length;
-                    if (keywordCount === 1) {
-                        textSpan.textContent = `"${data.keywords[0]}"`;
-                    } else if (keywordCount <= 3) {
-                        textSpan.textContent = data.keywords.join(', ');
-                    } else {
-                        textSpan.textContent = `${data.keywords.slice(0, 2).join(', ')} +${keywordCount - 2} more`;
+                    // Update the inline display
+                    const inlineDisplay = document.getElementById(`keywords-display-${screeningTypeId}`);
+                    if (inlineDisplay) {
+                        const keywordsHtml = data.keywords.map(keyword => 
+                            `<span class="badge bg-secondary me-1">${keyword}</span>`
+                        ).join('');
+                        inlineDisplay.innerHTML = keywordsHtml;
                     }
+
+                    // Update button text
+                    textSpan.textContent = 'Manage';
 
                     // Update button style to show it has keywords
                     button.className = 'btn btn-sm btn-info keywords-btn';
                     button.title = `Keywords: ${data.keywords.join(', ')}`;
 
-                    console.log(`Successfully updated keywords button for screening ${screeningTypeId} with ${keywordCount} keywords`);
+                    console.log(`Successfully updated keywords display for screening ${screeningTypeId} with ${data.keywords.length} keywords`);
                 } else {
-                    textSpan.textContent = 'No Keywords';
+                    // Update the inline display
+                    const inlineDisplay = document.getElementById(`keywords-display-${screeningTypeId}`);
+                    if (inlineDisplay) {
+                        inlineDisplay.innerHTML = '<small class="text-muted">No keywords defined</small>';
+                    }
+
+                    textSpan.textContent = 'Add Keywords';
                     button.className = 'btn btn-sm btn-outline-secondary keywords-btn';
                     button.title = 'No keywords defined - click to add';
                     console.log(`No keywords found for screening ${screeningTypeId}`);
@@ -1236,6 +1245,22 @@ function loadKeywordsForButtons() {
                 button.title = 'Error loading keywords';
             });
     });
+}
+
+// Initialize keyword display when page loads
+function initializeKeywordDisplay() {
+    // Only run on the types tab
+    if (window.location.href.includes('tab=types')) {
+        console.log('Initializing keyword display for types tab');
+        
+        // Load keywords immediately
+        loadKeywordsForButtons();
+        
+        // Also load after a short delay to ensure DOM is fully ready
+        setTimeout(() => {
+            loadKeywordsForButtons();
+        }, 500);
+    }
 }
 </script>
 
