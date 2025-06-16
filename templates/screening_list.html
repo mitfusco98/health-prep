@@ -350,10 +350,23 @@
                                 </div>
                                 <button type="button" class="btn btn-sm btn-outline-info keywords-btn" 
                                         id="keywords-btn-{{ screening_type.id }}"
-                                        onclick="openKeywordManager({{ screening_type.id }}, '{{ screening_type.name }}')"
-                                        title="Manage Keywords">
+                                        onclick="toggleKeywordDisplay({{ screening_type.id }}, '{{ screening_type.name }}')"
+                                        title="View Keywords">
                                     <i class="fas fa-tags"></i> <span id="keywords-text-{{ screening_type.id }}">Keywords</span>
                                 </button>
+                                <div id="keywords-dropdown-{{ screening_type.id }}" class="keywords-dropdown" style="display: none;">
+                                    <div class="keywords-dropdown-content">
+                                        <div class="keywords-dropdown-header">
+                                            <strong>{{ screening_type.name }} Keywords</strong>
+                                            <button type="button" class="btn btn-sm btn-link" onclick="openKeywordManager({{ screening_type.id }}, '{{ screening_type.name }}')">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </button>
+                                        </div>
+                                        <div id="keywords-list-{{ screening_type.id }}" class="keywords-list-content">
+                                            Loading keywords...
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                         <td>{{ screening_type.default_frequency or 'Not specified' }}</td>
@@ -908,6 +921,44 @@ let currentKeywords = [];
 
 
 
+// Toggle keyword display dropdown
+function toggleKeywordDisplay(screeningTypeId, screeningName) {
+    const dropdown = document.getElementById(`keywords-dropdown-${screeningTypeId}`);
+    const isVisible = dropdown.style.display !== 'none';
+    
+    // Hide all other dropdowns first
+    document.querySelectorAll('.keywords-dropdown').forEach(d => d.style.display = 'none');
+    
+    if (!isVisible) {
+        // Show this dropdown and load keywords
+        dropdown.style.display = 'block';
+        loadKeywordsForDisplay(screeningTypeId);
+    }
+}
+
+// Load keywords for display in dropdown
+function loadKeywordsForDisplay(screeningTypeId) {
+    const listContainer = document.getElementById(`keywords-list-${screeningTypeId}`);
+    listContainer.innerHTML = 'Loading keywords...';
+    
+    fetch(`/api/screening-keywords/${screeningTypeId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.keywords && data.keywords.length > 0) {
+                const keywordsHtml = data.keywords.map(keyword => 
+                    `<span class="badge bg-primary me-1 mb-1">${keyword}</span>`
+                ).join('');
+                listContainer.innerHTML = keywordsHtml;
+            } else {
+                listContainer.innerHTML = '<em class="text-muted">No keywords defined</em>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading keywords:', error);
+            listContainer.innerHTML = '<em class="text-danger">Error loading keywords</em>';
+        });
+}
+
 // Open keyword manager modal
 function openKeywordManager(screeningTypeId, screeningName) {
     currentScreeningTypeId = screeningTypeId;
@@ -1104,6 +1155,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.keywords-btn') && !event.target.closest('.keywords-dropdown')) {
+            document.querySelectorAll('.keywords-dropdown').forEach(dropdown => {
+                dropdown.style.display = 'none';
+            });
+        }
+    });
 });
 
 // Load keywords and update button text
@@ -1173,6 +1233,35 @@ function loadKeywordsForButtons() {
 }
 .btn-close-white {
     filter: invert(1) grayscale(100%) brightness(200%);
+}
+.keywords-dropdown {
+    position: absolute;
+    z-index: 1000;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    min-width: 300px;
+    max-width: 400px;
+    margin-top: 5px;
+}
+.keywords-dropdown-content {
+    padding: 1rem;
+}
+.keywords-dropdown-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+}
+.keywords-list-content {
+    max-height: 200px;
+    overflow-y: auto;
+}
+.keywords-dropdown .badge {
+    font-size: 0.75rem;
 }
 </style>
 {% endblock %}
