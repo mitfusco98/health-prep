@@ -348,22 +348,24 @@
                                 <div>
                                     <strong>{{ screening_type.name }}</strong>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-info keywords-btn" 
-                                        id="keywords-btn-{{ screening_type.id }}"
-                                        onclick="toggleKeywordDisplay({{ screening_type.id }}, '{{ screening_type.name }}')"
-                                        title="View Keywords">
-                                    <i class="fas fa-tags"></i> <span id="keywords-text-{{ screening_type.id }}">Keywords</span>
-                                </button>
-                                <div id="keywords-dropdown-{{ screening_type.id }}" class="keywords-dropdown" style="display: none;">
-                                    <div class="keywords-dropdown-content">
-                                        <div class="keywords-dropdown-header">
-                                            <strong>{{ screening_type.name }} Keywords</strong>
-                                            <button type="button" class="btn btn-sm btn-link" onclick="openKeywordManager({{ screening_type.id }}, '{{ screening_type.name }}')">
-                                                <i class="fas fa-edit"></i> Edit
-                                            </button>
-                                        </div>
-                                        <div id="keywords-list-{{ screening_type.id }}" class="keywords-list-content">
-                                            Loading keywords...
+                                <div class="position-relative">
+                                    <button type="button" class="btn btn-sm btn-outline-info keywords-btn" 
+                                            id="keywords-btn-{{ screening_type.id }}"
+                                            onclick="toggleKeywordDisplay({{ screening_type.id }}, '{{ screening_type.name }}')"
+                                            title="View Keywords">
+                                        <i class="fas fa-tags"></i> <span id="keywords-text-{{ screening_type.id }}">Keywords</span>
+                                    </button>
+                                    <div id="keywords-dropdown-{{ screening_type.id }}" class="keywords-dropdown" style="display: none;">
+                                        <div class="keywords-dropdown-content">
+                                            <div class="keywords-dropdown-header">
+                                                <strong>{{ screening_type.name }} Keywords</strong>
+                                                <button type="button" class="btn btn-sm btn-link" onclick="openKeywordManager({{ screening_type.id }}, '{{ screening_type.name }}')">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </button>
+                                            </div>
+                                            <div id="keywords-list-{{ screening_type.id }}" class="keywords-list-content">
+                                                Loading keywords...
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -924,6 +926,12 @@ let currentKeywords = [];
 // Toggle keyword display dropdown
 function toggleKeywordDisplay(screeningTypeId, screeningName) {
     const dropdown = document.getElementById(`keywords-dropdown-${screeningTypeId}`);
+    
+    if (!dropdown) {
+        console.error(`Dropdown not found for screening ${screeningTypeId}`);
+        return;
+    }
+    
     const isVisible = dropdown.style.display !== 'none';
     
     // Hide all other dropdowns first
@@ -939,11 +947,18 @@ function toggleKeywordDisplay(screeningTypeId, screeningName) {
 // Load keywords for display in dropdown
 function loadKeywordsForDisplay(screeningTypeId) {
     const listContainer = document.getElementById(`keywords-list-${screeningTypeId}`);
+    
+    if (!listContainer) {
+        console.error(`Keywords list container not found for screening ${screeningTypeId}`);
+        return;
+    }
+    
     listContainer.innerHTML = 'Loading keywords...';
     
     fetch(`/api/screening-keywords/${screeningTypeId}`)
         .then(response => response.json())
         .then(data => {
+            console.log(`Keywords loaded for screening ${screeningTypeId}:`, data);
             if (data.success && data.keywords && data.keywords.length > 0) {
                 const keywordsHtml = data.keywords.map(keyword => 
                     `<span class="badge bg-primary me-1 mb-1">${keyword}</span>`
@@ -1236,6 +1251,8 @@ function loadKeywordsForButtons() {
 }
 .keywords-dropdown {
     position: absolute;
+    top: 100%;
+    left: 0;
     z-index: 1000;
     background: white;
     border: 1px solid #dee2e6;
