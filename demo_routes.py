@@ -2742,6 +2742,37 @@ def screening_list():
 
     # Get the search query parameter
     search_query = request.args.get("search", "")
+    
+    # Log screening list access with search parameters
+    if search_query or tab != "screenings":
+        from models import AdminLog
+        import json
+        
+        log_details = {
+            "action": "access",
+            "data_type": "screening_list",
+            "tab": tab,
+            "search_query": search_query,
+            "has_search": bool(search_query),
+            "endpoint": "screening_list",
+            "method": "GET",
+            "timestamp": datetime.now().isoformat(),
+        }
+        
+        try:
+            from flask_login import current_user
+            user_id = current_user.id if current_user.is_authenticated else None
+        except:
+            user_id = None
+            
+        AdminLog.log_event(
+            event_type="data_access",
+            user_id=user_id,
+            event_details=json.dumps(log_details),
+            request_id=f"screening_list_access_{tab}_{int(datetime.now().timestamp())}",
+            ip_address=request.remote_addr or "127.0.0.1",
+            user_agent=request.headers.get("User-Agent", "Unknown"),
+        )
 
     # Import the checklist settings model and helper function
     from models import ChecklistSettings
