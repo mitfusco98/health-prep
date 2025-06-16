@@ -626,7 +626,7 @@ class AdminLog(db.Model):
     
     @property
     def formatted_frequency(self):
-        """Return a formatted frequency string from structured fields"""
+        """Return a formatted frequency string from structured fields, blank if not set"""
         if self.frequency_number and self.frequency_unit:
             if self.frequency_number == 1:
                 # Handle singular forms
@@ -639,10 +639,8 @@ class AdminLog(db.Model):
                 return f"Every {unit_singular.get(self.frequency_unit, self.frequency_unit)}"
             else:
                 return f"Every {self.frequency_number} {self.frequency_unit}"
-        elif self.default_frequency:
-            return self.default_frequency
         else:
-            return "Not specified"
+            return ""
     
     @property
     def frequency_in_days(self):
