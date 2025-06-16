@@ -5,6 +5,7 @@ Migration script to add structured frequency columns to ScreeningType table
 
 from app import app, db
 from models import ScreeningType
+from sqlalchemy import text
 
 def add_structured_frequency_columns():
     """Add frequency_number and frequency_unit columns to ScreeningType"""
@@ -16,15 +17,19 @@ def add_structured_frequency_columns():
             columns = [col['name'] for col in inspector.get_columns('screening_type')]
             
             if 'frequency_number' not in columns:
-                # Add frequency_number column
-                db.engine.execute('ALTER TABLE screening_type ADD COLUMN frequency_number INTEGER')
+                # Add frequency_number column using connection
+                with db.engine.connect() as connection:
+                    connection.execute(text('ALTER TABLE screening_type ADD COLUMN frequency_number INTEGER'))
+                    connection.commit()
                 print("✓ Added frequency_number column")
             else:
                 print("✓ frequency_number column already exists")
                 
             if 'frequency_unit' not in columns:
-                # Add frequency_unit column
-                db.engine.execute('ALTER TABLE screening_type ADD COLUMN frequency_unit VARCHAR(20)')
+                # Add frequency_unit column using connection
+                with db.engine.connect() as connection:
+                    connection.execute(text('ALTER TABLE screening_type ADD COLUMN frequency_unit VARCHAR(20)'))
+                    connection.commit()
                 print("✓ Added frequency_unit column")
             else:
                 print("✓ frequency_unit column already exists")
