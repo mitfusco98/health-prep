@@ -159,9 +159,15 @@ function removeFormKeyword(button) {
 // Update hidden form data
 function updateFormKeywordsData(formPrefix) {
     const container = document.getElementById(`${formPrefix}-keywords-list`);
-    const keywords = Array.from(container.querySelectorAll('.badge')).map(badge => 
-        badge.textContent.trim()
-    );
+    const keywords = Array.from(container.querySelectorAll('.badge')).map(badge => {
+        // Get only the text content, excluding the close button
+        const clone = badge.cloneNode(true);
+        const closeButton = clone.querySelector('.btn-close');
+        if (closeButton) {
+            closeButton.remove();
+        }
+        return clone.textContent.trim();
+    }).filter(keyword => keyword !== '');
     document.getElementById(`${formPrefix}-keywords-data`).value = JSON.stringify(keywords);
 }
 
