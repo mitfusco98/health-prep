@@ -951,7 +951,10 @@ def add_screening_type():
         screening_type = ScreeningType(
             name=form.name.data,
             description="",  # No longer using description field
-            default_frequency=form.default_frequency.data,
+            frequency_number=form.frequency_number.data,
+            frequency_unit=(
+                form.frequency_unit.data if form.frequency_unit.data else None
+            ),
             gender_specific=(
                 form.gender_specific.data if form.gender_specific.data else None
             ),
@@ -1080,7 +1083,10 @@ def edit_screening_type(screening_type_id):
         # Update the screening type with form data
         screening_type.name = form.name.data
         screening_type.description = ""  # No longer using description field
-        screening_type.default_frequency = form.default_frequency.data
+        screening_type.frequency_number = form.frequency_number.data
+        screening_type.frequency_unit = (
+            form.frequency_unit.data if form.frequency_unit.data else None
+        )
         screening_type.gender_specific = (
             form.gender_specific.data if form.gender_specific.data else None
         )
