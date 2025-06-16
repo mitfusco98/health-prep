@@ -319,7 +319,7 @@
                     <input class="form-control me-2" type="search" placeholder="Search screening types" name="search" value="{{ search_query }}">
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </form>
-                
+
                 <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
                     Add Type
                 </a>
@@ -348,10 +348,11 @@
                                 <div>
                                     <strong>{{ screening_type.name }}</strong>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                <button type="button" class="btn btn-sm btn-outline-info keywords-btn" 
+                                        id="keywords-btn-{{ screening_type.id }}"
                                         onclick="openKeywordManager({{ screening_type.id }}, '{{ screening_type.name }}')"
                                         title="Manage Keywords">
-                                    <i class="fas fa-tags"></i> Keywords
+                                    <i class="fas fa-tags"></i> <span id="keywords-text-{{ screening_type.id }}">Keywords</span>
                                 </button>
                             </div>
                         </td>
@@ -686,7 +687,8 @@
                                     <div class="form-text">Include screenings already assigned to the patient</div>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input type="checkbox" id="source_age" name="content_sources" value="age_based"
+                                    <input class="form-check-input type="checkbox"```text
+ id="source_age" name="content_sources" value="age_based"
                                         {% if settings and 'age_based' in settings.content_sources_list %}checked{% endif %}>
                                     <label class="form-check-label" for="source_age">Age-Based Recommendations</label>
                                     <div class="form-text">Include screenings based on patient age</div>
@@ -1072,7 +1074,17 @@ function updateFormKeywordsData(formPrefix) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded - checking for keyword displays...');
 
-    
+    // Load keywords for buttons on the types tab
+    if (window.location.href.includes('tab=types') || document.querySelector('.keywords-btn')) {
+        console.log('Loading keywords for buttons...');
+        loadKeywordsForButtons();
+
+        // Add a delay as fallback to ensure elements are fully rendered
+        setTimeout(() => {
+            console.log('Fallback keyword loading for buttons...');
+            loadKeywordsForButtons();
+        }, 1000);
+    }
 
     // Handle Enter key in main keyword input
     document.getElementById('newKeywordInput')?.addEventListener('keypress', function(e) {
@@ -1093,6 +1105,63 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// Load keywords and update button text
+function loadKeywordsForButtons() {
+    const buttons = document.querySelectorAll('.keywords-btn');
+    console.log(`loadKeywordsForButtons: Found ${buttons.length} keyword buttons to load`);
+
+    buttons.forEach(button => {
+        const screeningTypeId = button.id.replace('keywords-btn-', '');
+        const textSpan = document.getElementById(`keywords-text-${screeningTypeId}`);
+
+        if (!textSpan) {
+            console.log(`No text span found for screening ${screeningTypeId}`);
+            return;
+        }
+
+        console.log(`loadKeywordsForButtons: Loading keywords for screening ${screeningTypeId}`);
+
+        fetch(`/api/screening-keywords/${screeningTypeId}`)
+            .then(response => {
+                console.log(`loadKeywordsForButtons: API response status for screening ${screeningTypeId}: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log(`Received keywords data for screening ${screeningTypeId}:`, data);
+                if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
+                    // Show first few keywords in button text
+                    const keywordCount = data.keywords.length;
+                    if (keywordCount === 1) {
+                        textSpan.textContent = `"${data.keywords[0]}"`;
+                    } else if (keywordCount <= 3) {
+                        textSpan.textContent = data.keywords.join(', ');
+                    } else {
+                        textSpan.textContent = `${data.keywords.slice(0, 2).join(', ')} +${keywordCount - 2} more`;
+                    }
+
+                    // Update button style to show it has keywords
+                    button.className = 'btn btn-sm btn-info keywords-btn';
+                    button.title = `Keywords: ${data.keywords.join(', ')}`;
+
+                    console.log(`Successfully updated keywords button for screening ${screeningTypeId} with ${keywordCount} keywords`);
+                } else {
+                    textSpan.textContent = 'No Keywords';
+                    button.className = 'btn btn-sm btn-outline-secondary keywords-btn';
+                    button.title = 'No keywords defined - click to add';
+                    console.log(`No keywords found for screening ${screeningTypeId}`);
+                }
+            })
+            .catch(error => {
+                console.error(`Error loading keywords for screening ${screeningTypeId}:`, error);
+                textSpan.textContent = 'Keywords';
+                button.title = 'Error loading keywords';
+            });
+    });
+}
 </script>
 
 <style>
