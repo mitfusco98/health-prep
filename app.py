@@ -922,28 +922,47 @@ def validate_session_security():
         if "request_timestamps" not in session:
             session["request_timestamps"] = []
 
-        # Remove timestamps older than 1 minute
+        # Remove timestamps older than 2 minutes for more lenient rate limiting
         session["request_timestamps"] = [
-            ts for ts in session["request_timestamps"] if current_time - ts < 60
+            ts for ts in session["request_timestamps"] if current_time - ts < 120
         ]
 
-        # Exempt repository pages from strict rate limiting (for bulk operations)
+        # Exempt repository pages and common navigation from strict rate limiting
         repository_paths = [
             "/visits",
             "/document_repository",
             "/delete_appointments_bulk",
         ]
+        
+        # Navigation and read-only operations get higher limits
+        navigation_paths = [
+            "/home",
+            "/",
+            "/patient",
+            "/screening",
+            "/appointment",
+            "/static/",
+            "/api/",
+        ]
+        
         is_repository_request = any(path in request.path for path in repository_paths)
-
-        # Check if rate limit exceeded (100 for repository pages, 20 for others)
-        rate_limit = 100 if is_repository_request else 20
+        is_navigation_request = any(path in request.path for path in navigation_paths) or request.method == "GET"
+        
+        # More generous rate limits: 200 for repository, 100 for navigation/GET, 40 for modifications
+        if is_repository_request:
+            rate_limit = 200
+        elif is_navigation_request:
+            rate_limit = 100
+        else:
+            rate_limit = 40
+            
         if len(session["request_timestamps"]) >= rate_limit:
             logger.warning(
-                f"Rate limit exceeded for session {session.get('session_id', 'unknown')} from {g.security_context['ip_address']}"
+                f"Rate limit exceeded for session {session.get('session_id', 'unknown')} from {g.security_context['ip_address']} - {len(session['request_timestamps'])} requests in 2 minutes"
             )
             from flask import abort
 
-            abort(429, description="Too many requests. Please slow down.")
+            abort(429, description=f"Rate limit reached: {rate_limit} requests per 2 minutes. Please wait a moment before continuing.")
 
         # Add current timestamp
         session["request_timestamps"].append(current_time)
