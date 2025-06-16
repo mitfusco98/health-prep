@@ -1018,7 +1018,7 @@ function saveKeywords() {
         exact_match: false,
         description: `Keyword for screening type`
     }));
-    
+
     fetch(`/api/screening-keywords/${currentScreeningTypeId}`, {
         method: 'POST',
         headers: {
@@ -1105,9 +1105,17 @@ function updateFormKeywordsData(formPrefix) {
 
 // Handle Enter key in keyword inputs
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Content Loaded - checking for keyword displays...');
+
     // Load keywords for display when page loads
-    if (document.querySelector('[id^="keywords-display-"]')) {
+    const keywordDisplays = document.querySelectorAll('[id^="keywords-display-"]');
+    console.log(`Found ${keywordDisplays.length} keyword display elements`);
+
+    if (keywordDisplays.length > 0) {
+        console.log('Loading keywords for display...');
         loadKeywordsForDisplay();
+    } else {
+        console.log('No keyword display elements found');
     }
 
     // Handle Enter key in main keyword input

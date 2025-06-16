@@ -14,12 +14,14 @@ import json
 def get_screening_keywords(screening_id):
     """Get keyword configuration for a screening type"""
     try:
+        print(f"API: Getting keywords for screening ID {screening_id}")
         manager = ScreeningKeywordManager()
         config = manager.get_keyword_config(screening_id)
 
         if config:
             # Return simple keyword strings for display
             keywords = [rule.keyword for rule in config.keyword_rules]
+            print(f"API: Found {len(keywords)} keywords for screening {screening_id}: {keywords}")
             return jsonify({
                 'success': True,
                 'keywords': keywords,
@@ -28,6 +30,7 @@ def get_screening_keywords(screening_id):
                 'confidence_threshold': config.confidence_threshold
             })
         else:
+            print(f"API: No keyword config found for screening {screening_id}")
             return jsonify({
                 'success': True,
                 'keywords': [],
@@ -37,6 +40,7 @@ def get_screening_keywords(screening_id):
             })
 
     except Exception as e:
+        print(f"API: Error getting keywords for screening {screening_id}: {str(e)}")
         return jsonify({
             'success': False,
             'message': str(e)
