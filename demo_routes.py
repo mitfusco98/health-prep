@@ -2765,11 +2765,15 @@ def screening_list():
         except:
             user_id = None
             
+        # Generate shorter request ID to fit database constraint (36 chars max)
+        import uuid
+        request_id = str(uuid.uuid4())[:32]  # Use first 32 chars of UUID
+        
         AdminLog.log_event(
             event_type="data_access",
             user_id=user_id,
             event_details=json.dumps(log_details),
-            request_id=f"screening_list_access_{tab}_{int(datetime.now().timestamp())}",
+            request_id=request_id,
             ip_address=request.remote_addr or "127.0.0.1",
             user_agent=request.headers.get("User-Agent", "Unknown"),
         )
