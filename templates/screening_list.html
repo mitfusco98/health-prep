@@ -350,7 +350,7 @@
                                 </div>
                                 <div class="mt-1">
                                     <div id="keywords-display-{{ screening_type.id }}" class="keywords-display-inline mb-1">
-                                        <small class="text-muted">Loading keywords...</small>
+                                        <!-- Keywords will be loaded here -->
                                     </div>
                                     <div class="position-relative d-inline-block">
                                         <button type="button" class="btn btn-sm btn-outline-info keywords-btn" 
@@ -695,7 +695,8 @@
                             <div class="mb-3">
                                 <label class="form-label">Content Sources</label>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="source_db" name="content_sources" value="database"
+                                    <input class="form-check-input" type="checkbox"```text
+ id="source_db" name="content_sources" value="database"
                                         {% if settings and 'database' in settings.content_sources_list %}checked{% endif %}>
                                     <label class="form-check-label" for="source_db">Default Items</label>
                                     <div class="form-text">Include default items specified below</div>
@@ -707,8 +708,7 @@
                                     <div class="form-text">Include screenings already assigned to the patient</div>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input type="checkbox"```text
- id="source_age" name="content_sources" value="age_based"
+                                    <input class="form-check-input type="checkbox" id="source_age" name="content_sources" value="age_based"
                                         {% if settings and 'age_based' in settings.content_sources_list %}checked{% endif %}>
                                     <label class="form-check-label" for="source_age">Age-Based Recommendations</label>
                                     <div class="form-text">Include screenings based on patient age</div>
@@ -931,17 +931,17 @@ let currentKeywords = [];
 // Toggle keyword display dropdown
 function toggleKeywordDisplay(screeningTypeId, screeningName) {
     const dropdown = document.getElementById(`keywords-dropdown-${screeningTypeId}`);
-    
+
     if (!dropdown) {
         console.error(`Dropdown not found for screening ${screeningTypeId}`);
         return;
     }
-    
+
     const isVisible = dropdown.style.display !== 'none';
-    
+
     // Hide all other dropdowns first
     document.querySelectorAll('.keywords-dropdown').forEach(d => d.style.display = 'none');
-    
+
     if (!isVisible) {
         // Show this dropdown and load keywords
         dropdown.style.display = 'block';
@@ -952,14 +952,14 @@ function toggleKeywordDisplay(screeningTypeId, screeningName) {
 // Load keywords for display in dropdown
 function loadKeywordsForDisplay(screeningTypeId) {
     const listContainer = document.getElementById(`keywords-list-${screeningTypeId}`);
-    
+
     if (!listContainer) {
         console.error(`Keywords list container not found for screening ${screeningTypeId}`);
         return;
     }
-    
+
     listContainer.innerHTML = 'Loading keywords...';
-    
+
     fetch(`/api/screening-keywords/${screeningTypeId}`)
         .then(response => {
             if (!response.ok) {
@@ -1252,10 +1252,10 @@ function initializeKeywordDisplay() {
     // Only run on the types tab
     if (window.location.href.includes('tab=types')) {
         console.log('Initializing keyword display for types tab');
-        
+
         // Load keywords immediately
         loadKeywordsForButtons();
-        
+
         // Also load after a short delay to ensure DOM is fully ready
         setTimeout(() => {
             loadKeywordsForButtons();
