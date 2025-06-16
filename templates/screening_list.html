@@ -910,14 +910,17 @@ let currentKeywords = [];
 function loadKeywordsForDisplay() {
     document.querySelectorAll('[id^="keywords-display-"]').forEach(element => {
         const screeningTypeId = element.id.replace('keywords-display-', '');
-        fetch(`/api/screening-keywords/${screeningTypeId}`)
+        // Add cache busting parameter
+        const timestamp = new Date().getTime();
+        fetch(`/api/screening-keywords/${screeningTypeId}?_t=${timestamp}`)
             .then(response => {
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 return response.json();
             })
             .then(data => {
+                console.log(`Keywords data for screening ${screeningTypeId}:`, data);
                 if (data.success && data.keywords && data.keywords.length > 0) {
                     const keywordTags = data.keywords.map(keyword => {
                         // Handle both string and object formats
@@ -1030,19 +1033,21 @@ function saveKeywords() {
             const modal = bootstrap.Modal.getInstance(document.getElementById('keywordManagerModal'));
             modal.hide();
 
-            // Refresh keyword display
-            loadKeywordsForDisplay();
+            // Show success message and refresh the page to ensure all displays update
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
 
             // Show success message
             const alert = document.createElement('div');
             alert.className = 'alert alert-success alert-dismissible fade show';
             alert.innerHTML = `
-                Keywords updated successfully!
+                Keywords updated successfully! Refreshing...
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
             document.querySelector('.container').insertBefore(alert, document.querySelector('.container').firstChild);
         } else {
-            alert('Error saving keywords: ' + data.error);
+            alert('Error saving keywords: ' + (data.message || data.error || 'Unknown error'));
         }
     })
     .catch(error => {

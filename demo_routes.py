@@ -1103,10 +1103,11 @@ def edit_screening_type(screening_type_id):
                 keywords = json_module.loads(keywords_data)
                 manager = ScreeningKeywordManager()
                 
-                # Clear existing keywords for this screening type
+                # Completely clear existing keywords for this screening type
                 config = manager.get_keyword_config(screening_type_id)
                 if config:
-                    config.keyword_rules = []
+                    config.keyword_rules.clear()
+                    manager._save_config(config)  # Force save to database
                 
                 # Add new keywords - handle both simple keyword list and complex objects from form
                 if isinstance(keywords, list):

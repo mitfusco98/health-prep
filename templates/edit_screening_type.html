@@ -227,8 +227,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
+            // Update keywords data before submission
             updateFormKeywordsData('edit-form');
-            console.log('Form submitting with keywords:', document.getElementById('edit-form-keywords-data').value);
+            
+            // Ensure the hidden field has proper data
+            const keywordsField = document.getElementById('edit-form-keywords-data');
+            const keywordsValue = keywordsField ? keywordsField.value : '';
+            
+            console.log('Form submitting with keywords:', keywordsValue);
+            
+            // If no keywords data, set empty array
+            if (!keywordsValue || keywordsValue.trim() === '') {
+                if (keywordsField) {
+                    keywordsField.value = '[]';
+                }
+            }
         });
     }
 });

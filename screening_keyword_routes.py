@@ -60,28 +60,33 @@ def save_screening_keywords(screening_id):
 
         manager = ScreeningKeywordManager()
 
-        # Clear existing keywords
+        # Clear existing keywords completely
         config = manager.get_keyword_config(screening_id)
         if config:
-            config.keyword_rules = []
+            # Clear the rules completely
+            config.keyword_rules.clear()
+            # Force save to database
+            manager._save_config(config)
 
         # Add new keywords
         success_count = 0
         for keyword_data in keywords:
             try:
-                success = manager.add_keyword_rule(
-                    screening_type_id=screening_id,
-                    keyword=keyword_data.get('keyword', ''),
-                    section=keyword_data.get('section', 'general'),
-                    weight=keyword_data.get('weight', 1.0),
-                    case_sensitive=keyword_data.get('case_sensitive', False),
-                    exact_match=keyword_data.get('exact_match', False),
-                    description=keyword_data.get('description', '')
-                )
-                if success:
-                    success_count += 1
+                keyword_text = keyword_data.get('keyword', '') if isinstance(keyword_data, dict) else str(keyword_data)
+                if keyword_text.strip():
+                    success = manager.add_keyword_rule(
+                        screening_type_id=screening_id,
+                        keyword=keyword_text.strip(),
+                        section=keyword_data.get('section', 'general') if isinstance(keyword_data, dict) else 'general',
+                        weight=keyword_data.get('weight', 1.0) if isinstance(keyword_data, dict) else 1.0,
+                        case_sensitive=keyword_data.get('case_sensitive', False) if isinstance(keyword_data, dict) else False,
+                        exact_match=keyword_data.get('exact_match', False) if isinstance(keyword_data, dict) else False,
+                        description=keyword_data.get('description', '') if isinstance(keyword_data, dict) else ''
+                    )
+                    if success:
+                        success_count += 1
             except Exception as e:
-                print(f"Error adding keyword {keyword_data.get('keyword')}: {str(e)}")
+                print(f"Error adding keyword {keyword_data}: {str(e)}")
                 continue
 
         return jsonify({
@@ -91,6 +96,7 @@ def save_screening_keywords(screening_id):
         })
 
     except Exception as e:
+        print(f"Error in save_screening_keywords: {str(e)}")
         return jsonify({
             'success': False,
             'message': str(e)
