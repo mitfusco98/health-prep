@@ -688,7 +688,7 @@
                                     <div class="form-text">Include screenings already assigned to the patient</div>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input type="checkbox id="source_age" name="content_sources" value="age_based"
+                                    <input class="form-check-input type="checkbox" id="source_age" name="content_sources" value="age_based"
                                         {% if settings and 'age_based' in settings.content_sources_list %}checked{% endif %}>
                                     <label class="form-check-label" for="source_age">Age-Based Recommendations</label>
                                     <div class="form-text">Include screenings based on patient age</div>
@@ -914,14 +914,10 @@ function loadKeywordsForDisplay() {
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.keywords.length > 0) {
-                    const keywordTags = data.keywords.map(keyword => {
-                        // Extract keyword text from object or use as-is if it's a string
-                        const keywordText = typeof keyword === 'object' && keyword.keyword ? keyword.keyword : keyword;
-                        return `<span class="badge bg-info text-dark me-1 mb-1">${keywordText}</span>`;
-                    }).join('');
-
-                    element.innerHTML = keywordTags.length > 0 ? keywordTags : 
-                        '<em class="text-muted">No keywords defined</em>';
+                    const keywordTags = data.keywords.map(keyword => 
+                        `<span class="badge bg-secondary me-1">${keyword}</span>`
+                    ).join('');
+                    element.innerHTML = `<small class="text-muted">Keywords: ${keywordTags}</small>`;
                 } else {
                     element.innerHTML = '<small class="text-muted">No keywords defined</small>';
                 }
@@ -970,15 +966,13 @@ function displayKeywords() {
         return;
     }
 
-    const keywordsHtml = currentKeywords.map((keyword, index) => {
-        // Extract keyword text from object or use as-is if it's a string
-        const keywordText = typeof keyword === 'object' && keyword.keyword ? keyword.keyword : keyword;
-        return `<span class="badge bg-primary me-2 mb-2">
-            ${keywordText}
+    const keywordsHtml = currentKeywords.map((keyword, index) => 
+        `<span class="badge bg-primary me-2 mb-2">
+            ${keyword}
             <button type="button" class="btn-close btn-close-white ms-1" 
                     onclick="removeKeyword(${index})" aria-label="Remove"></button>
-        </span>`;
-    }).join('');
+        </span>`
+    ).join('');
 
     container.innerHTML = keywordsHtml;
 }
@@ -988,18 +982,10 @@ function addKeyword() {
     const input = document.getElementById('newKeywordInput');
     const keyword = input.value.trim();
 
-    if (keyword) {
-        // Check if keyword already exists (handling both string and object formats)
-        const exists = currentKeywords.some(existing => {
-            const existingText = typeof existing === 'object' && existing.keyword ? existing.keyword : existing;
-            return existingText === keyword;
-        });
-
-        if (!exists) {
-            currentKeywords.push(keyword);
-            displayKeywords();
-            input.value = '';
-        }
+    if (keyword && !currentKeywords.includes(keyword)) {
+        currentKeywords.push(keyword);
+        displayKeywords();
+        input.value = '';
     }
 }
 
@@ -1020,7 +1006,7 @@ function saveKeywords() {
         exact_match: false,
         description: `Keyword for screening type`
     }));
-
+    
     fetch(`/api/screening-keywords/${currentScreeningTypeId}`, {
         method: 'POST',
         headers: {
@@ -1123,26 +1109,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 addKeywordToForm(formPrefix);
             }
         });
-    });
-
-    // Load existing keywords on page load
-    document.querySelectorAll('.keyword-tags').forEach(container => {
-        const screeningId = container.id.split('-')[1];
-        fetch(`/api/screening-keywords/${screeningId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const keywordTags = data.keywords.map(keyword => {
-                        // Extract keyword text from object or use as-is if it's a string
-                        const keywordText = typeof keyword === 'object' ? keyword.keyword : keyword;
-                        return `<span class="badge bg-secondary me-1">${keywordText}</span>`;
-                    }).join('');
-                    container.innerHTML = keywordTags;
-                }
-            })
-            .catch(error => {
-                console.error('Error loading keywords for screening', screeningId, ':', error);
-            });
     });
 });
 </script>
