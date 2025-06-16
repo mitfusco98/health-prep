@@ -15,21 +15,10 @@ def get_screening_keywords(screening_id):
     """Get keyword configuration for a screening type"""
     try:
         print(f"API: Getting keywords for screening ID {screening_id}")
-        
-        # Validate screening type exists
-        from models import ScreeningType
-        screening_type = ScreeningType.query.get(screening_id)
-        if not screening_type:
-            print(f"API: Screening type {screening_id} not found")
-            return jsonify({
-                'success': False,
-                'message': f'Screening type {screening_id} not found'
-            }), 404
-            
         manager = ScreeningKeywordManager()
         config = manager.get_keyword_config(screening_id)
 
-        if config and config.keyword_rules:
+        if config:
             # Return simple keyword strings for display
             keywords = [rule.keyword for rule in config.keyword_rules]
             print(f"API: Found {len(keywords)} keywords for screening {screening_id}: {keywords}")
@@ -41,19 +30,17 @@ def get_screening_keywords(screening_id):
                 'confidence_threshold': config.confidence_threshold
             })
         else:
-            print(f"API: No keyword config or rules found for screening {screening_id}")
+            print(f"API: No keyword config found for screening {screening_id}")
             return jsonify({
                 'success': True,
                 'keywords': [],
-                'screening_name': screening_type.name,
+                'screening_name': '',
                 'fallback_enabled': True,
                 'confidence_threshold': 0.3
             })
 
     except Exception as e:
         print(f"API: Error getting keywords for screening {screening_id}: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return jsonify({
             'success': False,
             'message': str(e)

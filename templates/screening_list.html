@@ -908,25 +908,21 @@ let currentKeywords = [];
 
 // Load keywords for display in the table
 function loadKeywordsForDisplay() {
-    console.log('Loading keywords for display...');
     document.querySelectorAll('[id^="keywords-display-"]').forEach(element => {
         const screeningTypeId = element.id.replace('keywords-display-', '');
-        console.log(`Loading keywords for screening ${screeningTypeId}`);
-        
         // Add cache busting parameter
         const timestamp = new Date().getTime();
         fetch(`/api/screening-keywords/${screeningTypeId}?_t=${timestamp}`)
             .then(response => {
-                console.log(`Response status for screening ${screeningTypeId}:`, response.status);
                 if (!response.ok) {
                     console.warn(`Failed to load keywords for screening ${screeningTypeId}: ${response.status}`);
-                    throw new Error(`HTTP ${response.status}`);
+                    return { success: false, keywords: [] };
                 }
                 return response.json();
             })
             .then(data => {
                 console.log(`Keywords data for screening ${screeningTypeId}:`, data);
-                if (data && data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
+                if (data.success && data.keywords && data.keywords.length > 0) {
                     const keywordTags = data.keywords.map(keyword => {
                         // Handle both string and object formats
                         const keywordText = typeof keyword === 'string' ? keyword : 
@@ -934,15 +930,13 @@ function loadKeywordsForDisplay() {
                         return `<span class="badge bg-secondary me-1">${keywordText}</span>`;
                     }).join('');
                     element.innerHTML = `<small class="text-muted">Keywords: ${keywordTags}</small>`;
-                    console.log(`Updated display for screening ${screeningTypeId} with ${data.keywords.length} keywords`);
                 } else {
                     element.innerHTML = '<small class="text-muted">No keywords defined</small>';
-                    console.log(`No keywords found for screening ${screeningTypeId}`);
                 }
             })
             .catch(error => {
                 console.error('Error loading keywords for screening', screeningTypeId, ':', error);
-                element.innerHTML = '<small class="text-muted">Error loading keywords</small>';
+                element.innerHTML = '<small class="text-muted">No keywords defined</small>';
             });
     });
 }
@@ -1113,18 +1107,16 @@ function updateFormKeywordsData(formPrefix) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded - checking for keyword displays...');
 
-    // Use a slight delay to ensure all elements are rendered
-    setTimeout(function() {
-        const keywordDisplays = document.querySelectorAll('[id^="keywords-display-"]');
-        console.log(`Found ${keywordDisplays.length} keyword display elements`);
+    // Load keywords for display when page loads
+    const keywordDisplays = document.querySelectorAll('[id^="keywords-display-"]');
+    console.log(`Found ${keywordDisplays.length} keyword display elements`);
 
-        if (keywordDisplays.length > 0) {
-            console.log('Loading keywords for display...');
-            loadKeywordsForDisplay();
-        } else {
-            console.log('No keyword display elements found');
-        }
-    }, 100);
+    if (keywordDisplays.length > 0) {
+        console.log('Loading keywords for display...');
+        loadKeywordsForDisplay();
+    } else {
+        console.log('No keyword display elements found');
+    }
 
     // Handle Enter key in main keyword input
     document.getElementById('newKeywordInput')?.addEventListener('keypress', function(e) {
