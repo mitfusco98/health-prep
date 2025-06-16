@@ -319,9 +319,7 @@
                     <input class="form-control me-2" type="search" placeholder="Search screening types" name="search" value="{{ search_query }}">
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </form>
-                <button type="button" class="btn btn-outline-info me-2" onclick="loadKeywordsForDisplay()" title="Refresh keyword display">
-                    <i class="fas fa-sync"></i> Refresh Keywords
-                </button>
+                
                 <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
                     Add Type
                 </a>
@@ -349,9 +347,6 @@
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <strong>{{ screening_type.name }}</strong>
-                                    <div id="keywords-display-{{ screening_type.id }}" class="mt-1">
-                                        <small class="text-muted">Loading keywords...</small>
-                                    </div>
                                 </div>
                                 <button type="button" class="btn btn-sm btn-outline-info" 
                                         onclick="openKeywordManager({{ screening_type.id }}, '{{ screening_type.name }}')"
@@ -909,52 +904,7 @@
 let currentScreeningTypeId = null;
 let currentKeywords = [];
 
-// Load keywords for display in the table
-function loadKeywordsForDisplay() {
-    const elements = document.querySelectorAll('[id^="keywords-display-"]');
-    console.log(`loadKeywordsForDisplay: Found ${elements.length} keyword display elements to load`);
-    
-    if (elements.length === 0) {
-        console.log('loadKeywordsForDisplay: No elements found, checking if page is loaded correctly');
-        return;
-    }
-    
-    elements.forEach(element => {
-        const screeningTypeId = element.id.replace('keywords-display-', '');
-        console.log(`loadKeywordsForDisplay: Loading keywords for screening ${screeningTypeId}`);
-        
-        // Set loading state immediately
-        element.innerHTML = '<small class="text-muted">Loading keywords...</small>';
-        
-        fetch(`/api/screening-keywords/${screeningTypeId}`)
-            .then(response => {
-                console.log(`loadKeywordsForDisplay: API response status for screening ${screeningTypeId}: ${response.status}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log(`Received keywords data for screening ${screeningTypeId}:`, data);
-                if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
-                    const keywordTags = data.keywords.map(keyword => {
-                        // Handle both string keywords and object keywords
-                        const keywordText = typeof keyword === 'string' ? keyword : (keyword.keyword || keyword);
-                        return `<span class="badge bg-secondary me-1 mb-1">${keywordText}</span>`;
-                    }).join('');
-                    element.innerHTML = `<small class="text-muted d-block">Keywords:</small><div>${keywordTags}</div>`;
-                    console.log(`Successfully updated keywords display for screening ${screeningTypeId} with ${data.keywords.length} keywords`);
-                } else {
-                    element.innerHTML = '<small class="text-muted">No keywords defined</small>';
-                    console.log(`No keywords found for screening ${screeningTypeId}`);
-                }
-            })
-            .catch(error => {
-                console.error(`Error loading keywords for screening ${screeningTypeId}:`, error);
-                element.innerHTML = '<small class="text-muted text-danger">Error loading keywords</small>';
-            });
-    });
-}
+
 
 // Open keyword manager modal
 function openKeywordManager(screeningTypeId, screeningName) {
@@ -1122,31 +1072,7 @@ function updateFormKeywordsData(formPrefix) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded - checking for keyword displays...');
 
-    // Load keywords for display when page loads
-    const keywordDisplays = document.querySelectorAll('[id^="keywords-display-"]');
-    console.log(`Found ${keywordDisplays.length} keyword display elements`);
-
-    if (keywordDisplays.length > 0) {
-        console.log('Loading keywords for display...');
-        // Load immediately and also set up a fallback
-        loadKeywordsForDisplay();
-        
-        // Add a delay as fallback to ensure elements are fully rendered
-        setTimeout(() => {
-            console.log('Fallback keyword loading...');
-            loadKeywordsForDisplay();
-        }, 1000);
-    } else {
-        console.log('No keyword display elements found');
-        // Try again after a delay in case the page hasn't fully loaded
-        setTimeout(() => {
-            const retryDisplays = document.querySelectorAll('[id^="keywords-display-"]');
-            console.log(`Retry found ${retryDisplays.length} keyword display elements`);
-            if (retryDisplays.length > 0) {
-                loadKeywordsForDisplay();
-            }
-        }, 2000);
-    }
+    
 
     // Handle Enter key in main keyword input
     document.getElementById('newKeywordInput')?.addEventListener('keypress', function(e) {
