@@ -320,6 +320,9 @@
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </form>
 
+                <button type="button" class="btn btn-outline-info me-2" onclick="loadKeywordsAsBadges()" title="Refresh keyword display">
+                    <i class="fas fa-sync"></i> Load Keywords
+                </button>
                 <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
                     Add Type
                 </a>
@@ -1148,9 +1151,16 @@ function loadKeywordsAsBadges() {
 
 // Initialize keyword display when page loads
 function initializeKeywordDisplay() {
-    // Only run on the types tab
-    if (window.location.href.includes('tab=types')) {
-        console.log('Initializing keyword display for types tab');
+    console.log('Initializing keyword display - checking tab and containers...');
+    
+    // Check if we're on the types tab or if keyword containers exist
+    const hasKeywordContainers = document.querySelectorAll('.keywords-badges-container').length > 0;
+    const isTypesTab = window.location.href.includes('tab=types') || window.location.pathname === '/screenings';
+    
+    console.log(`Has keyword containers: ${hasKeywordContainers}, Is types tab: ${isTypesTab}`);
+    
+    if (hasKeywordContainers) {
+        console.log('Loading keywords for display...');
 
         // Load keywords immediately
         loadKeywordsAsBadges();
@@ -1158,7 +1168,9 @@ function initializeKeywordDisplay() {
         // Also load after a short delay to ensure DOM is fully ready
         setTimeout(() => {
             loadKeywordsAsBadges();
-        }, 500);
+        }, 1000);
+    } else {
+        console.log('No keyword containers found - skipping keyword loading');
     }
 }
 </script>
