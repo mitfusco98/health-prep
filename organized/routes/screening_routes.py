@@ -51,11 +51,22 @@ def screening_list():
 def add_screening_type():
     """Add a new screening type"""
     if request.method == "POST":
+        # Get frequency data
+        frequency_number = request.form.get("frequency_number")
+        frequency_unit = request.form.get("frequency_unit")
+        
+        # Convert frequency_number to int if provided
+        if frequency_number:
+            try:
+                frequency_number = int(frequency_number)
+            except (ValueError, TypeError):
+                frequency_number = None
+        
         screening_type = ScreeningType(
             name=request.form.get("name"),
             description=request.form.get("description"),
-            frequency_number=request.form.get("frequency_number", type=int),
-            frequency_unit=request.form.get("frequency_unit"),
+            frequency_number=frequency_number,
+            frequency_unit=frequency_unit if frequency_unit else None,
             gender_specific=(
                 request.form.get("gender_specific")
                 if request.form.get("gender_specific")
@@ -86,10 +97,21 @@ def edit_screening_type(screening_type_id):
     screening_type = ScreeningType.query.get_or_404(screening_type_id)
 
     if request.method == "POST":
+        # Get frequency data
+        frequency_number = request.form.get("frequency_number")
+        frequency_unit = request.form.get("frequency_unit")
+        
+        # Convert frequency_number to int if provided
+        if frequency_number:
+            try:
+                frequency_number = int(frequency_number)
+            except (ValueError, TypeError):
+                frequency_number = None
+        
         screening_type.name = request.form.get("name")
         screening_type.description = request.form.get("description")
-        screening_type.frequency_number = request.form.get("frequency_number", type=int)
-        screening_type.frequency_unit = request.form.get("frequency_unit")
+        screening_type.frequency_number = frequency_number
+        screening_type.frequency_unit = frequency_unit if frequency_unit else None
         screening_type.gender_specific = (
             request.form.get("gender_specific")
             if request.form.get("gender_specific")

@@ -347,11 +347,7 @@ class ScreeningTypeForm(FlaskForm):
         validators=[Optional()],
         description="Detailed description of this screening test",
     )
-    default_frequency = StringField(
-        "Default Frequency",
-        validators=[Optional()],
-        description="How often this screening should be done (e.g., 'Annual', 'Every 5 years')",
-    )
+    
     frequency_number = IntegerField(
         "Frequency Number",
         validators=[Optional(), NumberRange(min=1, max=999)],

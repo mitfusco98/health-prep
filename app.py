@@ -933,7 +933,7 @@ def validate_session_security():
             "/document_repository",
             "/delete_appointments_bulk",
         ]
-        
+
         # Navigation and read-only operations get higher limits
         navigation_paths = [
             "/home",
@@ -944,10 +944,10 @@ def validate_session_security():
             "/static/",
             "/api/",
         ]
-        
+
         is_repository_request = any(path in request.path for path in repository_paths)
         is_navigation_request = any(path in request.path for path in navigation_paths) or request.method == "GET"
-        
+
         # More generous rate limits: 200 for repository, 100 for navigation/GET, 40 for modifications
         if is_repository_request:
             rate_limit = 200
@@ -955,9 +955,9 @@ def validate_session_security():
             rate_limit = 100
         else:
             rate_limit = 40
-            
+
         if len(session["request_timestamps"]) >= rate_limit:
-            logger.warning(
+            logger.warning(```python
                 f"Rate limit exceeded for session {session.get('session_id', 'unknown')} from {g.security_context['ip_address']} - {len(session['request_timestamps'])} requests in 2 minutes"
             )
             from flask import abort
@@ -1369,3 +1369,46 @@ register_api_access_middleware(app)
 from admin_middleware import register_admin_middleware
 
 register_admin_middleware(app)
+
+@app.route('/screening-types/add', methods=['GET', 'POST'])
+@login_required
+def add_screening_type():
+    form = ScreeningTypeForm()
+    if form.validate_on_submit():
+        screening_type = ScreeningType(
+            name=form.name.data,
+            description=form.description.data,
+            frequency_number=form.frequency_number.data,
+            frequency_unit=form.frequency_unit.data if form.frequency_unit.data else None,
+            gender_specific=form.gender_specific.data if form.gender_specific.data else None,
+            min_age=form.min_age.data,
+            max_age=form.max_age.data,
+            is_active=form.is_active.data
+        )
+        db.session.add(screening_type)
+        db.session.commit()
+        flash('Screening type added successfully!', 'success')
+        return redirect(url_for('list_screening_types'))
+    return render_template('screening_types/add.html', form=form)
+
+@app.route('/screening-types/<int:screening_type_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_screening_type(screening_type_id):
+    screening_type = ScreeningType.query.get_or_404(screening_type_id)
+    form = ScreeningTypeForm(obj=screening_type)
+
+    if form.validate_on_submit():
+        screening_type.name = form.name.data
+        screening_type.description = form.description.data
+        screening_type.frequency_number = form.frequency_number.data
+        screening_type.frequency_unit = form.frequency_unit.data if form.frequency_unit.data else None
+        screening_type.gender_specific = form.gender_specific.data if form.gender_specific.data else None
+        screening_type.min_age = form.min_age.data
+        screening_type.max_age = form.max_age.data
+        screening_type.is_active = form.is_active.data
+
+        db.session.commit()
+        flash('Screening type updated successfully!', 'success')
+        return redirect(url_for('list_screening_types'))
+
+    return render_template('screening_types/edit.html', form=form, screening_type_id=screening_type_id)
