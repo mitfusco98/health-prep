@@ -957,7 +957,7 @@ def validate_session_security():
             rate_limit = 40
 
         if len(session["request_timestamps"]) >= rate_limit:
-            logger.warning(```python
+            logger.warning(
                 f"Rate limit exceeded for session {session.get('session_id', 'unknown')} from {g.security_context['ip_address']} - {len(session['request_timestamps'])} requests in 2 minutes"
             )
             from flask import abort
