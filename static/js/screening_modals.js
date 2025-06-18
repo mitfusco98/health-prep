@@ -63,37 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Handle edit screening type buttons
-    const editTypeBtns = document.querySelectorAll('.edit-screening-type-btn');
-    editTypeBtns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            // Get data attributes
-            const id = this.getAttribute('data-id');
-            const name = this.getAttribute('data-name');
-            const description = this.getAttribute('data-description');
-            const frequency = this.getAttribute('data-frequency');
-            const gender = this.getAttribute('data-gender');
-            const minAge = this.getAttribute('data-min-age');
-            const maxAge = this.getAttribute('data-max-age');
-            const active = this.getAttribute('data-active') === '1';
-            
-            // Set form values
-            const form = document.getElementById('editScreeningTypeForm');
-            form.action = `/screening-types/${id}/edit?ts=${Date.now()}`;
-            
-            document.getElementById('edit-name').value = name;
-            document.getElementById('edit-description').value = description || '';
-            document.getElementById('edit-frequency').value = frequency || '';
-            document.getElementById('edit-gender').value = gender || '';
-            document.getElementById('edit-min-age').value = minAge || '';
-            document.getElementById('edit-max-age').value = maxAge || '';
-            document.getElementById('edit-active').checked = active;
-            
-            // Open the modal
-            const modal = document.getElementById('editScreeningTypeModal');
-            openModal(modal);
-        });
-    });
+    // Edit screening type functionality removed - now redirects to dedicated edit page
     
     // Close buttons
     document.querySelectorAll('.modal .btn-close, .modal .btn-secondary').forEach(function(btn) {
