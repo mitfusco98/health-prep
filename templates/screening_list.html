@@ -386,7 +386,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </form>
 
-                
+                <button type="button" class="btn btn-outline-info me-2" onclick="loadKeywordsAsBadges()" title="Refresh keyword display">
+                    <i class="fas fa-sync"></i> Load Keywords
+                </button>
                 <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
                     Add Type
                 </a>
@@ -662,6 +664,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                             <div class="mb-3">
+                                <label class="form-label">Checklist Layout Style</label>
+                                <select class="form-select" name="layout_style">
+                                    <option value="table" {% if settings and settings.layout_style == 'table' %}selected{% endif %}>Table Format (Compact)</option>
+                                    <option value="list" {% if settings and settings.layout_style == 'list' %}selected{% endif %}>List Format (Spacious)</option>
+                                </select>
+                                <div class="form-text">Determines how screening items are displayed in the checklist.</div>
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label">Status Options</label>
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="status_due" name="status_options" value="due" 
@@ -704,6 +715,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             </div>
 
+                            <div class="mb-3">
+                                <label class="form-label">Note Field</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="show_notes" name="show_notes"
+                                        {% if settings and settings.show_notes %}checked{% endif %}>
+                                    <label class="form-check-label" for="show_notes">Show Notes Field</label>
+                                </div>
+                                <div class="form-text">Display a notes field for each screening item.</div>
+                            </div>
+
                             <button type="submit" class="btn btn-primary">Save Display Settings</button>
                         </form>
                     </div>
@@ -735,7 +756,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <div class="form-text">Include screenings already assigned to the patient</div>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="source_age" name="content_sources" value="age_based"
+                                    <input class="form-check-input type="checkbox" id="source_age" name="content_sources" value="age_based"
                                         {% if settings and 'age_based' in settings.content_sources_list %}checked{% endif %}>
                                     <label class="form-check-label" for="source_age">Age-Based Recommendations</label>
                                     <div class="form-text">Include screenings based on patient age</div>

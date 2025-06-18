@@ -1386,9 +1386,3 @@ from admin_middleware import register_admin_middleware
 
 register_admin_middleware(app)
 
-# Add missing index route
-@app.route("/")
-def index():
-    """Main dashboard redirects to PrepChecklist demo"""
-    return redirect(url_for('demo_prep_checklist'))
-
