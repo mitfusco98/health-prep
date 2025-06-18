@@ -5,6 +5,8 @@ from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# PrepChecklist models will be defined inline to avoid import issues
+
 
 class DocumentType(enum.Enum):
     CLINICAL_NOTE = "Clinical Note"
