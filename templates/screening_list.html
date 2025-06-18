@@ -575,21 +575,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="border rounded p-3 bg-light">
                             <div id="add-form-trigger-conditions-container">
                                 <div class="d-flex mb-2">
-                                    <select class="form-select me-2" id="add-form-condition-system" style="max-width: 200px;">
+                                    <select class="form-select me-2" id="add-form-trigger-system" style="max-width: 200px;">
                                         <option value="http://snomed.info/sct">SNOMED CT</option>
                                         <option value="http://hl7.org/fhir/sid/icd-10-cm">ICD-10-CM</option>
                                         <option value="http://hl7.org/fhir/sid/icd-9-cm">ICD-9-CM</option>
                                         <option value="custom">Custom</option>
                                     </select>
-                                    <input type="text" class="form-control me-2" id="add-form-condition-code" placeholder="Condition code">
-                                    <input type="text" class="form-control me-2" id="add-form-condition-display" placeholder="Display name">
-                                    <button type="button" class="btn btn-outline-primary" onclick="addTriggerCondition('add-form')">Add</button>
+                                    <input type="text" class="form-control me-2" id="add-form-trigger-code" placeholder="Condition code">
+                                    <input type="text" class="form-control me-2" id="add-form-trigger-display" placeholder="Display name">
+                                    <button type="button" class="btn btn-outline-primary" onclick="addTriggerToForm('add-form')">Add</button>
                                 </div>
-                                <div id="add-form-trigger-conditions-list" class="trigger-conditions-list"></div>
+                                <div id="add-form-triggers-list" class="trigger-conditions-list"></div>
                             </div>
                         </div>
                         <small class="text-muted">Medical conditions that should trigger this screening recommendation</small>
-                        <input type="hidden" name="trigger_conditions" id="add-form-trigger-conditions-data">
+                        <input type="hidden" name="trigger_conditions" id="add-form-triggers-data">
                     </div>
 
                     <div class="form-check">
@@ -684,21 +684,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="border rounded p-3 bg-light">
                             <div id="edit-form-trigger-conditions-container">
                                 <div class="d-flex mb-2">
-                                    <select class="form-select me-2" id="edit-form-condition-system" style="max-width: 200px;">
+                                    <select class="form-select me-2" id="edit-form-trigger-system" style="max-width: 200px;">
                                         <option value="http://snomed.info/sct">SNOMED CT</option>
                                         <option value="http://hl7.org/fhir/sid/icd-10-cm">ICD-10-CM</option>
                                         <option value="http://hl7.org/fhir/sid/icd-9-cm">ICD-9-CM</option>
                                         <option value="custom">Custom</option>
                                     </select>
-                                    <input type="text" class="form-control me-2" id="edit-form-condition-code" placeholder="Condition code">
-                                    <input type="text" class="form-control me-2" id="edit-form-condition-display" placeholder="Display name">
-                                    <button type="button" class="btn btn-outline-primary" onclick="addTriggerCondition('edit-form')">Add</button>
+                                    <input type="text" class="form-control me-2" id="edit-form-trigger-code" placeholder="Condition code">
+                                    <input type="text" class="form-control me-2" id="edit-form-trigger-display" placeholder="Display name">
+                                    <button type="button" class="btn btn-outline-primary" onclick="addTriggerToForm('edit-form')">Add</button>
                                 </div>
-                                <div id="edit-form-trigger-conditions-list" class="trigger-conditions-list"></div>
+                                <div id="edit-form-triggers-list" class="trigger-conditions-list"></div>
                             </div>
                         </div>
                         <small class="text-muted">Medical conditions that should trigger this screening recommendation</small>
-                        <input type="hidden" name="trigger_conditions" id="edit-form-trigger-conditions-data">
+                        <input type="hidden" name="trigger_conditions" id="edit-form-triggers-data">
                     </div>
 
                     <div class="form-check">
@@ -1359,6 +1359,70 @@ function updateFormKeywordsData(formPrefix) {
     }
 }
 
+// Add trigger condition to form
+function addTriggerToForm(formPrefix) {
+    const systemSelect = document.getElementById(`${formPrefix}-trigger-system`);
+    const codeInput = document.getElementById(`${formPrefix}-trigger-code`);
+    const displayInput = document.getElementById(`${formPrefix}-trigger-display`);
+    
+    const system = systemSelect.value;
+    const code = codeInput.value.trim();
+    const display = displayInput.value.trim();
+    
+    if (code && display) {
+        const container = document.getElementById(`${formPrefix}-triggers-list`);
+        const triggerElement = document.createElement('div');
+        triggerElement.className = 'trigger-condition-tag mb-2 p-2 border rounded bg-light';
+        triggerElement.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>${display}</strong><br>
+                    <small class="text-muted">${getSystemDisplayName(system)}: ${code}</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" 
+                        onclick="removeFormTrigger(this)" aria-label="Remove">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        triggerElement.dataset.system = system;
+        triggerElement.dataset.code = code;
+        triggerElement.dataset.display = display;
+        
+        container.appendChild(triggerElement);
+        
+        // Clear inputs
+        codeInput.value = '';
+        displayInput.value = '';
+        
+        updateFormTriggersData(formPrefix);
+    }
+}
+
+// Remove trigger condition from form
+function removeFormTrigger(button) {
+    const triggerElement = button.closest('.trigger-condition-tag');
+    const formPrefix = triggerElement.closest('[id$="-triggers-container"]').id.replace('-triggers-container', '');
+    triggerElement.remove();
+    updateFormTriggersData(formPrefix);
+}
+
+// Update hidden trigger conditions form data
+function updateFormTriggersData(formPrefix) {
+    const container = document.getElementById(`${formPrefix}-triggers-list`);
+    const triggers = Array.from(container.querySelectorAll('.trigger-condition-tag')).map(element => {
+        return {
+            system: element.dataset.system,
+            code: element.dataset.code,
+            display: element.dataset.display
+        };
+    });
+    const hiddenInput = document.getElementById(`${formPrefix}-triggers-data`);
+    if (hiddenInput) {
+        hiddenInput.value = JSON.stringify(triggers);
+    }
+}
+
 // Handle Enter key in keyword inputs
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded - checking for keyword displays...');
@@ -1385,7 +1449,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    
+    // Handle Enter key in trigger condition inputs
+    document.querySelectorAll('[id$="-trigger-code"], [id$="-trigger-display"]').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const formPrefix = this.id.replace('-trigger-code', '').replace('-trigger-display', '');
+                addTriggerToForm(formPrefix);
+            }
+        });
+    });
 });
 
 
