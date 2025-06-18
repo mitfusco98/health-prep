@@ -964,6 +964,67 @@ def add_screening_type():
         )
 
         db.session.add(screening_type)
+        db.session.flush()  # Get the ID before commit
+
+        # Handle keywords if provided
+        keywords_data = request.form.get('keywords')
+        print(f"Keywords data received: {keywords_data}")
+        
+        from screening_keyword_manager import ScreeningKeywordManager
+        manager = ScreeningKeywordManager()
+        
+        if keywords_data and keywords_data.strip():
+            try:
+                import json as json_module
+                import html
+                
+                # Fix HTML entity encoding issues
+                keywords_data = html.unescape(keywords_data)
+                keywords_data = keywords_data.replace('&quot;', '"').replace('&#x27;', "'")
+                
+                keywords = json_module.loads(keywords_data)
+                print(f"Parsed keywords: {keywords}")
+                
+                # Add new keywords
+                if isinstance(keywords, list):
+                    success_count = 0
+                    for keyword in keywords:
+                        if isinstance(keyword, str) and keyword.strip():
+                            success = manager.add_keyword_rule(
+                                screening_type_id=screening_type.id,
+                                keyword=keyword.strip(),
+                                section='general',
+                                weight=1.0,
+                                case_sensitive=False,
+                                exact_match=False,
+                                description=f'Keyword for {screening_type.name}'
+                            )
+                            if success:
+                                success_count += 1
+                    print(f"Successfully added {success_count} keywords")
+            except json_module.JSONDecodeError as e:
+                print(f"Error parsing keywords JSON: {str(e)} - Data: '{keywords_data[:100]}...'")
+            except Exception as e:
+                print(f"Error updating keywords: {str(e)}")
+
+        # Handle trigger conditions if provided
+        trigger_conditions_data = request.form.get('trigger_conditions')
+        print(f"Trigger conditions data received: {trigger_conditions_data}")
+        
+        if trigger_conditions_data and trigger_conditions_data.strip():
+            try:
+                import json as json_module
+                trigger_conditions = json_module.loads(trigger_conditions_data)
+                print(f"Parsed trigger conditions: {trigger_conditions}")
+                
+                # Set trigger conditions on the screening type
+                screening_type.set_trigger_conditions(trigger_conditions)
+                print(f"Successfully set {len(trigger_conditions)} trigger conditions")
+            except json_module.JSONDecodeError as e:
+                print(f"Error parsing trigger conditions JSON: {str(e)} - Data: '{trigger_conditions_data[:100]}...'")
+            except Exception as e:
+                print(f"Error updating trigger conditions: {str(e)}")
+
         db.session.commit()
 
         # Handle keywords if provided
@@ -1154,6 +1215,28 @@ def edit_screening_type(screening_type_id):
                 print(f"Error updating keywords: {str(e)}")
         else:
             print("No keywords data provided or empty")
+
+        # Handle trigger conditions if provided
+        trigger_conditions_data = request.form.get('trigger_conditions')
+        print(f"Trigger conditions data received: {trigger_conditions_data}")
+        
+        if trigger_conditions_data and trigger_conditions_data.strip():
+            try:
+                import json as json_module
+                trigger_conditions = json_module.loads(trigger_conditions_data)
+                print(f"Parsed trigger conditions: {trigger_conditions}")
+                
+                # Set trigger conditions on the screening type
+                screening_type.set_trigger_conditions(trigger_conditions)
+                print(f"Successfully set {len(trigger_conditions)} trigger conditions")
+            except json_module.JSONDecodeError as e:
+                print(f"Error parsing trigger conditions JSON: {str(e)} - Data: '{trigger_conditions_data[:100]}...'")
+            except Exception as e:
+                print(f"Error updating trigger conditions: {str(e)}")
+        else:
+            # Clear trigger conditions if none provided
+            screening_type.trigger_conditions = None
+            print("No trigger conditions data provided or empty")
 
         try:
             # Store original values for change tracking
