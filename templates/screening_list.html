@@ -754,7 +754,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <div class="form-text">Include screenings already assigned to the patient</div>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input type="checkbox" id="source_age" name="content_sources" value="age_based"
+                                    <input class="form-check-input" type="checkbox" id="source_age" name="content_sources" value="age_based"
                                         {% if settings and 'age_based' in settings.content_sources_list %}checked{% endif %}>
                                     <label class="form-check-label" for="source_age">Age-Based Recommendations</label>
                                     <div class="form-text">Include screenings based on patient age</div>
