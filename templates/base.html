@@ -49,10 +49,22 @@
                             <i class="fas fa-user-plus me-1"></i> Add Patient
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if '/screenings' in request.path %}active{% endif %}" href="{{ url_for('screening_list') }}">
-                            <i class="fas fa-clipboard-check me-1"></i><i class="fas fa-cog me-2"></i>Screening List
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if '/screening' in request.path %}active{% endif %}" href="#" id="screeningDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-clipboard-check me-1"></i> Screenings
                         </a>
+                        <ul class="dropdown-menu" aria-labelledby="screeningDropdown">
+                            <li>
+                                <a class="dropdown-item {% if '/screening_list' in request.path %}active{% endif %}" href="{{ url_for('screening_list') }}">
+                                    <i class="fas fa-list me-1"></i> Screening List
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if '/screening_engine' in request.path %}active{% endif %}" href="{{ url_for('screening_engine_dashboard') }}">
+                                    <i class="fas fa-robot me-1"></i> Auto-Screening Engine
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="importDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
