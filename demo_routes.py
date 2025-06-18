@@ -1084,6 +1084,16 @@ def edit_screening_type(screening_type_id):
     # For GET requests, pre-populate the form with existing data
     if request.method == "GET":
         form = ScreeningTypeForm(obj=screening_type)
+        # Pass trigger conditions to template for JavaScript population
+        trigger_conditions_json = screening_type.trigger_conditions or '[]'
+        timestamp = int(time_module.time())
+        return render_template(
+            "edit_screening_type.html",
+            form=form,
+            screening_type=screening_type,
+            trigger_conditions_json=trigger_conditions_json,
+            cache_timestamp=timestamp,
+        )
     else:
         form = ScreeningTypeForm()
 
@@ -1301,10 +1311,12 @@ def edit_screening_type(screening_type_id):
 
     # For GET requests or if validation fails, render the form page
     timestamp = int(time_module.time())
+    trigger_conditions_json = screening_type.trigger_conditions or '[]'
     return render_template(
         "edit_screening_type.html",
         form=form,
         screening_type=screening_type,
+        trigger_conditions_json=trigger_conditions_json,
         cache_timestamp=timestamp,
     )
 

@@ -403,6 +403,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <th>Frequency</th>
                         <th>Gender Specific</th>
                         <th>Age Range</th>
+                        <th>Trigger Conditions</th>
                         <th>Status</th>
                         <th width="200">Actions</th>
                     </tr>
@@ -442,6 +443,23 @@ document.addEventListener('DOMContentLoaded', function() {
                             {% endif %}
                         </td>
                         <td>
+                            {% set trigger_conditions = screening_type.get_trigger_conditions() %}
+                            {% if trigger_conditions %}
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% for condition in trigger_conditions[:3] %}
+                                        <span class="badge bg-info text-dark small" title="{{ condition.display }} ({{ condition.code }})">
+                                            {{ condition.display|truncate(20) }}
+                                        </span>
+                                    {% endfor %}
+                                    {% if trigger_conditions|length > 3 %}
+                                        <span class="badge bg-light text-dark small">+{{ trigger_conditions|length - 3 }} more</span>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <small class="text-muted">None</small>
+                            {% endif %}
+                        </td>
+                        <td>
                             {% if screening_type.is_active %}
                                 <span class="badge bg-success">Active</span>
                             {% else %}
@@ -450,9 +468,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                         <td>
                             <div class="btn-group" role="group">
-                                <a href="{{ url_for('edit_screening_type', screening_type_id=screening_type.id, t=cache_timestamp) }}" class="btn btn-sm btn-outline-primary">
+                                <button type="button" class="btn btn-sm btn-outline-primary edit-screening-type-btn"
+                                        data-id="{{ screening_type.id }}"
+                                        data-name="{{ screening_type.name }}"
+                                        data-frequency="{{ screening_type.default_frequency or '' }}"
+                                        data-gender="{{ screening_type.gender_specific or '' }}"
+                                        data-min-age="{{ screening_type.min_age or '' }}"
+                                        data-max-age="{{ screening_type.max_age or '' }}"
+                                        data-active="{{ '1' if screening_type.is_active else '0' }}"
+                                        data-trigger-conditions="{{ screening_type.trigger_conditions or '[]' }}"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editScreeningTypeModal">
                                     Edit
-                                </a>
+                                </button>
                                 <a href="{{ url_for('delete_screening_type', screening_type_id=screening_type.id, ts=cache_timestamp) }}" class="btn btn-sm btn-outline-danger" 
                                    onclick="return confirm('Are you sure you want to delete this screening type?');">
                                     Delete
@@ -897,6 +925,169 @@ document.addEventListener('DOMContentLoaded', function() {
         function removeCustomStatus(status, element) {
             if (element) {
                 element.remove();
+            }
+        }
+    });
+
+    // Trigger Conditions Management
+    window.triggerConditionsData = {
+        'add-form': [],
+        'edit-form': []
+    };
+
+    window.addTriggerCondition = function(formType) {
+        const systemSelect = document.getElementById(`${formType}-condition-system`);
+        const codeInput = document.getElementById(`${formType}-condition-code`);
+        const displayInput = document.getElementById(`${formType}-condition-display`);
+        
+        const system = systemSelect.value;
+        const code = codeInput.value.trim();
+        const display = displayInput.value.trim();
+        
+        if (!code || !display) {
+            alert('Please enter both condition code and display name');
+            return;
+        }
+        
+        const condition = {
+            system: system,
+            code: code,
+            display: display
+        };
+        
+        // Add to data array
+        if (!window.triggerConditionsData[formType]) {
+            window.triggerConditionsData[formType] = [];
+        }
+        window.triggerConditionsData[formType].push(condition);
+        
+        // Update hidden input
+        document.getElementById(`${formType}-trigger-conditions-data`).value = JSON.stringify(window.triggerConditionsData[formType]);
+        
+        // Update display
+        renderTriggerConditions(formType);
+        
+        // Clear inputs
+        codeInput.value = '';
+        displayInput.value = '';
+    };
+
+    window.removeTriggerCondition = function(formType, index) {
+        if (window.triggerConditionsData[formType]) {
+            window.triggerConditionsData[formType].splice(index, 1);
+            document.getElementById(`${formType}-trigger-conditions-data`).value = JSON.stringify(window.triggerConditionsData[formType]);
+            renderTriggerConditions(formType);
+        }
+    };
+
+    function renderTriggerConditions(formType) {
+        const container = document.getElementById(`${formType}-trigger-conditions-list`);
+        if (!container) return;
+        
+        const conditions = window.triggerConditionsData[formType] || [];
+        
+        if (conditions.length === 0) {
+            container.innerHTML = '<div class="text-muted small">No trigger conditions added</div>';
+            return;
+        }
+        
+        let html = '';
+        conditions.forEach((condition, index) => {
+            html += `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-white border rounded">
+                    <div class="flex-grow-1">
+                        <strong>${condition.display}</strong><br>
+                        <small class="text-muted">${condition.code} (${getSystemDisplayName(condition.system)})</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTriggerCondition('${formType}', ${index})">
+                        Remove
+                    </button>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    function getSystemDisplayName(system) {
+        const systemNames = {
+            'http://snomed.info/sct': 'SNOMED CT',
+            'http://hl7.org/fhir/sid/icd-10-cm': 'ICD-10-CM',
+            'http://hl7.org/fhir/sid/icd-9-cm': 'ICD-9-CM',
+            'custom': 'Custom'
+        };
+        return systemNames[system] || system;
+    }
+
+    window.loadTriggerConditionsForEdit = function(triggerConditionsJson) {
+        try {
+            const conditions = triggerConditionsJson ? JSON.parse(triggerConditionsJson) : [];
+            window.triggerConditionsData['edit-form'] = conditions;
+            document.getElementById('edit-form-trigger-conditions-data').value = triggerConditionsJson || '';
+            renderTriggerConditions('edit-form');
+        } catch (e) {
+            console.error('Error parsing trigger conditions:', e);
+            window.triggerConditionsData['edit-form'] = [];
+            renderTriggerConditions('edit-form');
+        }
+    };
+
+    // Clear trigger conditions when modals close
+    const addModal = document.getElementById('addScreeningTypeModal');
+    const editModal = document.getElementById('editScreeningTypeModal');
+    
+    if (addModal) {
+        addModal.addEventListener('hidden.bs.modal', function() {
+            window.triggerConditionsData['add-form'] = [];
+            const dataInput = document.getElementById('add-form-trigger-conditions-data');
+            if (dataInput) dataInput.value = '';
+            renderTriggerConditions('add-form');
+        });
+    }
+
+    if (editModal) {
+        editModal.addEventListener('hidden.bs.modal', function() {
+            window.triggerConditionsData['edit-form'] = [];
+            const dataInput = document.getElementById('edit-form-trigger-conditions-data');
+            if (dataInput) dataInput.value = '';
+            renderTriggerConditions('edit-form');
+        });
+    }
+
+    // Initialize trigger conditions displays
+    renderTriggerConditions('add-form');
+    renderTriggerConditions('edit-form');
+
+    // Handle edit screening type button clicks
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('edit-screening-type-btn')) {
+            const button = e.target;
+            const id = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name');
+            const frequency = button.getAttribute('data-frequency');
+            const gender = button.getAttribute('data-gender');
+            const minAge = button.getAttribute('data-min-age');
+            const maxAge = button.getAttribute('data-max-age');
+            const active = button.getAttribute('data-active') === '1';
+            const triggerConditions = button.getAttribute('data-trigger-conditions');
+            
+            // Set form values
+            const form = document.getElementById('editScreeningTypeForm');
+            form.action = `/screening-types/${id}/edit?ts=${Date.now()}`;
+            
+            document.getElementById('edit-name').value = name;
+            document.getElementById('edit-frequency').value = frequency || '';
+            document.getElementById('edit-gender').value = gender || '';
+            document.getElementById('edit-min-age').value = minAge || '';
+            document.getElementById('edit-max-age').value = maxAge || '';
+            document.getElementById('edit-active').checked = active;
+            
+            // Load trigger conditions
+            window.loadTriggerConditionsForEdit(triggerConditions);
+            
+            // Load keywords (existing functionality)
+            if (window.keywordManagers && window.keywordManagers.edit) {
+                window.keywordManagers.edit.loadKeywords(id);
             }
         }
     });
