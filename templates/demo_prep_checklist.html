@@ -1,0 +1,357 @@
+{% extends 'base_demo.html' %}
+
+{% block title %}PrepChecklist Demo{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1><i class="fas fa-clipboard-check me-2"></i>PrepChecklist Demo</h1>
+            <p class="lead">Dynamic preparation checklists with intelligent keyword matching</p>
+        </div>
+    </div>
+
+    <!-- Demo Controls -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Demo Setup</h5>
+                </div>
+                <div class="card-body">
+                    <p>Create demo checklist templates and sample medical data to test the system.</p>
+                    
+                    <button type="button" class="btn btn-success mb-3" onclick="createDemoData()">
+                        <i class="fas fa-plus me-2"></i>Create Demo Template
+                    </button>
+                    
+                    {% if patients %}
+                    <div class="mb-3">
+                        <label for="patientSelect" class="form-label">Select Patient for Testing:</label>
+                        <select class="form-select" id="patientSelect">
+                            <option value="">Choose a patient...</option>
+                            {% for patient in patients %}
+                            <option value="{{ patient.id }}">{{ patient.first_name }} {{ patient.last_name }} ({{ patient.age }}y, {{ patient.sex }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="button" class="btn btn-info mb-2" onclick="createSampleData()">
+                        <i class="fas fa-flask me-2"></i>Create Sample Medical Data
+                    </button>
+                    
+                    <button type="button" class="btn btn-primary mb-2" onclick="evaluateChecklist()">
+                        <i class="fas fa-search me-2"></i>Evaluate Checklist
+                    </button>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No patients found. Please create some patients first in the main application.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>System Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Templates</h6>
+                            <p class="text-muted">{{ templates|length }} active</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Default Template</h6>
+                            <p class="text-muted">
+                                {% if config.default_template %}
+                                    {{ config.default_template.name }}
+                                {% else %}
+                                    Not set
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Confidence Threshold</h6>
+                            <p class="text-muted">{{ config.confidence_threshold }}%</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Auto Evaluation</h6>
+                            <p class="text-muted">
+                                {% if config.auto_evaluate_on_data_add %}
+                                    <i class="fas fa-check text-success"></i> Enabled
+                                {% else %}
+                                    <i class="fas fa-times text-danger"></i> Disabled
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Area -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Evaluation Results</h5>
+                </div>
+                <div class="card-body">
+                    <div id="resultsArea">
+                        <div class="text-center py-4">
+                            <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No evaluation results yet</h5>
+                            <p class="text-muted">Create demo data and evaluate a patient's checklist to see results here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Messages -->
+<div id="alertArea"></div>
+
+<script>
+let currentPatientId = null;
+
+function showAlert(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 1050; max-width: 400px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.getElementById('alertArea').appendChild(alertDiv);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+function createDemoData() {
+    fetch('/demo/prep-checklist/create-demo', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('Demo template created successfully!', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert('Error: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Failed to create demo data', 'danger');
+    });
+}
+
+function createSampleData() {
+    const select = document.getElementById('patientSelect');
+    const patientId = select.value;
+    
+    if (!patientId) {
+        showAlert('Please select a patient first', 'warning');
+        return;
+    }
+    
+    fetch(`/demo/prep-checklist/create-sample-data/${patientId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('Sample medical data created successfully!', 'success');
+            currentPatientId = patientId;
+        } else {
+            showAlert('Error: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Failed to create sample data', 'danger');
+    });
+}
+
+function evaluateChecklist() {
+    const select = document.getElementById('patientSelect');
+    const patientId = select.value;
+    
+    if (!patientId) {
+        showAlert('Please select a patient first', 'warning');
+        return;
+    }
+    
+    // Show loading
+    document.getElementById('resultsArea').innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5 class="mt-3">Evaluating checklist...</h5>
+        </div>
+    `;
+    
+    fetch(`/demo/prep-checklist/evaluate/${patientId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            displayResults(data);
+            showAlert('Checklist evaluation completed!', 'success');
+        } else {
+            showAlert('Error: ' + data.error, 'danger');
+            document.getElementById('resultsArea').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${data.error}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Failed to evaluate checklist', 'danger');
+        document.getElementById('resultsArea').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Evaluation failed. Please try again.
+            </div>
+        `;
+    });
+}
+
+function displayResults(data) {
+    const patient = data.patient;
+    const summary = data.summary;
+    const results = data.results;
+    
+    let html = `
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h4>${patient.name} (${patient.age}y, ${patient.sex})</h4>
+                <p class="text-muted">Template: ${data.template.name}</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="badge bg-primary fs-6">
+                    ${summary.completion_percentage.toFixed(1)}% Complete
+                </div>
+                <div class="text-muted small">
+                    ${summary.found_items} of ${summary.total_items} items found
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+    `;
+    
+    // Group results by section
+    const sections = {};
+    results.forEach(result => {
+        if (!sections[result.section]) {
+            sections[result.section] = [];
+        }
+        sections[result.section].push(result);
+    });
+    
+    Object.keys(sections).forEach(sectionKey => {
+        const sectionItems = sections[sectionKey];
+        const sectionName = sectionKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        
+        html += `
+            <div class="col-md-6 mb-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">${sectionName}</h6>
+                    </div>
+                    <div class="card-body">
+        `;
+        
+        sectionItems.forEach(item => {
+            const statusIcon = item.status === 'found' ? 
+                '<i class="fas fa-check-circle text-success"></i>' :
+                '<i class="fas fa-times-circle text-danger"></i>';
+            
+            html += `
+                <div class="d-flex align-items-start mb-3">
+                    <div class="me-3 mt-1">
+                        ${statusIcon}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold">${item.title}</div>
+                        <div class="text-muted small">${item.description}</div>
+            `;
+            
+            if (item.matches && item.matches.length > 0) {
+                html += `
+                    <div class="mt-2">
+                        <span class="badge bg-success">${item.confidence}% confidence</span>
+                        <div class="mt-1">
+                `;
+                
+                item.matches.forEach(match => {
+                    const typeColor = {
+                        'lab': 'info',
+                        'imaging': 'warning',
+                        'consult': 'secondary'
+                    }[match.type] || 'light';
+                    
+                    html += `
+                        <div class="small mb-1">
+                            <span class="badge bg-${typeColor}">${match.type}</span>
+                            ${match.text} (${match.date})
+                            <span class="text-muted">- matched "${match.keyword}"</span>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    document.getElementById('resultsArea').innerHTML = html;
+}
+
+// Set patient selection
+document.getElementById('patientSelect')?.addEventListener('change', function() {
+    currentPatientId = this.value;
+});
+</script>
+{% endblock %}
