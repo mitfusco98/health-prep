@@ -76,28 +76,6 @@
                     <small class="keywords-help-text">Keywords help identify relevant documents for this screening type</small>
                     <input type="hidden" name="keywords" id="edit-form-keywords-data">
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Trigger Conditions (FHIR)</label>
-                    <div class="trigger-conditions-container">
-                        <div id="edit-form-trigger-conditions-container">
-                            <div class="d-flex mb-2">
-                                <select class="form-select me-2" id="edit-form-trigger-system" style="max-width: 200px;">
-                                    <option value="http://snomed.info/sct">SNOMED CT</option>
-                                    <option value="http://hl7.org/fhir/sid/icd-10-cm">ICD-10-CM</option>
-                                    <option value="http://hl7.org/fhir/sid/icd-9-cm">ICD-9-CM</option>
-                                    <option value="custom">Custom</option>
-                                </select>
-                                <input type="text" class="form-control me-2" id="edit-form-trigger-code" placeholder="Condition code">
-                                <input type="text" class="form-control me-2" id="edit-form-trigger-display" placeholder="Display name">
-                                <button type="button" class="btn btn-outline-primary" onclick="addTriggerToForm('edit-form')">Add</button>
-                            </div>
-                            <div id="edit-form-triggers-list" class="trigger-conditions-list"></div>
-                        </div>
-                    </div>
-                    <small class="text-muted">Medical conditions that should trigger this screening recommendation</small>
-                    <input type="hidden" name="trigger_conditions" id="edit-form-triggers-data">
-                </div>
                 
                 <div class="row mb-3">
                     <div class="col-md-4">
@@ -215,86 +193,6 @@ function updateFormKeywordsData(formPrefix) {
     }
 }
 
-// Initialize trigger conditions data storage
-window.triggerConditionsData = window.triggerConditionsData || {};
-
-// Add trigger condition to form
-function addTriggerToForm(formPrefix) {
-    const systemSelect = document.getElementById(`${formPrefix}-trigger-system`);
-    const codeInput = document.getElementById(`${formPrefix}-trigger-code`);
-    const displayInput = document.getElementById(`${formPrefix}-trigger-display`);
-    
-    const system = systemSelect.value;
-    const code = codeInput.value.trim();
-    const display = displayInput.value.trim();
-    
-    if (code && display) {
-        if (!window.triggerConditionsData[formPrefix]) {
-            window.triggerConditionsData[formPrefix] = [];
-        }
-        
-        const condition = { system, code, display };
-        window.triggerConditionsData[formPrefix].push(condition);
-        
-        // Clear inputs
-        codeInput.value = '';
-        displayInput.value = '';
-        systemSelect.selectedIndex = 0;
-        
-        // Update display and hidden field
-        renderTriggerConditions(formPrefix);
-        updateTriggerConditionsData(formPrefix);
-    }
-}
-
-// Remove trigger condition
-function removeTriggerCondition(formPrefix, index) {
-    if (window.triggerConditionsData[formPrefix]) {
-        window.triggerConditionsData[formPrefix].splice(index, 1);
-        renderTriggerConditions(formPrefix);
-        updateTriggerConditionsData(formPrefix);
-    }
-}
-
-// Render trigger conditions display
-function renderTriggerConditions(formPrefix) {
-    const container = document.getElementById(`${formPrefix}-triggers-list`);
-    if (!container) return;
-    
-    const conditions = window.triggerConditionsData[formPrefix] || [];
-    
-    container.innerHTML = conditions.map((condition, index) => `
-        <span class="badge trigger-condition-tag me-2 mb-2" style="background-color: #e7f3ff; border: 1px solid #b6d7ff; color: #0066cc;">
-            ${condition.display} (${condition.code})
-            <button type="button" class="btn-close ms-1" 
-                    onclick="removeTriggerCondition('${formPrefix}', ${index})" 
-                    aria-label="Remove" style="font-size: 0.8em;"></button>
-        </span>
-    `).join('');
-}
-
-// Update hidden trigger conditions data
-function updateTriggerConditionsData(formPrefix) {
-    const hiddenInput = document.getElementById(`${formPrefix}-triggers-data`);
-    if (hiddenInput && window.triggerConditionsData[formPrefix]) {
-        hiddenInput.value = JSON.stringify(window.triggerConditionsData[formPrefix]);
-    }
-}
-
-// Load existing trigger conditions
-function loadExistingTriggerConditions() {
-    const triggerConditionsJson = `{{ trigger_conditions_json|safe }}`;
-    try {
-        const conditions = triggerConditionsJson ? JSON.parse(triggerConditionsJson) : [];
-        window.triggerConditionsData['edit-form'] = conditions;
-        renderTriggerConditions('edit-form');
-        updateTriggerConditionsData('edit-form');
-    } catch (e) {
-        console.error('Error parsing trigger conditions:', e);
-        window.triggerConditionsData['edit-form'] = [];
-    }
-}
-
 // Load existing keywords for editing
 function loadExistingKeywords() {
     const screeningTypeId = {{ screening_type.id }};
@@ -328,9 +226,8 @@ function loadExistingKeywords() {
 
 // Handle Enter key in keyword inputs and form submission
 document.addEventListener('DOMContentLoaded', function() {
-    // Load existing data when page loads
+    // Load existing keywords when page loads
     loadExistingKeywords();
-    loadExistingTriggerConditions();
     
     // Handle Enter key in form keyword inputs
     document.querySelectorAll('[id$="-keyword-input"]').forEach(input => {
@@ -343,36 +240,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Handle Enter key in trigger condition inputs
-    document.querySelectorAll('[id$="-trigger-code"], [id$="-trigger-display"]').forEach(input => {
-        input.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const formPrefix = this.id.replace('-trigger-code', '').replace('-trigger-display', '');
-                addTriggerToForm(formPrefix);
-            }
-        });
-    });
-    
-    // Handle form submission to ensure both keywords and trigger conditions are included
+    // Handle form submission to ensure keywords are included
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
             // Update keywords data before submission
             updateFormKeywordsData('edit-form');
             
-            // Update trigger conditions data before submission
-            updateTriggerConditionsData('edit-form');
-            
-            // Ensure the hidden fields have proper data
+            // Ensure the hidden field has proper data
             const keywordsField = document.getElementById('edit-form-keywords-data');
             const keywordsValue = keywordsField ? keywordsField.value : '';
             
-            const triggersField = document.getElementById('edit-form-triggers-data');
-            const triggersValue = triggersField ? triggersField.value : '';
-            
             console.log('Form submitting with keywords:', keywordsValue);
-            console.log('Form submitting with trigger conditions:', triggersValue);
             
             // If no keywords data, set empty array
             if (!keywordsValue || keywordsValue.trim() === '') {
@@ -381,12 +260,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // If no trigger conditions data, set empty array
-            if (!triggersValue || triggersValue.trim() === '') {
-                if (triggersField) {
-                    triggersField.value = '[]';
-                }
-            }
+            // Force a small delay to ensure data is set
+            setTimeout(() => {
+                console.log('Final keywords value before submit:', keywordsField ? keywordsField.value : 'no field');
+            }, 100);
         });
     }
 });
@@ -431,24 +308,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .btn-close-white {
     filter: invert(1) grayscale(100%) brightness(200%);
-}
-
-.trigger-conditions-container {
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    padding: 1rem;
-    background-color: #f8f9fa;
-}
-
-.trigger-conditions-list {
-    min-height: 60px;
-    margin-top: 0.5rem;
-}
-
-.trigger-condition-tag {
-    background-color: #e7f3ff !important;
-    border-color: #b6d7ff !important;
-    color: #0066cc !important;
 }
 </style>
 {% endblock %}
