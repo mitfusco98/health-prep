@@ -43,7 +43,7 @@
 <div class="card">
     <div class="card-body">
         <p class="text-muted mb-4">These settings control the layout and content generation of the screening checklist section in patient prep sheets.</p>
-        
+
         <div class="row">
             <div class="col-md-6">
                 <div class="card mb-4">
@@ -53,7 +53,7 @@
                     <div class="card-body">
                         <form method="POST" action="{{ url_for('update_checklist_settings') }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Checklist Layout Style</label>
                                 <select class="form-select" name="layout_style">
@@ -62,7 +62,7 @@
                                 </select>
                                 <div class="form-text">Determines how screening items are displayed in the checklist.</div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Status Options</label>
                                 <div class="form-check">
@@ -105,7 +105,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Note Field</label>
                                 <div class="form-check form-switch">
@@ -115,13 +115,13 @@
                                 </div>
                                 <div class="form-text">Display a notes field for each screening item.</div>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary">Save Display Settings</button>
                         </form>
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header">
@@ -130,7 +130,7 @@
                     <div class="card-body">
                         <form method="POST" action="{{ url_for('update_checklist_generation') }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Content Sources</label>
                                 <div class="form-check">
@@ -164,13 +164,13 @@
                                     <div class="form-text">Include screenings based on patient conditions</div>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Default Items</label>
                                 <textarea class="form-control" name="default_items" rows="4" placeholder="One item per line">{{ default_items_text }}</textarea>
                                 <div class="form-text">Default items to include in every patient's checklist</div>
                             </div>
-                            
+
                             <button type="submit" class="btn btn-primary">Save Generation Settings</button>
                         </form>
                     </div>
