@@ -222,15 +222,14 @@ class ScreeningEngine:
         with self.app.app_context():
             for rec in recommendations:
                 try:
-                    screening = Screening(
-                        patient_id=rec.patient_id,
-                        screening_type=rec.screening_type_name,
-                        due_date=rec.due_date.date() if rec.due_date else None,
-                        frequency="As needed",
-                        priority=rec.priority,
-                        notes=rec.notes,
-                        status="Due"
-                    )
+                    screening = Screening()
+                    screening.patient_id = rec.patient_id
+                    screening.screening_type = rec.screening_type_name
+                    screening.due_date = rec.due_date.date() if rec.due_date else None
+                    screening.frequency = "As needed"
+                    screening.priority = rec.priority
+                    screening.notes = rec.notes
+                    screening.status = "Due"
                     
                     db.session.add(screening)
                     created_screenings.append(screening)
