@@ -221,7 +221,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Conditions -->
                     <div class="col-md-4 mb-3">
                         <div class="card h-100">
@@ -239,7 +239,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Laboratories -->
                     <div class="col-md-4 mb-3">
                         <div class="card h-100">
@@ -257,7 +257,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Imaging -->
                     <div class="col-md-4 mb-3">
                         <div class="card h-100">
@@ -275,7 +275,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Consults -->
                     <div class="col-md-4 mb-3">
                         <div class="card h-100">
@@ -293,7 +293,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Appointments -->
                     <div class="col-md-4 mb-3">
                         <div class="card h-100">
@@ -311,7 +311,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Hospital Records -->
                     <div class="col-md-4 mb-3">
                         <div class="card h-100">
@@ -329,7 +329,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Immunizations -->
                     <div class="col-md-4 mb-3">
                         <div class="card h-100">
@@ -347,7 +347,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Screenings -->
                     <div class="col-md-4 mb-3">
                         <div class="card h-100">
@@ -365,7 +365,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
 
                 </div>
             </div>
@@ -495,7 +495,7 @@
                         </div>
                         {% endif %}
                     </div>
-                    
+
                     <!-- Past Appointments Tab -->
                     <div class="tab-pane fade" id="past-appt" role="tabpanel" aria-labelledby="past-appt-tab">
                         {% if past_appointments %}
@@ -609,7 +609,7 @@
                             {% for doc in lab_documents %}
                             <tr>
                                 <td>{{ doc.document_name if doc.document_name else doc.filename }}</td>
-                                <td>{{ doc.document_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ doc.document_date.strftime('%Y-%m-%d') if doc.document_date else 'N/A' }}</td>
                                 <td>{{ doc.source_system }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
@@ -656,7 +656,7 @@
                             {% for doc in imaging_documents %}
                             <tr>
                                 <td>{{ doc.document_name if doc.document_name else doc.filename }}</td>
-                                <td>{{ doc.document_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ doc.document_date.strftime('%Y-%m-%d') if doc.document_date else 'N/A' }}</td>
                                 <td>{{ doc.source_system }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
@@ -703,7 +703,7 @@
                             {% for doc in consult_documents %}
                             <tr>
                                 <td>{{ doc.document_name if doc.document_name else doc.filename }}</td>
-                                <td>{{ doc.document_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ doc.document_date.strftime('%Y-%m-%d') if doc.document_date else 'N/A' }}</td>
                                 <td>{{ doc.source_system }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
@@ -750,7 +750,7 @@
                             {% for doc in hospital_documents %}
                             <tr>
                                 <td>{{ doc.document_name if doc.document_name else doc.filename }}</td>
-                                <td>{{ doc.document_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ doc.document_date.strftime('%Y-%m-%d') if doc.document_date else 'N/A' }}</td>
                                 <td>{{ doc.source_system }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
@@ -773,7 +773,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Immunizations History Section -->
     <div id="immunizations-history" class="history-section" style="display: none;">
         <div class="card">
@@ -810,7 +810,7 @@
                 {% else %}
                 <div class="alert alert-info">No immunization records available for this patient.</div>
                 {% endif %}
-                
+
                 <div class="mt-3">
                     <a href="/patients/{{patient.id}}/immunization" class="btn btn-primary">
                         <i class="fas fa-plus-circle me-1"></i> Add Immunization
@@ -819,7 +819,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Screenings History Section -->
     <div id="screenings-history" class="history-section" style="display: none;">
         <div class="card">
@@ -883,7 +883,7 @@
             </div>
         </div>
     </div>
-    
+
 
 </div>
 
@@ -904,21 +904,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         tabEl.addEventListener('click', function (event) {
                             event.preventDefault();
                             const tabTarget = document.querySelector(this.getAttribute('data-bs-target'));
-                            
+
                             // Hide all tab panes
                             document.querySelectorAll('#appointmentHistoryTabsContent .tab-pane').forEach(pane => {
                                 pane.classList.remove('show', 'active');
                             });
-                            
+
                             // Deactivate all tab buttons
                             document.querySelectorAll('#appointmentHistoryTabs button').forEach(btn => {
                                 btn.classList.remove('active');
                                 btn.setAttribute('aria-selected', 'false');
                             });
-                            
+
                             // Show the selected tab pane
                             tabTarget.classList.add('show', 'active');
-                            
+
                             // Activate the clicked tab button
                             this.classList.add('active');
                             this.setAttribute('aria-selected', 'true');
