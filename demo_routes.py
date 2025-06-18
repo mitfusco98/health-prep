@@ -963,6 +963,16 @@ def add_screening_type():
             is_active=form.is_active.data,
         )
 
+        # Handle trigger conditions if provided
+        trigger_conditions_data = request.form.get('trigger_conditions')
+        if trigger_conditions_data and trigger_conditions_data.strip():
+            try:
+                trigger_conditions = json.loads(trigger_conditions_data)
+                if isinstance(trigger_conditions, list) and trigger_conditions:
+                    screening_type.set_trigger_conditions(trigger_conditions)
+            except json.JSONDecodeError as e:
+                print(f"Error parsing trigger conditions JSON: {str(e)}")
+
         db.session.add(screening_type)
         db.session.commit()
 
@@ -1093,6 +1103,20 @@ def edit_screening_type(screening_type_id):
         screening_type.min_age = form.min_age.data
         screening_type.max_age = form.max_age.data
         screening_type.is_active = form.is_active.data
+
+        # Handle trigger conditions if provided
+        trigger_conditions_data = request.form.get('trigger_conditions')
+        if trigger_conditions_data and trigger_conditions_data.strip():
+            try:
+                import json as json_module
+                trigger_conditions = json_module.loads(trigger_conditions_data)
+                if isinstance(trigger_conditions, list):
+                    screening_type.set_trigger_conditions(trigger_conditions)
+            except json_module.JSONDecodeError as e:
+                print(f"Error parsing trigger conditions JSON: {str(e)}")
+        else:
+            # Clear trigger conditions if none provided
+            screening_type.set_trigger_conditions([])
 
         # Handle keywords if provided
         keywords_data = request.form.get('keywords')

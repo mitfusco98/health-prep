@@ -542,6 +542,28 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">Trigger Conditions (FHIR)</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div id="add-form-trigger-conditions-container">
+                                <div class="d-flex mb-2">
+                                    <select class="form-select me-2" id="add-form-condition-system" style="max-width: 200px;">
+                                        <option value="http://snomed.info/sct">SNOMED CT</option>
+                                        <option value="http://hl7.org/fhir/sid/icd-10-cm">ICD-10-CM</option>
+                                        <option value="http://hl7.org/fhir/sid/icd-9-cm">ICD-9-CM</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                    <input type="text" class="form-control me-2" id="add-form-condition-code" placeholder="Condition code">
+                                    <input type="text" class="form-control me-2" id="add-form-condition-display" placeholder="Display name">
+                                    <button type="button" class="btn btn-outline-primary" onclick="addTriggerCondition('add-form')">Add</button>
+                                </div>
+                                <div id="add-form-trigger-conditions-list" class="trigger-conditions-list"></div>
+                            </div>
+                        </div>
+                        <small class="text-muted">Medical conditions that should trigger this screening recommendation</small>
+                        <input type="hidden" name="trigger_conditions" id="add-form-trigger-conditions-data">
+                    </div>
+
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="is_active" id="isActive" checked>
                         <label class="form-check-label" for="isActive">
@@ -627,6 +649,28 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <small class="text-muted">Maximum age for this screening (leave blank if no upper limit)</small>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Trigger Conditions (FHIR)</label>
+                        <div class="border rounded p-3 bg-light">
+                            <div id="edit-form-trigger-conditions-container">
+                                <div class="d-flex mb-2">
+                                    <select class="form-select me-2" id="edit-form-condition-system" style="max-width: 200px;">
+                                        <option value="http://snomed.info/sct">SNOMED CT</option>
+                                        <option value="http://hl7.org/fhir/sid/icd-10-cm">ICD-10-CM</option>
+                                        <option value="http://hl7.org/fhir/sid/icd-9-cm">ICD-9-CM</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                    <input type="text" class="form-control me-2" id="edit-form-condition-code" placeholder="Condition code">
+                                    <input type="text" class="form-control me-2" id="edit-form-condition-display" placeholder="Display name">
+                                    <button type="button" class="btn btn-outline-primary" onclick="addTriggerCondition('edit-form')">Add</button>
+                                </div>
+                                <div id="edit-form-trigger-conditions-list" class="trigger-conditions-list"></div>
+                            </div>
+                        </div>
+                        <small class="text-muted">Medical conditions that should trigger this screening recommendation</small>
+                        <input type="hidden" name="trigger_conditions" id="edit-form-trigger-conditions-data">
                     </div>
 
                     <div class="form-check">
