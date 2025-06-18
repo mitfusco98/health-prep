@@ -62,9 +62,9 @@
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('login') }}">
-                            <i class="fas fa-key me-1"></i> Admin Login
-                        </a>
+                        <span class="nav-link text-muted">
+                            <i class="fas fa-key me-1"></i> Demo Mode
+                        </span>
                     </li>
                     {% endif %}
                 </ul>
@@ -108,10 +108,7 @@
                         <div class="mb-3">
                             <label for="importPatient" class="form-label">Patient</label>
                             <select class="form-select" id="importPatient">
-                                <option value="">Select a patient</option>
-                                {% for patient in get_all_patients() %}
-                                <option value="{{ patient.id }}">{{ patient.last_name }}, {{ patient.first_name }} ({{ patient.mrn }})</option>
-                                {% endfor %}
+                                <option value="">Demo patient data will be loaded automatically</option>
                             </select>
                         </div>
                         <div id="importResult"></div>
