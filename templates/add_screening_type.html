@@ -30,8 +30,7 @@
                 <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy')</small>
             </div>
             
-            <!-- Keywords Section -->
-            <div class="mb-4">
+            <div class="mb-3">
                 <label class="form-label">Keywords for Document Matching</label>
                 <div class="keywords-container">
                     <div id="add-form-keywords-container" class="keywords-form-group">
@@ -44,49 +43,6 @@
                 </div>
                 <small class="keywords-help-text">Keywords help identify relevant documents for this screening type</small>
                 <input type="hidden" name="keywords" id="add-form-keywords-data">
-            </div>
-
-            <!-- Trigger Conditions Section -->
-            <div class="mb-4">
-                <label class="form-label">Trigger Conditions</label>
-                <p class="small text-muted mb-3">Define medical conditions that automatically trigger this screening recommendation. Use standard medical codes (ICD-10, SNOMED CT, etc.)</p>
-                
-                <div id="trigger-conditions-container">
-                    <div class="trigger-condition-group mb-3 p-3 border rounded">
-                        <div class="row">
-                            <div class="col-md-3">
-                                <label class="form-label small">Code System</label>
-                                <select class="form-select form-select-sm" name="trigger_system[]">
-                                    <option value="">Select system</option>
-                                    <option value="http://hl7.org/fhir/sid/icd-10-cm">ICD-10-CM</option>
-                                    <option value="http://snomed.info/sct">SNOMED CT</option>
-                                    <option value="http://hl7.org/fhir/sid/icd-9-cm">ICD-9-CM</option>
-                                    <option value="http://loinc.org">LOINC</option>
-                                    <option value="custom">Custom</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small">Code</label>
-                                <input type="text" class="form-control form-control-sm" name="trigger_code[]" placeholder="e.g., E11.9">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small">Display Name</label>
-                                <input type="text" class="form-control form-control-sm" name="trigger_display[]" placeholder="e.g., Type 2 diabetes mellitus">
-                            </div>
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeTriggerCondition(this)">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addTriggerCondition()">
-                    <i class="fas fa-plus me-1"></i>Add Trigger Condition
-                </button>
-                
-                <input type="hidden" name="trigger_conditions" id="trigger-conditions-data">
             </div>
             
             <div class="row mb-3">
@@ -165,84 +121,6 @@
         </form>
     </div>
 </div>
-
-<script>
-// Trigger conditions management
-function addTriggerCondition() {
-    const container = document.getElementById('trigger-conditions-container');
-    const newGroup = document.createElement('div');
-    newGroup.className = 'trigger-condition-group mb-3 p-3 border rounded';
-    newGroup.innerHTML = `
-        <div class="row">
-            <div class="col-md-3">
-                <label class="form-label small">Code System</label>
-                <select class="form-select form-select-sm" name="trigger_system[]">
-                    <option value="">Select system</option>
-                    <option value="http://hl7.org/fhir/sid/icd-10-cm">ICD-10-CM</option>
-                    <option value="http://snomed.info/sct">SNOMED CT</option>
-                    <option value="http://hl7.org/fhir/sid/icd-9-cm">ICD-9-CM</option>
-                    <option value="http://loinc.org">LOINC</option>
-                    <option value="custom">Custom</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small">Code</label>
-                <input type="text" class="form-control form-control-sm" name="trigger_code[]" placeholder="e.g., E11.9">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label small">Display Name</label>
-                <input type="text" class="form-control form-control-sm" name="trigger_display[]" placeholder="e.g., Type 2 diabetes mellitus">
-            </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeTriggerCondition(this)">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        </div>
-    `;
-    container.appendChild(newGroup);
-    updateTriggerConditionsData();
-}
-
-function removeTriggerCondition(button) {
-    const group = button.closest('.trigger-condition-group');
-    group.remove();
-    updateTriggerConditionsData();
-}
-
-function updateTriggerConditionsData() {
-    const groups = document.querySelectorAll('.trigger-condition-group');
-    const conditions = [];
-    
-    groups.forEach(group => {
-        const system = group.querySelector('select[name="trigger_system[]"]').value;
-        const code = group.querySelector('input[name="trigger_code[]"]').value;
-        const display = group.querySelector('input[name="trigger_display[]"]').value;
-        
-        if (system && code && display) {
-            conditions.push({
-                system: system,
-                code: code,
-                display: display
-            });
-        }
-    });
-    
-    document.getElementById('trigger-conditions-data').value = JSON.stringify(conditions);
-}
-
-// Update trigger conditions data when form changes
-document.addEventListener('change', function(e) {
-    if (e.target.matches('select[name="trigger_system[]"], input[name="trigger_code[]"], input[name="trigger_display[]"]')) {
-        updateTriggerConditionsData();
-    }
-});
-
-// Update data on form submission
-document.querySelector('form').addEventListener('submit', function() {
-    updateTriggerConditionsData();
-    updateFormKeywordsData('add-form');
-});
 
 <script>
 // Add keyword to form (for add/edit modals)

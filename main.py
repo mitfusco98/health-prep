@@ -1,4 +1,3 @@
-# Registers the screening blueprint to resolve 404 errors for /screening routes.
 import os
 
 # Set default FLASK_ENV if not provided
@@ -89,12 +88,3 @@ if __name__ != "__main__":
                 logging.info(f"Added 5 sample appointments for today")
         except Exception as e:
             logging.error(f"Error adding sample appointments: {e}")
-
-from app import app
-from organized.routes.screening_routes import screening_bp
-
-# Register the screening blueprint
-app.register_blueprint(screening_bp)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
