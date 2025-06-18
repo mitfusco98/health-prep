@@ -965,13 +965,20 @@ def add_screening_type():
 
         # Handle trigger conditions if provided
         trigger_conditions_data = request.form.get('trigger_conditions')
+        print(f"Trigger conditions data received: {trigger_conditions_data}")
         if trigger_conditions_data and trigger_conditions_data.strip():
             try:
                 trigger_conditions = json.loads(trigger_conditions_data)
+                print(f"Parsed trigger conditions: {trigger_conditions}")
                 if isinstance(trigger_conditions, list) and trigger_conditions:
                     screening_type.set_trigger_conditions(trigger_conditions)
+                    print(f"Set trigger conditions on screening type: {screening_type.name}")
+                else:
+                    print("Trigger conditions is not a non-empty list")
             except json.JSONDecodeError as e:
                 print(f"Error parsing trigger conditions JSON: {str(e)}")
+        else:
+            print("No trigger conditions data provided or empty")
 
         db.session.add(screening_type)
         db.session.commit()
