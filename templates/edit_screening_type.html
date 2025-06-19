@@ -122,6 +122,36 @@
                     </div>
                 </div>
                 
+                <div class="mb-3">
+                    <label class="form-label">Trigger Conditions (FHIR)</label>
+                    <div class="trigger-conditions-container">
+                        <div id="edit-form-trigger-conditions-container" class="trigger-conditions-form-group">
+                            <div class="row mb-2">
+                                <div class="col-md-3">
+                                    <select class="form-select" id="edit-form-condition-system">
+                                        <option value="http://snomed.info/sct">SNOMED CT</option>
+                                        <option value="http://hl7.org/fhir/sid/icd-10-cm">ICD-10-CM</option>
+                                        <option value="http://hl7.org/fhir/sid/icd-9-cm">ICD-9-CM</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" id="edit-form-condition-code" placeholder="Condition code">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" id="edit-form-condition-display" placeholder="Display name">
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-outline-primary w-100" onclick="addTriggerConditionToForm('edit-form')">Add</button>
+                                </div>
+                            </div>
+                            <div id="edit-form-trigger-conditions-list" class="trigger-conditions-display"></div>
+                        </div>
+                    </div>
+                    <small class="trigger-conditions-help-text">Medical conditions that should trigger this screening recommendation</small>
+                    <input type="hidden" name="trigger_conditions" id="edit-form-trigger-conditions-data">
+                </div>
+
                 <div class="form-check mb-4">
                     {{ form.is_active(class="form-check-input") }}
                     {{ form.is_active.label(class="form-check-label") }}
