@@ -426,26 +426,61 @@ function addTriggerConditionToForm(formPrefix) {
     const code = codeInput.value.trim();
     const display = displayInput.value.trim();
     
-    if (code && display) {
-        const container = document.getElementById(`${formPrefix}-trigger-conditions-list`);
-        const conditionElement = document.createElement('span');
-        conditionElement.className = 'badge bg-info me-2 mb-2';
-        conditionElement.setAttribute('data-system', system);
-        conditionElement.setAttribute('data-code', code);
-        conditionElement.setAttribute('data-display', display);
-        conditionElement.innerHTML = `
-            ${display} (${code})
-            <button type="button" class="btn-close btn-close-white ms-1" 
-                    onclick="removeFormTriggerCondition(this)" aria-label="Remove"></button>
-        `;
-        container.appendChild(conditionElement);
-        
-        // Clear inputs
-        codeInput.value = '';
-        displayInput.value = '';
-        
-        updateFormTriggerConditionsData(formPrefix);
+    if (display) {
+        // If no code provided, try to auto-assign one from autocomplete
+        if (!code) {
+            // Try to find a matching condition and use its primary code
+            fetch(`/api/condition-autocomplete?q=${encodeURIComponent(display)}&limit=1`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.conditions && data.conditions.length > 0) {
+                        const primaryCode = data.conditions[0].primary_code || data.conditions[0].codes[0];
+                        if (primaryCode) {
+                            codeInput.value = primaryCode.code;
+                            systemSelect.value = primaryCode.system;
+                            addTriggerConditionElement(formPrefix, primaryCode.system, primaryCode.code, primaryCode.display);
+                        } else {
+                            // No code found, add with custom system
+                            addTriggerConditionElement(formPrefix, 'custom', 'auto-generated', display);
+                        }
+                    } else {
+                        // No matching condition found, add with custom system
+                        addTriggerConditionElement(formPrefix, 'custom', 'auto-generated', display);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error auto-assigning code:', error);
+                    addTriggerConditionElement(formPrefix, 'custom', 'auto-generated', display);
+                });
+        } else {
+            // Code provided, add directly
+            addTriggerConditionElement(formPrefix, system, code, display);
+        }
     }
+}
+
+// Helper function to add trigger condition element
+function addTriggerConditionElement(formPrefix, system, code, display) {
+    const container = document.getElementById(`${formPrefix}-trigger-conditions-list`);
+    const conditionElement = document.createElement('span');
+    conditionElement.className = 'badge bg-info me-2 mb-2';
+    conditionElement.setAttribute('data-system', system);
+    conditionElement.setAttribute('data-code', code);
+    conditionElement.setAttribute('data-display', display);
+    conditionElement.innerHTML = `
+        ${display} (${code})
+        <button type="button" class="btn-close btn-close-white ms-1" 
+                onclick="removeFormTriggerCondition(this)" aria-label="Remove"></button>
+    `;
+    container.appendChild(conditionElement);
+    
+    // Clear inputs
+    const displayInput = document.getElementById(`${formPrefix}-condition-display`);
+    const codeInput = document.getElementById(`${formPrefix}-condition-code`);
+    if (displayInput) displayInput.value = '';
+    if (codeInput) codeInput.value = '';
+    
+    updateFormTriggerConditionsData(formPrefix);
 }
 
 // Remove trigger condition from form
