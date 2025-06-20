@@ -968,7 +968,11 @@ def add_screening_type():
         print(f"Trigger conditions data received: {trigger_conditions_data}")
         if trigger_conditions_data and trigger_conditions_data.strip():
             try:
-                trigger_conditions = json.loads(trigger_conditions_data)
+                import html
+                # Decode HTML entities before parsing JSON
+                decoded_data = html.unescape(trigger_conditions_data)
+                print(f"Decoded trigger conditions data: {decoded_data}")
+                trigger_conditions = json.loads(decoded_data)
                 print(f"Parsed trigger conditions: {trigger_conditions}")
                 if isinstance(trigger_conditions, list):
                     screening_type.set_trigger_conditions(trigger_conditions)
@@ -1138,7 +1142,11 @@ def edit_screening_type(screening_type_id):
         if trigger_conditions_data and trigger_conditions_data.strip():
             try:
                 import json as json_module
-                trigger_conditions = json_module.loads(trigger_conditions_data)
+                import html
+                # Decode HTML entities before parsing JSON
+                decoded_data = html.unescape(trigger_conditions_data)
+                print(f"Edit - Decoded trigger conditions data: {decoded_data}")
+                trigger_conditions = json_module.loads(decoded_data)
                 print(f"Edit - Parsed trigger conditions: {trigger_conditions}")
                 if isinstance(trigger_conditions, list):
                     screening_type.set_trigger_conditions(trigger_conditions)
