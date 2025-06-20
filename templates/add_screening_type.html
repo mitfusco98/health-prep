@@ -1,3 +1,4 @@
+
 {% extends 'base_demo.html' %}
 
 {% block title %}HealthPrep - Add Screening Type{% endblock %}
@@ -46,27 +47,6 @@
             </div>
             
             <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label class="form-label">Default Frequency (Legacy)</label>
-                        <input type="text" class="form-control" name="default_frequency" placeholder="Optional text description">
-                        <small class="text-muted">Optional: Legacy text field (e.g., 'Annual', 'Every 5 years')</small>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label class="form-label">Gender Specific</label>
-                        <select class="form-select" name="gender_specific">
-                            <option value="">All Genders</option>
-                            <option value="Male">Male Only</option>
-                            <option value="Female">Female Only</option>
-                        </select>
-                        <small class="text-muted">Is this screening specific to a particular gender?</small>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row mb-3">
                 <div class="col-md-12">
                     <label class="form-label">Structured Frequency <span class="text-danger">*</span></label>
                     <div class="row">
@@ -90,27 +70,7 @@
             </div>
             
             <div class="row mb-3">
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label class="form-label">Frequency Number</label>
-                        <input type="number" class="form-control" name="frequency_number" min="1" max="100">
-                        <small class="text-muted">How many time units (e.g., "1" for every 1 year)</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="form-group">
-                        <label class="form-label">Frequency Unit</label>
-                        <select class="form-select" name="frequency_unit">
-                            <option value="">Select frequency unit</option>
-                            <option value="days">Days</option>
-                            <option value="weeks">Weeks</option>
-                            <option value="months">Months</option>
-                            <option value="years">Years</option>
-                        </select>
-                        <small class="text-muted">Time unit</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="form-group">
                         <label class="form-label">Gender Specific</label>
                         <select class="form-select" name="gender_specific">
@@ -119,6 +79,15 @@
                             <option value="Female">Female Only</option>
                         </select>
                         <small class="text-muted">Is this screening specific to a particular gender?</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="isActive" checked>
+                        <label class="form-check-label" for="isActive">
+                            Active
+                        </label>
+                        <div class="form-text">Whether this screening should appear in checklists</div>
                     </div>
                 </div>
             </div>
@@ -168,14 +137,6 @@
                 </div>
                 <small class="trigger-conditions-help-text">Medical conditions that should trigger this screening recommendation</small>
                 <input type="hidden" name="trigger_conditions" id="add-form-trigger-conditions-data">
-            </div>
-
-            <div class="form-check mb-3">
-                <input class="form-check-input" type="checkbox" name="is_active" id="isActive" checked>
-                <label class="form-check-label" for="isActive">
-                    Active
-                </label>
-                <div class="form-text">Whether this screening should appear in checklists</div>
             </div>
             
             <div class="mt-4">
@@ -229,55 +190,6 @@ function updateFormKeywordsData(formPrefix) {
     }).filter(keyword => keyword !== '');
     document.getElementById(`${formPrefix}-keywords-data`).value = JSON.stringify(keywords);
 }
-
-// Handle Enter key in keyword inputs
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle Enter key in form keyword inputs
-    document.querySelectorAll('[id$="-keyword-input"]').forEach(input => {
-        input.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const formPrefix = this.id.replace('-keyword-input', '');
-                addKeywordToForm(formPrefix);
-            }
-        });
-    });
-    
-    // Handle Enter key in trigger condition inputs
-    document.querySelectorAll('[id$="-condition-code"], [id$="-condition-display"]').forEach(input => {
-        input.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const formPrefix = this.id.includes('condition-code') ? 
-                    this.id.replace('-condition-code', '') : 
-                    this.id.replace('-condition-display', '');
-                addTriggerConditionToForm(formPrefix);
-            }
-        });
-    });
-    
-    // Handle form submission to ensure trigger conditions are included
-    const form = document.querySelector('form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            // Update trigger conditions data before submission
-            updateFormTriggerConditionsData('add-form');
-            
-            // Ensure the hidden field has proper data
-            const triggerConditionsField = document.getElementById('add-form-trigger-conditions-data');
-            const triggerConditionsValue = triggerConditionsField ? triggerConditionsField.value : '';
-            
-            // If no trigger conditions data, set empty array
-            if (!triggerConditionsValue || triggerConditionsValue.trim() === '') {
-                if (triggerConditionsField) {
-                    triggerConditionsField.value = '[]';
-                }
-            }
-            
-            console.log('Final trigger conditions value before submit:', triggerConditionsField ? triggerConditionsField.value : 'no field');
-        });
-    }
-});
 
 // Add trigger condition to form (similar to keywords)
 function addTriggerConditionToForm(formPrefix) {
@@ -336,10 +248,59 @@ function updateFormTriggerConditionsData(formPrefix) {
         console.log('Updated trigger conditions data:', conditions);
     }
 }
+
+// Handle Enter key in keyword inputs
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle Enter key in form keyword inputs
+    document.querySelectorAll('[id$="-keyword-input"]').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const formPrefix = this.id.replace('-keyword-input', '');
+                addKeywordToForm(formPrefix);
+            }
+        });
+    });
+    
+    // Handle Enter key in trigger condition inputs
+    document.querySelectorAll('[id$="-condition-code"], [id$="-condition-display"]').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const formPrefix = this.id.includes('condition-code') ? 
+                    this.id.replace('-condition-code', '') : 
+                    this.id.replace('-condition-display', '');
+                addTriggerConditionToForm(formPrefix);
+            }
+        });
+    });
+    
+    // Handle form submission to ensure trigger conditions are included
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Update trigger conditions data before submission
+            updateFormTriggerConditionsData('add-form');
+            
+            // Ensure the hidden field has proper data
+            const triggerConditionsField = document.getElementById('add-form-trigger-conditions-data');
+            const triggerConditionsValue = triggerConditionsField ? triggerConditionsField.value : '';
+            
+            // If no trigger conditions data, set empty array
+            if (!triggerConditionsValue || triggerConditionsValue.trim() === '') {
+                if (triggerConditionsField) {
+                    triggerConditionsField.value = '[]';
+                }
+            }
+            
+            console.log('Final trigger conditions value before submit:', triggerConditionsField ? triggerConditionsField.value : 'no field');
+        });
+    }
+});
 </script>
 
 <style>
-.keywords-container {
+.keywords-container, .trigger-conditions-container {
     border: 1px solid #dee2e6;
     border-radius: 0.375rem;
     padding: 1rem;
@@ -364,12 +325,12 @@ function updateFormTriggerConditionsData(formPrefix) {
     border-color: #0a58ca;
 }
 
-.keywords-display {
+.keywords-display, .trigger-conditions-display {
     min-height: 60px;
     margin-top: 0.5rem;
 }
 
-.keywords-help-text {
+.keywords-help-text, .trigger-conditions-help-text {
     color: #6c757d;
     font-size: 0.875em;
     margin-top: 0.25rem;
