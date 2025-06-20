@@ -126,7 +126,8 @@
                                 <input type="text" class="form-control" id="add-form-condition-code" placeholder="Condition code">
                             </div>
                             <div class="col-md-4">
-                                <input type="text" class="form-control" id="add-form-condition-display" placeholder="Display name">
+                                <input type="text" class="form-control" id="add-form-condition-display" placeholder="Display name" autocomplete="off">
+                                <div id="add-form-condition-suggestions" class="condition-suggestions"></div>
                             </div>
                             <div class="col-md-2">
                                 <button type="button" class="btn btn-outline-primary w-100" onclick="addTriggerConditionToForm('add-form')">Add</button>
@@ -338,6 +339,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .btn-close-white {
     filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Condition Autocomplete Styles */
+.condition-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+
+.condition-suggestion {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.condition-suggestion:hover {
+    background-color: #f8f9fa;
+}
+
+.condition-suggestion:last-child {
+    border-bottom: none;
+}
+
+.condition-name {
+    font-weight: 500;
+    color: #495057;
+}
+
+.condition-codes {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.condition-code {
+    display: inline-block;
+    margin-right: 0.5rem;
+    padding: 0.125rem 0.375rem;
+    background-color: #e9ecef;
+    border-radius: 0.25rem;
+    font-family: monospace;
 }
 </style>
 {% endblock %}
