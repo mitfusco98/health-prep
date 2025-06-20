@@ -965,16 +965,34 @@ def add_screening_type():
 
         # Handle trigger conditions if provided
         trigger_conditions_data = request.form.get('trigger_conditions')
+        print(f"Trigger conditions data received: {trigger_conditions_data}")
         if trigger_conditions_data and trigger_conditions_data.strip():
             try:
                 trigger_conditions = json.loads(trigger_conditions_data)
-                if isinstance(trigger_conditions, list) and trigger_conditions:
+                print(f"Parsed trigger conditions: {trigger_conditions}")
+                if isinstance(trigger_conditions, list):
                     screening_type.set_trigger_conditions(trigger_conditions)
+                    print(f"Set trigger conditions for screening type {screening_type.name}")
             except json.JSONDecodeError as e:
                 print(f"Error parsing trigger conditions JSON: {str(e)}")
+        else:
+            # Clear trigger conditions if none provided
+            screening_type.set_trigger_conditions([])
+            print("Cleared trigger conditions")
 
         db.session.add(screening_type)
         db.session.commit()
+        
+        # After commit, ensure trigger conditions are saved
+        if trigger_conditions_data and trigger_conditions_data.strip():
+            try:
+                trigger_conditions = json.loads(trigger_conditions_data)
+                if isinstance(trigger_conditions, list):
+                    screening_type.set_trigger_conditions(trigger_conditions)
+                    db.session.commit()
+                    print(f"Re-saved trigger conditions after commit for {screening_type.name}")
+            except json.JSONDecodeError:
+                pass
 
         # Handle keywords if provided
         keywords_data = request.form.get('keywords')
@@ -1116,17 +1134,21 @@ def edit_screening_type(screening_type_id):
 
         # Handle trigger conditions if provided
         trigger_conditions_data = request.form.get('trigger_conditions')
+        print(f"Edit - Trigger conditions data received: {trigger_conditions_data}")
         if trigger_conditions_data and trigger_conditions_data.strip():
             try:
                 import json as json_module
                 trigger_conditions = json_module.loads(trigger_conditions_data)
+                print(f"Edit - Parsed trigger conditions: {trigger_conditions}")
                 if isinstance(trigger_conditions, list):
                     screening_type.set_trigger_conditions(trigger_conditions)
+                    print(f"Edit - Set trigger conditions for screening type {screening_type.name}")
             except json_module.JSONDecodeError as e:
-                print(f"Error parsing trigger conditions JSON: {str(e)}")
+                print(f"Edit - Error parsing trigger conditions JSON: {str(e)}")
         else:
             # Clear trigger conditions if none provided
             screening_type.set_trigger_conditions([])
+            print("Edit - Cleared trigger conditions")
 
         # Handle keywords if provided
         keywords_data = request.form.get('keywords')
