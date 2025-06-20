@@ -339,5 +339,155 @@ document.addEventListener('DOMContentLoaded', function() {
 .btn-close-white {
     filter: invert(1) grayscale(100%) brightness(200%);
 }
+
+/* Trigger Conditions Management Styles */
+.trigger-conditions-container {
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+}
+
+.trigger-conditions-form-group {
+    margin-bottom: 0;
+}
+
+.trigger-conditions-display {
+    min-height: 60px;
+    margin-top: 0.5rem;
+}
+
+.trigger-conditions-help-text {
+    color: #6c757d;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
 </style>
+
+<script>
+// Add trigger condition to form (similar to keywords)
+function addTriggerConditionToForm(formPrefix) {
+    const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
+    const codeInput = document.getElementById(`${formPrefix}-condition-code`);
+    const displayInput = document.getElementById(`${formPrefix}-condition-display`);
+    
+    const system = systemSelect.value;
+    const code = codeInput.value.trim();
+    const display = displayInput.value.trim();
+    
+    if (code && display) {
+        const container = document.getElementById(`${formPrefix}-trigger-conditions-list`);
+        const conditionElement = document.createElement('span');
+        conditionElement.className = 'badge bg-info me-2 mb-2';
+        conditionElement.setAttribute('data-system', system);
+        conditionElement.setAttribute('data-code', code);
+        conditionElement.setAttribute('data-display', display);
+        conditionElement.innerHTML = `
+            ${display} (${code})
+            <button type="button" class="btn-close btn-close-white ms-1" 
+                    onclick="removeFormTriggerCondition(this)" aria-label="Remove"></button>
+        `;
+        container.appendChild(conditionElement);
+        
+        // Clear inputs
+        codeInput.value = '';
+        displayInput.value = '';
+        
+        updateFormTriggerConditionsData(formPrefix);
+    }
+}
+
+// Remove trigger condition from form
+function removeFormTriggerCondition(button) {
+    const conditionElement = button.closest('.badge');
+    const formPrefix = conditionElement.closest('[id$="-trigger-conditions-container"]').id.replace('-trigger-conditions-container', '');
+    conditionElement.remove();
+    updateFormTriggerConditionsData(formPrefix);
+}
+
+// Update hidden form data for trigger conditions
+function updateFormTriggerConditionsData(formPrefix) {
+    const container = document.getElementById(`${formPrefix}-trigger-conditions-list`);
+    const conditions = Array.from(container.querySelectorAll('.badge')).map(badge => {
+        return {
+            system: badge.getAttribute('data-system'),
+            code: badge.getAttribute('data-code'),
+            display: badge.getAttribute('data-display')
+        };
+    });
+    
+    const hiddenInput = document.getElementById(`${formPrefix}-trigger-conditions-data`);
+    if (hiddenInput) {
+        hiddenInput.value = JSON.stringify(conditions);
+        console.log('Updated trigger conditions data:', conditions);
+    }
+}
+
+// Load existing trigger conditions for editing
+function loadExistingTriggerConditions() {
+    const triggerConditions = {{ screening_type.get_trigger_conditions() | tojson }};
+    
+    if (triggerConditions && triggerConditions.length > 0) {
+        const container = document.getElementById('edit-form-trigger-conditions-list');
+        container.innerHTML = '';
+        
+        triggerConditions.forEach(condition => {
+            const conditionElement = document.createElement('span');
+            conditionElement.className = 'badge bg-info me-2 mb-2';
+            conditionElement.setAttribute('data-system', condition.system || '');
+            conditionElement.setAttribute('data-code', condition.code || '');
+            conditionElement.setAttribute('data-display', condition.display || '');
+            conditionElement.innerHTML = `
+                ${condition.display} (${condition.code})
+                <button type="button" class="btn-close btn-close-white ms-1" 
+                        onclick="removeFormTriggerCondition(this)" aria-label="Remove"></button>
+            `;
+            container.appendChild(conditionElement);
+        });
+        
+        updateFormTriggerConditionsData('edit-form');
+    }
+}
+
+// Enhanced page initialization
+document.addEventListener('DOMContentLoaded', function() {
+    loadExistingKeywords();
+    loadExistingTriggerConditions();
+    
+    // Handle Enter key in trigger condition inputs
+    document.querySelectorAll('[id$="-condition-code"], [id$="-condition-display"]').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const formPrefix = this.id.includes('condition-code') ? 
+                    this.id.replace('-condition-code', '') : 
+                    this.id.replace('-condition-display', '');
+                addTriggerConditionToForm(formPrefix);
+            }
+        });
+    });
+    
+    // Handle form submission to ensure trigger conditions are included
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Update trigger conditions data before submission
+            updateFormTriggerConditionsData('edit-form');
+            
+            // Ensure the hidden field has proper data
+            const triggerConditionsField = document.getElementById('edit-form-trigger-conditions-data');
+            const triggerConditionsValue = triggerConditionsField ? triggerConditionsField.value : '';
+            
+            // If no trigger conditions data, set empty array
+            if (!triggerConditionsValue || triggerConditionsValue.trim() === '') {
+                if (triggerConditionsField) {
+                    triggerConditionsField.value = '[]';
+                }
+            }
+            
+            console.log('Final trigger conditions value before submit:', triggerConditionsField ? triggerConditionsField.value : 'no field');
+        });
+    }
+});
+</script>
 {% endblock %}

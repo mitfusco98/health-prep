@@ -208,7 +208,100 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    // Handle Enter key in trigger condition inputs
+    document.querySelectorAll('[id$="-condition-code"], [id$="-condition-display"]').forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const formPrefix = this.id.includes('condition-code') ? 
+                    this.id.replace('-condition-code', '') : 
+                    this.id.replace('-condition-display', '');
+                addTriggerConditionToForm(formPrefix);
+            }
+        });
+    });
+    
+    // Handle form submission to ensure trigger conditions are included
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Update trigger conditions data before submission
+            updateFormTriggerConditionsData('add-form');
+            
+            // Ensure the hidden field has proper data
+            const triggerConditionsField = document.getElementById('add-form-trigger-conditions-data');
+            const triggerConditionsValue = triggerConditionsField ? triggerConditionsField.value : '';
+            
+            // If no trigger conditions data, set empty array
+            if (!triggerConditionsValue || triggerConditionsValue.trim() === '') {
+                if (triggerConditionsField) {
+                    triggerConditionsField.value = '[]';
+                }
+            }
+            
+            console.log('Final trigger conditions value before submit:', triggerConditionsField ? triggerConditionsField.value : 'no field');
+        });
+    }
 });
+
+// Add trigger condition to form (similar to keywords)
+function addTriggerConditionToForm(formPrefix) {
+    const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
+    const codeInput = document.getElementById(`${formPrefix}-condition-code`);
+    const displayInput = document.getElementById(`${formPrefix}-condition-display`);
+    
+    const system = systemSelect.value;
+    const code = codeInput.value.trim();
+    const display = displayInput.value.trim();
+    
+    if (code && display) {
+        const container = document.getElementById(`${formPrefix}-trigger-conditions-list`);
+        const conditionElement = document.createElement('span');
+        conditionElement.className = 'badge bg-info me-2 mb-2';
+        conditionElement.setAttribute('data-system', system);
+        conditionElement.setAttribute('data-code', code);
+        conditionElement.setAttribute('data-display', display);
+        conditionElement.innerHTML = `
+            ${display} (${code})
+            <button type="button" class="btn-close btn-close-white ms-1" 
+                    onclick="removeFormTriggerCondition(this)" aria-label="Remove"></button>
+        `;
+        container.appendChild(conditionElement);
+        
+        // Clear inputs
+        codeInput.value = '';
+        displayInput.value = '';
+        
+        updateFormTriggerConditionsData(formPrefix);
+    }
+}
+
+// Remove trigger condition from form
+function removeFormTriggerCondition(button) {
+    const conditionElement = button.closest('.badge');
+    const formPrefix = conditionElement.closest('[id$="-trigger-conditions-container"]').id.replace('-trigger-conditions-container', '');
+    conditionElement.remove();
+    updateFormTriggerConditionsData(formPrefix);
+}
+
+// Update hidden form data for trigger conditions
+function updateFormTriggerConditionsData(formPrefix) {
+    const container = document.getElementById(`${formPrefix}-trigger-conditions-list`);
+    const conditions = Array.from(container.querySelectorAll('.badge')).map(badge => {
+        return {
+            system: badge.getAttribute('data-system'),
+            code: badge.getAttribute('data-code'),
+            display: badge.getAttribute('data-display')
+        };
+    });
+    
+    const hiddenInput = document.getElementById(`${formPrefix}-trigger-conditions-data`);
+    if (hiddenInput) {
+        hiddenInput.value = JSON.stringify(conditions);
+        console.log('Updated trigger conditions data:', conditions);
+    }
+}
 </script>
 
 <style>
