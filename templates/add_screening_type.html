@@ -90,6 +90,40 @@
             </div>
             
             <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Frequency Number</label>
+                        <input type="number" class="form-control" name="frequency_number" min="1" max="100">
+                        <small class="text-muted">How many time units (e.g., "1" for every 1 year)</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Frequency Unit</label>
+                        <select class="form-select" name="frequency_unit">
+                            <option value="">Select frequency unit</option>
+                            <option value="days">Days</option>
+                            <option value="weeks">Weeks</option>
+                            <option value="months">Months</option>
+                            <option value="years">Years</option>
+                        </select>
+                        <small class="text-muted">Time unit</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Gender Specific</label>
+                        <select class="form-select" name="gender_specific">
+                            <option value="">All Genders</option>
+                            <option value="Male">Male Only</option>
+                            <option value="Female">Female Only</option>
+                        </select>
+                        <small class="text-muted">Is this screening specific to a particular gender?</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="form-group">
                         <label class="form-label">Minimum Age</label>

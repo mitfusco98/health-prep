@@ -948,19 +948,23 @@ def add_screening_type():
     form = ScreeningTypeForm()
 
     if form.validate_on_submit():
+        # Get form data with proper handling
+        frequency_number = request.form.get('frequency_number')
+        frequency_unit = request.form.get('frequency_unit')
+        gender_specific = request.form.get('gender_specific')
+        min_age = request.form.get('min_age')
+        max_age = request.form.get('max_age')
+        is_active = 'is_active' in request.form
+        
         screening_type = ScreeningType(
             name=form.name.data,
             description="",  # No longer using description field
-            frequency_number=form.frequency_number.data,
-            frequency_unit=(
-                form.frequency_unit.data if form.frequency_unit.data else None
-            ),
-            gender_specific=(
-                form.gender_specific.data if form.gender_specific.data else None
-            ),
-            min_age=form.min_age.data,
-            max_age=form.max_age.data,
-            is_active=form.is_active.data,
+            frequency_number=int(frequency_number) if frequency_number else None,
+            frequency_unit=frequency_unit if frequency_unit else None,
+            gender_specific=gender_specific if gender_specific else None,
+            min_age=int(min_age) if min_age else None,
+            max_age=int(max_age) if max_age else None,
+            is_active=is_active,
         )
 
         # Handle trigger conditions if provided
