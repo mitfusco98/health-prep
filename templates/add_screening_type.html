@@ -333,6 +333,101 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Condition autocomplete functionality
+function setupConditionAutocomplete(formPrefix) {
+    const displayInput = document.getElementById(`${formPrefix}-condition-display`);
+    const codeInput = document.getElementById(`${formPrefix}-condition-code`);
+    const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
+    const suggestionsDiv = document.getElementById(`${formPrefix}-condition-suggestions`);
+    
+    if (!displayInput || !suggestionsDiv) return;
+    
+    let debounceTimer;
+    
+    displayInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        
+        clearTimeout(debounceTimer);
+        
+        if (query.length < 2) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        
+        debounceTimer = setTimeout(() => {
+            fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect);
+        }, 300);
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!displayInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+}
+
+function fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect) {
+    fetch(`/api/condition-autocomplete?q=${encodeURIComponent(query)}&limit=8`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.conditions && data.conditions.length > 0) {
+                renderConditionSuggestions(data.conditions, suggestionsDiv, displayInput, codeInput, systemSelect);
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching condition suggestions:', error);
+            suggestionsDiv.style.display = 'none';
+        });
+}
+
+function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, codeInput, systemSelect) {
+    suggestionsDiv.innerHTML = '';
+    
+    conditions.forEach(condition => {
+        const suggestionDiv = document.createElement('div');
+        suggestionDiv.className = 'condition-suggestion';
+        
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'condition-name';
+        nameDiv.textContent = condition.condition_name;
+        
+        const codesDiv = document.createElement('div');
+        codesDiv.className = 'condition-codes';
+        
+        condition.codes.slice(0, 3).forEach(code => {
+            const codeSpan = document.createElement('span');
+            codeSpan.className = 'condition-code';
+            codeSpan.textContent = code.code;
+            codesDiv.appendChild(codeSpan);
+        });
+        
+        suggestionDiv.appendChild(nameDiv);
+        suggestionDiv.appendChild(codesDiv);
+        
+        suggestionDiv.addEventListener('click', function() {
+            const primaryCode = condition.primary_code || condition.codes[0];
+            if (primaryCode) {
+                displayInput.value = primaryCode.display;
+                codeInput.value = primaryCode.code;
+                systemSelect.value = primaryCode.system;
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+        
+        suggestionsDiv.appendChild(suggestionDiv);
+    });
+    
+    suggestionsDiv.style.display = 'block';
+}
+
+// Initialize autocomplete on page load
+document.addEventListener('DOMContentLoaded', function() {
+    setupConditionAutocomplete('add-form');
+});
 </script>
 
 <style>
