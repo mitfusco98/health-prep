@@ -429,16 +429,25 @@ function addTriggerConditionToForm(formPrefix) {
     if (display) {
         // If no code provided, try to auto-assign one from autocomplete
         if (!code) {
-            // Try to find a matching condition and use its primary code
+            // Try to find a matching condition and use code for selected system
             fetch(`/api/condition-autocomplete?q=${encodeURIComponent(display)}&limit=1`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.conditions && data.conditions.length > 0) {
-                        const primaryCode = data.conditions[0].primary_code || data.conditions[0].codes[0];
-                        if (primaryCode) {
-                            codeInput.value = primaryCode.code;
-                            systemSelect.value = primaryCode.system;
-                            addTriggerConditionElement(formPrefix, primaryCode.system, primaryCode.code, primaryCode.display);
+                        const condition = data.conditions[0];
+                        
+                        // Try to find code for the selected system first
+                        let codeForSystem = condition.codes.find(c => c.system === system);
+                        
+                        // If no code for selected system, use primary code
+                        if (!codeForSystem) {
+                            codeForSystem = condition.primary_code || condition.codes[0];
+                        }
+                        
+                        if (codeForSystem) {
+                            codeInput.value = codeForSystem.code;
+                            systemSelect.value = codeForSystem.system;
+                            addTriggerConditionElement(formPrefix, codeForSystem.system, codeForSystem.code, codeForSystem.display);
                         } else {
                             // No code found, add with custom system
                             addTriggerConditionElement(formPrefix, 'custom', 'auto-generated', display);
@@ -545,6 +554,7 @@ function setupConditionAutocomplete(formPrefix) {
     if (!displayInput || !suggestionsDiv) return;
     
     let debounceTimer;
+    let currentConditionData = null;
     
     displayInput.addEventListener('input', function() {
         const query = this.value.trim();
@@ -553,12 +563,22 @@ function setupConditionAutocomplete(formPrefix) {
         
         if (query.length < 2) {
             suggestionsDiv.style.display = 'none';
+            currentConditionData = null;
             return;
         }
         
         debounceTimer = setTimeout(() => {
-            fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect);
+            fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect, (conditionData) => {
+                currentConditionData = conditionData;
+            });
         }, 300);
+    });
+    
+    // Handle system selection change
+    systemSelect.addEventListener('change', function() {
+        if (currentConditionData && displayInput.value.trim()) {
+            updateCodeForSystem(currentConditionData, this.value, codeInput, displayInput);
+        }
     });
     
     // Hide suggestions when clicking outside
@@ -569,12 +589,12 @@ function setupConditionAutocomplete(formPrefix) {
     });
 }
 
-function fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect) {
+function fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect, onConditionSelected) {
     fetch(`/api/condition-autocomplete?q=${encodeURIComponent(query)}&limit=8`)
         .then(response => response.json())
         .then(data => {
             if (data.conditions && data.conditions.length > 0) {
-                renderConditionSuggestions(data.conditions, suggestionsDiv, displayInput, codeInput, systemSelect);
+                renderConditionSuggestions(data.conditions, suggestionsDiv, displayInput, codeInput, systemSelect, onConditionSelected);
             } else {
                 suggestionsDiv.style.display = 'none';
             }
@@ -585,7 +605,7 @@ function fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInpu
         });
 }
 
-function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, codeInput, systemSelect) {
+function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, codeInput, systemSelect, onConditionSelected) {
     suggestionsDiv.innerHTML = '';
     
     conditions.forEach(condition => {
@@ -616,6 +636,9 @@ function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, co
                 codeInput.value = primaryCode.code;
                 systemSelect.value = primaryCode.system;
                 suggestionsDiv.style.display = 'none';
+                if (onConditionSelected) {
+                    onConditionSelected(condition);
+                }
             }
         });
         
@@ -623,6 +646,25 @@ function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, co
     });
     
     suggestionsDiv.style.display = 'block';
+}
+
+// Function to update code when system changes
+function updateCodeForSystem(conditionData, selectedSystem, codeInput, displayInput) {
+    if (!conditionData || !conditionData.codes) return;
+    
+    // Find code for the selected system
+    const codeForSystem = conditionData.codes.find(code => code.system === selectedSystem);
+    
+    if (codeForSystem) {
+        codeInput.value = codeForSystem.code;
+        displayInput.value = codeForSystem.display;
+    } else {
+        // If no code exists for this system, clear the code but keep display name
+        codeInput.value = '';
+        if (!displayInput.value) {
+            displayInput.value = conditionData.condition_name;
+        }
+    }
 }
 
 // Enhanced page initialization
