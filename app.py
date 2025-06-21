@@ -1385,4 +1385,3 @@ register_api_access_middleware(app)
 from admin_middleware import register_admin_middleware
 
 register_admin_middleware(app)
-

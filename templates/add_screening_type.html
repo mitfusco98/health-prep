@@ -1,3 +1,4 @@
+
 {% extends 'base_demo.html' %}
 
 {% block title %}HealthPrep - Add Screening Type{% endblock %}
@@ -29,7 +30,7 @@
                 <input type="text" class="form-control" name="name" required>
                 <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy')</small>
             </div>
-
+            
             <div class="mb-3">
                 <label class="form-label">Keywords for Document Matching</label>
                 <div class="keywords-container">
@@ -44,7 +45,7 @@
                 <small class="keywords-help-text">Keywords help identify relevant documents for this screening type</small>
                 <input type="hidden" name="keywords" id="add-form-keywords-data">
             </div>
-
+            
             <div class="row mb-3">
                 <div class="col-md-12">
                     <label class="form-label">Structured Frequency <span class="text-danger">*</span></label>
@@ -67,7 +68,7 @@
                     <small class="text-muted">How often this screening should be performed (e.g., "1 year", "6 months", "3 years")</small>
                 </div>
             </div>
-
+            
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="form-group">
@@ -90,7 +91,7 @@
                     </div>
                 </div>
             </div>
-
+            
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="form-group">
@@ -107,7 +108,7 @@
                     </div>
                 </div>
             </div>
-
+            
             <div class="mb-3">
                 <label class="form-label">Trigger Conditions (FHIR)</label>
                 <div class="trigger-conditions-container">
@@ -138,7 +139,7 @@
                 <small class="trigger-conditions-help-text">Medical conditions that should trigger this screening recommendation</small>
                 <input type="hidden" name="trigger_conditions" id="add-form-trigger-conditions-data">
             </div>
-
+            
             <div class="mt-4">
                 <a href="{{ url_for('screening_list', tab='types') }}" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">Save Screening Type</button>
@@ -152,7 +153,7 @@
 function addKeywordToForm(formPrefix) {
     const input = document.getElementById(`${formPrefix}-keyword-input`);
     const keyword = input.value.trim();
-
+    
     if (keyword) {
         const container = document.getElementById(`${formPrefix}-keywords-list`);
         const keywordElement = document.createElement('span');
@@ -196,24 +197,33 @@ function addTriggerConditionToForm(formPrefix) {
     const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
     const codeInput = document.getElementById(`${formPrefix}-condition-code`);
     const displayInput = document.getElementById(`${formPrefix}-condition-display`);
-
+    
     const system = systemSelect.value;
     const code = codeInput.value.trim();
     const display = displayInput.value.trim();
-
+    
     if (display) {
         // If no code provided, try to auto-assign one from autocomplete
         if (!code) {
-            // Try to find a matching condition and use its primary code
+            // Try to find a matching condition and use code for selected system
             fetch(`/api/condition-autocomplete?q=${encodeURIComponent(display)}&limit=1`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.conditions && data.conditions.length > 0) {
-                        const primaryCode = data.conditions[0].primary_code || data.conditions[0].codes[0];
-                        if (primaryCode) {
-                            codeInput.value = primaryCode.code;
-                            systemSelect.value = primaryCode.system;
-                            addTriggerConditionElement(formPrefix, primaryCode.system, primaryCode.code, primaryCode.display);
+                        const condition = data.conditions[0];
+                        
+                        // Try to find code for the selected system first
+                        let codeForSystem = condition.codes.find(c => c.system === system);
+                        
+                        // If no code for selected system, use primary code
+                        if (!codeForSystem) {
+                            codeForSystem = condition.primary_code || condition.codes[0];
+                        }
+                        
+                        if (codeForSystem) {
+                            codeInput.value = codeForSystem.code;
+                            systemSelect.value = codeForSystem.system;
+                            addTriggerConditionElement(formPrefix, codeForSystem.system, codeForSystem.code, codeForSystem.display);
                         } else {
                             // No code found, add with custom system
                             addTriggerConditionElement(formPrefix, 'custom', 'auto-generated', display);
@@ -248,13 +258,13 @@ function addTriggerConditionElement(formPrefix, system, code, display) {
                 onclick="removeFormTriggerCondition(this)" aria-label="Remove"></button>
     `;
     container.appendChild(conditionElement);
-
+    
     // Clear inputs
     const displayInput = document.getElementById(`${formPrefix}-condition-display`);
     const codeInput = document.getElementById(`${formPrefix}-condition-code`);
     if (displayInput) displayInput.value = '';
     if (codeInput) codeInput.value = '';
-
+    
     updateFormTriggerConditionsData(formPrefix);
 }
 
@@ -276,7 +286,7 @@ function updateFormTriggerConditionsData(formPrefix) {
             display: badge.getAttribute('data-display')
         };
     });
-
+    
     const hiddenInput = document.getElementById(`${formPrefix}-trigger-conditions-data`);
     if (hiddenInput) {
         hiddenInput.value = JSON.stringify(conditions);
@@ -296,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
+    
     // Handle Enter key in trigger condition inputs
     document.querySelectorAll('[id$="-condition-code"], [id$="-condition-display"]').forEach(input => {
         input.addEventListener('keypress', function(e) {
@@ -309,25 +319,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
+    
     // Handle form submission to ensure trigger conditions are included
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
             // Update trigger conditions data before submission
             updateFormTriggerConditionsData('add-form');
-
+            
             // Ensure the hidden field has proper data
             const triggerConditionsField = document.getElementById('add-form-trigger-conditions-data');
             const triggerConditionsValue = triggerConditionsField ? triggerConditionsField.value : '';
-
+            
             // If no trigger conditions data, set empty array
             if (!triggerConditionsValue || triggerConditionsValue.trim() === '') {
                 if (triggerConditionsField) {
                     triggerConditionsField.value = '[]';
                 }
             }
-
+            
             console.log('Final trigger conditions value before submit:', triggerConditionsField ? triggerConditionsField.value : 'no field');
         });
     }
@@ -339,26 +349,37 @@ function setupConditionAutocomplete(formPrefix) {
     const codeInput = document.getElementById(`${formPrefix}-condition-code`);
     const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
     const suggestionsDiv = document.getElementById(`${formPrefix}-condition-suggestions`);
-
+    
     if (!displayInput || !suggestionsDiv) return;
-
+    
     let debounceTimer;
-
+    let currentConditionData = null; // Store the current condition data
+    
     displayInput.addEventListener('input', function() {
         const query = this.value.trim();
-
+        
         clearTimeout(debounceTimer);
-
+        
         if (query.length < 2) {
             suggestionsDiv.style.display = 'none';
+            currentConditionData = null;
             return;
         }
-
+        
         debounceTimer = setTimeout(() => {
-            fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect);
+            fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect, (conditionData) => {
+                currentConditionData = conditionData;
+            });
         }, 300);
     });
-
+    
+    // Handle system selection change
+    systemSelect.addEventListener('change', function() {
+        if (currentConditionData && displayInput.value.trim()) {
+            updateCodeForSystem(currentConditionData, this.value, codeInput, displayInput);
+        }
+    });
+    
     // Hide suggestions when clicking outside
     document.addEventListener('click', function(e) {
         if (!displayInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
@@ -367,12 +388,12 @@ function setupConditionAutocomplete(formPrefix) {
     });
 }
 
-function fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect) {
+function fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect, onConditionSelected) {
     fetch(`/api/condition-autocomplete?q=${encodeURIComponent(query)}&limit=8`)
         .then(response => response.json())
         .then(data => {
             if (data.conditions && data.conditions.length > 0) {
-                renderConditionSuggestions(data.conditions, suggestionsDiv, displayInput, codeInput, systemSelect);
+                renderConditionSuggestions(data.conditions, suggestionsDiv, displayInput, codeInput, systemSelect, onConditionSelected);
             } else {
                 suggestionsDiv.style.display = 'none';
             }
@@ -383,30 +404,30 @@ function fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInpu
         });
 }
 
-function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, codeInput, systemSelect) {
+function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, codeInput, systemSelect, onConditionSelected) {
     suggestionsDiv.innerHTML = '';
-
+    
     conditions.forEach(condition => {
         const suggestionDiv = document.createElement('div');
         suggestionDiv.className = 'condition-suggestion';
-
+        
         const nameDiv = document.createElement('div');
         nameDiv.className = 'condition-name';
         nameDiv.textContent = condition.condition_name;
-
+        
         const codesDiv = document.createElement('div');
         codesDiv.className = 'condition-codes';
-
+        
         condition.codes.slice(0, 3).forEach(code => {
             const codeSpan = document.createElement('span');
             codeSpan.className = 'condition-code';
             codeSpan.textContent = code.code;
             codesDiv.appendChild(codeSpan);
         });
-
+        
         suggestionDiv.appendChild(nameDiv);
         suggestionDiv.appendChild(codesDiv);
-
+        
         suggestionDiv.addEventListener('click', function() {
             const primaryCode = condition.primary_code || condition.codes[0];
             if (primaryCode) {
@@ -414,106 +435,43 @@ function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, co
                 codeInput.value = primaryCode.code;
                 systemSelect.value = primaryCode.system;
                 suggestionsDiv.style.display = 'none';
+                // Store condition data for system changes
+                if (onConditionSelected) {
+                    onConditionSelected(condition);
+                }
             }
         });
-
+        
         suggestionsDiv.appendChild(suggestionDiv);
     });
-
+    
     suggestionsDiv.style.display = 'block';
+}
+
+// Function to update code when system changes
+function updateCodeForSystem(conditionData, selectedSystem, codeInput, displayInput) {
+    if (!conditionData || !conditionData.codes) return;
+    
+    // Find code for the selected system
+    const codeForSystem = conditionData.codes.find(code => code.system === selectedSystem);
+    
+    if (codeForSystem) {
+        codeInput.value = codeForSystem.code;
+        displayInput.value = codeForSystem.display;
+    } else {
+        // If no code exists for this system, clear the code but keep display name
+        codeInput.value = '';
+        // Keep the original display name or use a generic one
+        if (!displayInput.value) {
+            displayInput.value = conditionData.condition_name;
+        }
+    }
 }
 
 // Initialize autocomplete on page load
 document.addEventListener('DOMContentLoaded', function() {
     setupConditionAutocomplete('add-form');
 });
-
-// Auto-assign FHIR code based on condition name
-function autoAssignConditionCode(formPrefix) {
-    const displayInput = document.getElementById(`${formPrefix}-condition-display`);
-    const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
-    const codeInput = document.getElementById(`${formPrefix}-condition-code`);
-
-    const display = displayInput.value.trim();
-    const system = systemSelect.value;
-    const code = codeInput.value.trim();
-
-    if (display) {
-        if (!code) {
-            // Auto-assign code based on display name and selected system
-            const systemParam = system !== 'custom' ? `&system=${encodeURIComponent(system)}` : '';
-            fetch(`/api/condition-autocomplete?q=${encodeURIComponent(display)}${systemParam}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.suggestions && data.suggestions.length > 0) {
-                        const firstSuggestion = data.suggestions[0];
-                        if (firstSuggestion.codes && firstSuggestion.codes.length > 0) {
-                            const primaryCode = firstSuggestion.codes[0];
-                            addTriggerConditionElement(formPrefix, primaryCode.system, primaryCode.code, 
-                                                    primaryCode.display);
-                        } else {
-                            // No code found for selected system, add with custom system
-                            addTriggerConditionElement(formPrefix, 'custom', 'auto-generated', display);
-                        }
-                    } else {
-                        // No matching condition found, add with custom system
-                        addTriggerConditionElement(formPrefix, 'custom', 'auto-generated', display);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error auto-assigning code:', error);
-                    addTriggerConditionElement(formPrefix, 'custom', 'auto-generated', display);
-                });
-        } else {
-            // Code provided, add directly
-            addTriggerConditionElement(formPrefix, system, code, display);
-        }
-    }
-}
-
-// Handle system change to re-lookup code if display name exists
-function handleSystemChange(formPrefix) {
-    const displayInput = document.getElementById(`${formPrefix}-condition-display`);
-    const codeInput = document.getElementById(`${formPrefix}-condition-code`);
-    const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
-
-    const display = displayInput.value.trim();
-    const system = systemSelect.value;
-
-    // If we have a display name but the code was auto-generated, re-lookup
-    if (display && (codeInput.value === 'auto-generated' || codeInput.value === '')) {
-        codeInput.value = ''; // Clear the code field
-
-        if (system !== 'custom') {
-            // Re-lookup code for the new system
-            fetch(`/api/condition-autocomplete?q=${encodeURIComponent(display)}&system=${encodeURIComponent(system)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.suggestions && data.suggestions.length > 0) {
-                        const firstSuggestion = data.suggestions[0];
-                        if (firstSuggestion.codes && firstSuggestion.codes.length > 0) {
-                            const primaryCode = firstSuggestion.codes[0];
-                            codeInput.value = primaryCode.code;
-                            // Update display if the matched term is more specific
-                            if (primaryCode.display && primaryCode.display !== display) {
-                                displayInput.value = primaryCode.display;
-                            }
-                        } else {
-                            codeInput.value = 'auto-generated';
-                        }
-                    } else {
-                        codeInput.value = 'auto-generated';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error re-looking up code:', error);
-                    codeInput.value = 'auto-generated';
-                });
-        } else {
-            codeInput.value = 'auto-generated';
-        }
-    }
-}
 </script>
 
 <style>
