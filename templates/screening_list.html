@@ -566,7 +566,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="border rounded p-3 bg-light">
                             <div id="add-form-trigger-conditions-container">
                                 <div class="d-flex mb-2">
-                                    <select class="form-select me-2" id="add-form-condition-system" style="max-width: 200px;">
+                                    <select class="form-select me-2" id="add-form-condition-system" style="max-width: 200px;" onchange="handleSystemChange('add-form')">
                                         <option value="http://snomed.info/sct">SNOMED CT</option>
                                         <option value="http://hl7.org/fhir/sid/icd-10-cm">ICD-10-CM</option>
                                         <option value="http://hl7.org/fhir/sid/icd-9-cm">ICD-9-CM</option>

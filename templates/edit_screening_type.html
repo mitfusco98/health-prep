@@ -128,7 +128,7 @@
                         <div id="edit-form-trigger-conditions-container" class="trigger-conditions-form-group">
                             <div class="row mb-2">
                                 <div class="col-md-3">
-                                    <select class="form-select" id="edit-form-condition-system">
+                                    <select class="form-select" id="edit-form-condition-system" onchange="handleSystemChange('edit-form')">
                                         <option value="http://snomed.info/sct">SNOMED CT</option>
                                         <option value="http://hl7.org/fhir/sid/icd-10-cm">ICD-10-CM</option>
                                         <option value="http://hl7.org/fhir/sid/icd-9-cm">ICD-9-CM</option>
@@ -455,6 +455,50 @@ function addTriggerConditionToForm(formPrefix) {
         } else {
             // Code provided, add directly
             addTriggerConditionElement(formPrefix, system, code, display);
+        }
+    }
+}
+
+// Handle system change to re-lookup code if display name exists
+function handleSystemChange(formPrefix) {
+    const displayInput = document.getElementById(`${formPrefix}-condition-display`);
+    const codeInput = document.getElementById(`${formPrefix}-condition-code`);
+    const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
+    
+    const display = displayInput.value.trim();
+    const system = systemSelect.value;
+    
+    // If we have a display name but the code was auto-generated, re-lookup
+    if (display && (codeInput.value === 'auto-generated' || codeInput.value === '')) {
+        codeInput.value = ''; // Clear the code field
+        
+        if (system !== 'custom') {
+            // Re-lookup code for the new system
+            fetch(`/api/condition-autocomplete?q=${encodeURIComponent(display)}&system=${encodeURIComponent(system)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        const firstSuggestion = data.suggestions[0];
+                        if (firstSuggestion.codes && firstSuggestion.codes.length > 0) {
+                            const primaryCode = firstSuggestion.codes[0];
+                            codeInput.value = primaryCode.code;
+                            // Update display if the matched term is more specific
+                            if (primaryCode.display && primaryCode.display !== display) {
+                                displayInput.value = primaryCode.display;
+                            }
+                        } else {
+                            codeInput.value = 'auto-generated';
+                        }
+                    } else {
+                        codeInput.value = 'auto-generated';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error re-looking up code:', error);
+                    codeInput.value = 'auto-generated';
+                });
+        } else {
+            codeInput.value = 'auto-generated';
         }
     }
 }

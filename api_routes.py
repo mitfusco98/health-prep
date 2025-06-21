@@ -1242,6 +1242,50 @@ def add_hospital_summary_api(patient_id):
         return jsonify({"error": "Internal server error"}), 500
 
 
+@app.route("/api/condition-autocomplete", methods=["GET"])
+@csrf.exempt
+def api_condition_autocomplete():
+    """
+    Get FHIR code suggestions for condition names
+    
+    Query parameters:
+    - q: Search term for condition name
+    - system: Optional coding system to filter results
+    """
+    try:
+        search_term = request.args.get('q', '').strip().lower()
+        system_filter = request.args.get('system', '').strip()
+        
+        if not search_term or len(search_term) < 2:
+            return jsonify({'suggestions': []}), 200
+        
+        # Import the autocomplete function
+        from fhir_condition_autocomplete import get_condition_suggestions
+        
+        # Get suggestions
+        suggestions = get_condition_suggestions(search_term)
+        
+        # Filter by system if specified
+        if system_filter:
+            filtered_suggestions = []
+            for suggestion in suggestions:
+                filtered_codes = [
+                    code for code in suggestion.get('codes', [])
+                    if code.get('system') == system_filter
+                ]
+                if filtered_codes:
+                    filtered_suggestion = suggestion.copy()
+                    filtered_suggestion['codes'] = filtered_codes
+                    filtered_suggestions.append(filtered_suggestion)
+            suggestions = filtered_suggestions
+        
+        return jsonify({'suggestions': suggestions[:10]}), 200  # Limit to 10 results
+        
+    except Exception as e:
+        logger.error(f"Error in condition autocomplete: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 @app.route("/api/patients/<int:patient_id>/documents", methods=["POST"])
 @csrf.exempt
 @log_data_modification("document")
