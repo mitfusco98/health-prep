@@ -898,7 +898,6 @@ def add_condition_api(patient_id):
         if "diagnosed_date" not in data or not isinstance(data["diagnosed_date"], str):
             errors.append("diagnosed_date is required and must be a string")
         else:
-```python
             try:
                 datetime.strptime(data["diagnosed_date"], "%Y-%m-%d")
             except ValueError:
