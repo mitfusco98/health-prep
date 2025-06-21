@@ -169,11 +169,29 @@ def index(date_str=None):
     )
 
     # Get recent documents
-    recent_documents = (
-        MedicalDocument.query.order_by(MedicalDocument.created_at.desc())
-        .limit(10)
-        .all()
-    )
+    # Get recent documents with retry logic for connection issues
+    recent_documents = []
+    try:
+        recent_documents = (
+            MedicalDocument.query.order_by(MedicalDocument.created_at.desc())
+            .limit(10)
+            .all()
+        )
+    except (OperationalError, DisconnectionError) as e:
+        if "SSL connection has been closed" in str(e):
+            print("Database connection lost, attempting to reconnect...")
+            db.session.remove()
+            try:
+                recent_documents = (
+                    MedicalDocument.query.order_by(MedicalDocument.created_at.desc())
+                    .limit(10)
+                    .all()
+                )
+            except Exception as retry_error:
+                print(f"Database retry failed: {retry_error}")
+                recent_documents = []
+        else:
+            raise
 
     # Get selected date's appointments or default to today
     today = datetime.now().date()

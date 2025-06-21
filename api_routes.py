@@ -13,6 +13,10 @@ from models import (
     MedicalDocument,
     Appointment,
     PatientAlert,
+    ScreeningType, # Import ScreeningType model
+    Keyword, # Import Keyword model
+    ScreeningKeyword, # Import ScreeningKeyword model
+    KeywordConfig # Import KeywordConfig model
 )
 from jwt_utils import jwt_required, optional_jwt, admin_required
 from cache_manager import cache_route, invalidate_cache_pattern, cache_manager
@@ -28,8 +32,10 @@ from db_utils import (
 )
 from datetime import datetime, date, timedelta
 import logging
+import time
 from sqlalchemy import func, or_
 from comprehensive_logging import log_patient_operation, log_data_modification
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -892,6 +898,7 @@ def add_condition_api(patient_id):
         if "diagnosed_date" not in data or not isinstance(data["diagnosed_date"], str):
             errors.append("diagnosed_date is required and must be a string")
         else:
+```python
             try:
                 datetime.strptime(data["diagnosed_date"], "%Y-%m-%d")
             except ValueError:
@@ -1304,4 +1311,54 @@ def add_document_api(patient_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error adding medical document: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+from functools import lru_cache
+from flask import request
+import hashlib
+
+# Cache for screening keywords (5 minute TTL)
+screening_keywords_cache = {}
+CACHE_TTL = 300  # 5 minutes
+
+@app.route("/api/screening-keywords/<int:screening_id>", methods=["GET"])
+def get_screening_keywords(screening_id):
+    try:
+        # Check cache first
+        cache_key = f"screening_keywords_{screening_id}"
+        current_time = time.time()
+
+        if cache_key in screening_keywords_cache:
+            cached_data, timestamp = screening_keywords_cache[cache_key]
+            if current_time - timestamp < CACHE_TTL:
+                return jsonify(cached_data)
+
+        print(f"API: Getting keywords for screening ID {screening_id}")
+
+        # Get screening type
+        screening = ScreeningType.query.get_or_404(screening_id)
+        
+        # Get keywords associated with the screening type
+        keywords = Keyword.query.join(ScreeningKeyword).filter(ScreeningKeyword.screening_id == screening_id).all()
+
+        # Get keyword config for the screening type
+        keyword_config = KeywordConfig.query.filter_by(screening_id=screening_id).first()
+
+        # Convert keywords to a list of names
+        keywords_list = [keyword.name for keyword in keywords]
+
+        response_data = {
+            "screening_id": screening_id,
+            "screening_name": screening.name,
+            "keywords": keywords_list,
+            "keyword_config": keyword_config.config if keyword_config else {}
+        }
+
+        # Cache the response
+        screening_keywords_cache[cache_key] = (response_data, current_time)
+
+        return jsonify(response_data)
+
+    except Exception as e:
+        logger.error(f"Error getting screening keywords: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500

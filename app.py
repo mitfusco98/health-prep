@@ -959,7 +959,8 @@ def validate_session_security():
             "/api/",
         ]
 
-        is_repository_request = any(path in request.path for path in repository_paths)
+        is_repository_request = any(path in request.path for path<previous_generation>```text
+in repository_paths)
         is_navigation_request = any(path in request.path for path in navigation_paths) or request.method == "GET"
 
         # More generous rate limits: 200 for repository, 100 for navigation/GET, 40 for modifications
@@ -1385,4 +1386,3 @@ register_api_access_middleware(app)
 from admin_middleware import register_admin_middleware
 
 register_admin_middleware(app)
-
