@@ -4775,6 +4775,30 @@ def condition_autocomplete():
         return jsonify({"conditions": [], "error": str(e)})
 
 
+@app.route('/api/screening-name-autocomplete')
+def screening_name_autocomplete():
+    """
+    API endpoint for screening name autocomplete
+    
+    Query parameters:
+    - q: Search query string
+    - limit: Maximum number of results (default: 10)
+    """
+    from screening_name_autocomplete import screening_autocomplete_service
+    
+    query = request.args.get('q', '').strip()
+    limit = int(request.args.get('limit', 10))
+    
+    if not query or len(query) < 2:
+        return jsonify({"screenings": []})
+    
+    try:
+        screenings = screening_autocomplete_service.search_screenings(query, limit)
+        return jsonify({"screenings": screenings})
+    except Exception as e:
+        return jsonify({"screenings": [], "error": str(e)})
+
+
 @app.route(
     "/patients/<int:patient_id>/screenings/<int:screening_id>/edit", methods=["POST"]
 )
