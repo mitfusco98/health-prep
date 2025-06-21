@@ -1018,3 +1018,82 @@ class AdminLog(db.Model):
 
         db.session.add(log_entry)
         return log_entry
+
+
+class Keyword(db.Model):
+    """Keywords for document and screening matching"""
+
+    __tablename__ = "keywords"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    def __repr__(self):
+        return f"<Keyword {self.name}>"
+
+
+class ScreeningKeyword(db.Model):
+    """Many-to-many relationship between screening types and keywords"""
+
+    __tablename__ = "screening_keywords"
+
+    id = db.Column(db.Integer, primary_key=True)
+    screening_id = db.Column(db.Integer, db.ForeignKey("screening_type.id"), nullable=False)
+    keyword_id = db.Column(db.Integer, db.ForeignKey("keywords.id"), nullable=False)
+    weight = db.Column(db.Float, default=1.0)
+    section = db.Column(db.String(50))  # 'labs', 'imaging', 'consults', etc.
+    case_sensitive = db.Column(db.Boolean, default=False)
+    exact_match = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    screening_type = db.relationship("ScreeningType", backref=db.backref("keyword_associations", lazy=True))
+    keyword = db.relationship("Keyword", backref=db.backref("screening_associations", lazy=True))
+
+    def __repr__(self):
+        return f"<ScreeningKeyword screening_id={self.screening_id} keyword_id={self.keyword_id}>"
+
+
+class KeywordConfig(db.Model):
+    """Configuration settings for keyword matching per screening type"""
+
+    __tablename__ = "keyword_configs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    screening_id = db.Column(db.Integer, db.ForeignKey("screening_type.id"), nullable=False, unique=True)
+    config = db.Column(db.Text)  # JSON string with configuration data
+    fallback_enabled = db.Column(db.Boolean, default=True)
+    confidence_threshold = db.Column(db.Float, default=0.3)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    # Relationship
+    screening_type = db.relationship("ScreeningType", backref=db.backref("keyword_config", uselist=False))
+
+    def __repr__(self):
+        return f"<KeywordConfig for screening_id={self.screening_id}>"
+
+    @property
+    def config_dict(self):
+        """Return configuration as a dictionary"""
+        if not self.config:
+            return {}
+        try:
+            return json.loads(self.config)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    def set_config(self, config_dict):
+        """Set configuration from a dictionary"""
+        if config_dict:
+            self.config = json.dumps(config_dict)
+        else:
+            self.config = None
