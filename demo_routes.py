@@ -4733,6 +4733,30 @@ def add_screening_recommendation():
     return redirect(url_for("screening_list", _t=timestamp))
 
 
+@app.route('/api/condition-autocomplete')
+def condition_autocomplete():
+    """
+    API endpoint for FHIR condition code autocomplete
+    
+    Query parameters:
+    - q: Search query string
+    - limit: Maximum number of results (default: 10)
+    """
+    from fhir_condition_autocomplete import autocomplete_service
+    
+    query = request.args.get('q', '').strip()
+    limit = int(request.args.get('limit', 10))
+    
+    if not query or len(query) < 2:
+        return jsonify({"conditions": []})
+    
+    try:
+        conditions = autocomplete_service.search_conditions(query, limit)
+        return jsonify({"conditions": conditions})
+    except Exception as e:
+        return jsonify({"conditions": [], "error": str(e)})
+
+
 @app.route(
     "/patients/<int:patient_id>/screenings/<int:screening_id>/edit", methods=["POST"]
 )
