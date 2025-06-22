@@ -615,30 +615,24 @@ class ScreeningType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     description = db.Column(db.Text)
-    
-    # === FREQUENCY FIELDS ===
     default_frequency = db.Column(db.String(50))  # e.g., "Annual", "Every 3 years" - kept for backward compatibility
     frequency_number = db.Column(db.Integer)  # e.g., 1, 3, 6
     frequency_unit = db.Column(db.String(20))  # e.g., "days", "weeks", "months", "years"
-    frequency_months = db.Column(db.Integer)  # Frequency in months for easy calculation
+    gender_specific = db.Column(db.String(10))  # "Male" or "Female" or None for all
+    min_age = db.Column(
+        db.Integer
+    )  # Minimum age for this screening, null if no minimum
+    max_age = db.Column(
+        db.Integer
+    )  # Maximum age for this screening, null if no maximum
+    is_active = db.Column(db.Boolean, default=True)
     
-    # === AGE AND GENDER CRITERIA ===
-    min_age = db.Column(db.Integer)  # Minimum age for this screening, null if no minimum
-    max_age = db.Column(db.Integer)  # Maximum age for this screening, null if no maximum
-    gender = db.Column(db.String(10))  # "Male", "Female", or None for all genders
-    gender_specific = db.Column(db.String(10))  # Legacy field - kept for backward compatibility
-    
-    # === TRIGGER CONDITIONS ===
+    # === FHIR TRIGGER CONDITIONS ===
     trigger_conditions = db.Column(db.Text)  # JSON array of condition codes that trigger this screening
     
-    # === DOCUMENT PARSING FIELDS ===
-    keywords = db.Column(db.Text)  # JSON array of keywords for document content matching
-    filename_keywords = db.Column(db.Text)  # JSON array of keywords for filename parsing
-    document_section = db.Column(db.String(50))  # Primary document section (labs, imaging, etc.)
+    # === DOCUMENT SECTION MAPPINGS ===
     document_section_mappings = db.Column(db.Text)  # JSON mapping of document sections to FHIR categories
     
-    # === STATUS AND METADATA ===
-    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -695,53 +689,10 @@ class ScreeningType(db.Model):
         trigger_conditions = self.get_trigger_conditions()
 
     
-    # === KEYWORD MANAGEMENT METHODS ===
-    def set_keywords(self, keywords_list):
-        """Set content keywords as JSON array"""
-        if keywords_list:
-            self.keywords = json.dumps(keywords_list)
-        else:
-            self.keywords = None
-    
-    def get_keywords(self):
-        """Get content keywords as list"""
-        if not self.keywords:
-            return []
-        try:
-            return json.loads(self.keywords)
-        except (json.JSONDecodeError, TypeError):
-            return []
-    
-    def set_filename_keywords(self, keywords_list):
-        """Set filename keywords as JSON array"""
-        if keywords_list:
-            self.filename_keywords = json.dumps(keywords_list)
-        else:
-            self.filename_keywords = None
-    
-    def get_filename_keywords(self):
-        """Get filename keywords as list"""
-        if not self.filename_keywords:
-            return []
-        try:
-            return json.loads(self.filename_keywords)
-        except (json.JSONDecodeError, TypeError):
-            return []
-    
-    # === FREQUENCY PROPERTIES ===
     @property
     def formatted_frequency(self):
         """Return a formatted frequency string from structured fields, blank if not set"""
-        if self.frequency_months:
-            if self.frequency_months == 12:
-                return "Annual"
-            elif self.frequency_months == 6:
-                return "Every 6 months"
-            elif self.frequency_months == 3:
-                return "Every 3 months"
-            else:
-                return f"Every {self.frequency_months} months"
-        elif self.frequency_number and self.frequency_unit:
+        if self.frequency_number and self.frequency_unit:
             if self.frequency_number == 1:
                 # Handle singular forms
                 unit_singular = {
@@ -759,19 +710,19 @@ class ScreeningType(db.Model):
     @property
     def frequency_in_days(self):
         """Convert structured frequency to approximate days for calculations"""
-        if self.frequency_months:
-            return self.frequency_months * 30  # Approximate
-        elif self.frequency_number and self.frequency_unit:
-            multipliers = {
-                'days': 1,
-                'weeks': 7,
-                'months': 30,  # Approximate
-                'years': 365   # Approximate
-            }
+        if not self.frequency_number or not self.frequency_unit:
+            return None
             
-            multiplier = multipliers.get(self.frequency_unit)
-            if multiplier:
-                return self.frequency_number * multiplier
+        multipliers = {
+            'days': 1,
+            'weeks': 7,
+            'months': 30,  # Approximate
+            'years': 365   # Approximate
+        }
+        
+        multiplier = multipliers.get(self.frequency_unit)
+        if multiplier:
+            return self.frequency_number * multiplier
         return None
 
 
@@ -787,30 +738,6 @@ class ScreeningType(db.Model):
                     return True
         
         return False
-    
-    def matches_patient_criteria(self, patient):
-        """
-        Check if a patient matches this screening type's criteria
-        
-        Args:
-            patient: Patient object
-            
-        Returns:
-            bool: True if patient matches all criteria
-        """
-        # Check age criteria
-        if self.min_age is not None and patient.age < self.min_age:
-            return False
-        if self.max_age is not None and patient.age > self.max_age:
-            return False
-        
-        # Check gender criteria (support both new and legacy fields)
-        gender_field = self.gender or self.gender_specific
-        if gender_field:
-            if gender_field.lower() != patient.sex.lower():
-                return False
-        
-        return True
     
     def set_document_section_mappings(self, mappings_dict):
         """
@@ -887,11 +814,6 @@ class ScreeningType(db.Model):
         Returns:
             bool: True if document section matches screening criteria
         """
-        # Check primary document section
-        if self.document_section and self.document_section.lower() == document_section.lower():
-            return True
-        
-        # Check legacy document section mappings
         mappings = self.get_document_section_mappings()
         
         if not mappings:
@@ -909,54 +831,6 @@ class ScreeningType(db.Model):
                         return True
         
         return False
-    
-    def matches_content_keywords(self, content_text):
-        """Check if content text matches any of the keywords"""
-        if not content_text:
-            return False
-        
-        keywords = self.get_keywords()
-        if not keywords:
-            return False
-        
-        content_lower = content_text.lower()
-        return any(keyword.lower() in content_lower for keyword in keywords)
-    
-    def matches_filename_keywords(self, filename):
-        """Check if filename matches any of the filename keywords"""
-        if not filename:
-            return False
-        
-        filename_keywords = self.get_filename_keywords()
-        if not filename_keywords:
-            return False
-        
-        filename_lower = filename.lower()
-        return any(keyword.lower() in filename_lower for keyword in filename_keywords)
-    
-    def matches_patient_criteria(self, patient):
-        """
-        Check if a patient matches this screening type's criteria
-        
-        Args:
-            patient: Patient object
-            
-        Returns:
-            bool: True if patient matches all criteria
-        """
-        # Check age criteria
-        if self.min_age is not None and patient.age < self.min_age:
-            return False
-        if self.max_age is not None and patient.age > self.max_age:
-            return False
-        
-        # Check gender criteria (support both new and legacy fields)
-        gender_field = self.gender or self.gender_specific
-        if gender_field:
-            if gender_field.lower() != patient.sex.lower():
-                return False
-        
-        return True
 
     def __repr__(self):
         return f"<ScreeningType {self.name}>"

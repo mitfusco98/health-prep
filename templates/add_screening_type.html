@@ -23,122 +23,64 @@
         </h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('add_screening_type') }}">
-            {{ csrf_token() }}
-            
-            <!-- Basic Information -->
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    {{ form.name.label(class="form-label") }}
-                    {{ form.name(class="form-control") }}
-                    <small class="form-text text-muted">{{ form.name.description }}</small>
-                </div>
-                <div class="col-md-6">
-                    {{ form.document_section.label(class="form-label") }}
-                    {{ form.document_section(class="form-select") }}
-                    <small class="form-text text-muted">{{ form.document_section.description }}</small>
-                </div>
-            </div>
-            
+        <form method="POST" action="{{ url_for('add_screening_type', ts=cache_timestamp) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
-                {{ form.description.label(class="form-label") }}
-                {{ form.description(class="form-control", rows="3") }}
-                <small class="form-text text-muted">{{ form.description.description }}</small>
-            </div>
-            
-            <!-- Frequency and Demographics -->
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    {{ form.frequency_months.label(class="form-label") }}
-                    {{ form.frequency_months(class="form-control") }}
-                    <small class="form-text text-muted">{{ form.frequency_months.description }}</small>
-                </div>
-                <div class="col-md-4">
-                    {{ form.min_age.label(class="form-label") }}
-                    {{ form.min_age(class="form-control") }}
-                    <small class="form-text text-muted">{{ form.min_age.description }}</small>
-                </div>
-                <div class="col-md-4">
-                    {{ form.max_age.label(class="form-label") }}
-                    {{ form.max_age(class="form-control") }}
-                    <small class="form-text text-muted">{{ form.max_age.description }}</small>
-                </div>
+                <label class="form-label">Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="name" required>
+                <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy')</small>
             </div>
             
             <div class="row mb-3">
                 <div class="col-md-6">
-                    {{ form.gender.label(class="form-label") }}
-                    {{ form.gender(class="form-select") }}
-                    <small class="form-text text-muted">{{ form.gender.description }}</small>
+                    <div class="mb-3">
+                        <label class="form-label">Keywords for Document Content</label>
+                        <div class="keywords-container">
+                            <div id="add-form-keywords-container" class="keywords-form-group">
+                                <div class="d-flex mb-2">
+                                    <input type="text" class="keywords-input me-2" id="add-form-keyword-input" placeholder="Enter keyword">
+                                    <button type="button" class="keywords-btn" onclick="addKeywordToForm('add-form')">Add</button>
+                                </div>
+                                <div id="add-form-keywords-list" class="keywords-display"></div>
+                            </div>
+                        </div>
+                        <small class="keywords-help-text">Keywords for matching document content</small>
+                        <input type="hidden" name="keywords" id="add-form-keywords-data">
+                    </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="form-check mt-4">
-                        {{ form.is_active(class="form-check-input") }}
-                        {{ form.is_active.label(class="form-check-label") }}
-                        <small class="form-text text-muted d-block">{{ form.is_active.description }}</small>
+                    <div class="mb-3">
+                        <label class="form-label">Filename Keywords</label>
+                        <div class="keywords-container">
+                            <div id="add-form-filename-keywords-container" class="keywords-form-group">
+                                <div class="d-flex mb-2">
+                                    <input type="text" class="keywords-input me-2" id="add-form-filename-keyword-input" placeholder="Enter filename keyword">
+                                    <button type="button" class="keywords-btn" onclick="addFilenameKeywordToForm('add-form')">Add</button>
+                                </div>
+                                <div id="add-form-filename-keywords-list" class="keywords-display"></div>
+                            </div>
+                        </div>
+                        <small class="keywords-help-text">Keywords for matching filenames</small>
+                        <input type="hidden" name="filename_keywords" id="add-form-filename-keywords-data">
                     </div>
                 </div>
             </div>
             
-            <!-- Keywords and Parsing -->
-            <h6 class="mb-3">Document Parsing Configuration</h6>
-            
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    {{ form.keywords_text.label(class="form-label") }}
-                    {{ form.keywords_text(class="form-control", rows="4") }}
-                    <small class="form-text text-muted">{{ form.keywords_text.description }}</small>
-                </div>
-                <div class="col-md-6">
-                    {{ form.filename_keywords_text.label(class="form-label") }}
-                    {{ form.filename_keywords_text(class="form-control", rows="4") }}
-                    <small class="form-text text-muted">{{ form.filename_keywords_text.description }}</small>
-                </div>
-            </div>
-            
-            <!-- Trigger Conditions -->
             <div class="mb-3">
-                {{ form.trigger_conditions_text.label(class="form-label") }}
-                {{ form.trigger_conditions_text(class="form-control", rows="6") }}
-                <small class="form-text text-muted">{{ form.trigger_conditions_text.description }}</small>
-                <div class="mt-2">
-                    <button type="button" class="btn btn-sm btn-outline-info" onclick="showTriggerConditionsExample()">
-                        Show Example JSON
-                    </button>
-                </div>
+                <label class="form-label">Document Section</label>
+                <select class="form-select" name="document_section">
+                    <option value="">Any Section</option>
+                    <option value="labs">Laboratory Results</option>
+                    <option value="imaging">Imaging Studies</option>
+                    <option value="reports">Medical Reports</option>
+                    <option value="consultations">Consultations</option>
+                    <option value="procedures">Procedures</option>
+                    <option value="pathology">Pathology</option>
+                    <option value="discharge">Discharge Summaries</option>
+                    <option value="operative">Operative Notes</option>
+                </select>
+                <small class="text-muted">Select the document section this screening typically appears in</small>
             </div>
-            
-            <div class="d-flex justify-content-between">
-                <a href="{{ url_for('screening_list', tab='types') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>Cancel
-                </a>
-                {{ form.submit(class="btn btn-primary") }}
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-function showTriggerConditionsExample() {
-    const example = [
-        {
-            "system": "http://snomed.info/sct",
-            "code": "73211009",
-            "display": "Diabetes mellitus"
-        },
-        {
-            "system": "http://hl7.org/fhir/sid/icd-10-cm",
-            "code": "E11.9",
-            "display": "Type 2 diabetes mellitus without complications"
-        }
-    ];
-    
-    const textArea = document.querySelector('textarea[name="trigger_conditions_text"]');
-    if (textArea) {
-        textArea.value = JSON.stringify(example, null, 2);
-    }
-}
-</script>
             
             <div class="row mb-3">
                 <div class="col-md-12">
@@ -629,10 +571,58 @@ function renderScreeningNameSuggestions(screenings, suggestionsDiv, nameInput) {
     suggestionsDiv.style.display = 'block';
 }
 
+// Filename keywords management
+function addFilenameKeywordToForm(formPrefix) {
+    const keywordInput = document.getElementById(`${formPrefix}-filename-keyword-input`);
+    const keywordsList = document.getElementById(`${formPrefix}-filename-keywords-list`);
+    
+    const keyword = keywordInput.value.trim();
+    if (keyword) {
+        const keywordElement = document.createElement('span');
+        keywordElement.className = 'badge bg-secondary me-2 mb-2';
+        keywordElement.innerHTML = `
+            ${keyword}
+            <button type="button" class="btn-close btn-close-white ms-1" 
+                    onclick="removeFormFilenameKeyword(this)" aria-label="Remove"></button>
+        `;
+        keywordsList.appendChild(keywordElement);
+        
+        keywordInput.value = '';
+        updateFormFilenameKeywordsData(formPrefix);
+    }
+}
+
+function removeFormFilenameKeyword(button) {
+    const formPrefix = 'add-form';
+    button.parentElement.remove();
+    updateFormFilenameKeywordsData(formPrefix);
+}
+
+function updateFormFilenameKeywordsData(formPrefix) {
+    const keywordsList = document.getElementById(`${formPrefix}-filename-keywords-list`);
+    const hiddenInput = document.getElementById(`${formPrefix}-filename-keywords-data`);
+    
+    const keywords = Array.from(keywordsList.children).map(element => 
+        element.textContent.trim().replace(/×$/, '')
+    );
+    
+    if (hiddenInput) {
+        hiddenInput.value = JSON.stringify(keywords);
+    }
+}
+
 // Initialize autocomplete on page load
 document.addEventListener('DOMContentLoaded', function() {
     setupConditionAutocomplete('add-form');
     setupScreeningNameAutocomplete();
+    
+    // Handle Enter key for filename keywords
+    document.getElementById('add-form-filename-keyword-input')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addFilenameKeywordToForm('add-form');
+        }
+    });
 });
 </script>
 

@@ -20,8 +20,8 @@
         <a href="{{ url_for('edit_patient', patient_id=patient.id) }}" class="btn btn-outline-secondary mb-2">
             <i class="fas fa-edit me-2"></i>Edit
         </a>
-        <a href="{{ url_for('generate_prep_sheet', patient_id=patient.id) }}" class="btn btn-primary">
-            <i class="fas fa-file-medical me-2"></i>Generate Prep Sheet
+        <a href="{{ url_for('generate_patient_prep_sheet', patient_id=patient.id, cache_buster=now().strftime('%Y%m%d%H%M%S')|int) }}" class="btn btn-primary">
+            Generate Prep Sheet
         </a>
     </div>
 </div>
