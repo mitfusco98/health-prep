@@ -2973,7 +2973,6 @@ def screening_list():
     if tab == "checklist":
         settings = get_or_create_settings()
         # Get active screening types instead of default_items_list
-        from models import ScreeningType
         active_screening_types = ScreeningType.query.filter_by(is_active=True, status='active').order_by(ScreeningType.name).all()
 
     # Create forms for screening type management
