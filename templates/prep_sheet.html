@@ -1,277 +1,879 @@
-{% extends "base.html" %}
+{% extends 'base_demo.html' %}
 
-{% block title %}Prep Sheet - {{ patient.full_name }}{% endblock %}
+{% block title %}HealthPrep - Prep Sheet for {{ patient.full_name }}{% endblock %}
+
+{% block extra_head %}
+<!-- Force cache busting with current timestamp: {{ now().strftime('%Y%m%d%H%M%S')|int }} -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/prep_sheet.js') }}?v={{ cache_timestamp }}"></script>
+<script src="{{ url_for('static', filename='js/consolidated_checklist.js') }}?v={{ cache_timestamp }}"></script>
+<style>
+    /* Styling for consolidated status/notes field */
+    .screening-field-container {
+        position: relative;
+    }
+    
+    .screening-consolidated-field {
+        margin-bottom: 0.25rem;
+    }
+    
+    .screening-consolidated-field:focus {
+        border-color: rgba(var(--bs-primary-rgb), 0.5);
+        box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+    }
+    
+    .screening-preset-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+    
+    .screening-preset-btn {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .screening-preset-btn.active {
+        background-color: var(--bs-primary);
+        color: white;
+    }
+    
+    /* Highlight field with content */
+    .screening-consolidated-field.has-content {
+        background-color: rgba(var(--bs-primary-rgb), 0.05);
+    }
+    
+    /* Styling for the unified status note cell */
+    .screening-status-note-cell {
+        display: table-cell;
+        vertical-align: middle;
+        padding: 3px 10px 3px 0;
+        width: 65%;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-0">Prep Sheet</h1>
-                    <p class="text-muted mb-0">{{ patient.full_name }} (MRN: {{ patient.mrn }})</p>
-                </div>
-                <div>
-                    <button onclick="window.print()" class="btn btn-outline-primary">
-                        <i class="fas fa-print"></i> Print
-                    </button>
-                    <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to Patient
-                    </a>
-                </div>
+<div class="mb-2">
+    <div class="d-flex flex-column align-items-start">
+        <a href="{{ url_for('patient_list') }}" class="btn btn-outline-secondary mb-2">
+            <i class="fas fa-arrow-left me-2"></i>Return to Patient List
+        </a>
+        <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Patient Profile
+        </a>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        Prep Sheet
+    </h1>
+    <div>
+        <button id="save-prep-sheet" class="btn btn-primary">
+            <i class="fas fa-save me-2"></i>Save
+        </button>
+    </div>
+</div>
+
+<!-- Prep Sheet Header -->
+<div class="card border-0 mb-4">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h4 class="mb-0">{{ patient.full_name }}</h4>
+                <p class="mb-0 text-muted">
+                    MRN: {{ patient.mrn }} | DOB: {{ patient.date_of_birth|dob }} ({{ patient.age }} years) | Sex: {{ patient.sex }}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <p class="mb-0" data-current-date="{{ today.strftime('%Y-%m-%d') }}"><strong>Prep Date:</strong> {{ today|datetime }}</p>
+                {% if past_appointments %}
+                <p class="mb-0"><strong>Last Visit:</strong> {{ past_appointments[0].appointment_date.strftime('%m/%d/%Y') }}</p>
+                {% else %}
+                <p class="mb-0"><strong>Last Visit:</strong> None recorded</p>
+                {% endif %}
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Patient Summary -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Patient Information</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <strong>Name:</strong> {{ patient.full_name }}
-                        </div>
-                        <div class="col-md-3">
-                            <strong>MRN:</strong> {{ patient.mrn }}
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Age:</strong> {{ patient.age }} years
-                        </div>
-                        <div class="col-md-3">
-                            <strong>Gender:</strong> {{ patient.sex }}
-                        </div>
-                    </div>
-                    {% if patient.date_of_birth %}
-                    <div class="row mt-2">
-                        <div class="col-md-3">
-                            <strong>DOB:</strong> {{ patient.date_of_birth.strftime('%m/%d/%Y') }}
-                        </div>
-                        <div class="col-md-9">
-                            <strong>Generated:</strong> {{ generated_at.strftime('%m/%d/%Y at %I:%M %p') }}
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+<!-- Summary Section -->
+<div class="card border-0 mb-4">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <h5 class="mb-0">
+            Patient Summary
+        </h5>
     </div>
-
-    <!-- Document Analysis Summary -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Document Analysis Summary</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="text-center">
-                                <h4 class="text-primary mb-0">{{ total_documents }}</h4>
-                                <small class="text-muted">Total Documents</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="text-center">
-                                <h4 class="text-success mb-0">{{ total_matches }}</h4>
-                                <small class="text-muted">Document Matches</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="text-center">
-                                <h4 class="text-info mb-0">{{ screening_statuses|length }}</h4>
-                                <small class="text-muted">Screening Types</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="text-center">
-                                <h4 class="text-warning mb-0">{{ screening_statuses|selectattr('status', 'equalto', 'no_documents')|list|length }}</h4>
-                                <small class="text-muted">No Documents Found</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    <div class="card-body">
+        <p class="lead">{{ prep_sheet.summary }}</p>
+        
+        <!-- Patient Alerts Section - Managed Section -->
+        <div class="card border-0 mb-4">
+            <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Patient Alerts</h6>
+                <a href="{{ url_for('add_alert', patient_id=patient.id) }}" class="btn btn-sm btn-primary">
+                    Add Alert
+                </a>
             </div>
-        </div>
-    </div>
-
-    <!-- Screening Checklist -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Screening Checklist</h5>
-                    <small class="text-muted">Based on document analysis and screening rules</small>
-                </div>
-                <div class="card-body">
-                    {% if screening_statuses %}
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th style="width: 50px;">Status</th>
-                                    <th>Screening Type</th>
-                                    <th>Last Completed</th>
-                                    <th>Documents Found</th>
-                                    <th>Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for status in screening_statuses %}
-                                <tr class="screening-row" data-status="{{ status.status }}">
+            <div class="card-body p-0">
+                {% if patient.alerts %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 15%;">Type</th>
+                                <th style="width: 30%;">Description</th>
+                                <th style="width: 10%;">Severity</th>
+                                <th style="width: 15%;">Start Date</th>
+                                <th style="width: 15%;">End Date</th>
+                                <th style="width: 15%;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in patient.alerts %}
+                                {% if alert.is_active %}
+                                <tr class="{% if alert.severity == 'High' %}table-danger{% elif alert.severity == 'Medium' %}table-warning{% else %}table-info{% endif %}">
+                                    <td>{{ alert.alert_type }}</td>
                                     <td>
-                                        {% if status.status == 'complete' %}
-                                            <input type="checkbox" checked disabled class="form-check-input">
-                                            <span class="badge bg-success ms-2">Complete</span>
-                                        {% elif status.status == 'due' %}
-                                            <input type="checkbox" disabled class="form-check-input">
-                                            <span class="badge bg-warning ms-2">Due</span>
-                                        {% elif status.status == 'overdue' %}
-                                            <input type="checkbox" disabled class="form-check-input">
-                                            <span class="badge bg-danger ms-2">Overdue</span>
-                                        {% else %}
-                                            <input type="checkbox" disabled class="form-check-input">
-                                            <span class="badge bg-secondary ms-2">No Documents</span>
+                                        {{ alert.description }}
+                                        {% if alert.details %}
+                                        <small class="d-block text-muted">{{ alert.details }}</small>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <strong>{{ status.screening_name }}</strong>
+                                        <span class="badge {% if alert.severity == 'High' %}bg-danger{% elif alert.severity == 'Medium' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">
+                                            {{ alert.severity }}
+                                        </span>
                                     </td>
+                                    <td>{{ alert.start_date|dob }}</td>
+                                    <td>{{ alert.end_date|dob if alert.end_date else 'Permanent' }}</td>
                                     <td>
-                                        {% if status.last_completed %}
-                                            {{ status.last_completed.strftime('%m/%d/%Y') }}
-                                        {% else %}
-                                            <span class="text-muted">Never</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if status.documents_found %}
-                                            <span class="badge bg-info">{{ status.documents_found|length }} document(s)</span>
-                                            {% if document_matches.get(status.screening_type_id) %}
-                                                <button class="btn btn-sm btn-outline-info ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#matches-{{ status.screening_type_id }}" aria-expanded="false">
-                                                    View Details
-                                                </button>
-                                            {% endif %}
-                                        {% else %}
-                                            <span class="text-muted">No documents found</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{ status.notes }}</small>
-                                    </td>
-                                </tr>
-                                
-                                <!-- Document matches details -->
-                                {% if document_matches.get(status.screening_type_id) %}
-                                <tr>
-                                    <td colspan="5" class="p-0">
-                                        <div class="collapse" id="matches-{{ status.screening_type_id }}">
-                                            <div class="card card-body m-2">
-                                                <h6>Document Matches:</h6>
-                                                <ul class="list-unstyled mb-0">
-                                                    {% for match in document_matches[status.screening_type_id] %}
-                                                    <li class="mb-2">
-                                                        <div class="d-flex justify-content-between align-items-start">
-                                                            <div>
-                                                                <strong>{{ match.document_filename }}</strong>
-                                                                <br>
-                                                                <small class="text-muted">
-                                                                    Match: {{ match.matched_value }} 
-                                                                    ({{ match.match_type }}, 
-                                                                    {{ "%.0f"|format(match.confidence * 100) }}% confidence)
-                                                                </small>
-                                                            </div>
-                                                            {% if match.matched_date %}
-                                                            <small class="text-muted">{{ match.matched_date.strftime('%m/%d/%Y') }}</small>
-                                                            {% endif %}
-                                                        </div>
-                                                    </li>
-                                                    {% endfor %}
-                                                </ul>
-                                            </div>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('edit_alert', patient_id=patient.id, alert_id=alert.id) }}" class="btn btn-outline-secondary">
+                                                Edit
+                                            </a>
+                                            <a href="{{ url_for('delete_alert', patient_id=patient.id, alert_id=alert.id) }}" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this alert?')">
+                                                Delete
+                                            </a>
                                         </div>
                                     </td>
                                 </tr>
                                 {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <p class="text-muted">No screening types configured.</p>
-                        <a href="{{ url_for('screening_list') }}" class="btn btn-primary">Configure Screening Types</a>
-                    </div>
-                    {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
+                {% else %}
+                <div class="alert alert-info m-3">
+                    <p class="mb-0">No active alerts for this patient. <a href="{{ url_for('add_alert', patient_id=patient.id) }}" class="alert-link">Add an alert</a></p>
+                </div>
+                {% endif %}
             </div>
         </div>
+        
+        {% if past_appointments %}
+        <h6>Recent Visit History:</h6>
+        <ul class="mb-3">
+            {% for appt in past_appointments %}
+            <li>{{ appt.appointment_date.strftime('%m/%d/%Y') }} at {{ appt.appointment_time.strftime('%I:%M %p') }}
+              {% if appt.status %} - Status: {{ appt.status }}{% endif %}
+              {% if appt.notes %} - Note: {{ appt.notes }}{% endif %}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        {% if active_conditions %}
+        <h6>Active Conditions:</h6>
+        <ul class="mb-3">
+            {% for condition in active_conditions %}
+            <li>{{ condition.name }} {% if condition.diagnosed_date %}(diagnosed: {{ condition.diagnosed_date|datetime }}){% endif %}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        {% if immunizations %}
+        <h6>Immunization History:</h6>
+        <ul class="mb-3">
+            {% for immunization in immunizations %}
+            <li>{{ immunization.vaccine_name }} {% if immunization.administration_date %}({{ immunization.administration_date|datetime }}){% endif %}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
     </div>
-
-    <!-- Active Conditions -->
-    {% if conditions %}
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Active Conditions</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        {% for condition in conditions %}
-                        <div class="col-md-6 mb-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span>{{ condition.name }}</span>
-                                {% if condition.date_diagnosed %}
-                                <small class="text-muted">{{ condition.date_diagnosed.strftime('%m/%d/%Y') }}</small>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 </div>
 
+
+
+<!-- Recent Vitals Section -->
+{% if recent_vitals %}
+<div class="card border-0 mb-4">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <h5 class="mb-0">
+            <i class="fas fa-heartbeat me-2"></i>Recent Vitals
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 border-0">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-primary fw-bold">Blood Pressure</h6>
+                        <div class="display-6 text-danger">
+                            <span style="white-space: nowrap; font-weight: bold;">
+                                {{ recent_vitals.blood_pressure_systolic }}/{{ recent_vitals.blood_pressure_diastolic }}
+                            </span>
+                        </div>
+                        <p class="card-text">mmHg</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 border-0">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-primary fw-bold">Weight <button class="btn btn-sm btn-outline-secondary py-0 px-1 ms-1 toggle-weight-unit">Switch Unit</button></h6>
+                        <div class="h4">
+                            <span class="weight-kg">{{ recent_vitals.weight|round(1) }} kg</span>
+                            <span class="weight-lb" style="display: none;">{{ (recent_vitals.weight * 2.20462)|round(1) }} lbs</span>
+                        </div>
+                        <p class="card-text weight-info text-muted"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 border-0">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-muted">BMI</h6>
+                        <div class="h4">{{ recent_vitals.bmi|round(1) }}</div>
+                        <p class="card-text">kg/m²</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 border-0">
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-muted">Pulse</h6>
+                        <div class="h4">{{ recent_vitals.pulse }}</div>
+                        <p class="card-text">bpm</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="text-muted small">Vitals recorded on {{ recent_vitals.date.strftime('%Y-%m-%d') }}</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Lab Results Section -->
+{% if recent_labs %}
+<div class="card border-0 mb-4">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <h5 class="mb-0">
+            <i class="fas fa-flask me-2"></i>Recent Lab Results
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Test</th>
+                        <th>Date</th>
+                        <th>Result</th>
+                        <th>Reference Range</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lab in recent_labs %}
+                    <tr>
+                        <td>{{ lab.test_name }}</td>
+                        <td>{{ lab.test_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ lab.result_value }} {{ lab.unit }}</td>
+                        <td>{{ lab.reference_range }}</td>
+                        <td>
+                            {% if lab.is_abnormal %}
+                            <span class="badge bg-danger">Abnormal</span>
+                            {% else %}
+                            <span class="badge bg-success">Normal</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Imaging Studies Section -->
+{% if recent_imaging %}
+<div class="card border-0 mb-4">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <h5 class="mb-0">
+            <i class="fas fa-x-ray me-2"></i>Recent Imaging Studies
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Study Type</th>
+                        <th>Body Site</th>
+                        <th>Date</th>
+                        <th>Impression</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for study in recent_imaging %}
+                    <tr>
+                        <td>{{ study.study_type }}</td>
+                        <td>{{ study.body_site }}</td>
+                        <td>{{ study.study_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ study.impression }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Specialist Consults Section -->
+{% if recent_consults %}
+<div class="card border-0 mb-4">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <h5 class="mb-0">
+            <i class="fas fa-user-md me-2"></i>Recent Specialist Consults
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Specialty</th>
+                        <th>Specialist</th>
+                        <th>Date</th>
+                        <th>Recommendations</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for consult in recent_consults %}
+                    <tr>
+                        <td>{{ consult.specialty }}</td>
+                        <td>{{ consult.specialist }}</td>
+                        <td>{{ consult.report_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ consult.recommendations }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Hospital Stays Section -->
+{% if recent_hospital %}
+<div class="card border-0 mb-4">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <h5 class="mb-0">
+            <i class="fas fa-hospital me-2"></i>Recent Hospital Stays
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Hospital</th>
+                        <th>Admission Date</th>
+                        <th>Discharge Date</th>
+                        <th>Diagnosis</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stay in recent_hospital %}
+                    <tr>
+                        <td>{{ stay.hospital_name }}</td>
+                        <td>{{ stay.admission_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ stay.discharge_date.strftime('%Y-%m-%d') if stay.discharge_date else 'Ongoing' }}</td>
+                        <td>{{ stay.discharge_diagnosis }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quality Checklist Section -->
+<div class="card border-0 mb-4">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <h5 class="mb-0">
+            <i class="fas fa-tasks me-2"></i>Quality Checklist
+        </h5>
+    </div>
+    <div class="card-body">
+        <!-- Patient Information Section -->
+        <div class="mb-4">
+            <h6 class="mb-3">Patient Information</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <p><strong>Patient Name:</strong> {{ patient.full_name }}</p>
+                </div>
+                <div class="col-md-4">
+                    <p><strong>Date of Birth:</strong> {{ patient.date_of_birth|dob }}</p>
+                </div>
+                <div class="col-md-4">
+                    <p><strong>MRN:</strong> {{ patient.mrn }}</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <p><strong>Active Conditions:</strong> 
+                        {% if active_conditions %}
+                            {% for condition in active_conditions %}
+                                {{ condition.name }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            None documented
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Screening Checklist -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">Screening Checklist</h6>
+            <button class="btn btn-sm btn-outline-secondary" id="reset-checkboxes">
+                Reset Checkboxes
+            </button>
+        </div>
+        <div class="mb-4">
+            {% set layout_style = checklist_settings.layout_style if checklist_settings is defined else 'list' %}
+            {% set status_options = checklist_settings.status_options_list if checklist_settings is defined else ['due', 'due_soon', 'sent_incomplete', 'completed'] %}
+            {% set show_notes = checklist_settings.show_notes if checklist_settings is defined else true %}
+            
+            {% if layout_style == 'table' %}
+            <!-- Table Layout -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 5%"></th>
+                            <th style="width: 45%">Screening</th>
+                            <th style="width: 50%">Status/Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in recommended_screenings %}
+                        <tr>
+                            <td class="text-center">
+                                <input class="form-check-input" type="checkbox" id="screening_{{ loop.index }}">
+                            </td>
+                            <td>
+                                <label class="form-check-label" for="screening_{{ loop.index }}">
+                                    {{ item }}
+                                </label>
+                            </td>
+                            <td>
+                                <div class="screening-field-container">
+                                    <input type="text" class="form-control form-control-sm screening-consolidated-field" 
+                                           id="screening_status_note_{{ loop.index }}" 
+                                           list="statusOptions_{{ loop.index }}"
+                                           placeholder="Type or select status/notes...">
+                                    
+                                    <datalist id="statusOptions_{{ loop.index }}">
+                                        {% for status in status_options %}
+                                            <option value="{{ status|replace('_', ' ')|title }}">
+                                        {% endfor %}
+                                        {% if settings.custom_status_list %}
+                                            {% for custom_status in settings.custom_status_list %}
+                                            <option value="{{ custom_status }}">
+                                            {% endfor %}
+                                        {% endif %}
+                                    </datalist>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <!-- List Layout -->
+            <div class="screening-container">
+                <div class="screening-header">
+                    <div class="screening-cell">Screening</div>
+                    <div class="screening-status-note-cell">Status/Notes</div>
+                </div>
+                    
+                {% for item in recommended_screenings %}
+                <div class="screening-row">
+                    <div class="screening-cell">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="screening_{{ loop.index }}">
+                            <label class="form-check-label" for="screening_{{ loop.index }}">
+                                {{ item }}
+                            </label>
+                        </div>
+                    </div>
+                    <div class="screening-status-note-cell">
+                        <div class="screening-field-container">
+                            <input type="text" class="form-control form-control-sm screening-consolidated-field" 
+                                   id="screening_status_note_{{ loop.index }}" 
+                                   list="statusOptions_{{ loop.index }}"
+                                   placeholder="Type or select status/notes...">
+                            
+                            <datalist id="statusOptions_{{ loop.index }}">
+                                {% for status in status_options %}
+                                    <option value="{{ status|replace('_', ' ')|title }}">
+                                {% endfor %}
+                                {% if settings.custom_status_list %}
+                                    {% for custom_status in settings.custom_status_list %}
+                                    <option value="{{ custom_status }}">
+                                    {% endfor %}
+                                {% endif %}
+                            </datalist>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Section headings for other data -->
+        <div class="mb-3">
+            <h6>Laboratories</h6>
+            <p>
+                {% if recent_labs %}
+                    {% for lab in recent_labs[:3] %}
+                        {{ lab.test_name }}: {{ lab.result_value }} {{ lab.unit }} ({{ lab.test_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    No recent laboratory results.
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="mb-3">
+            <h6>Imaging</h6>
+            <p>
+                {% if recent_imaging %}
+                    {% for img in recent_imaging[:3] %}
+                        {{ img.study_type }} ({{ img.study_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    No recent imaging studies.
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="mb-3">
+            <h6>Consults</h6>
+            <p>
+                {% if recent_consults %}
+                    {% for consult in recent_consults[:3] %}
+                        {{ consult.specialty }} ({{ consult.report_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    No recent consult reports.
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="mb-3">
+            <h6>Hospital Visits</h6>
+            <p>
+                {% if recent_hospital %}
+                    {% for stay in recent_hospital[:3] %}
+                        {{ stay.hospital_name }} ({{ stay.admission_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    No recent hospital visits.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Screening Recommendations -->
+{% if screenings %}
+<div class="card border-0 mb-4">
+    <div class="card-header bg-secondary bg-opacity-25">
+        <h5 class="mb-0">
+            <i class="fas fa-clipboard-check me-2"></i>Screening Recommendations
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Screening</th>
+                        <th>Due Date</th>
+                        <th>Last Completed</th>
+                        <th>Frequency</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for screening in screenings %}
+                    <tr>
+                        <td>{{ screening.screening_type }}</td>
+                        <td>{{ screening.due_date.strftime('%Y-%m-%d') if screening.due_date else 'Not set' }}</td>
+                        <td>{{ screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else 'Never' }}</td>
+                        <td>{{ screening.frequency }}</td>
+                        <td>
+                            {% if screening.due_date and screening.due_date < today.date() %}
+                            <span class="badge bg-danger">Overdue</span>
+                            {% elif screening.due_date and screening.due_date == today.date() %}
+                            <span class="badge bg-warning">Due Today</span>
+                            {% elif screening.due_date %}
+                            <span class="badge bg-success">Upcoming</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Not Scheduled</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Print styles - only apply when printing -->
 <style>
 @media print {
-    .btn, .collapse, .card-header button {
+    .btn, nav, footer {
         display: none !important;
     }
     
+    body {
+        background-color: white !important;
+    }
+    
     .card {
-        border: 1px solid #000 !important;
         break-inside: avoid;
+        border: 1px solid #ddd !important;
+        margin-bottom: 20px !important;
     }
     
-    .table {
-        font-size: 12px;
+    .card-header, .card-body {
+        background-color: white !important;
+        color: black !important;
     }
     
-    .badge {
-        border: 1px solid #000;
-        color: #000 !important;
-        background-color: transparent !important;
+    .text-muted {
+        color: #444 !important;
     }
-}
-
-.screening-row[data-status="complete"] {
-    background-color: #f8f9fa;
-}
-
-.screening-row[data-status="no_documents"] {
-    background-color: #fff3cd;
-}
-
-.screening-row[data-status="due"], .screening-row[data-status="overdue"] {
-    background-color: #f8d7da;
 }
 </style>
+
+<script>
+// Handle checkboxes, reset, and save functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Load saved checkbox states and screening statuses
+    const checkboxes = document.querySelectorAll('.form-check-input');
+    const statusSelects = document.querySelectorAll('.screening-status-select');
+    const screeningNotes = document.querySelectorAll('.screening-note');
+    const patientId = '{{ patient.id }}';
+    const resetButton = document.getElementById('reset-checkboxes');
+    const saveButton = document.getElementById('save-prep-sheet');
+    
+    // Weight unit conversion functionality
+    const toggleWeightButtons = document.querySelectorAll('.toggle-weight-unit');
+    
+    toggleWeightButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const cardBody = this.closest('.card-body');
+            const kgDisplay = cardBody.querySelector('.weight-kg');
+            const lbDisplay = cardBody.querySelector('.weight-lb');
+            const weightInfo = cardBody.querySelector('.weight-info');
+            
+            // Toggle display
+            if (kgDisplay.style.display === 'none') {
+                kgDisplay.style.display = 'inline';
+                lbDisplay.style.display = 'none';
+                button.textContent = 'Show lbs';
+                weightInfo.textContent = '(Metric)';
+            } else {
+                kgDisplay.style.display = 'none';
+                lbDisplay.style.display = 'inline';
+                button.textContent = 'Show kg';
+                weightInfo.textContent = '(Imperial)';
+            }
+        });
+        
+        // Initialize button text
+        button.textContent = 'Show lbs';
+        const weightInfo = button.closest('.card-body').querySelector('.weight-info');
+        weightInfo.textContent = '(Metric)';
+    });
+    
+    // Function to get storage key for form elements
+    function getStorageKey(elementId, type = 'checkbox') {
+        return `patient_${patientId}_${elementId}_${type}`;
+    }
+    
+    // Load saved states for checkboxes
+    checkboxes.forEach(function(checkbox) {
+        const checkboxId = checkbox.id;
+        const storageKey = getStorageKey(checkboxId);
+        const savedState = localStorage.getItem(storageKey);
+        
+        if (savedState === 'true') {
+            checkbox.checked = true;
+        }
+        
+        // Add event listener to save state on change
+        checkbox.addEventListener('change', function() {
+            localStorage.setItem(storageKey, this.checked);
+        });
+    });
+    
+    // Load saved states for status selects
+    statusSelects.forEach(function(select) {
+        const selectId = select.id;
+        const storageKey = getStorageKey(selectId, 'status');
+        const savedStatus = localStorage.getItem(storageKey);
+        
+        if (savedStatus) {
+            select.value = savedStatus;
+        }
+        
+        // Add event listener to save state on change
+        select.addEventListener('change', function() {
+            localStorage.setItem(storageKey, this.value);
+        });
+    });
+    
+    // Load saved states for screening notes
+    screeningNotes.forEach(function(note) {
+        const noteId = note.id;
+        const storageKey = getStorageKey(noteId, 'note');
+        const savedNote = localStorage.getItem(storageKey);
+        
+        if (savedNote) {
+            note.value = savedNote;
+        }
+        
+        // Add event listener to save state on change
+        note.addEventListener('input', function() {
+            localStorage.setItem(storageKey, this.value);
+        });
+    });
+    
+    // Reset button functionality
+    resetButton.addEventListener('click', function() {
+        if (confirm('Are you sure you want to reset all screening data (checkboxes, statuses, and notes)?')) {
+            // Reset checkboxes
+            checkboxes.forEach(function(checkbox) {
+                const checkboxId = checkbox.id;
+                const storageKey = getStorageKey(checkboxId);
+                
+                // Clear localStorage and uncheck the box
+                localStorage.removeItem(storageKey);
+                checkbox.checked = false;
+            });
+            
+            // Reset status selects
+            statusSelects.forEach(function(select) {
+                const selectId = select.id;
+                const storageKey = getStorageKey(selectId, 'status');
+                
+                // Clear localStorage and reset select
+                localStorage.removeItem(storageKey);
+                select.value = '';
+            });
+            
+            // Reset notes
+            screeningNotes.forEach(function(note) {
+                const noteId = note.id;
+                const storageKey = getStorageKey(noteId, 'note');
+                
+                // Clear localStorage and empty note
+                localStorage.removeItem(storageKey);
+                note.value = '';
+            });
+        }
+    });
+    
+    // Save button functionality
+    saveButton.addEventListener('click', function() {
+        // Gather checked screening items and their statuses/notes
+        const screeningData = [];
+        
+        checkboxes.forEach(function(checkbox, index) {
+            // Get the label text for this screening item
+            const screeningName = checkbox.nextElementSibling.textContent.trim();
+            
+            // Get the corresponding status and note elements
+            const statusSelect = statusSelects[index];
+            const noteInput = screeningNotes[index];
+            
+            // Create data object for this screening item
+            const screeningItem = {
+                name: screeningName,
+                checked: checkbox.checked,
+                status: statusSelect.value,
+                note: noteInput.value
+            };
+            
+            // Add to the collection
+            screeningData.push(screeningItem);
+        });
+        
+        // Get just the checked screening names for backward compatibility
+        const checkedScreenings = screeningData
+            .filter(item => item.checked)
+            .map(item => item.name);
+        
+        // Send data to backend to save as document
+        fetch(`/patients/${patientId}/save_prep_sheet`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                patient_id: patientId,
+                date: '{{ today.strftime("%Y-%m-%d") }}',
+                checked_screenings: checkedScreenings,
+                screening_data: screeningData
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Failed to save prep sheet');
+        })
+        .then(data => {
+            alert('Prep sheet saved successfully!');
+            window.location.href = `/patients/${patientId}`;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error saving prep sheet. Please try again.');
+        });
+    });
+});
+</script>
+
 {% endblock %}
