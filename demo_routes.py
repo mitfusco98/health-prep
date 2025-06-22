@@ -987,6 +987,7 @@ def add_screening_type():
         )
         
         # Process keyword fields from the form
+        import json
         try:
             # Content keywords (for document content parsing)
             keywords_data = request.form.get('keywords')
@@ -1192,6 +1193,7 @@ def edit_screening_type(screening_type_id):
         screening_type.status = 'active' if form.is_active.data else 'inactive'
 
         # Process keyword fields from the form (similar to add function)
+        import json
         try:
             # Content keywords (for document content parsing)
             keywords_data = request.form.get('keywords')
