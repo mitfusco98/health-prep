@@ -962,9 +962,11 @@ def validate_session_security():
         is_repository_request = any(path in request.path for path in repository_paths)
         is_navigation_request = any(path in request.path for path in navigation_paths) or request.method == "GET"
 
-        # More generous rate limits: 200 for repository, 100 for navigation/GET, 40 for modifications
+        # More generous rate limits: 200 for repository, 150 for API, 100 for navigation/GET, 40 for modifications
         if is_repository_request:
             rate_limit = 200
+        elif request.path.startswith('/api/'):
+            rate_limit = 150  # Higher limit for API endpoints
         elif is_navigation_request:
             rate_limit = 100
         else:
@@ -1217,8 +1219,11 @@ def detect_automated_attacks():
         ts for ts in app._request_tracker[client_ip] if current_time - ts < 60
     ]
 
-    # Check if more than 30 requests in the last minute
-    if len(app._request_tracker[client_ip]) > 30:
+    # Relax limits for API endpoints - they often need multiple rapid requests
+    api_limit = 100 if request.path.startswith('/api/') else 30
+    
+    # Check if more than the limit requests in the last minute
+    if len(app._request_tracker[client_ip]) > api_limit:
         logger.warning(
             f"Potential automated attack detected from {client_ip}: {len(app._request_tracker[client_ip])} requests in 1 minute"
         )
