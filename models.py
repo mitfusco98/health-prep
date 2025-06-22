@@ -633,6 +633,12 @@ class ScreeningType(db.Model):
     # === DOCUMENT SECTION MAPPINGS ===
     document_section_mappings = db.Column(db.Text)  # JSON mapping of document sections to FHIR categories
     
+    # === KEYWORD FIELDS FOR DYNAMIC PARSING ===
+    content_keywords = db.Column(db.Text)  # JSON array of keywords for content parsing
+    document_keywords = db.Column(db.Text)  # JSON array of keywords for document type parsing
+    filename_keywords = db.Column(db.Text)  # JSON array of keywords for filename parsing
+    status = db.Column(db.String(20), default='active')  # Status field (active, inactive, draft)
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -738,6 +744,107 @@ class ScreeningType(db.Model):
                     return True
         
         return False
+    
+    def set_content_keywords(self, keywords_list):
+        """
+        Set content keywords as JSON array
+        
+        Args:
+            keywords_list: List of keywords for content parsing like ["mammogram", "breast", "screening"]
+        """
+        if keywords_list:
+            self.content_keywords = json.dumps(keywords_list)
+        else:
+            self.content_keywords = None
+    
+    def get_content_keywords(self):
+        """Get content keywords as list"""
+        if not self.content_keywords:
+            return []
+        
+        try:
+            return json.loads(self.content_keywords)
+        except (json.JSONDecodeError, TypeError):
+            return []
+    
+    def set_document_keywords(self, keywords_list):
+        """
+        Set document keywords as JSON array
+        
+        Args:
+            keywords_list: List of keywords for document type parsing like ["radiology", "lab", "pathology"]
+        """
+        if keywords_list:
+            self.document_keywords = json.dumps(keywords_list)
+        else:
+            self.document_keywords = None
+    
+    def get_document_keywords(self):
+        """Get document keywords as list"""
+        if not self.document_keywords:
+            return []
+        
+        try:
+            return json.loads(self.document_keywords)
+        except (json.JSONDecodeError, TypeError):
+            return []
+    
+    def set_filename_keywords(self, keywords_list):
+        """
+        Set filename keywords as JSON array
+        
+        Args:
+            keywords_list: List of keywords for filename parsing like ["mammo", "xray", "ct"]
+        """
+        if keywords_list:
+            self.filename_keywords = json.dumps(keywords_list)
+        else:
+            self.filename_keywords = None
+    
+    def get_filename_keywords(self):
+        """Get filename keywords as list"""
+        if not self.filename_keywords:
+            return []
+        
+        try:
+            return json.loads(self.filename_keywords)
+        except (json.JSONDecodeError, TypeError):
+            return []
+    
+    def get_all_keywords(self):
+        """Get all keywords combined for comprehensive parsing"""
+        all_keywords = []
+        all_keywords.extend(self.get_content_keywords())
+        all_keywords.extend(self.get_document_keywords())
+        all_keywords.extend(self.get_filename_keywords())
+        return list(set(all_keywords))  # Remove duplicates
+    
+    def matches_keywords(self, text, keyword_type='all'):
+        """
+        Check if text matches any keywords of specified type
+        
+        Args:
+            text: Text to search in
+            keyword_type: 'content', 'document', 'filename', or 'all'
+            
+        Returns:
+            bool: True if any keywords match
+        """
+        if not text:
+            return False
+        
+        text_lower = text.lower()
+        
+        if keyword_type == 'content':
+            keywords = self.get_content_keywords()
+        elif keyword_type == 'document':
+            keywords = self.get_document_keywords()
+        elif keyword_type == 'filename':
+            keywords = self.get_filename_keywords()
+        else:  # 'all'
+            keywords = self.get_all_keywords()
+        
+        return any(keyword.lower() in text_lower for keyword in keywords)
     
     def set_document_section_mappings(self, mappings_dict):
         """
