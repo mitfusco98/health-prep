@@ -15,13 +15,47 @@ def get_screening_keywords(screening_id):
     """Get keyword configuration for a screening type"""
     try:
         print(f"API: Getting keywords for screening ID {screening_id}")
+        
+        # First, check the new database fields in ScreeningType
+        from models import ScreeningType
+        screening_type = ScreeningType.query.get(screening_id)
+        
+        if screening_type:
+            # Get keywords from new database fields
+            content_keywords = screening_type.get_content_keywords()
+            document_keywords = screening_type.get_document_keywords()
+            filename_keywords = screening_type.get_filename_keywords()
+            
+            # Combine all keywords for display
+            all_keywords = []
+            all_keywords.extend(content_keywords)
+            all_keywords.extend(document_keywords)
+            all_keywords.extend(filename_keywords)
+            
+            # Remove duplicates while preserving order
+            unique_keywords = []
+            for keyword in all_keywords:
+                if keyword not in unique_keywords:
+                    unique_keywords.append(keyword)
+            
+            if unique_keywords:
+                print(f"API: Found {len(unique_keywords)} keywords from new fields for screening {screening_id}: {unique_keywords}")
+                return jsonify({
+                    'success': True,
+                    'keywords': unique_keywords,
+                    'screening_name': screening_type.name,
+                    'fallback_enabled': True,
+                    'confidence_threshold': 0.3
+                })
+        
+        # Fallback to old keyword system if no new keywords found
         manager = ScreeningKeywordManager()
         config = manager.get_keyword_config(screening_id)
 
         if config:
             # Return simple keyword strings for display
             keywords = [rule.keyword for rule in config.keyword_rules]
-            print(f"API: Found {len(keywords)} keywords for screening {screening_id}: {keywords}")
+            print(f"API: Found {len(keywords)} keywords from old system for screening {screening_id}: {keywords}")
             return jsonify({
                 'success': True,
                 'keywords': keywords,
@@ -34,7 +68,7 @@ def get_screening_keywords(screening_id):
             return jsonify({
                 'success': True,
                 'keywords': [],
-                'screening_name': '',
+                'screening_name': screening_type.name if screening_type else '',
                 'fallback_enabled': True,
                 'confidence_threshold': 0.3
             })
