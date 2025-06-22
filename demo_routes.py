@@ -4799,6 +4799,52 @@ def screening_name_autocomplete():
         return jsonify({"screenings": [], "error": str(e)})
 
 
+@app.route('/patients/<int:patient_id>/prep_sheet')
+@safe_db_operation
+def generate_prep_sheet(patient_id):
+    """
+    Generate a comprehensive prep sheet for a patient using document parsing
+    """
+    try:
+        patient = Patient.query.get_or_404(patient_id)
+        
+        # Use the document screening engine to generate screening status
+        from document_screening_engine import document_screening_engine
+        screening_statuses = document_screening_engine.generate_prep_sheet_screening_status(patient_id)
+        
+        # Get existing patient data
+        conditions = Condition.query.filter_by(patient_id=patient_id).all()
+        documents = MedicalDocument.query.filter_by(patient_id=patient_id).all()
+        
+        # Parse documents to get matches
+        document_matches = document_screening_engine.parse_patient_documents(patient_id)
+        
+        # Group matches by screening type for display
+        matches_by_screening = {}
+        for match in document_matches:
+            if match.screening_type_id not in matches_by_screening:
+                matches_by_screening[match.screening_type_id] = []
+            matches_by_screening[match.screening_type_id].append(match)
+        
+        # Prepare prep sheet data
+        prep_sheet_data = {
+            'patient': patient,
+            'screening_statuses': screening_statuses,
+            'document_matches': matches_by_screening,
+            'total_documents': len(documents),
+            'total_matches': len(document_matches),
+            'conditions': conditions,
+            'generated_at': datetime.now()
+        }
+        
+        return render_template('prep_sheet.html', **prep_sheet_data)
+        
+    except Exception as e:
+        logger.error(f"Error generating prep sheet for patient {patient_id}: {str(e)}")
+        flash(f"Error generating prep sheet: {str(e)}", "error")
+        return redirect(url_for('patient_detail', patient_id=patient_id))
+
+
 @app.route(
     "/patients/<int:patient_id>/screenings/<int:screening_id>/edit", methods=["POST"]
 )
