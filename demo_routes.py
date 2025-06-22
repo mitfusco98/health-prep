@@ -768,13 +768,36 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     checklist_settings = get_or_create_settings()
     content_sources = checklist_settings.content_sources_list
 
-    # Start with default items if enabled - these are user-configured items in settings
-    if "database" in content_sources and checklist_settings.default_items:
-        # Exclusively use default items when the database source is selected
-        recommended_screenings.extend(checklist_settings.default_items_list)
+    # Start with active screening types if database source is enabled
+    if "database" in content_sources:
+        # Get filtered list of active ScreeningTypes based on patient demographics
+        from models import ScreeningType
+        active_screening_types = ScreeningType.query.filter_by(is_active=True, status='active').all()
+        
+        # Filter by patient demographics (age and gender)
+        applicable_screenings = []
+        for st in active_screening_types:
+            # Check age criteria
+            age_match = True
+            if st.min_age is not None and patient_age is not None and patient_age < st.min_age:
+                age_match = False
+            if st.max_age is not None and patient_age is not None and patient_age > st.max_age:
+                age_match = False
+            
+            # Check gender criteria
+            gender_match = True
+            if st.gender_specific and patient.sex.lower() != st.gender_specific.lower():
+                gender_match = False
+            
+            # Add if criteria match
+            if age_match and gender_match:
+                applicable_screenings.append(st.name)
+        
+        # Use filtered active ScreeningTypes instead of default_items_list
+        recommended_screenings.extend(applicable_screenings)
 
-    # Only add other items if database source isn't selected or if no default items are configured
-    if "database" not in content_sources or not checklist_settings.default_items_list:
+    # Only add other items if database source isn't selected or if no applicable screenings found
+    if "database" not in content_sources or not recommended_screenings:
         # Get patient's age
         if patient.date_of_birth:
             today = datetime.today()
@@ -2945,12 +2968,12 @@ def screening_list():
 
     # Variables for checklist tab
     settings = None
-    default_items_text = ""
+    active_screening_types = []
     if tab == "checklist":
         settings = get_or_create_settings()
-        default_items_text = (
-            "\n".join(settings.default_items_list) if settings.default_items else ""
-        )
+        # Get active screening types instead of default_items_list
+        from models import ScreeningType
+        active_screening_types = ScreeningType.query.filter_by(is_active=True, status='active').order_by(ScreeningType.name).all()
 
     # Create forms for screening type management
     from forms import ScreeningTypeForm
