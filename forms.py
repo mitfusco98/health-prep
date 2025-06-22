@@ -336,57 +336,77 @@ class ScreeningForm(FlaskForm):
 
 class ScreeningTypeForm(FlaskForm):
     """Form for adding or editing screening types"""
-
-    name = StringField(
-        "Name",
-        validators=[DataRequired()],
-        description="Name of the screening (e.g., 'Mammogram', 'Colonoscopy')",
-    )
-    description = TextAreaField(
-        "Description",
-        validators=[Optional()],
-        description="Detailed description of this screening test",
+    
+    # Basic Information
+    name = StringField("Screening Name", validators=[DataRequired(), Length(max=100)])
+    description = TextAreaField("Description", validators=[Optional(), Length(max=1000)])
+    
+    # Frequency Settings
+    frequency_months = IntegerField(
+        "Frequency (Months)", 
+        validators=[Optional(), NumberRange(min=1, max=120)],
+        description="How often this screening should be performed (in months)"
     )
     
-    frequency_number = IntegerField(
-        "Frequency Number",
-        validators=[Optional(), NumberRange(min=1, max=999)],
-        description="Number for frequency (e.g., 1, 3, 6)",
-    )
-    frequency_unit = SelectField(
-        "Frequency Unit",
-        choices=[
-            ("", "Select unit"),
-            ("days", "Days"),
-            ("weeks", "Weeks"),
-            ("months", "Months"),
-            ("years", "Years")
-        ],
-        validators=[Optional()],
-        description="Time unit for frequency",
-    )
-    gender_specific = SelectField(
-        "Gender Specific",
-        choices=[("", "All Genders"), ("Male", "Male Only"), ("Female", "Female Only")],
-        validators=[Optional()],
-        description="Is this screening specific to a particular gender?",
-    )
+    # Age and Gender Criteria
     min_age = IntegerField(
-        "Minimum Age",
-        validators=[Optional(), NumberRange(min=0, max=120)],
-        description="Minimum age to start this screening (leave blank if not age-specific)",
+        "Minimum Age", 
+        validators=[Optional(), NumberRange(min=0, max=150)],
+        description="Minimum age for this screening (leave blank for no minimum)"
     )
     max_age = IntegerField(
-        "Maximum Age",
-        validators=[Optional(), NumberRange(min=0, max=120)],
-        description="Maximum age for this screening (leave blank if no upper limit)",
+        "Maximum Age", 
+        validators=[Optional(), NumberRange(min=0, max=150)],
+        description="Maximum age for this screening (leave blank for no maximum)"
     )
-    is_active = BooleanField(
-        "Active",
-        default=True,
-        description="Whether this screening should appear in checklists",
+    gender = SelectField(
+        "Gender",
+        choices=[("", "All Genders"), ("Male", "Male"), ("Female", "Female")],
+        validators=[Optional()],
+        description="Gender requirement for this screening"
     )
-    submit = SubmitField("Save Screening")
+    
+    # Trigger Conditions (JSON field as text area)
+    trigger_conditions_text = TextAreaField(
+        "Trigger Conditions",
+        validators=[Optional()],
+        description="JSON list of medical conditions that trigger this screening"
+    )
+    
+    # Keywords for Document Parsing
+    keywords_text = TextAreaField(
+        "Content Keywords",
+        validators=[Optional()],
+        description="Keywords to search for in document content (one per line)"
+    )
+    filename_keywords_text = TextAreaField(
+        "Filename Keywords", 
+        validators=[Optional()],
+        description="Keywords to search for in filenames (one per line)"
+    )
+    
+    # Document Section
+    document_section = SelectField(
+        "Document Section",
+        choices=[
+            ("", "None"),
+            ("labs", "Laboratory Results"),
+            ("imaging", "Imaging Studies"),
+            ("procedures", "Procedures"),
+            ("vitals", "Vital Signs"),
+            ("immunizations", "Immunizations"),
+            ("assessments", "Assessments"),
+            ("consults", "Consultation Reports"),
+            ("medications", "Medications")
+        ],
+        validators=[Optional()],
+        description="Primary document section for this screening"
+    )
+    
+    # Status
+    is_active = BooleanField("Active", default=True, description="Whether this screening type is active")
+    
+    submit = SubmitField("Save Screening Type")
 
 
 class ImmunizationForm(FlaskForm):
