@@ -768,6 +768,20 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     checklist_settings = get_or_create_settings()
     content_sources = checklist_settings.content_sources_list
 
+    # Get patient's age first (needed for demographic filtering)
+    if patient.date_of_birth:
+        today = datetime.today()
+        patient_age = (
+            today.year
+            - patient.date_of_birth.year
+            - (
+                (today.month, today.day)
+                < (patient.date_of_birth.month, patient.date_of_birth.day)
+            )
+        )
+    else:
+        patient_age = None
+
     # Start with active screening types if database source is enabled
     if "database" in content_sources:
         # Get filtered list of active ScreeningTypes based on patient demographics
@@ -798,19 +812,6 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
 
     # Only add other items if database source isn't selected or if no applicable screenings found
     if "database" not in content_sources or not recommended_screenings:
-        # Get patient's age
-        if patient.date_of_birth:
-            today = datetime.today()
-            patient_age = (
-                today.year
-                - patient.date_of_birth.year
-                - (
-                    (today.month, today.day)
-                    < (patient.date_of_birth.month, patient.date_of_birth.day)
-                )
-            )
-        else:
-            patient_age = None
 
         # Query active screening types from the database if age/gender-based content is enabled
         if "age_based" in content_sources or "gender_based" in content_sources:
@@ -3050,7 +3051,7 @@ def screening_list():
             today=today,
             patients=patients,
             settings=settings,
-            default_items_text=default_items_text,
+            active_screening_types=active_screening_types,
         )
     except Exception as e:
         print(f"Error rendering screening_list.html: {str(e)}")

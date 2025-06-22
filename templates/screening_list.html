@@ -712,7 +712,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             <div class="mb-3">
                                 <label class="form-label">Default Items</label>
-                                <textarea class="form-control" name="default_items" rows="4" placeholder="One item per line">{{ default_items_text }}</textarea>
+                                <div class="screening-types-checklist">
+                                    {% if active_screening_types %}
+                                        {% for screening_type in active_screening_types %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" value="{{ screening_type.name }}" id="screening_{{ screening_type.id }}" name="selected_screening_types">
+                                            <label class="form-check-label" for="screening_{{ screening_type.id }}">
+                                                <strong>{{ screening_type.name }}</strong>
+                                                {% if screening_type.description %}
+                                                <small class="text-muted d-block">{{ screening_type.description }}</small>
+                                                {% endif %}
+                                                <small class="text-info">
+                                                    {% if screening_type.formatted_frequency %}{{ screening_type.formatted_frequency }}{% endif %}
+                                                    {% if screening_type.gender_specific %} • {{ screening_type.gender_specific }} only{% endif %}
+                                                    {% if screening_type.min_age or screening_type.max_age %} • Ages {{ screening_type.min_age or 0 }}-{{ screening_type.max_age or '∞' }}{% endif %}
+                                                </small>
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <p class="text-muted">No active screening types found. <a href="{{ url_for('screening_list', tab='types') }}">Add screening types</a> to configure quality checklist items.</p>
+                                    {% endif %}
+                                </div>
                                 <div class="form-text">Default items to include in every patient's checklist</div>
                             </div>
 
