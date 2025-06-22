@@ -976,14 +976,33 @@ def add_screening_type():
         
         screening_type = ScreeningType(
             name=form.name.data,
-            description="",  # No longer using description field
-            frequency_number=int(frequency_number) if frequency_number else None,
-            frequency_unit=frequency_unit if frequency_unit else None,
-            gender_specific=gender_specific if gender_specific else None,
-            min_age=int(min_age) if min_age else None,
-            max_age=int(max_age) if max_age else None,
-            is_active=is_active,
+            description=form.description.data,
+            frequency_months=form.frequency_months.data,
+            min_age=form.min_age.data,
+            max_age=form.max_age.data,
+            gender=form.gender.data if form.gender.data else None,
+            document_section=form.document_section.data if form.document_section.data else None,
+            is_active=form.is_active.data,
         )
+        
+        # Handle keywords from text area (one per line)
+        if hasattr(form, 'keywords_text') and form.keywords_text.data:
+            keywords = [k.strip() for k in form.keywords_text.data.split('\n') if k.strip()]
+            screening_type.set_keywords(keywords)
+        
+        # Handle filename keywords from text area (one per line)
+        if hasattr(form, 'filename_keywords_text') and form.filename_keywords_text.data:
+            filename_keywords = [k.strip() for k in form.filename_keywords_text.data.split('\n') if k.strip()]
+            screening_type.set_filename_keywords(filename_keywords)
+            
+        # Handle trigger conditions from text area (JSON format)
+        if hasattr(form, 'trigger_conditions_text') and form.trigger_conditions_text.data:
+            try:
+                import json
+                trigger_conditions = json.loads(form.trigger_conditions_text.data)
+                screening_type.set_trigger_conditions(trigger_conditions)
+            except json.JSONDecodeError:
+                flash("Invalid JSON format for trigger conditions", "warning")
 
         # Handle trigger conditions if provided
         trigger_conditions_data = request.form.get('trigger_conditions')
@@ -1146,17 +1165,38 @@ def edit_screening_type(screening_type_id):
 
         # Update the screening type with form data
         screening_type.name = form.name.data
-        screening_type.description = ""  # No longer using description field
-        screening_type.frequency_number = form.frequency_number.data
-        screening_type.frequency_unit = (
-            form.frequency_unit.data if form.frequency_unit.data else None
-        )
-        screening_type.gender_specific = (
-            form.gender_specific.data if form.gender_specific.data else None
-        )
+        screening_type.description = form.description.data
+        screening_type.frequency_months = form.frequency_months.data
         screening_type.min_age = form.min_age.data
         screening_type.max_age = form.max_age.data
+        screening_type.gender = form.gender.data if form.gender.data else None
+        screening_type.document_section = form.document_section.data if form.document_section.data else None
         screening_type.is_active = form.is_active.data
+        
+        # Handle keywords from text area (one per line)
+        if hasattr(form, 'keywords_text') and form.keywords_text.data:
+            keywords = [k.strip() for k in form.keywords_text.data.split('\n') if k.strip()]
+            screening_type.set_keywords(keywords)
+        else:
+            screening_type.set_keywords([])
+            
+        # Handle filename keywords from text area (one per line)
+        if hasattr(form, 'filename_keywords_text') and form.filename_keywords_text.data:
+            filename_keywords = [k.strip() for k in form.filename_keywords_text.data.split('\n') if k.strip()]
+            screening_type.set_filename_keywords(filename_keywords)
+        else:
+            screening_type.set_filename_keywords([])
+            
+        # Handle trigger conditions from text area (JSON format)
+        if hasattr(form, 'trigger_conditions_text') and form.trigger_conditions_text.data:
+            try:
+                import json
+                trigger_conditions = json.loads(form.trigger_conditions_text.data)
+                screening_type.set_trigger_conditions(trigger_conditions)
+            except json.JSONDecodeError:
+                flash("Invalid JSON format for trigger conditions", "warning")
+        else:
+            screening_type.set_trigger_conditions([])
 
         # Handle trigger conditions if provided
         trigger_conditions_data = request.form.get('trigger_conditions')
