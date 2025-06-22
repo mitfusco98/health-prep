@@ -76,23 +76,30 @@ def update_checklist_generation():
     # Get or create settings
     settings = get_or_create_settings()
 
-    # Get form data
-    content_sources = request.form.getlist("content_sources")
-    default_items = request.form.get("default_items", "")
+    # Get content sources
+    content_sources = request.form.getlist('content_sources')
+    settings.content_sources = ','.join(content_sources) if content_sources else ''
 
-    # Update settings
-    settings.content_sources = (
-        ",".join(content_sources) if content_sources else "database"
-    )
-    settings.default_items = default_items
+    # Get selected screening types from the checkboxes
+    selected_screening_types = request.form.getlist('selected_screening_types')
 
-    # Save settings
-    db.session.commit()
+    # Update default items with selected screening types
+    if selected_screening_types:
+        # Join the selected screening types with newlines
+        settings.default_items = '\n'.join(selected_screening_types)
+    else:
+        # Fall back to manual default items input if no screening types selected
+        default_items = request.form.get('default_items', '')
+        settings.default_items = default_items
 
-    flash("Prep sheet generation settings updated successfully!", "success")
+    try:
+        db.session.commit()
+        flash('Checklist generation settings updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating settings: {str(e)}', 'danger')
 
-    # Redirect back to the screening list page with the checklist tab active
-    return redirect(url_for("screening_list", tab="checklist"))
+    return redirect(url_for('screening_list', tab='checklist'))
 
 
 @app.route("/checklist-settings/remove-custom-status", methods=["POST"])

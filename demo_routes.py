@@ -784,30 +784,35 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
 
     # Start with active screening types if database source is enabled
     if "database" in content_sources:
-        # Get filtered list of active ScreeningTypes based on patient demographics
-        from models import ScreeningType
-        active_screening_types = ScreeningType.query.filter_by(is_active=True, status='active').all()
+        # Get the selected default items from checklist settings
+        default_items_list = checklist_settings.default_items_list if checklist_settings.default_items else []
         
-        # Filter by patient demographics (age and gender)
+        # Filter default items by patient demographics (age and gender)
         applicable_screenings = []
-        for st in active_screening_types:
-            # Check age criteria
-            age_match = True
-            if st.min_age is not None and patient_age is not None and patient_age < st.min_age:
-                age_match = False
-            if st.max_age is not None and patient_age is not None and patient_age > st.max_age:
-                age_match = False
-            
-            # Check gender criteria
-            gender_match = True
-            if st.gender_specific and patient.sex.lower() != st.gender_specific.lower():
-                gender_match = False
-            
-            # Add if criteria match
-            if age_match and gender_match:
-                applicable_screenings.append(st.name)
+        for item_name in default_items_list:
+            # Find the corresponding screening type to check demographics
+            screening_type = ScreeningType.query.filter_by(name=item_name, is_active=True, status='active').first()
+            if screening_type:
+                # Check age criteria
+                age_match = True
+                if screening_type.min_age is not None and patient_age is not None and patient_age < screening_type.min_age:
+                    age_match = False
+                if screening_type.max_age is not None and patient_age is not None and patient_age > screening_type.max_age:
+                    age_match = False
+                
+                # Check gender criteria
+                gender_match = True
+                if screening_type.gender_specific and patient.sex and screening_type.gender_specific.lower() != patient.sex.lower():
+                    gender_match = False
+                
+                # Add if criteria match
+                if age_match and gender_match:
+                    applicable_screenings.append(item_name)
+            else:
+                # If no screening type found, include the item anyway (for custom items)
+                applicable_screenings.append(item_name)
         
-        # Use filtered active ScreeningTypes instead of default_items_list
+        # Use filtered default items from checklist settings
         recommended_screenings.extend(applicable_screenings)
 
     # Only add other items if database source isn't selected or if no applicable screenings found
