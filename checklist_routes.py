@@ -85,11 +85,24 @@ def update_checklist_generation():
     print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
     print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
     print(f"DEBUG: All form data: {dict(request.form)}")
+    print(f"DEBUG: Raw form data: {request.form}")
+    print(f"DEBUG: Form data lists: {request.form.lists()}")
 
     # Debug: Check what's in the form data
     for key, value in request.form.items():
+        print(f"DEBUG: Form field '{key}' = '{value}'")
+    
+    # Debug: Check specifically for multiple values
+    for key in request.form.keys():
+        values = request.form.getlist(key)
+        if len(values) > 1:
+            print(f"DEBUG: Multiple values for '{key}': {values}")
+    
+    # Debug: Check if there are any issues with the key name
+    print(f"DEBUG: Looking for keys containing 'screening':")
+    for key in request.form.keys():
         if 'screening' in key.lower():
-            print(f"DEBUG: Form field '{key}' = '{value}'")
+            print(f"DEBUG: Found key '{key}' with values: {request.form.getlist(key)}")
 
     # Update default items with selected screening types
     if selected_screening_types:

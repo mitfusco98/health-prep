@@ -745,14 +745,61 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         <script>
                         // Debug form submission
-                        document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
-                            console.log('Form being submitted...');
-                            const formData = new FormData(this);
-                            const selectedScreenings = formData.getAll('selected_screening_types');
-                            console.log('Selected screening types being submitted:', selectedScreenings);
-                            console.log('All form data:');
-                            for (let [key, value] of formData.entries()) {
-                                console.log(key, value);
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const form = document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]');
+                            if (form) {
+                                // Debug when form is about to be submitted
+                                form.addEventListener('submit', function(e) {
+                                    console.log('=== FORM SUBMISSION DEBUG ===');
+                                    
+                                    // Check all checkboxes manually
+                                    const allCheckboxes = this.querySelectorAll('input[name="selected_screening_types"]');
+                                    console.log('Total checkboxes found:', allCheckboxes.length);
+                                    
+                                    const checkedBoxes = [];
+                                    allCheckboxes.forEach((checkbox, index) => {
+                                        console.log(`Checkbox ${index}: name="${checkbox.name}", value="${checkbox.value}", checked=${checkbox.checked}`);
+                                        if (checkbox.checked) {
+                                            checkedBoxes.push(checkbox.value);
+                                        }
+                                    });
+                                    console.log('Manually checked boxes:', checkedBoxes);
+                                    
+                                    // Check FormData
+                                    const formData = new FormData(this);
+                                    const selectedScreenings = formData.getAll('selected_screening_types');
+                                    console.log('FormData.getAll result:', selectedScreenings);
+                                    
+                                    console.log('All form data entries:');
+                                    for (let [key, value] of formData.entries()) {
+                                        console.log(`  ${key}: ${value}`);
+                                    }
+                                    
+                                    // If there's a mismatch, prevent submission for debugging
+                                    if (checkedBoxes.length !== selectedScreenings.length) {
+                                        console.error('MISMATCH: Manual count vs FormData count!');
+                                        console.error('Manual:', checkedBoxes);
+                                        console.error('FormData:', selectedScreenings);
+                                        // Uncomment the next line to prevent submission for debugging
+                                        // e.preventDefault();
+                                    }
+                                    
+                                    console.log('=== END FORM SUBMISSION DEBUG ===');
+                                });
+                                
+                                // Also log when checkboxes change
+                                const checkboxes = form.querySelectorAll('input[name="selected_screening_types"]');
+                                checkboxes.forEach((checkbox, index) => {
+                                    checkbox.addEventListener('change', function() {
+                                        console.log(`Checkbox ${index} changed: ${this.value} = ${this.checked}`);
+                                        
+                                        // Count currently checked
+                                        const currentlyChecked = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+                                        console.log('Currently checked items:', currentlyChecked);
+                                    });
+                                });
+                            } else {
+                                console.error('Form not found!');
                             }
                         });
                         </script>
