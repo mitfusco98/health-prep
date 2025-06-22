@@ -31,55 +31,19 @@
                 <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy')</small>
             </div>
             
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Keywords for Document Content</label>
-                        <div class="keywords-container">
-                            <div id="add-form-keywords-container" class="keywords-form-group">
-                                <div class="d-flex mb-2">
-                                    <input type="text" class="keywords-input me-2" id="add-form-keyword-input" placeholder="Enter keyword">
-                                    <button type="button" class="keywords-btn" onclick="addKeywordToForm('add-form')">Add</button>
-                                </div>
-                                <div id="add-form-keywords-list" class="keywords-display"></div>
-                            </div>
-                        </div>
-                        <small class="keywords-help-text">Keywords for matching document content</small>
-                        <input type="hidden" name="keywords" id="add-form-keywords-data">
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Filename Keywords</label>
-                        <div class="keywords-container">
-                            <div id="add-form-filename-keywords-container" class="keywords-form-group">
-                                <div class="d-flex mb-2">
-                                    <input type="text" class="keywords-input me-2" id="add-form-filename-keyword-input" placeholder="Enter filename keyword">
-                                    <button type="button" class="keywords-btn" onclick="addFilenameKeywordToForm('add-form')">Add</button>
-                                </div>
-                                <div id="add-form-filename-keywords-list" class="keywords-display"></div>
-                            </div>
-                        </div>
-                        <small class="keywords-help-text">Keywords for matching filenames</small>
-                        <input type="hidden" name="filename_keywords" id="add-form-filename-keywords-data">
-                    </div>
-                </div>
-            </div>
-            
             <div class="mb-3">
-                <label class="form-label">Document Section</label>
-                <select class="form-select" name="document_section">
-                    <option value="">Any Section</option>
-                    <option value="labs">Laboratory Results</option>
-                    <option value="imaging">Imaging Studies</option>
-                    <option value="reports">Medical Reports</option>
-                    <option value="consultations">Consultations</option>
-                    <option value="procedures">Procedures</option>
-                    <option value="pathology">Pathology</option>
-                    <option value="discharge">Discharge Summaries</option>
-                    <option value="operative">Operative Notes</option>
-                </select>
-                <small class="text-muted">Select the document section this screening typically appears in</small>
+                <label class="form-label">Keywords for Document Matching</label>
+                <div class="keywords-container">
+                    <div id="add-form-keywords-container" class="keywords-form-group">
+                        <div class="d-flex mb-2">
+                            <input type="text" class="keywords-input me-2" id="add-form-keyword-input" placeholder="Enter keyword">
+                            <button type="button" class="keywords-btn" onclick="addKeywordToForm('add-form')">Add</button>
+                        </div>
+                        <div id="add-form-keywords-list" class="keywords-display"></div>
+                    </div>
+                </div>
+                <small class="keywords-help-text">Keywords help identify relevant documents for this screening type</small>
+                <input type="hidden" name="keywords" id="add-form-keywords-data">
             </div>
             
             <div class="row mb-3">
@@ -571,58 +535,10 @@ function renderScreeningNameSuggestions(screenings, suggestionsDiv, nameInput) {
     suggestionsDiv.style.display = 'block';
 }
 
-// Filename keywords management
-function addFilenameKeywordToForm(formPrefix) {
-    const keywordInput = document.getElementById(`${formPrefix}-filename-keyword-input`);
-    const keywordsList = document.getElementById(`${formPrefix}-filename-keywords-list`);
-    
-    const keyword = keywordInput.value.trim();
-    if (keyword) {
-        const keywordElement = document.createElement('span');
-        keywordElement.className = 'badge bg-secondary me-2 mb-2';
-        keywordElement.innerHTML = `
-            ${keyword}
-            <button type="button" class="btn-close btn-close-white ms-1" 
-                    onclick="removeFormFilenameKeyword(this)" aria-label="Remove"></button>
-        `;
-        keywordsList.appendChild(keywordElement);
-        
-        keywordInput.value = '';
-        updateFormFilenameKeywordsData(formPrefix);
-    }
-}
-
-function removeFormFilenameKeyword(button) {
-    const formPrefix = 'add-form';
-    button.parentElement.remove();
-    updateFormFilenameKeywordsData(formPrefix);
-}
-
-function updateFormFilenameKeywordsData(formPrefix) {
-    const keywordsList = document.getElementById(`${formPrefix}-filename-keywords-list`);
-    const hiddenInput = document.getElementById(`${formPrefix}-filename-keywords-data`);
-    
-    const keywords = Array.from(keywordsList.children).map(element => 
-        element.textContent.trim().replace(/×$/, '')
-    );
-    
-    if (hiddenInput) {
-        hiddenInput.value = JSON.stringify(keywords);
-    }
-}
-
 // Initialize autocomplete on page load
 document.addEventListener('DOMContentLoaded', function() {
     setupConditionAutocomplete('add-form');
     setupScreeningNameAutocomplete();
-    
-    // Handle Enter key for filename keywords
-    document.getElementById('add-form-filename-keyword-input')?.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            addFilenameKeywordToForm('add-form');
-        }
-    });
 });
 </script>
 
