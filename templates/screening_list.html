@@ -717,10 +717,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                         {% set default_items_list = settings.default_items_list if settings else [] %}
                                         {% for screening_type in active_screening_types %}
                                         <div class="form-check mb-2">
-                                            <input class="form-check-input screening-checkbox" type="checkbox" value="{{ screening_type.name }}" id="screening_{{ screening_type.id }}" name="selected_screening_types"
+                                            <!-- Add hidden input to ensure unchecked items are handled properly -->
+                                            <input type="hidden" name="screening_type_{{ screening_type.id }}" value="off">
+                                            <input class="form-check-input" type="checkbox" value="on" id="screening_{{ screening_type.id }}" name="screening_type_{{ screening_type.id }}"
                                                 {% if screening_type.name in default_items_list %}checked{% endif %}
-                                                data-screening-name="{{ screening_type.name }}"
-                                                onchange="console.log('Checkbox changed:', this.name, this.value, this.checked)">
+                                                data-screening-name="{{ screening_type.name }}">
                                             <label class="form-check-label" for="screening_{{ screening_type.id }}">
                                                 <strong>{{ screening_type.name }}</strong>
                                                 {% if screening_type.description %}
@@ -743,96 +744,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             <button type="submit" class="btn btn-primary">Save Generation Settings</button>
                         </form>
-                        
-                        <script>
-                        // Fix multiple checkbox submission issue
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const form = document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]');
-                            if (form) {
-                                // Always intercept form submission to ensure all checkboxes are sent
-                                form.addEventListener('submit', function(e) {
-                                    e.preventDefault(); // Always prevent default submission
-                                    console.log('=== INTERCEPTED FORM SUBMISSION ===');
-                                    
-                                    // Get all checkbox values manually to ensure they're all captured
-                                    const allCheckboxes = this.querySelectorAll('input[name="selected_screening_types"]');
-                                    console.log('Total checkboxes found:', allCheckboxes.length);
-                                    
-                                    const checkedValues = [];
-                                    allCheckboxes.forEach((checkbox, index) => {
-                                        console.log(`Checkbox ${index}: name="${checkbox.name}", value="${checkbox.value}", checked=${checkbox.checked}`);
-                                        if (checkbox.checked) {
-                                            checkedValues.push(checkbox.value);
-                                        }
-                                    });
-                                    console.log('Selected screening types:', checkedValues);
-                                    
-                                    // Build manual form submission to guarantee all values are sent
-                                    const xhr = new XMLHttpRequest();
-                                    xhr.open('POST', this.action, true);
-                                    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-                                    
-                                    // Build URL-encoded parameters manually
-                                    const params = new URLSearchParams();
-                                    
-                                    // Add CSRF token
-                                    const csrfToken = this.querySelector('input[name="csrf_token"]').value;
-                                    params.append('csrf_token', csrfToken);
-                                    
-                                    // Add content sources
-                                    const contentSources = this.querySelectorAll('input[name="content_sources"]:checked');
-                                    contentSources.forEach(cb => {
-                                        params.append('content_sources', cb.value);
-                                        console.log('Adding content source:', cb.value);
-                                    });
-                                    
-                                    // Add ALL checked screening types manually
-                                    checkedValues.forEach(value => {
-                                        params.append('selected_screening_types', value);
-                                        console.log('Adding screening type:', value);
-                                    });
-                                    
-                                    console.log('Final params string:', params.toString());
-                                    
-                                    xhr.onload = function() {
-                                        console.log('XHR response status:', xhr.status);
-                                        if (xhr.status === 200 || xhr.status === 302) {
-                                            console.log('Form submission successful, redirecting...');
-                                            // Redirect to the checklist tab after successful submission
-                                            window.location.href = '/screenings?tab=checklist';
-                                        } else {
-                                            console.error('Form submission failed:', xhr.status, xhr.statusText, xhr.responseText);
-                                            alert('Form submission failed. Please try again.');
-                                        }
-                                    };
-                                    
-                                    xhr.onerror = function() {
-                                        console.error('Network error during form submission');
-                                        alert('Network error. Please try again.');
-                                    };
-                                    
-                                    console.log('Sending manual form submission...');
-                                    xhr.send(params.toString());
-                                    
-                                    console.log('=== END MANUAL FORM SUBMISSION ===');
-                                });
-                                
-                                // Also log when checkboxes change
-                                const checkboxes = form.querySelectorAll('input[name="selected_screening_types"]');
-                                checkboxes.forEach((checkbox, index) => {
-                                    checkbox.addEventListener('change', function() {
-                                        console.log(`Checkbox ${index} changed: ${this.value} = ${this.checked}`);
-                                        
-                                        // Count currently checked
-                                        const currentlyChecked = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-                                        console.log('Currently checked items:', currentlyChecked);
-                                    });
-                                });
-                            } else {
-                                console.error('Form not found!');
-                            }
-                        });
-                        </script>
                     </div>
                 </div>
             </div>

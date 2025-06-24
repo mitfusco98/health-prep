@@ -80,15 +80,23 @@ def update_checklist_generation():
     content_sources = request.form.getlist('content_sources')
     settings.content_sources = ','.join(content_sources) if content_sources else ''
 
-    # Get selected screening types from the checkboxes
-    selected_screening_types = request.form.getlist('selected_screening_types')
-    print(f"INFO: Processing {len(selected_screening_types)} selected screening types: {selected_screening_types}")
+    # Process screening type checkboxes using individual field names
+    from models import ScreeningType
+    active_screening_types = ScreeningType.query.filter_by(is_active=True, status='active').all()
+    
+    selected_screening_names = []
+    for screening_type in active_screening_types:
+        field_name = f'screening_type_{screening_type.id}'
+        if request.form.get(field_name) == 'on':
+            selected_screening_names.append(screening_type.name)
+    
+    print(f"INFO: Processing {len(selected_screening_names)} selected screening types: {selected_screening_names}")
 
     # Update default items with selected screening types
-    if selected_screening_types:
+    if selected_screening_names:
         # Join the selected screening types with newlines
-        settings.default_items = '\n'.join(selected_screening_types)
-        flash(f'Updated checklist with {len(selected_screening_types)} screening types', 'success')
+        settings.default_items = '\n'.join(selected_screening_names)
+        flash(f'Updated checklist with {len(selected_screening_names)} screening types', 'success')
     else:
         # Clear default items if none selected
         settings.default_items = ''
@@ -96,7 +104,7 @@ def update_checklist_generation():
 
     try:
         db.session.commit()
-        print(f"INFO: Successfully saved {len(selected_screening_types)} screening types to checklist settings")
+        print(f"INFO: Successfully saved {len(selected_screening_names)} screening types to checklist settings")
     except Exception as e:
         db.session.rollback()
         flash(f'Error updating settings: {str(e)}', 'danger')
