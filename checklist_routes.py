@@ -80,62 +80,23 @@ def update_checklist_generation():
     content_sources = request.form.getlist('content_sources')
     settings.content_sources = ','.join(content_sources) if content_sources else ''
 
-    # Enhanced debugging for form data
-    print(f"DEBUG: ===== FORM SUBMISSION ANALYSIS =====")
-    print(f"DEBUG: Request method: {request.method}")
-    print(f"DEBUG: Content type: {request.content_type}")
-    
     # Get selected screening types from the checkboxes
     selected_screening_types = request.form.getlist('selected_screening_types')
-    print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
-    print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
-    
-    # Check raw form data completely
-    print(f"DEBUG: Raw request.form type: {type(request.form)}")
-    print(f"DEBUG: All form keys: {list(request.form.keys())}")
-    
-    # Check all form values
-    for key in request.form.keys():
-        all_values = request.form.getlist(key)
-        single_value = request.form.get(key)
-        print(f"DEBUG: Key '{key}' -> getlist: {all_values}, get: '{single_value}'")
-    
-    # Check if the issue is with the form name
-    alt_names = ['selected_screening_types[]', 'selected_screening_types', 'screening_types']
-    for name in alt_names:
-        if name in request.form:
-            print(f"DEBUG: Found alternative name '{name}': {request.form.getlist(name)}")
-    
-    # Try to get all checkbox values in different ways
-    try:
-        from werkzeug.datastructures import MultiDict
-        if isinstance(request.form, MultiDict):
-            items = request.form.items(multi=True)
-            screening_items = [value for key, value in items if key == 'selected_screening_types']
-            print(f"DEBUG: MultiDict items with multi=True for selected_screening_types: {screening_items}")
-    except Exception as e:
-        print(f"DEBUG: Error checking MultiDict: {e}")
+    print(f"INFO: Processing {len(selected_screening_types)} selected screening types: {selected_screening_types}")
 
     # Update default items with selected screening types
     if selected_screening_types:
         # Join the selected screening types with newlines
         settings.default_items = '\n'.join(selected_screening_types)
-        print(f"DEBUG: Updated default_items to: '{settings.default_items}'")
-        print(f"DEBUG: Length of default_items string: {len(settings.default_items)}")
+        flash(f'Updated checklist with {len(selected_screening_types)} screening types', 'success')
     else:
-        # Fall back to manual default items input if no screening types selected
-        default_items = request.form.get('default_items', '')
-        settings.default_items = default_items
-        print(f"DEBUG: Using manual default_items: '{default_items}'")
+        # Clear default items if none selected
+        settings.default_items = ''
+        flash('Cleared default checklist items', 'info')
 
     try:
         db.session.commit()
-        print(f"DEBUG: Successfully committed to database")
-
-        # Verify the data was saved
-        db.session.refresh(settings)
-        print(f"DEBUG: After refresh, default_items: '{settings.default_items}'")
-        print(f"DEBUG: default_items_list: {settings.default_items_list}")
+        print(f"INFO: Successfully saved {len(selected_screening_types)} screening types to checklist settings")
     except Exception as e:
         db.session.rollback()
         flash(f'Error updating settings: {str(e)}', 'danger')
