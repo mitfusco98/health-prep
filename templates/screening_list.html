@@ -717,8 +717,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                         {% set default_items_list = settings.default_items_list if settings else [] %}
                                         {% for screening_type in active_screening_types %}
                                         <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" value="{{ screening_type.name }}" id="screening_{{ screening_type.id }}" name="selected_screening_types"
+                                            <input class="form-check-input screening-checkbox" type="checkbox" value="{{ screening_type.name }}" id="screening_{{ screening_type.id }}" name="selected_screening_types"
                                                 {% if screening_type.name in default_items_list %}checked{% endif %}
+                                                data-screening-name="{{ screening_type.name }}"
                                                 onchange="console.log('Checkbox changed:', this.name, this.value, this.checked)">
                                             <label class="form-check-label" for="screening_{{ screening_type.id }}">
                                                 <strong>{{ screening_type.name }}</strong>
@@ -780,8 +781,51 @@ document.addEventListener('DOMContentLoaded', function() {
                                         console.error('MISMATCH: Manual count vs FormData count!');
                                         console.error('Manual:', checkedBoxes);
                                         console.error('FormData:', selectedScreenings);
-                                        // Uncomment the next line to prevent submission for debugging
-                                        // e.preventDefault();
+                                        
+                                        // Fix the form data issue by preventing default submission and manually creating correct data
+                                        console.log('FIXING: Multiple checkboxes not being sent correctly');
+                                        e.preventDefault();
+                                        
+                                        // Create a new XMLHttpRequest to manually send the correct data
+                                        const xhr = new XMLHttpRequest();
+                                        xhr.open('POST', this.action, true);
+                                        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                                        
+                                        // Build form data manually to ensure all checkboxes are included
+                                        const params = new URLSearchParams();
+                                        
+                                        // Add CSRF token
+                                        const csrfToken = this.querySelector('input[name="csrf_token"]').value;
+                                        params.append('csrf_token', csrfToken);
+                                        
+                                        // Add content sources
+                                        const contentSources = this.querySelectorAll('input[name="content_sources"]:checked');
+                                        contentSources.forEach(cb => params.append('content_sources', cb.value));
+                                        
+                                        // Add all checked screening types manually
+                                        checkedBoxes.forEach(value => {
+                                            params.append('selected_screening_types', value);
+                                        });
+                                        
+                                        console.log('Manually submitting with params:', params.toString());
+                                        
+                                        xhr.onload = function() {
+                                            if (xhr.status === 200) {
+                                                // Redirect to the checklist tab after successful submission
+                                                window.location.href = '/screenings?tab=checklist';
+                                            } else {
+                                                console.error('Form submission failed:', xhr.status, xhr.statusText);
+                                                alert('Form submission failed. Please try again.');
+                                            }
+                                        };
+                                        
+                                        xhr.onerror = function() {
+                                            console.error('Network error during form submission');
+                                            alert('Network error. Please try again.');
+                                        };
+                                        
+                                        xhr.send(params.toString());
+                                        return;
                                     }
                                     
                                     console.log('=== END FORM SUBMISSION DEBUG ===');
