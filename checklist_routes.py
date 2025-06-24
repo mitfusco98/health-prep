@@ -80,29 +80,41 @@ def update_checklist_generation():
     content_sources = request.form.getlist('content_sources')
     settings.content_sources = ','.join(content_sources) if content_sources else ''
 
+    # Enhanced debugging for form data
+    print(f"DEBUG: ===== FORM SUBMISSION ANALYSIS =====")
+    print(f"DEBUG: Request method: {request.method}")
+    print(f"DEBUG: Content type: {request.content_type}")
+    
     # Get selected screening types from the checkboxes
     selected_screening_types = request.form.getlist('selected_screening_types')
     print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
     print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
-    print(f"DEBUG: All form data: {dict(request.form)}")
-    print(f"DEBUG: Raw form data: {request.form}")
-    print(f"DEBUG: Form data lists: {request.form.lists()}")
-
-    # Debug: Check what's in the form data
-    for key, value in request.form.items():
-        print(f"DEBUG: Form field '{key}' = '{value}'")
     
-    # Debug: Check specifically for multiple values
-    for key in request.form.keys():
-        values = request.form.getlist(key)
-        if len(values) > 1:
-            print(f"DEBUG: Multiple values for '{key}': {values}")
+    # Check raw form data completely
+    print(f"DEBUG: Raw request.form type: {type(request.form)}")
+    print(f"DEBUG: All form keys: {list(request.form.keys())}")
     
-    # Debug: Check if there are any issues with the key name
-    print(f"DEBUG: Looking for keys containing 'screening':")
+    # Check all form values
     for key in request.form.keys():
-        if 'screening' in key.lower():
-            print(f"DEBUG: Found key '{key}' with values: {request.form.getlist(key)}")
+        all_values = request.form.getlist(key)
+        single_value = request.form.get(key)
+        print(f"DEBUG: Key '{key}' -> getlist: {all_values}, get: '{single_value}'")
+    
+    # Check if the issue is with the form name
+    alt_names = ['selected_screening_types[]', 'selected_screening_types', 'screening_types']
+    for name in alt_names:
+        if name in request.form:
+            print(f"DEBUG: Found alternative name '{name}': {request.form.getlist(name)}")
+    
+    # Try to get all checkbox values in different ways
+    try:
+        from werkzeug.datastructures import MultiDict
+        if isinstance(request.form, MultiDict):
+            items = request.form.items(multi=True)
+            screening_items = [value for key, value in items if key == 'selected_screening_types']
+            print(f"DEBUG: MultiDict items with multi=True for selected_screening_types: {screening_items}")
+    except Exception as e:
+        print(f"DEBUG: Error checking MultiDict: {e}")
 
     # Update default items with selected screening types
     if selected_screening_types:
