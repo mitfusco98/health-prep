@@ -11,7 +11,7 @@ function loadKeywordsAsBadges() {
 
     keywordContainers.forEach(container => {
         const screeningTypeId = container.id.replace('keywords-display-', '');
-        
+
         console.log(`loadKeywordsAsBadges: Loading keywords for screening ${screeningTypeId}`);
 
         fetch(`/api/screening-keywords/${screeningTypeId}`)
@@ -48,15 +48,15 @@ function loadKeywordsAsBadges() {
 // Initialize keyword display when page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded - checking for keyword containers...');
-    
+
     // Check if keyword containers exist
     const hasKeywordContainers = document.querySelectorAll('.keywords-badges-container').length > 0;
-    
+
     if (hasKeywordContainers) {
         console.log('Loading keywords for display...');
         // Load keywords immediately
         loadKeywordsAsBadges();
-        
+
         // Also load after a delay to ensure DOM is fully ready
         setTimeout(() => {
             loadKeywordsAsBadges();
@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </form>
 
-                
+
                 <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
                     Add Type
                 </a>
@@ -742,7 +742,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             <button type="submit" class="btn btn-primary">Save Generation Settings</button>
                         </form>
-                        
+
                         <script>
                         // Debug form submission
                         document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
@@ -760,10 +760,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         </div>
-    </div>
-</div>
-{% endif %}
-{% endblock %}
     </div>
 </div>
 {% endif %}
@@ -865,34 +861,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const systemSelect = document.getElementById(`${formType}-condition-system`);
         const codeInput = document.getElementById(`${formType}-condition-code`);
         const displayInput = document.getElementById(`${formType}-condition-display`);
-        
+
         const system = systemSelect.value;
         const code = codeInput.value.trim();
         const display = displayInput.value.trim();
-        
+
         if (!code || !display) {
             alert('Please enter both condition code and display name');
             return;
         }
-        
+
         const condition = {
             system: system,
             code: code,
             display: display
         };
-        
+
         // Add to data array
         if (!window.triggerConditionsData[formType]) {
             window.triggerConditionsData[formType] = [];
         }
         window.triggerConditionsData[formType].push(condition);
-        
+
         // Update hidden input
         document.getElementById(`${formType}-trigger-conditions-data`).value = JSON.stringify(window.triggerConditionsData[formType]);
-        
+
         // Update display
         renderTriggerConditions(formType);
-        
+
         // Clear inputs
         codeInput.value = '';
         displayInput.value = '';
@@ -909,14 +905,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderTriggerConditions(formType) {
         const container = document.getElementById(`${formType}-trigger-conditions-list`);
         if (!container) return;
-        
+
         const conditions = window.triggerConditionsData[formType] || [];
-        
+
         if (conditions.length === 0) {
             container.innerHTML = '<div class="text-muted small">No trigger conditions added</div>';
             return;
         }
-        
+
         let html = '';
         conditions.forEach((condition, index) => {
             html += `
@@ -931,7 +927,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
         });
-        
+
         container.innerHTML = html;
     }
 
@@ -961,7 +957,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Clear trigger conditions when modals close
     const addModal = document.getElementById('addScreeningTypeModal');
     // Edit modal removed - now redirects to dedicated edit page
-    
+
     if (addModal) {
         addModal.addEventListener('hidden.bs.modal', function() {
             window.triggerConditionsData['add-form'] = [];
@@ -996,21 +992,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const maxAge = button.getAttribute('data-max-age');
             const active = button.getAttribute('data-active') === '1';
             const triggerConditions = button.getAttribute('data-trigger-conditions');
-            
+
             // Set form values
             const form = document.getElementById('editScreeningTypeForm');
             form.action = `/screening-types/${id}/edit?ts=${Date.now()}`;
-            
+
             document.getElementById('edit-name').value = name;
             document.getElementById('edit-frequency').value = frequency || '';
             document.getElementById('edit-gender').value = gender || '';
             document.getElementById('edit-min-age').value = minAge || '';
             document.getElementById('edit-max-age').value = maxAge || '';
             document.getElementById('edit-active').checked = active;
-            
+
             // Load trigger conditions
             window.loadTriggerConditionsForEdit(triggerConditions);
-            
+
             // Load keywords (existing functionality)
             if (window.keywordManagers && window.keywordManagers.edit) {
                 window.keywordManagers.edit.loadKeywords(id);
@@ -1311,7 +1307,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    
+
 });
 
 
