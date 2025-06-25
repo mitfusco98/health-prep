@@ -83,7 +83,6 @@ def update_checklist_generation():
     print(f"DEBUG: ===== FORM SUBMISSION DEBUG =====")
     print(f"DEBUG: Request method: {request.method}")
     print(f"DEBUG: Content type: {request.content_type}")
-    print(f"DEBUG: Request headers: {dict(request.headers)}")
     print(f"DEBUG: Raw form data: {request.form}")
     print(f"DEBUG: Form data as dict: {dict(request.form)}")
     print(f"DEBUG: Form data keys: {list(request.form.keys())}")
@@ -96,20 +95,22 @@ def update_checklist_generation():
     selected_get = request.form.get("selected_screening_types")
     print(f"DEBUG: selected_screening_types (get): {selected_get}")
     
-    # Check ALL form fields
+    # Check ALL form fields - specifically look for multiple values
     print(f"DEBUG: All form fields:")
     for key in request.form.keys():
         values_getlist = request.form.getlist(key)
         value_get = request.form.get(key)
         print(f"DEBUG:   {key}: getlist={values_getlist}, get={value_get}")
+        
+        # If this is the screening types field and we have multiple values
+        if key == "selected_screening_types" and len(values_getlist) > 1:
+            print(f"DEBUG: MULTIPLE VALUES DETECTED for {key}: {values_getlist}")
+    
+    # Also check if there are any other fields that might contain our data
+    potential_fields = [k for k in request.form.keys() if 'screening' in k.lower() or 'selected' in k.lower()]
+    print(f"DEBUG: Potential screening fields: {potential_fields}")
     
     print(f"DEBUG: ===== END FORM DEBUG =====")
-    
-    # Debug: Check if we're getting the right field name
-    for key in request.form.keys():
-        if 'screening' in key.lower():
-            values = request.form.getlist(key)
-            print(f"DEBUG: Form field '{key}' = {values}")
     
     # Update settings
     settings.content_sources = (
