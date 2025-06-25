@@ -78,16 +78,40 @@ def update_checklist_generation():
 
     # Get form data
     content_sources = request.form.getlist("content_sources")
-    default_items = request.form.get("default_items", "")
-
+    selected_screening_types = request.form.getlist("selected_screening_types")
+    
+    print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
+    print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
+    
     # Update settings
     settings.content_sources = (
         ",".join(content_sources) if content_sources else "database"
     )
-    settings.default_items = default_items
+    
+    # Update default items with selected screening types
+    if selected_screening_types:
+        # Join the selected screening types with newlines
+        settings.default_items = '\n'.join(selected_screening_types)
+        print(f"DEBUG: Updated default_items to: '{settings.default_items}'")
+        print(f"DEBUG: Length of default_items string: {len(settings.default_items)}")
+    else:
+        # Fall back to manual default items input if no screening types selected
+        default_items = request.form.get('default_items', '')
+        settings.default_items = default_items
+        print(f"DEBUG: Using manual default_items: '{default_items}'")
 
-    # Save settings
-    db.session.commit()
+    try:
+        db.session.commit()
+        print(f"DEBUG: Successfully committed to database")
+
+        # Verify the data was saved
+        db.session.refresh(settings)
+        print(f"DEBUG: After refresh, default_items: '{settings.default_items}'")
+        print(f"DEBUG: default_items_list: {settings.default_items_list}")
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating settings: {str(e)}', 'danger')
+        return redirect(url_for("screening_list", tab="checklist"))
 
     flash("Prep sheet generation settings updated successfully!", "success")
 
