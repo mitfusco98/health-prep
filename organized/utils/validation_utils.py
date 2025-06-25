@@ -253,6 +253,61 @@ def validate_condition_data(form_data: Dict[str, str]) -> List[str]:
     return errors
 
 
+def validate_document_data(form_data: Dict[str, str]) -> List[str]:
+    """Validate document upload form data"""
+    errors = []
+
+    # Required fields
+    document_type = form_data.get("document_type", "").strip()
+    if not document_type:
+        errors.append("Document type is required")
+
+    # File validation (if file is expected)
+    filename = form_data.get("filename", "").strip()
+    if filename:
+        # Check file extension
+        allowed_extensions = ["pdf", "doc", "docx", "txt", "jpg", "jpeg", "png", "gif"]
+        if "." in filename:
+            extension = filename.rsplit(".", 1)[1].lower()
+            if extension not in allowed_extensions:
+                errors.append(f"File type not allowed. Allowed types: {', '.join(allowed_extensions)}")
+        else:
+            errors.append("File must have an extension")
+
+    # Date validation
+    date_created = form_data.get("date_created", "").strip()
+    if date_created and not validate_date(date_created):
+        errors.append("Invalid date format (YYYY-MM-DD expected)")
+    elif date_created:
+        try:
+            doc_date = datetime.strptime(date_created, "%Y-%m-%d").date()
+            if doc_date > date.today():
+                errors.append("Document date cannot be in the future")
+        except ValueError:
+            errors.append("Invalid date format")
+
+    # Description length validation
+    description = form_data.get("description", "").strip()
+    if description and len(description) > 500:
+        errors.append("Description must be 500 characters or less")
+
+    # Document type validation
+    valid_document_types = [
+        "Lab Results",
+        "Imaging Study", 
+        "Consultation Report",
+        "Hospital Summary",
+        "Insurance Document",
+        "Prescription",
+        "Medical History",
+        "Other"
+    ]
+    if document_type and document_type not in valid_document_types:
+        errors.append(f"Document type must be one of: {', '.join(valid_document_types)}")
+
+    return errors
+
+
 def sanitize_input(text: str) -> str:
     """Sanitize user input by removing potentially harmful characters"""
     if not text:
