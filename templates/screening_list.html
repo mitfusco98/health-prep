@@ -718,9 +718,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <small class="text-muted">Debug: Default items = {{ default_items_list|join(', ') if default_items_list else 'None' }}</small>
                                         </div>
                                         
-                                        <!-- Hidden input to ensure the field is always submitted, even when no items are selected -->
-                                        <input type="hidden" name="selected_screening_types" value="">
-                                        
                                         {% for screening_type in active_screening_types %}
                                         <div class="form-check mb-2">
                                             <input class="form-check-input screening-checkbox" 
@@ -788,23 +785,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
                             console.log('Form being submitted...');
 
-                            // Get all checked checkboxes (excluding the hidden empty one)
+                            // Get all checked checkboxes
                             const checkboxes = this.querySelectorAll('input[name="selected_screening_types"]:checked');
-                            const checkedBoxes = Array.from(checkboxes).filter(cb => cb.value !== '');
                             
-                            console.log('Checked checkboxes count:', checkedBoxes.length);
-                            checkedBoxes.forEach((cb, index) => {
+                            console.log('Checked checkboxes count:', checkboxes.length);
+                            checkboxes.forEach((cb, index) => {
                                 console.log(`Checkbox ${index + 1}: ${cb.value} (checked: ${cb.checked})`);
                             });
 
-                            // Remove the hidden empty input to avoid confusion
-                            const hiddenInput = this.querySelector('input[name="selected_screening_types"][type="hidden"]');
-                            if (hiddenInput) {
-                                hiddenInput.remove();
-                            }
-
                             // If no checkboxes are selected, add a hidden input with empty value
-                            if (checkedBoxes.length === 0) {
+                            // This ensures the field is submitted even when nothing is selected
+                            if (checkboxes.length === 0) {
                                 const emptyInput = document.createElement('input');
                                 emptyInput.type = 'hidden';
                                 emptyInput.name = 'selected_screening_types';
