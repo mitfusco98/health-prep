@@ -672,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <h6 class="mb-0">Checklist Content Generation</h6>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="{{ url_for('update_checklist_generation') }}" enctype="application/x-www-form-urlencoded">
+                        <form method="POST" action="{{ url_for('update_checklist_generation') }}">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                             <div class="mb-3">
@@ -781,11 +781,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         }
 
-                        // Simple form submission debug without interference
+                        // Simple form submission debug - no interference with form data
                         document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
                             console.log('Form being submitted...');
 
-                            // Get all checked checkboxes
+                            // Get all checked checkboxes for debugging only
                             const checkboxes = this.querySelectorAll('input[name="selected_screening_types"]:checked');
                             
                             console.log('Checked checkboxes count:', checkboxes.length);
@@ -793,14 +793,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 console.log(`Checkbox ${index + 1}: ${cb.value} (checked: ${cb.checked})`);
                             });
 
-                            // Only add empty input if truly no checkboxes are selected
-                            if (checkboxes.length === 0) {
-                                const emptyInput = document.createElement('input');
-                                emptyInput.type = 'hidden';
-                                emptyInput.name = 'selected_screening_types';
-                                emptyInput.value = '';
-                                this.appendChild(emptyInput);
-                            }
+                            // Don't add any hidden inputs - let the form submit naturally
+                            console.log('Allowing natural form submission...');
                         });
                         </script>
                     </div>
