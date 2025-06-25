@@ -1,0 +1,40 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Checkbox Test</title>
+</head>
+<body>
+    <h1>Test Multiple Checkbox Submission</h1>
+    <form method="POST" action="/test-checkboxes" onsubmit="debugForm(event)">
+        <div>
+            <input type="checkbox" name="test_items" value="Item 1" id="item1">
+            <label for="item1">Item 1</label>
+        </div>
+        <div>
+            <input type="checkbox" name="test_items" value="Item 2" id="item2">
+            <label for="item2">Item 2</label>
+        </div>
+        <div>
+            <input type="checkbox" name="test_items" value="Item 3" id="item3">
+            <label for="item3">Item 3</label>
+        </div>
+        <button type="submit">Submit</button>
+    </form>
+
+    <script>
+    function debugForm(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        const items = formData.getAll('test_items');
+        console.log('Selected items:', items);
+        console.log('Count:', items.length);
+        
+        // Also test with URLSearchParams
+        const params = new URLSearchParams(formData);
+        console.log('URLSearchParams:', params.toString());
+    }
+    </script>
+</body>
+</html>

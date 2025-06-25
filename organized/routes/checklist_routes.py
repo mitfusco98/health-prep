@@ -80,10 +80,30 @@ def update_checklist_generation():
     content_sources = request.form.getlist("content_sources")
     selected_screening_types = request.form.getlist("selected_screening_types")
     
-    print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
-    print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
+    print(f"DEBUG: ===== FORM SUBMISSION DEBUG =====")
+    print(f"DEBUG: Request method: {request.method}")
+    print(f"DEBUG: Content type: {request.content_type}")
+    print(f"DEBUG: Request headers: {dict(request.headers)}")
+    print(f"DEBUG: Raw form data: {request.form}")
+    print(f"DEBUG: Form data as dict: {dict(request.form)}")
     print(f"DEBUG: Form data keys: {list(request.form.keys())}")
-    print(f"DEBUG: All form data: {dict(request.form)}")
+    
+    print(f"DEBUG: content_sources (getlist): {content_sources}")
+    print(f"DEBUG: selected_screening_types (getlist): {selected_screening_types}")
+    print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
+    
+    # Test different ways to get the data
+    selected_get = request.form.get("selected_screening_types")
+    print(f"DEBUG: selected_screening_types (get): {selected_get}")
+    
+    # Check ALL form fields
+    print(f"DEBUG: All form fields:")
+    for key in request.form.keys():
+        values_getlist = request.form.getlist(key)
+        value_get = request.form.get(key)
+        print(f"DEBUG:   {key}: getlist={values_getlist}, get={value_get}")
+    
+    print(f"DEBUG: ===== END FORM DEBUG =====")
     
     # Debug: Check if we're getting the right field name
     for key in request.form.keys():
@@ -153,3 +173,27 @@ def remove_custom_status():
         return jsonify({"success": True})
 
     return jsonify({"success": False, "error": "Status not found"}), 404
+
+
+@app.route("/test-checkboxes", methods=["POST"])
+def test_checkboxes():
+    """Test route to debug multiple checkbox submission"""
+    print("=== CHECKBOX TEST ROUTE ===")
+    print(f"Request method: {request.method}")
+    print(f"Content type: {request.content_type}")
+    print(f"Form data: {dict(request.form)}")
+    
+    # Test different ways to get the data
+    test_items_getlist = request.form.getlist('test_items')
+    test_items_get = request.form.get('test_items')
+    
+    print(f"request.form.getlist('test_items'): {test_items_getlist}")
+    print(f"request.form.get('test_items'): {test_items_get}")
+    print(f"Length of getlist result: {len(test_items_getlist)}")
+    
+    return jsonify({
+        "success": True,
+        "getlist_result": test_items_getlist,
+        "get_result": test_items_get,
+        "count": len(test_items_getlist)
+    })

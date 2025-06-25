@@ -714,10 +714,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="screening-types-checklist">
                                     {% if active_screening_types %}
                                         {% set default_items_list = settings.default_items_list if settings else [] %}
+                                        <div class="mb-2">
+                                            <small class="text-muted">Debug: Default items = {{ default_items_list|join(', ') if default_items_list else 'None' }}</small>
+                                        </div>
                                         {% for screening_type in active_screening_types %}
                                         <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" value="{{ screening_type.name }}" id="screening_{{ screening_type.id }}" name="selected_screening_types"
-                                                {% if screening_type.name in default_items_list %}checked{% endif %}>
+                                            <input class="form-check-input screening-checkbox" 
+                                                   type="checkbox" 
+                                                   value="{{ screening_type.name }}" 
+                                                   id="screening_{{ screening_type.id }}" 
+                                                   name="selected_screening_types"
+                                                   {% if screening_type.name in default_items_list %}checked{% endif %}
+                                                   onchange="debugCheckbox(this)">
                                             <label class="form-check-label" for="screening_{{ screening_type.id }}">
                                                 <strong>{{ screening_type.name }}</strong>
                                                 {% if screening_type.description %}
@@ -731,6 +739,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                             </label>
                                         </div>
                                         {% endfor %}
+                                        
+                                        <div class="mt-3">
+                                            <button type="button" onclick="selectAllScreenings()" class="btn btn-sm btn-outline-secondary me-2">Select All</button>
+                                            <button type="button" onclick="clearAllScreenings()" class="btn btn-sm btn-outline-secondary">Clear All</button>
+                                        </div>
                                     {% else %}
                                         <p class="text-muted">No active screening types found. <a href="{{ url_for('screening_list', tab='types') }}">Add screening types</a> to configure quality checklist items.</p>
                                     {% endif %}
@@ -742,24 +755,63 @@ document.addEventListener('DOMContentLoaded', function() {
                         </form>
                         
                         <script>
+                        // Debug checkbox changes
+                        function debugCheckbox(checkbox) {
+                            console.log(`Checkbox ${checkbox.value} changed to: ${checkbox.checked}`);
+                            const allChecked = document.querySelectorAll('input[name="selected_screening_types"]:checked');
+                            console.log(`Total checked boxes: ${allChecked.length}`);
+                        }
+                        
+                        // Select all checkboxes
+                        function selectAllScreenings() {
+                            const checkboxes = document.querySelectorAll('input[name="selected_screening_types"]');
+                            checkboxes.forEach(cb => {
+                                cb.checked = true;
+                                debugCheckbox(cb);
+                            });
+                        }
+                        
+                        // Clear all checkboxes
+                        function clearAllScreenings() {
+                            const checkboxes = document.querySelectorAll('input[name="selected_screening_types"]');
+                            checkboxes.forEach(cb => {
+                                cb.checked = false;
+                                debugCheckbox(cb);
+                            });
+                        }
+                        
                         // Debug form submission
                         document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
                             console.log('Form being submitted...');
-                            const formData = new FormData(this);
-                            const selectedScreenings = formData.getAll('selected_screening_types');
-                            console.log('Selected screening types being submitted:', selectedScreenings);
-                            console.log('Number of selected items:', selectedScreenings.length);
-                            console.log('All form data:');
-                            for (let [key, value] of formData.entries()) {
-                                console.log(key, value);
-                            }
                             
-                            // Additional debugging: check all checkboxes
+                            // Check all checkboxes BEFORE creating FormData
                             const checkboxes = this.querySelectorAll('input[name="selected_screening_types"]:checked');
                             console.log('Checked checkboxes count:', checkboxes.length);
                             checkboxes.forEach((cb, index) => {
-                                console.log(`Checkbox ${index + 1}: ${cb.value}`);
+                                console.log(`Checkbox ${index + 1}: ${cb.value} (checked: ${cb.checked})`);
                             });
+                            
+                            // Test if we can manually get the values
+                            const manualValues = Array.from(checkboxes).map(cb => cb.value);
+                            console.log('Manual checkbox values:', manualValues);
+                            
+                            const formData = new FormData(this);
+                            const selectedScreenings = formData.getAll('selected_screening_types');
+                            console.log('FormData.getAll() result:', selectedScreenings);
+                            console.log('Number of selected items in FormData:', selectedScreenings.length);
+                            
+                            console.log('All form data:');
+                            for (let [key, value] of formData.entries()) {
+                                console.log(`${key}: ${value}`);
+                            }
+                            
+                            // If there's a mismatch, let's prevent submission to debug
+                            if (checkboxes.length !== selectedScreenings.length && checkboxes.length > 1) {
+                                console.error('MISMATCH: Checkbox count vs FormData count!');
+                                console.error(`Expected ${checkboxes.length} items, got ${selectedScreenings.length}`);
+                                // Uncomment the next line to prevent submission for debugging
+                                // e.preventDefault();
+                            }
                         });
                         </script>
                     </div>
