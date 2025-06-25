@@ -80,61 +80,37 @@ def update_checklist_generation():
     content_sources = request.form.getlist('content_sources')
     settings.content_sources = ','.join(content_sources) if content_sources else ''
 
-    # Debug: Print all form data first
-    print(f"DEBUG: All form data keys: {list(request.form.keys())}")
-    print(f"DEBUG: All form data: {dict(request.form)}")
-    print(f"DEBUG: Raw form data: {request.form}")
-    
-    # Check if we have any screening types at all in the form
-    if 'selected_screening_types' in request.form:
-        print(f"DEBUG: selected_screening_types found in form")
-    else:
-        print(f"DEBUG: selected_screening_types NOT found in form")
-    
-    # Get selected screening types from checkboxes 
+    # Get selected screening types from the checkboxes
     selected_screening_types = request.form.getlist('selected_screening_types')
-    print(f"DEBUG: getlist result: {selected_screening_types}")
-    print(f"DEBUG: getlist type: {type(selected_screening_types)}")
-    print(f"DEBUG: getlist length: {len(selected_screening_types)}")
-    
-    # Also try direct access to see what happens
-    try:
-        direct_value = request.form['selected_screening_types']
-        print(f"DEBUG: Direct access gives: {direct_value}")
-    except KeyError:
-        print(f"DEBUG: Direct access failed - key not found")
-    
-    # Check all keys that contain 'screening'
-    screening_keys = [key for key in request.form.keys() if 'screening' in key.lower()]
-    print(f"DEBUG: All keys containing 'screening': {screening_keys}")
-    
-    # Also try to get individual form values to debug
-    all_form_values = []
-    for key in request.form.keys():
-        if key == 'selected_screening_types':
-            values = request.form.getlist(key)
-            print(f"DEBUG: Key '{key}' has values: {values}")
-            all_form_values.extend(values)
-    
-    print(f"DEBUG: Collected values from all keys: {all_form_values}")
-    
-    print(f"INFO: Processing {len(selected_screening_types)} selected screening types: {selected_screening_types}")
-    
-    selected_screening_names = selected_screening_types
+    print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
+    print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
+    print(f"DEBUG: All form data: {dict(request.form)}")
+
+    # Debug: Check what's in the form data
+    for key, value in request.form.items():
+        if 'screening' in key.lower():
+            print(f"DEBUG: Form field '{key}' = '{value}'")
 
     # Update default items with selected screening types
-    if selected_screening_names:
+    if selected_screening_types:
         # Join the selected screening types with newlines
-        settings.default_items = '\n'.join(selected_screening_names)
-        flash(f'Updated checklist with {len(selected_screening_names)} screening types', 'success')
+        settings.default_items = '\n'.join(selected_screening_types)
+        print(f"DEBUG: Updated default_items to: '{settings.default_items}'")
+        print(f"DEBUG: Length of default_items string: {len(settings.default_items)}")
     else:
-        # Clear default items if none selected
-        settings.default_items = ''
-        flash('Cleared default checklist items', 'info')
+        # Fall back to manual default items input if no screening types selected
+        default_items = request.form.get('default_items', '')
+        settings.default_items = default_items
+        print(f"DEBUG: Using manual default_items: '{default_items}'")
 
     try:
         db.session.commit()
-        print(f"INFO: Successfully saved {len(selected_screening_names)} screening types to checklist settings")
+        print(f"DEBUG: Successfully committed to database")
+
+        # Verify the data was saved
+        db.session.refresh(settings)
+        print(f"DEBUG: After refresh, default_items: '{settings.default_items}'")
+        print(f"DEBUG: default_items_list: {settings.default_items_list}")
     except Exception as e:
         db.session.rollback()
         flash(f'Error updating settings: {str(e)}', 'danger')

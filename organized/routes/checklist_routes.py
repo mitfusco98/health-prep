@@ -73,27 +73,23 @@ def update_checklist_settings():
 @safe_db_operation
 def update_checklist_generation():
     """Update content generation settings for the prep sheet quality checklist"""
-
     # Get or create settings
     settings = get_or_create_settings()
 
     # Get form data
     content_sources = request.form.getlist("content_sources")
-    # Get selected screening types from checkboxes using the correct array key name
-    selected_screening_types = request.form.getlist('selected_screening_types[]')
+    default_items = request.form.get("default_items", "")
 
     # Update settings
     settings.content_sources = (
         ",".join(content_sources) if content_sources else "database"
     )
-
-    # Use the selected screening types as default items
-    settings.default_items = ",".join(selected_screening_types) if selected_screening_types else ""
+    settings.default_items = default_items
 
     # Save settings
     db.session.commit()
 
-    flash(f"Prep sheet generation settings updated successfully! Saved {len(selected_screening_types)} screening types.", "success")
+    flash("Prep sheet generation settings updated successfully!", "success")
 
     # Redirect back to the screening list page with the checklist tab active
     return redirect(url_for("screening_list", tab="checklist"))
