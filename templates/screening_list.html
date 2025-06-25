@@ -678,8 +678,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="mb-3">
                                 <label class="form-label">Content Sources</label>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox"```text
- id="source_db" name="content_sources" value="database"
+                                    <input class="form-check-input" type="checkbox" id="source_db" name="content_sources" value="database"
                                         {% if settings and 'database' in settings.content_sources_list %}checked{% endif %}>
                                     <label class="form-check-label" for="source_db">Default Items</label>
                                     <div class="form-text">Include default items specified below</div>
@@ -760,8 +759,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         </div>
-    {% endif %}
-{% endblock %}
+        
     </div>
 </div>
 {% endif %}
