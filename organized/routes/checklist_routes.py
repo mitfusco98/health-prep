@@ -117,6 +117,12 @@ def update_checklist_generation():
 
     print(f"DEBUG: Collected values from all keys: {all_form_values}")
 
+    # Check if key exists in form
+    if 'selected_screening_types[]' in request.form:
+        print("DEBUG: selected_screening_types[] found in form")
+    else:
+        print("DEBUG: selected_screening_types[] NOT found in form")
+
     print(f"DEBUG: Content sources: {content_sources}")
     print(f"DEBUG: Selected screening types: {selected_screening_types}")
     print(f"DEBUG: Selected screening types count: {len(selected_screening_types)}")
