@@ -781,20 +781,41 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         }
 
-                        // Simple form submission - let checkboxes work naturally
+                        // Enhanced form submission debugging
                         document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
-                            console.log('Form being submitted...');
+                            console.log('=== FORM SUBMISSION DEBUG ===');
 
-                            // Get all checked checkboxes for debugging only
-                            const checkboxes = this.querySelectorAll('input[name="selected_screening_types"]:checked');
-                            console.log('Checked checkboxes count:', checkboxes.length);
-                            
-                            checkboxes.forEach((cb, index) => {
-                                console.log(`Checkbox ${index + 1}: ${cb.value} (checked: ${cb.checked})`);
+                            // Get all checkboxes (both checked and unchecked)
+                            const allCheckboxes = this.querySelectorAll('input[name="selected_screening_types"]');
+                            const checkedCheckboxes = this.querySelectorAll('input[name="selected_screening_types"]:checked');
+
+                            console.log(`Total checkboxes: ${allCheckboxes.length}`);
+                            console.log(`Checked checkboxes: ${checkedCheckboxes.length}`);
+
+                            // Log all checkbox states
+                            allCheckboxes.forEach((cb, index) => {
+                                console.log(`Checkbox ${index + 1}: "${cb.value}" (checked: ${cb.checked}) [ID: ${cb.id}]`);
                             });
 
-                            // Don't interfere with natural form submission
-                            console.log('Allowing natural form submission...');
+                            // Log the selected values that will be sent
+                            const selectedValues = Array.from(checkedCheckboxes).map(cb => cb.value);
+                            console.log('Selected values to be sent:', selectedValues);
+
+                            // Check if form data will be sent correctly
+                            const formData = new FormData(this);
+                            const sentValues = formData.getAll('selected_screening_types');
+                            console.log('FormData selected_screening_types:', sentValues);
+
+                            // Verify multiple selections
+                            if (sentValues.length > 1) {
+                                console.log('✅ Multiple selections detected - should work properly');
+                            } else if (sentValues.length === 1) {
+                                console.log('⚠️ Only one selection detected');
+                            } else {
+                                console.log('❌ No selections detected');
+                            }
+
+                            console.log('=== END FORM SUBMISSION DEBUG ===');
                         });
                         </script>
                     </div>

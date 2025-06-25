@@ -78,37 +78,40 @@ def update_checklist_generation():
 
     # Get form data
     content_sources = request.form.getlist("content_sources")
-    
+
     # Get selected screening types using standard checkbox processing
     selected_screening_types = request.form.getlist("selected_screening_types")
-    
+
     print(f"DEBUG: ===== FORM SUBMISSION DEBUG =====")
     print(f"DEBUG: Request method: {request.method}")
     print(f"DEBUG: Form data keys: {list(request.form.keys())}")
     print(f"DEBUG: content_sources: {content_sources}")
     print(f"DEBUG: selected_screening_types (raw): {selected_screening_types}")
     print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
-    
-    # Filter out empty values
-    selected_screening_types = [item.strip() for item in selected_screening_types if item and item.strip()]
-    print(f"DEBUG: Filtered selected_screening_types: {selected_screening_types}")
-    print(f"DEBUG: Number of filtered items: {len(selected_screening_types)}")
-    
+
+    # Filter out empty values while preserving the full list
+    if selected_screening_types:
+        filtered_screening_types = [item.strip() for item in selected_screening_types if item and item.strip()]
+    else:
+        filtered_screening_types = []
+
+    print(f"DEBUG: Filtered selected_screening_types: {filtered_screening_types}")
+    print(f"DEBUG: Number of filtered items: {len(filtered_screening_types)}")
+
     print(f"DEBUG: ===== END FORM DEBUG =====")
-    
+
     # Update settings
     settings.content_sources = (
         ",".join(content_sources) if content_sources else "database"
     )
-    
+
     # Update default items with selected screening types
-    if selected_screening_types and len(selected_screening_types) > 0:
+    if filtered_screening_types and len(filtered_screening_types) > 0:
         # Filter out any empty strings and join with newlines
-        filtered_types = [item.strip() for item in selected_screening_types if item.strip()]
-        settings.default_items = '\n'.join(filtered_types)
+        settings.default_items = '\n'.join(filtered_screening_types)
         print(f"DEBUG: Updated default_items to: '{settings.default_items}'")
         print(f"DEBUG: Length of default_items string: {len(settings.default_items)}")
-        print(f"DEBUG: Number of items stored: {len(filtered_types)}")
+        print(f"DEBUG: Number of items stored: {len(filtered_screening_types)}")
     else:
         # Clear default items if no screening types selected
         settings.default_items = ''
@@ -168,15 +171,15 @@ def test_checkboxes():
     print(f"Request method: {request.method}")
     print(f"Content type: {request.content_type}")
     print(f"Form data: {dict(request.form)}")
-    
+
     # Test different ways to get the data
     test_items_getlist = request.form.getlist('test_items')
     test_items_get = request.form.get('test_items')
-    
+
     print(f"request.form.getlist('test_items'): {test_items_getlist}")
     print(f"request.form.get('test_items'): {test_items_get}")
     print(f"Length of getlist result: {len(test_items_getlist)}")
-    
+
     return jsonify({
         "success": True,
         "getlist_result": test_items_getlist,
