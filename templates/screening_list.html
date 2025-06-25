@@ -781,7 +781,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         }
 
-                        // Debug form submission and fix multiple checkbox handling
+                        // Simple form submission debug without interference
                         document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
                             console.log('Form being submitted...');
 
@@ -793,24 +793,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                 console.log(`Checkbox ${index + 1}: ${cb.value} (checked: ${cb.checked})`);
                             });
 
-                            // If no checkboxes are selected, add a hidden input with empty value
-                            // This ensures the field is submitted even when nothing is selected
+                            // Only add empty input if truly no checkboxes are selected
                             if (checkboxes.length === 0) {
                                 const emptyInput = document.createElement('input');
                                 emptyInput.type = 'hidden';
                                 emptyInput.name = 'selected_screening_types';
                                 emptyInput.value = '';
                                 this.appendChild(emptyInput);
-                            }
-
-                            const formData = new FormData(this);
-                            const selectedScreenings = formData.getAll('selected_screening_types');
-                            console.log('FormData.getAll() result:', selectedScreenings);
-                            console.log('Number of selected items in FormData:', selectedScreenings.length);
-
-                            console.log('All form data:');
-                            for (let [key, value] of formData.entries()) {
-                                console.log(`${key}: ${value}`);
                             }
                         });
                         </script>
