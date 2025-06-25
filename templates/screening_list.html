@@ -717,7 +717,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <div class="mb-2">
                                             <small class="text-muted">Debug: Default items = {{ default_items_list|join(', ') if default_items_list else 'None' }}</small>
                                         </div>
-                                        
+
                                         {% for screening_type in active_screening_types %}
                                         <div class="form-check mb-2">
                                             <input class="form-check-input screening-checkbox" 
@@ -781,40 +781,42 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         }
 
-                        // Reliable multiple checkbox submission handler
+                        // Simple and reliable checkbox submission handler
                         document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
                             console.log('Form being submitted...');
 
                             // Get all checked checkboxes
                             const checkboxes = this.querySelectorAll('input[name="selected_screening_types"]:checked');
                             console.log('Checked checkboxes count:', checkboxes.length);
-                            
+
                             // Create array of selected values
                             const selectedValues = Array.from(checkboxes).map(cb => cb.value);
                             console.log('Selected values:', selectedValues);
-                            
-                            // Remove any existing hidden serialized input
-                            const existingHidden = this.querySelector('input[name="selected_screening_types_serialized"]');
-                            if (existingHidden) {
-                                existingHidden.remove();
-                            }
-                            
-                            // Create a single hidden input with JSON-serialized array
+
+                            // Disable all original checkboxes to prevent duplicate submission
+                            checkboxes.forEach(cb => cb.disabled = true);
+
+                            // Remove any existing hidden inputs to avoid conflicts
+                            const existingHiddens = this.querySelectorAll('input[name^="selected_screening_types"][type="hidden"]');
+                            existingHiddens.forEach(input => input.remove());
+
+                            // Create a single hidden input with all selected values
                             if (selectedValues.length > 0) {
+                                // Use a simple comma-separated approach that's easy to parse
                                 const hiddenInput = document.createElement('input');
                                 hiddenInput.type = 'hidden';
-                                hiddenInput.name = 'selected_screening_types_serialized';
-                                hiddenInput.value = JSON.stringify(selectedValues);
+                                hiddenInput.name = 'checklist_items_selected';
+                                hiddenInput.value = selectedValues.join(',');
                                 this.appendChild(hiddenInput);
-                                console.log('Added serialized input with value:', hiddenInput.value);
-                                
-                                // Additional backup: comma-separated string
-                                const backupInput = document.createElement('input');
-                                backupInput.type = 'hidden';
-                                backupInput.name = 'selected_screening_types_backup';
-                                backupInput.value = selectedValues.join('|||'); // Use unique separator
-                                this.appendChild(backupInput);
-                                console.log('Added backup input with value:', backupInput.value);
+                                console.log('Added checklist_items_selected with value:', hiddenInput.value);
+                            } else {
+                                // Send empty value to indicate no selections
+                                const hiddenInput = document.createElement('input');
+                                hiddenInput.type = 'hidden';
+                                hiddenInput.name = 'checklist_items_selected';
+                                hiddenInput.value = '';
+                                this.appendChild(hiddenInput);
+                                console.log('Added empty checklist_items_selected');
                             }
                         });
                         </script>
@@ -998,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const systemNames = {
             'http://snomed.info/sct': 'SNOMED CT',
             'http://hl7.org/fhir/sid/icd-10-cm': 'ICD-10-CM',
-            'http://hl7.org/fhir/sid/icd-9-cm': 'ICD-9-CM',
+            'http://hl7.org/fhir/sid/icd-9-cm': 'ICD-10-CM',
             'custom': 'Custom'
         };
         return systemNames[system] || system;

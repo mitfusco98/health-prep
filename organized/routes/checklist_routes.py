@@ -78,33 +78,22 @@ def update_checklist_generation():
 
     # Get form data
     content_sources = request.form.getlist("content_sources")
-    selected_screening_types = request.form.getlist("selected_screening_types")
     
-    # Check for serialized fallback if normal checkboxes failed
-    serialized_data = request.form.get("selected_screening_types_serialized")
-    backup_data = request.form.get("selected_screening_types_backup")
+    # Get selected checklist items from the single hidden input
+    checklist_items_selected = request.form.get("checklist_items_selected", "")
     
-    if (not selected_screening_types or len(selected_screening_types) <= 1):
-        if serialized_data:
-            try:
-                import json
-                selected_screening_types = json.loads(serialized_data)
-                print(f"DEBUG: Using JSON serialized data: {selected_screening_types}")
-            except (json.JSONDecodeError, TypeError) as e:
-                print(f"DEBUG: Error parsing JSON serialized data: {e}")
-                # Try backup method
-                if backup_data:
-                    selected_screening_types = backup_data.split('|||')
-                    print(f"DEBUG: Using backup string data: {selected_screening_types}")
-        elif backup_data:
-            selected_screening_types = backup_data.split('|||')
-            print(f"DEBUG: Using backup string data: {selected_screening_types}")
+    if checklist_items_selected:
+        # Parse comma-separated values
+        selected_screening_types = [item.strip() for item in checklist_items_selected.split(',') if item.strip()]
+    else:
+        # Fallback to original checkbox method (for backwards compatibility)
+        selected_screening_types = request.form.getlist("selected_screening_types")
     
     print(f"DEBUG: ===== FORM SUBMISSION DEBUG =====")
     print(f"DEBUG: Request method: {request.method}")
-    print(f"DEBUG: Content type: {request.content_type}")
-    print(f"DEBUG: Raw form data: {request.form}")
-    print(f"DEBUG: Form data as dict: {dict(request.form)}")
+    print(f"DEBUG: checklist_items_selected: '{checklist_items_selected}'")
+    print(f"DEBUG: parsed selected_screening_types: {selected_screening_types}")
+    print(f"DEBUG: content_sources: {content_sources}")
     
     print(f"DEBUG: content_sources (getlist): {content_sources}")
     print(f"DEBUG: selected_screening_types (final): {selected_screening_types}")
