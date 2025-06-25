@@ -79,29 +79,18 @@ def update_checklist_generation():
     # Get form data
     content_sources = request.form.getlist("content_sources")
     
-    # Get selected checklist items from the single hidden input
-    checklist_items_selected = request.form.get("checklist_items_selected", "")
-    
-    if checklist_items_selected:
-        # Parse comma-separated values
-        selected_screening_types = [item.strip() for item in checklist_items_selected.split(',') if item.strip()]
-    else:
-        # Fallback to original checkbox method (for backwards compatibility)
-        selected_screening_types = request.form.getlist("selected_screening_types")
+    # Get selected screening types using standard checkbox processing
+    selected_screening_types = request.form.getlist("selected_screening_types")
     
     print(f"DEBUG: ===== FORM SUBMISSION DEBUG =====")
     print(f"DEBUG: Request method: {request.method}")
-    print(f"DEBUG: checklist_items_selected: '{checklist_items_selected}'")
-    print(f"DEBUG: parsed selected_screening_types: {selected_screening_types}")
+    print(f"DEBUG: Form data keys: {list(request.form.keys())}")
     print(f"DEBUG: content_sources: {content_sources}")
-    
-    print(f"DEBUG: content_sources (getlist): {content_sources}")
-    print(f"DEBUG: selected_screening_types (final): {selected_screening_types}")
+    print(f"DEBUG: selected_screening_types (raw): {selected_screening_types}")
     print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
-    print(f"DEBUG: Serialized fallback used: {serialized_data is not None}")
     
     # Filter out empty values
-    selected_screening_types = [item for item in selected_screening_types if item and item.strip()]
+    selected_screening_types = [item.strip() for item in selected_screening_types if item and item.strip()]
     print(f"DEBUG: Filtered selected_screening_types: {selected_screening_types}")
     print(f"DEBUG: Number of filtered items: {len(selected_screening_types)}")
     

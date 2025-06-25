@@ -781,43 +781,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         }
 
-                        // Simple and reliable checkbox submission handler
+                        // Simple form submission - let checkboxes work naturally
                         document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
                             console.log('Form being submitted...');
 
-                            // Get all checked checkboxes
+                            // Get all checked checkboxes for debugging only
                             const checkboxes = this.querySelectorAll('input[name="selected_screening_types"]:checked');
                             console.log('Checked checkboxes count:', checkboxes.length);
+                            
+                            checkboxes.forEach((cb, index) => {
+                                console.log(`Checkbox ${index + 1}: ${cb.value} (checked: ${cb.checked})`);
+                            });
 
-                            // Create array of selected values
-                            const selectedValues = Array.from(checkboxes).map(cb => cb.value);
-                            console.log('Selected values:', selectedValues);
-
-                            // Disable all original checkboxes to prevent duplicate submission
-                            checkboxes.forEach(cb => cb.disabled = true);
-
-                            // Remove any existing hidden inputs to avoid conflicts
-                            const existingHiddens = this.querySelectorAll('input[name^="selected_screening_types"][type="hidden"]');
-                            existingHiddens.forEach(input => input.remove());
-
-                            // Create a single hidden input with all selected values
-                            if (selectedValues.length > 0) {
-                                // Use a simple comma-separated approach that's easy to parse
-                                const hiddenInput = document.createElement('input');
-                                hiddenInput.type = 'hidden';
-                                hiddenInput.name = 'checklist_items_selected';
-                                hiddenInput.value = selectedValues.join(',');
-                                this.appendChild(hiddenInput);
-                                console.log('Added checklist_items_selected with value:', hiddenInput.value);
-                            } else {
-                                // Send empty value to indicate no selections
-                                const hiddenInput = document.createElement('input');
-                                hiddenInput.type = 'hidden';
-                                hiddenInput.name = 'checklist_items_selected';
-                                hiddenInput.value = '';
-                                this.appendChild(hiddenInput);
-                                console.log('Added empty checklist_items_selected');
-                            }
+                            // Don't interfere with natural form submission
+                            console.log('Allowing natural form submission...');
                         });
                         </script>
                     </div>
