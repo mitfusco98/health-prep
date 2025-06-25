@@ -85,30 +85,15 @@ def update_checklist_generation():
     print(f"DEBUG: Content type: {request.content_type}")
     print(f"DEBUG: Raw form data: {request.form}")
     print(f"DEBUG: Form data as dict: {dict(request.form)}")
-    print(f"DEBUG: Form data keys: {list(request.form.keys())}")
     
     print(f"DEBUG: content_sources (getlist): {content_sources}")
     print(f"DEBUG: selected_screening_types (getlist): {selected_screening_types}")
     print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
     
-    # Test different ways to get the data
-    selected_get = request.form.get("selected_screening_types")
-    print(f"DEBUG: selected_screening_types (get): {selected_get}")
-    
-    # Check ALL form fields - specifically look for multiple values
-    print(f"DEBUG: All form fields:")
-    for key in request.form.keys():
-        values_getlist = request.form.getlist(key)
-        value_get = request.form.get(key)
-        print(f"DEBUG:   {key}: getlist={values_getlist}, get={value_get}")
-        
-        # If this is the screening types field and we have multiple values
-        if key == "selected_screening_types" and len(values_getlist) > 1:
-            print(f"DEBUG: MULTIPLE VALUES DETECTED for {key}: {values_getlist}")
-    
-    # Also check if there are any other fields that might contain our data
-    potential_fields = [k for k in request.form.keys() if 'screening' in k.lower() or 'selected' in k.lower()]
-    print(f"DEBUG: Potential screening fields: {potential_fields}")
+    # Filter out empty values (from hidden input)
+    selected_screening_types = [item for item in selected_screening_types if item.strip()]
+    print(f"DEBUG: Filtered selected_screening_types: {selected_screening_types}")
+    print(f"DEBUG: Number of filtered items: {len(selected_screening_types)}")
     
     print(f"DEBUG: ===== END FORM DEBUG =====")
     
@@ -119,15 +104,16 @@ def update_checklist_generation():
     
     # Update default items with selected screening types
     if selected_screening_types and len(selected_screening_types) > 0:
-        # Join the selected screening types with newlines
-        settings.default_items = '\n'.join(selected_screening_types)
+        # Filter out any empty strings and join with newlines
+        filtered_types = [item.strip() for item in selected_screening_types if item.strip()]
+        settings.default_items = '\n'.join(filtered_types)
         print(f"DEBUG: Updated default_items to: '{settings.default_items}'")
         print(f"DEBUG: Length of default_items string: {len(settings.default_items)}")
+        print(f"DEBUG: Number of items stored: {len(filtered_types)}")
     else:
-        # Fall back to manual default items input if no screening types selected
-        default_items = request.form.get('default_items', '')
-        settings.default_items = default_items
-        print(f"DEBUG: Using manual default_items: '{default_items}'")
+        # Clear default items if no screening types selected
+        settings.default_items = ''
+        print(f"DEBUG: Cleared default_items (no selections)")
 
     try:
         db.session.commit()
