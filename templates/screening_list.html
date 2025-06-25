@@ -672,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <h6 class="mb-0">Checklist Content Generation</h6>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="{{ url_for('update_checklist_generation') }}">
+                        <form method="POST" action="{{ url_for('update_checklist_generation') }}" enctype="application/x-www-form-urlencoded">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                             <div class="mb-3">
@@ -748,10 +748,18 @@ document.addEventListener('DOMContentLoaded', function() {
                             const formData = new FormData(this);
                             const selectedScreenings = formData.getAll('selected_screening_types');
                             console.log('Selected screening types being submitted:', selectedScreenings);
+                            console.log('Number of selected items:', selectedScreenings.length);
                             console.log('All form data:');
                             for (let [key, value] of formData.entries()) {
                                 console.log(key, value);
                             }
+                            
+                            // Additional debugging: check all checkboxes
+                            const checkboxes = this.querySelectorAll('input[name="selected_screening_types"]:checked');
+                            console.log('Checked checkboxes count:', checkboxes.length);
+                            checkboxes.forEach((cb, index) => {
+                                console.log(`Checkbox ${index + 1}: ${cb.value}`);
+                            });
                         });
                         </script>
                     </div>

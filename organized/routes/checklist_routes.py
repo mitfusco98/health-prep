@@ -82,6 +82,14 @@ def update_checklist_generation():
     
     print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
     print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
+    print(f"DEBUG: Form data keys: {list(request.form.keys())}")
+    print(f"DEBUG: All form data: {dict(request.form)}")
+    
+    # Debug: Check if we're getting the right field name
+    for key in request.form.keys():
+        if 'screening' in key.lower():
+            values = request.form.getlist(key)
+            print(f"DEBUG: Form field '{key}' = {values}")
     
     # Update settings
     settings.content_sources = (
@@ -89,7 +97,7 @@ def update_checklist_generation():
     )
     
     # Update default items with selected screening types
-    if selected_screening_types:
+    if selected_screening_types and len(selected_screening_types) > 0:
         # Join the selected screening types with newlines
         settings.default_items = '\n'.join(selected_screening_types)
         print(f"DEBUG: Updated default_items to: '{settings.default_items}'")
