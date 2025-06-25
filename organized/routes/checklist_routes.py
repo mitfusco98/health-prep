@@ -73,29 +73,50 @@ def update_checklist_settings():
 @safe_db_operation
 def update_checklist_generation():
     """Update content generation settings for the prep sheet quality checklist"""
-    
+
     # Debug: Print comprehensive form debugging info
     print(f"DEBUG: Raw request.form: {request.form}")
     print(f"DEBUG: Raw request.form type: {type(request.form)}")
     print(f"DEBUG: All form keys: {list(request.form.keys())}")
     print(f"DEBUG: Form as dict: {dict(request.form)}")
-    
+
     # Check for multiple values specifically
     print(f"DEBUG: request.form.getlist('selected_screening_types'): {request.form.getlist('selected_screening_types')}")
-    
+
     # Check raw form data
     for key in request.form.keys():
         if 'screening' in key.lower():
             values = request.form.getlist(key)
             print(f"DEBUG: Key '{key}' has {len(values)} values: {values}")
-    
+
     # Get or create settings
     settings = get_or_create_settings()
 
     # Get form data
     content_sources = request.form.getlist("content_sources")
-    selected_screening_types = request.form.getlist("selected_screening_types")
-    
+    # Get selected screening types from checkboxes - try both array and non-array names
+    selected_screening_types = request.form.getlist('selected_screening_types[]')
+    if not selected_screening_types:
+        selected_screening_types = request.form.getlist('selected_screening_types')
+
+    print(f"DEBUG: getlist result: {selected_screening_types}")
+    print(f"DEBUG: getlist type: {type(selected_screening_types)}")
+    print(f"DEBUG: getlist length: {len(selected_screening_types)}")
+
+    # Check all keys that contain 'screening'
+    screening_keys = [key for key in request.form.keys() if 'screening' in key.lower()]
+    print(f"DEBUG: All keys containing 'screening': {screening_keys}")
+
+    # Also try to get individual form values to debug
+    all_form_values = []
+    for key in request.form.keys():
+        if 'selected_screening_types' in key:
+            values = request.form.getlist(key)
+            print(f"DEBUG: Key '{key}' has values: {values}")
+            all_form_values.extend(values)
+
+    print(f"DEBUG: Collected values from all keys: {all_form_values}")
+
     print(f"DEBUG: Content sources: {content_sources}")
     print(f"DEBUG: Selected screening types: {selected_screening_types}")
     print(f"DEBUG: Selected screening types count: {len(selected_screening_types)}")
@@ -104,10 +125,10 @@ def update_checklist_generation():
     settings.content_sources = (
         ",".join(content_sources) if content_sources else "database"
     )
-    
+
     # Use the selected screening types as default items
     settings.default_items = ",".join(selected_screening_types) if selected_screening_types else ""
-    
+
     print(f"DEBUG: Saving default_items as: '{settings.default_items}'")
 
     # Save settings

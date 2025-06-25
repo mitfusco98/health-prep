@@ -721,7 +721,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 type="checkbox" 
                                                 value="{{ screening_type.name }}" 
                                                 id="screening_{{ screening_type.id }}" 
-                                                name="selected_screening_types"
+                                                name="selected_screening_types[]"
                                                 {% if screening_type.name in default_items_list %}checked{% endif %}>
                                             <label class="form-check-label" for="screening_{{ screening_type.id }}">
                                                 <strong>{{ screening_type.name }}</strong>
@@ -754,15 +754,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <input type="hidden" name="content_sources" value="database">
                                 
                                 <div class="form-check">
-                                    <input type="checkbox" name="selected_screening_types" value="Test1" id="test1" checked>
+                                    <input type="checkbox" name="selected_screening_types[]" value="Test1" id="test1" checked>
                                     <label for="test1">Test Screening 1</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" name="selected_screening_types" value="Test2" id="test2" checked>
+                                    <input type="checkbox" name="selected_screening_types[]" value="Test2" id="test2" checked>
                                     <label for="test2">Test Screening 2</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" name="selected_screening_types" value="Test3" id="test3" checked>
+                                    <input type="checkbox" name="selected_screening_types[]" value="Test3" id="test3" checked>
                                     <label for="test3">Test Screening 3</label>
                                 </div>
                                 
@@ -788,9 +788,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Multiple checkbox handler for screening types
     document.addEventListener('DOMContentLoaded', function() {
         // Add change event listeners to checkboxes for real-time feedback
-        document.querySelectorAll('input[name="selected_screening_types"]').forEach(checkbox => {
+        document.querySelectorAll('input[name="selected_screening_types[]"]').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
-                const checkedCount = document.querySelectorAll('input[name="selected_screening_types"]:checked').length;
+                const checkedCount = document.querySelectorAll('input[name="selected_screening_types[]"]:checked').length;
                 console.log(`Checkbox changed: ${this.value} (${this.checked ? 'checked' : 'unchecked'}). Total checked: ${checkedCount}`);
             });
         });
@@ -799,7 +799,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const checklistForm = document.getElementById('checklistForm');
         if (checklistForm) {
             checklistForm.addEventListener('submit', function(e) {
-                const checkedBoxes = document.querySelectorAll('input[name="selected_screening_types"]:checked');
+                const checkedBoxes = document.querySelectorAll('input[name="selected_screening_types[]"]:checked');
                 console.log(`FORM SUBMIT: Found ${checkedBoxes.length} checked screening types`);
                 
                 checkedBoxes.forEach(function(checkbox, index) {
