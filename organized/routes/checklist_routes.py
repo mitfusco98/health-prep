@@ -78,57 +78,16 @@ def update_checklist_generation():
 
     # Get form data
     content_sources = request.form.getlist("content_sources")
-
-    # Get selected screening types using standard checkbox processing
-    selected_screening_types = request.form.getlist("selected_screening_types")
-
-    print(f"DEBUG: ===== FORM SUBMISSION DEBUG =====")
-    print(f"DEBUG: Request method: {request.method}")
-    print(f"DEBUG: Form data keys: {list(request.form.keys())}")
-    print(f"DEBUG: content_sources: {content_sources}")
-    print(f"DEBUG: selected_screening_types (raw): {selected_screening_types}")
-    print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
-
-    # Filter out empty values while preserving the full list
-    if selected_screening_types:
-        filtered_screening_types = [item.strip() for item in selected_screening_types if item and item.strip()]
-    else:
-        filtered_screening_types = []
-
-    print(f"DEBUG: Filtered selected_screening_types: {filtered_screening_types}")
-    print(f"DEBUG: Number of filtered items: {len(filtered_screening_types)}")
-
-    print(f"DEBUG: ===== END FORM DEBUG =====")
+    default_items = request.form.get("default_items", "")
 
     # Update settings
     settings.content_sources = (
         ",".join(content_sources) if content_sources else "database"
     )
+    settings.default_items = default_items
 
-    # Update default items with selected screening types
-    if filtered_screening_types and len(filtered_screening_types) > 0:
-        # Filter out any empty strings and join with newlines
-        settings.default_items = '\n'.join(filtered_screening_types)
-        print(f"DEBUG: Updated default_items to: '{settings.default_items}'")
-        print(f"DEBUG: Length of default_items string: {len(settings.default_items)}")
-        print(f"DEBUG: Number of items stored: {len(filtered_screening_types)}")
-    else:
-        # Clear default items if no screening types selected
-        settings.default_items = ''
-        print(f"DEBUG: Cleared default_items (no selections)")
-
-    try:
-        db.session.commit()
-        print(f"DEBUG: Successfully committed to database")
-
-        # Verify the data was saved
-        db.session.refresh(settings)
-        print(f"DEBUG: After refresh, default_items: '{settings.default_items}'")
-        print(f"DEBUG: default_items_list: {settings.default_items_list}")
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error updating settings: {str(e)}', 'danger')
-        return redirect(url_for("screening_list", tab="checklist"))
+    # Save settings
+    db.session.commit()
 
     flash("Prep sheet generation settings updated successfully!", "success")
 
@@ -162,27 +121,3 @@ def remove_custom_status():
         return jsonify({"success": True})
 
     return jsonify({"success": False, "error": "Status not found"}), 404
-
-
-@app.route("/test-checkboxes", methods=["POST"])
-def test_checkboxes():
-    """Test route to debug multiple checkbox submission"""
-    print("=== CHECKBOX TEST ROUTE ===")
-    print(f"Request method: {request.method}")
-    print(f"Content type: {request.content_type}")
-    print(f"Form data: {dict(request.form)}")
-
-    # Test different ways to get the data
-    test_items_getlist = request.form.getlist('test_items')
-    test_items_get = request.form.get('test_items')
-
-    print(f"request.form.getlist('test_items'): {test_items_getlist}")
-    print(f"request.form.get('test_items'): {test_items_get}")
-    print(f"Length of getlist result: {len(test_items_getlist)}")
-
-    return jsonify({
-        "success": True,
-        "getlist_result": test_items_getlist,
-        "get_result": test_items_get,
-        "count": len(test_items_getlist)
-    })

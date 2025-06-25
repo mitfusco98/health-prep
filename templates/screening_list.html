@@ -11,7 +11,7 @@ function loadKeywordsAsBadges() {
 
     keywordContainers.forEach(container => {
         const screeningTypeId = container.id.replace('keywords-display-', '');
-
+        
         console.log(`loadKeywordsAsBadges: Loading keywords for screening ${screeningTypeId}`);
 
         fetch(`/api/screening-keywords/${screeningTypeId}`)
@@ -48,15 +48,15 @@ function loadKeywordsAsBadges() {
 // Initialize keyword display when page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Content Loaded - checking for keyword containers...');
-
+    
     // Check if keyword containers exist
     const hasKeywordContainers = document.querySelectorAll('.keywords-badges-container').length > 0;
-
+    
     if (hasKeywordContainers) {
         console.log('Loading keywords for display...');
         // Load keywords immediately
         loadKeywordsAsBadges();
-
+        
         // Also load after a delay to ensure DOM is fully ready
         setTimeout(() => {
             loadKeywordsAsBadges();
@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </form>
 
-
+                
                 <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
                     Add Type
                 </a>
@@ -678,7 +678,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="mb-3">
                                 <label class="form-label">Content Sources</label>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="source_db" name="content_sources" value="database"
+                                    <input class="form-check-input" type="checkbox"```text
+ id="source_db" name="content_sources" value="database"
                                         {% if settings and 'database' in settings.content_sources_list %}checked{% endif %}>
                                     <label class="form-check-label" for="source_db">Default Items</label>
                                     <div class="form-text">Include default items specified below</div>
@@ -714,19 +715,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="screening-types-checklist">
                                     {% if active_screening_types %}
                                         {% set default_items_list = settings.default_items_list if settings else [] %}
-                                        <div class="mb-2">
-                                            <small class="text-muted">Debug: Default items = {{ default_items_list|join(', ') if default_items_list else 'None' }}</small>
-                                        </div>
-
                                         {% for screening_type in active_screening_types %}
                                         <div class="form-check mb-2">
-                                            <input class="form-check-input screening-checkbox" 
-                                                   type="checkbox" 
-                                                   value="{{ screening_type.name }}" 
-                                                   id="screening_{{ screening_type.id }}" 
-                                                   name="selected_screening_types"
-                                                   {% if screening_type.name in default_items_list %}checked{% endif %}
-                                                   onchange="debugCheckbox(this)">
+                                            <input class="form-check-input" type="checkbox" value="{{ screening_type.name }}" id="screening_{{ screening_type.id }}" name="selected_screening_types"
+                                                {% if screening_type.name in default_items_list %}checked{% endif %}
+                                                onchange="console.log('Checkbox changed:', this.name, this.value, this.checked)">
                                             <label class="form-check-label" for="screening_{{ screening_type.id }}">
                                                 <strong>{{ screening_type.name }}</strong>
                                                 {% if screening_type.description %}
@@ -740,11 +733,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                             </label>
                                         </div>
                                         {% endfor %}
-
-                                        <div class="mt-3">
-                                            <button type="button" onclick="selectAllScreenings()" class="btn btn-sm btn-outline-secondary me-2">Select All</button>
-                                            <button type="button" onclick="clearAllScreenings()" class="btn btn-sm btn-outline-secondary">Clear All</button>
-                                        </div>
                                     {% else %}
                                         <p class="text-muted">No active screening types found. <a href="{{ url_for('screening_list', tab='types') }}">Add screening types</a> to configure quality checklist items.</p>
                                     {% endif %}
@@ -754,75 +742,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             <button type="submit" class="btn btn-primary">Save Generation Settings</button>
                         </form>
-
+                        
                         <script>
-                        // Debug checkbox changes
-                        function debugCheckbox(checkbox) {
-                            console.log(`Checkbox ${checkbox.value} changed to: ${checkbox.checked}`);
-                            const allChecked = document.querySelectorAll('input[name="selected_screening_types"]:checked');
-                            console.log(`Total checked boxes: ${allChecked.length}`);
-                        }
-
-                        // Select all checkboxes
-                        function selectAllScreenings() {
-                            const checkboxes = document.querySelectorAll('input[name="selected_screening_types"]');
-                            checkboxes.forEach(cb => {
-                                cb.checked = true;
-                                debugCheckbox(cb);
-                            });
-                        }
-
-                        // Clear all checkboxes
-                        function clearAllScreenings() {
-                            const checkboxes = document.querySelectorAll('input[name="selected_screening_types"]');
-                            checkboxes.forEach(cb => {
-                                cb.checked = false;
-                                debugCheckbox(cb);
-                            });
-                        }
-
-                        // Enhanced form submission debugging
+                        // Debug form submission
                         document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
-                            console.log('=== FORM SUBMISSION DEBUG ===');
-
-                            // Get all checkboxes (both checked and unchecked)
-                            const allCheckboxes = this.querySelectorAll('input[name="selected_screening_types"]');
-                            const checkedCheckboxes = this.querySelectorAll('input[name="selected_screening_types"]:checked');
-
-                            console.log(`Total checkboxes: ${allCheckboxes.length}`);
-                            console.log(`Checked checkboxes: ${checkedCheckboxes.length}`);
-
-                            // Log all checkbox states
-                            allCheckboxes.forEach((cb, index) => {
-                                console.log(`Checkbox ${index + 1}: "${cb.value}" (checked: ${cb.checked}) [ID: ${cb.id}]`);
-                            });
-
-                            // Log the selected values that will be sent
-                            const selectedValues = Array.from(checkedCheckboxes).map(cb => cb.value);
-                            console.log('Selected values to be sent:', selectedValues);
-
-                            // Check if form data will be sent correctly
+                            console.log('Form being submitted...');
                             const formData = new FormData(this);
-                            const sentValues = formData.getAll('selected_screening_types');
-                            console.log('FormData selected_screening_types:', sentValues);
-
-                            // Verify multiple selections
-                            if (sentValues.length > 1) {
-                                console.log('✅ Multiple selections detected - should work properly');
-                            } else if (sentValues.length === 1) {
-                                console.log('⚠️ Only one selection detected');
-                            } else {
-                                console.log('❌ No selections detected');
+                            const selectedScreenings = formData.getAll('selected_screening_types');
+                            console.log('Selected screening types being submitted:', selectedScreenings);
+                            console.log('All form data:');
+                            for (let [key, value] of formData.entries()) {
+                                console.log(key, value);
                             }
-
-                            console.log('=== END FORM SUBMISSION DEBUG ===');
                         });
                         </script>
                     </div>
                 </div>
             </div>
         </div>
-
+    {% endif %}
+{% endblock %}
     </div>
 </div>
 {% endif %}
@@ -924,34 +863,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const systemSelect = document.getElementById(`${formType}-condition-system`);
         const codeInput = document.getElementById(`${formType}-condition-code`);
         const displayInput = document.getElementById(`${formType}-condition-display`);
-
+        
         const system = systemSelect.value;
         const code = codeInput.value.trim();
         const display = displayInput.value.trim();
-
+        
         if (!code || !display) {
             alert('Please enter both condition code and display name');
             return;
         }
-
+        
         const condition = {
             system: system,
             code: code,
             display: display
         };
-
+        
         // Add to data array
         if (!window.triggerConditionsData[formType]) {
             window.triggerConditionsData[formType] = [];
         }
         window.triggerConditionsData[formType].push(condition);
-
+        
         // Update hidden input
         document.getElementById(`${formType}-trigger-conditions-data`).value = JSON.stringify(window.triggerConditionsData[formType]);
-
+        
         // Update display
         renderTriggerConditions(formType);
-
+        
         // Clear inputs
         codeInput.value = '';
         displayInput.value = '';
@@ -968,14 +907,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderTriggerConditions(formType) {
         const container = document.getElementById(`${formType}-trigger-conditions-list`);
         if (!container) return;
-
+        
         const conditions = window.triggerConditionsData[formType] || [];
-
+        
         if (conditions.length === 0) {
             container.innerHTML = '<div class="text-muted small">No trigger conditions added</div>';
             return;
         }
-
+        
         let html = '';
         conditions.forEach((condition, index) => {
             html += `
@@ -990,7 +929,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
         });
-
+        
         container.innerHTML = html;
     }
 
@@ -998,7 +937,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const systemNames = {
             'http://snomed.info/sct': 'SNOMED CT',
             'http://hl7.org/fhir/sid/icd-10-cm': 'ICD-10-CM',
-            'http://hl7.org/fhir/sid/icd-9-cm': 'ICD-10-CM',
+            'http://hl7.org/fhir/sid/icd-9-cm': 'ICD-9-CM',
             'custom': 'Custom'
         };
         return systemNames[system] || system;
@@ -1020,7 +959,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Clear trigger conditions when modals close
     const addModal = document.getElementById('addScreeningTypeModal');
     // Edit modal removed - now redirects to dedicated edit page
-
+    
     if (addModal) {
         addModal.addEventListener('hidden.bs.modal', function() {
             window.triggerConditionsData['add-form'] = [];
@@ -1055,21 +994,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const maxAge = button.getAttribute('data-max-age');
             const active = button.getAttribute('data-active') === '1';
             const triggerConditions = button.getAttribute('data-trigger-conditions');
-
+            
             // Set form values
             const form = document.getElementById('editScreeningTypeForm');
             form.action = `/screening-types/${id}/edit?ts=${Date.now()}`;
-
+            
             document.getElementById('edit-name').value = name;
             document.getElementById('edit-frequency').value = frequency || '';
             document.getElementById('edit-gender').value = gender || '';
             document.getElementById('edit-min-age').value = minAge || '';
             document.getElementById('edit-max-age').value = maxAge || '';
             document.getElementById('edit-active').checked = active;
-
+            
             // Load trigger conditions
             window.loadTriggerConditionsForEdit(triggerConditions);
-
+            
             // Load keywords (existing functionality)
             if (window.keywordManagers && window.keywordManagers.edit) {
                 window.keywordManagers.edit.loadKeywords(id);
@@ -1370,7 +1309,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-
+    
 });
 
 
