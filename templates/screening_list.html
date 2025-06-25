@@ -672,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <h6 class="mb-0">Checklist Content Generation</h6>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="{{ url_for('update_checklist_generation') }}">
+                        <form method="POST" action="{{ url_for('update_checklist_generation') }}" id="checklistForm">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                             <div class="mb-3">
@@ -717,8 +717,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         {% for screening_type in active_screening_types %}
                                         <div class="form-check mb-2">
                                             <input class="form-check-input screening-type-checkbox" type="checkbox" value="{{ screening_type.name }}" id="screening_{{ screening_type.id }}" name="selected_screening_types"
-                                                {% if screening_type.name in default_items_list %}checked{% endif %}
-                                                data-screening-name="{{ screening_type.name }}">
+                                                {% if screening_type.name in default_items_list %}checked{% endif %}>
                                             <label class="form-check-label" for="screening_{{ screening_type.id }}">
                                                 <strong>{{ screening_type.name }}</strong>
                                                 {% if screening_type.description %}
@@ -760,7 +759,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Multiple checkbox handler for screening types
     document.addEventListener('DOMContentLoaded', function() {
         // Handle form submission to ensure multiple checkboxes are captured
-        const checklistForm = document.querySelector('form[action="{{ url_for("update_checklist_generation") }}"]');
+        const checklistForm = document.getElementById('checklistForm');
         if (checklistForm) {
             checklistForm.addEventListener('submit', function(e) {
                 // Get all checked screening type checkboxes
@@ -769,10 +768,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Log what we're about to submit
                 checkedBoxes.forEach(function(checkbox, index) {
-                    console.log(`Checkbox ${index + 1}: ${checkbox.value}`);
+                    console.log(`Checkbox ${index + 1}: ${checkbox.value} (name: ${checkbox.name})`);
                 });
+
+                // Verify form data that will be sent
+                const formData = new FormData(checklistForm);
+                const screeningTypes = formData.getAll('selected_screening_types');
+                console.log('FormData.getAll result:', screeningTypes);
+                console.log('Total screening types to submit:', screeningTypes.length);
+
+                // Don't prevent form submission - let it proceed normally
             });
         }
+
+        // Add change event listeners to checkboxes for real-time feedback
+        document.querySelectorAll('input[name="selected_screening_types"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const checkedCount = document.querySelectorAll('input[name="selected_screening_types"]:checked').length;
+                console.log(`Checkbox changed: ${this.value} (${this.checked ? 'checked' : 'unchecked'}). Total checked: ${checkedCount}`);
+            });
+        });
 
         const addCustomStatusBtn = document.getElementById('add_custom_status');
         const customStatusInput = document.getElementById('custom_status_input');
