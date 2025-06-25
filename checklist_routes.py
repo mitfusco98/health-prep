@@ -80,8 +80,26 @@ def update_checklist_generation():
     content_sources = request.form.getlist('content_sources')
     settings.content_sources = ','.join(content_sources) if content_sources else ''
 
-    # Get selected screening types from checkboxes (back to original method)
+    # Debug: Print all form data first
+    print(f"DEBUG: All form data keys: {list(request.form.keys())}")
+    print(f"DEBUG: All form data: {dict(request.form)}")
+    
+    # Get selected screening types from checkboxes 
     selected_screening_types = request.form.getlist('selected_screening_types')
+    print(f"DEBUG: getlist result: {selected_screening_types}")
+    print(f"DEBUG: getlist type: {type(selected_screening_types)}")
+    print(f"DEBUG: getlist length: {len(selected_screening_types)}")
+    
+    # Also try to get individual form values to debug
+    all_form_values = []
+    for key in request.form.keys():
+        if key == 'selected_screening_types':
+            values = request.form.getlist(key)
+            print(f"DEBUG: Key '{key}' has values: {values}")
+            all_form_values.extend(values)
+    
+    print(f"DEBUG: Collected values from all keys: {all_form_values}")
+    
     print(f"INFO: Processing {len(selected_screening_types)} selected screening types: {selected_screening_types}")
     
     selected_screening_names = selected_screening_types
