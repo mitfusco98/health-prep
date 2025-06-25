@@ -716,7 +716,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         {% set default_items_list = settings.default_items_list if settings else [] %}
                                         {% for screening_type in active_screening_types %}
                                         <div class="form-check mb-2">
-                                            <input class="form-check-input screening-type-checkbox" type="checkbox" value="{{ screening_type.name }}" id="screening_{{ screening_type.id }}" name="selected_screening_types"
+                                            <input 
+                                                class="form-check-input screening-type-checkbox" 
+                                                type="checkbox" 
+                                                value="{{ screening_type.name }}" 
+                                                id="screening_{{ screening_type.id }}" 
+                                                name="selected_screening_types"
                                                 {% if screening_type.name in default_items_list %}checked{% endif %}>
                                             <label class="form-check-label" for="screening_{{ screening_type.id }}">
                                                 <strong>{{ screening_type.name }}</strong>
@@ -740,6 +745,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             <button type="submit" class="btn btn-primary">Save Generation Settings</button>
                         </form>
+                        
+                        <!-- Debug form to test multiple checkbox submission -->
+                        <div class="mt-4 p-3 border rounded bg-light">
+                            <h6>Debug: Test Multiple Checkbox Submission</h6>
+                            <form method="POST" action="{{ url_for('update_checklist_generation') }}" style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="content_sources" value="database">
+                                
+                                <div class="form-check">
+                                    <input type="checkbox" name="selected_screening_types" value="Test1" id="test1" checked>
+                                    <label for="test1">Test Screening 1</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" name="selected_screening_types" value="Test2" id="test2" checked>
+                                    <label for="test2">Test Screening 2</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" name="selected_screening_types" value="Test3" id="test3" checked>
+                                    <label for="test3">Test Screening 3</label>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-sm btn-secondary mt-2">Test Submit (Should send 3 values)</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -758,29 +787,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
     // Multiple checkbox handler for screening types
     document.addEventListener('DOMContentLoaded', function() {
-        // Handle form submission to ensure multiple checkboxes are captured
-        const checklistForm = document.getElementById('checklistForm');
-        if (checklistForm) {
-            checklistForm.addEventListener('submit', function(e) {
-                // Get all checked screening type checkboxes
-                const checkedBoxes = document.querySelectorAll('input[name="selected_screening_types"]:checked');
-                console.log(`Found ${checkedBoxes.length} checked screening types before submission`);
-
-                // Log what we're about to submit
-                checkedBoxes.forEach(function(checkbox, index) {
-                    console.log(`Checkbox ${index + 1}: ${checkbox.value} (name: ${checkbox.name})`);
-                });
-
-                // Verify form data that will be sent
-                const formData = new FormData(checklistForm);
-                const screeningTypes = formData.getAll('selected_screening_types');
-                console.log('FormData.getAll result:', screeningTypes);
-                console.log('Total screening types to submit:', screeningTypes.length);
-
-                // Don't prevent form submission - let it proceed normally
-            });
-        }
-
         // Add change event listeners to checkboxes for real-time feedback
         document.querySelectorAll('input[name="selected_screening_types"]').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
@@ -788,6 +794,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log(`Checkbox changed: ${this.value} (${this.checked ? 'checked' : 'unchecked'}). Total checked: ${checkedCount}`);
             });
         });
+
+        // Simple form submission handler for debugging
+        const checklistForm = document.getElementById('checklistForm');
+        if (checklistForm) {
+            checklistForm.addEventListener('submit', function(e) {
+                const checkedBoxes = document.querySelectorAll('input[name="selected_screening_types"]:checked');
+                console.log(`FORM SUBMIT: Found ${checkedBoxes.length} checked screening types`);
+                
+                checkedBoxes.forEach(function(checkbox, index) {
+                    console.log(`FORM SUBMIT: Checkbox ${index + 1}: ${checkbox.value}`);
+                });
+                
+                // Let the form submit naturally - don't interfere
+            });
+        }
 
         const addCustomStatusBtn = document.getElementById('add_custom_status');
         const customStatusInput = document.getElementById('custom_status_input');

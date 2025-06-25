@@ -73,23 +73,47 @@ def update_checklist_settings():
 @safe_db_operation
 def update_checklist_generation():
     """Update content generation settings for the prep sheet quality checklist"""
+    
+    # Debug: Print comprehensive form debugging info
+    print(f"DEBUG: Raw request.form: {request.form}")
+    print(f"DEBUG: Raw request.form type: {type(request.form)}")
+    print(f"DEBUG: All form keys: {list(request.form.keys())}")
+    print(f"DEBUG: Form as dict: {dict(request.form)}")
+    
+    # Check for multiple values specifically
+    print(f"DEBUG: request.form.getlist('selected_screening_types'): {request.form.getlist('selected_screening_types')}")
+    
+    # Check raw form data
+    for key in request.form.keys():
+        if 'screening' in key.lower():
+            values = request.form.getlist(key)
+            print(f"DEBUG: Key '{key}' has {len(values)} values: {values}")
+    
     # Get or create settings
     settings = get_or_create_settings()
 
     # Get form data
     content_sources = request.form.getlist("content_sources")
-    default_items = request.form.get("default_items", "")
+    selected_screening_types = request.form.getlist("selected_screening_types")
+    
+    print(f"DEBUG: Content sources: {content_sources}")
+    print(f"DEBUG: Selected screening types: {selected_screening_types}")
+    print(f"DEBUG: Selected screening types count: {len(selected_screening_types)}")
 
     # Update settings
     settings.content_sources = (
         ",".join(content_sources) if content_sources else "database"
     )
-    settings.default_items = default_items
+    
+    # Use the selected screening types as default items
+    settings.default_items = ",".join(selected_screening_types) if selected_screening_types else ""
+    
+    print(f"DEBUG: Saving default_items as: '{settings.default_items}'")
 
     # Save settings
     db.session.commit()
 
-    flash("Prep sheet generation settings updated successfully!", "success")
+    flash(f"Prep sheet generation settings updated successfully! Saved {len(selected_screening_types)} screening types.", "success")
 
     # Redirect back to the screening list page with the checklist tab active
     return redirect(url_for("screening_list", tab="checklist"))
