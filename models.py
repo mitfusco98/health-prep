@@ -1025,6 +1025,9 @@ class ChecklistSettings(db.Model):
         """Return default items as a list"""
         if not self.default_items:
             return []
+        # Handle both comma-separated and newline-separated formats for backward compatibility
+        if "," in self.default_items and "\n" not in self.default_items:
+            return [item.strip() for item in self.default_items.split(",") if item.strip()]
         return [item.strip() for item in self.default_items.split("\n") if item.strip()]
 
     def __repr__(self):
