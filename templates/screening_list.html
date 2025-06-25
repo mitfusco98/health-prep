@@ -717,9 +717,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         {% set default_items_list = settings.default_items_list if settings else [] %}
                                         {% for screening_type in active_screening_types %}
                                         <div class="form-check mb-2">
-                                            <!-- Add hidden input to ensure unchecked items are handled properly -->
-                                            <input type="hidden" name="screening_type_{{ screening_type.id }}" value="off">
-                                            <input class="form-check-input" type="checkbox" value="on" id="screening_{{ screening_type.id }}" name="screening_type_{{ screening_type.id }}"
+                                            <input class="form-check-input" type="checkbox" value="{{ screening_type.name }}" id="screening_{{ screening_type.id }}" name="selected_screening_types"
                                                 {% if screening_type.name in default_items_list %}checked{% endif %}
                                                 data-screening-name="{{ screening_type.name }}">
                                             <label class="form-check-label" for="screening_{{ screening_type.id }}">

@@ -80,25 +80,11 @@ def update_checklist_generation():
     content_sources = request.form.getlist('content_sources')
     settings.content_sources = ','.join(content_sources) if content_sources else ''
 
-    # Debug all form fields to understand what's being sent
-    print(f"DEBUG: All form keys: {list(request.form.keys())}")
-    for key, value in request.form.items():
-        print(f"DEBUG: Form field '{key}' = '{value}'")
+    # Get selected screening types from checkboxes (back to original method)
+    selected_screening_types = request.form.getlist('selected_screening_types')
+    print(f"INFO: Processing {len(selected_screening_types)} selected screening types: {selected_screening_types}")
     
-    # Process screening type checkboxes using individual field names
-    from models import ScreeningType
-    active_screening_types = ScreeningType.query.filter_by(is_active=True, status='active').all()
-    
-    selected_screening_names = []
-    for screening_type in active_screening_types:
-        field_name = f'screening_type_{screening_type.id}'
-        field_value = request.form.get(field_name)
-        print(f"DEBUG: Checking field '{field_name}' for screening '{screening_type.name}': value='{field_value}'")
-        if field_value == 'on':
-            selected_screening_names.append(screening_type.name)
-            print(f"DEBUG: Added '{screening_type.name}' to selected list")
-    
-    print(f"INFO: Processing {len(selected_screening_names)} selected screening types: {selected_screening_names}")
+    selected_screening_names = selected_screening_types
 
     # Update default items with selected screening types
     if selected_screening_names:
