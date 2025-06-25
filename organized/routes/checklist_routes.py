@@ -94,10 +94,8 @@ def update_checklist_generation():
 
     # Get form data
     content_sources = request.form.getlist("content_sources")
-    # Get selected screening types from checkboxes - try both array and non-array names
+    # Get selected screening types from checkboxes using the correct array key name
     selected_screening_types = request.form.getlist('selected_screening_types[]')
-    if not selected_screening_types:
-        selected_screening_types = request.form.getlist('selected_screening_types')
 
     print(f"DEBUG: getlist result: {selected_screening_types}")
     print(f"DEBUG: getlist type: {type(selected_screening_types)}")
@@ -120,6 +118,7 @@ def update_checklist_generation():
     # Check if key exists in form
     if 'selected_screening_types[]' in request.form:
         print("DEBUG: selected_screening_types[] found in form")
+        print(f"DEBUG: Form contains screening types: {request.form.getlist('selected_screening_types[]')}")
     else:
         print("DEBUG: selected_screening_types[] NOT found in form")
 
