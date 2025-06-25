@@ -74,20 +74,10 @@ def update_checklist_settings():
 def update_checklist_generation():
     """Update content generation settings for the prep sheet quality checklist"""
 
-    # Debug: Print comprehensive form debugging info
-    print(f"DEBUG: Raw request.form: {request.form}")
-    print(f"DEBUG: Raw request.form type: {type(request.form)}")
-    print(f"DEBUG: All form keys: {list(request.form.keys())}")
-    print(f"DEBUG: Form as dict: {dict(request.form)}")
-
-    # Check for multiple values specifically
-    print(f"DEBUG: request.form.getlist('selected_screening_types'): {request.form.getlist('selected_screening_types')}")
-
-    # Check raw form data
-    for key in request.form.keys():
-        if 'screening' in key.lower():
-            values = request.form.getlist(key)
-            print(f"DEBUG: Key '{key}' has {len(values)} values: {values}")
+    # Debug: Print basic form debugging info
+    print(f"DEBUG: All form data keys: {list(request.form.keys())}")
+    print(f"DEBUG: All form data: {dict(request.form)}")
+    print(f"DEBUG: Raw form data: {request.form}")
 
     # Get or create settings
     settings = get_or_create_settings()
