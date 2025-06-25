@@ -83,12 +83,30 @@ def update_checklist_generation():
     # Debug: Print all form data first
     print(f"DEBUG: All form data keys: {list(request.form.keys())}")
     print(f"DEBUG: All form data: {dict(request.form)}")
+    print(f"DEBUG: Raw form data: {request.form}")
+    
+    # Check if we have any screening types at all in the form
+    if 'selected_screening_types' in request.form:
+        print(f"DEBUG: selected_screening_types found in form")
+    else:
+        print(f"DEBUG: selected_screening_types NOT found in form")
     
     # Get selected screening types from checkboxes 
     selected_screening_types = request.form.getlist('selected_screening_types')
     print(f"DEBUG: getlist result: {selected_screening_types}")
     print(f"DEBUG: getlist type: {type(selected_screening_types)}")
     print(f"DEBUG: getlist length: {len(selected_screening_types)}")
+    
+    # Also try direct access to see what happens
+    try:
+        direct_value = request.form['selected_screening_types']
+        print(f"DEBUG: Direct access gives: {direct_value}")
+    except KeyError:
+        print(f"DEBUG: Direct access failed - key not found")
+    
+    # Check all keys that contain 'screening'
+    screening_keys = [key for key in request.form.keys() if 'screening' in key.lower()]
+    print(f"DEBUG: All keys containing 'screening': {screening_keys}")
     
     # Also try to get individual form values to debug
     all_form_values = []
