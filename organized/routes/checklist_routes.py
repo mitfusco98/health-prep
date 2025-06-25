@@ -80,6 +80,26 @@ def update_checklist_generation():
     content_sources = request.form.getlist("content_sources")
     selected_screening_types = request.form.getlist("selected_screening_types")
     
+    # Check for serialized fallback if normal checkboxes failed
+    serialized_data = request.form.get("selected_screening_types_serialized")
+    backup_data = request.form.get("selected_screening_types_backup")
+    
+    if (not selected_screening_types or len(selected_screening_types) <= 1):
+        if serialized_data:
+            try:
+                import json
+                selected_screening_types = json.loads(serialized_data)
+                print(f"DEBUG: Using JSON serialized data: {selected_screening_types}")
+            except (json.JSONDecodeError, TypeError) as e:
+                print(f"DEBUG: Error parsing JSON serialized data: {e}")
+                # Try backup method
+                if backup_data:
+                    selected_screening_types = backup_data.split('|||')
+                    print(f"DEBUG: Using backup string data: {selected_screening_types}")
+        elif backup_data:
+            selected_screening_types = backup_data.split('|||')
+            print(f"DEBUG: Using backup string data: {selected_screening_types}")
+    
     print(f"DEBUG: ===== FORM SUBMISSION DEBUG =====")
     print(f"DEBUG: Request method: {request.method}")
     print(f"DEBUG: Content type: {request.content_type}")
@@ -87,11 +107,12 @@ def update_checklist_generation():
     print(f"DEBUG: Form data as dict: {dict(request.form)}")
     
     print(f"DEBUG: content_sources (getlist): {content_sources}")
-    print(f"DEBUG: selected_screening_types (getlist): {selected_screening_types}")
+    print(f"DEBUG: selected_screening_types (final): {selected_screening_types}")
     print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
+    print(f"DEBUG: Serialized fallback used: {serialized_data is not None}")
     
-    # Filter out empty values (from hidden input)
-    selected_screening_types = [item for item in selected_screening_types if item.strip()]
+    # Filter out empty values
+    selected_screening_types = [item for item in selected_screening_types if item and item.strip()]
     print(f"DEBUG: Filtered selected_screening_types: {selected_screening_types}")
     print(f"DEBUG: Number of filtered items: {len(selected_screening_types)}")
     

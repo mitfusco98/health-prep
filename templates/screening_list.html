@@ -781,20 +781,41 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         }
 
-                        // Simple form submission debug - no interference with form data
+                        // Reliable multiple checkbox submission handler
                         document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
                             console.log('Form being submitted...');
 
-                            // Get all checked checkboxes for debugging only
+                            // Get all checked checkboxes
                             const checkboxes = this.querySelectorAll('input[name="selected_screening_types"]:checked');
-                            
                             console.log('Checked checkboxes count:', checkboxes.length);
-                            checkboxes.forEach((cb, index) => {
-                                console.log(`Checkbox ${index + 1}: ${cb.value} (checked: ${cb.checked})`);
-                            });
-
-                            // Don't add any hidden inputs - let the form submit naturally
-                            console.log('Allowing natural form submission...');
+                            
+                            // Create array of selected values
+                            const selectedValues = Array.from(checkboxes).map(cb => cb.value);
+                            console.log('Selected values:', selectedValues);
+                            
+                            // Remove any existing hidden serialized input
+                            const existingHidden = this.querySelector('input[name="selected_screening_types_serialized"]');
+                            if (existingHidden) {
+                                existingHidden.remove();
+                            }
+                            
+                            // Create a single hidden input with JSON-serialized array
+                            if (selectedValues.length > 0) {
+                                const hiddenInput = document.createElement('input');
+                                hiddenInput.type = 'hidden';
+                                hiddenInput.name = 'selected_screening_types_serialized';
+                                hiddenInput.value = JSON.stringify(selectedValues);
+                                this.appendChild(hiddenInput);
+                                console.log('Added serialized input with value:', hiddenInput.value);
+                                
+                                // Additional backup: comma-separated string
+                                const backupInput = document.createElement('input');
+                                backupInput.type = 'hidden';
+                                backupInput.name = 'selected_screening_types_backup';
+                                backupInput.value = selectedValues.join('|||'); // Use unique separator
+                                this.appendChild(backupInput);
+                                console.log('Added backup input with value:', backupInput.value);
+                            }
                         });
                         </script>
                     </div>
