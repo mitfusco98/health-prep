@@ -29,7 +29,6 @@ def screening_checklist_rebuilt():
 
 
 @app.route('/save-status-options-simple', methods=['POST'])
-@login_required
 def save_status_options_simple():
     """Save status options with simple, reliable processing"""
     try:
@@ -73,7 +72,6 @@ def save_status_options_simple():
 
 
 @app.route('/save-default-items-simple', methods=['POST'])
-@login_required
 def save_default_items_simple():
     """Save default items with simple, reliable processing"""
     try:
