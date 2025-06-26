@@ -39,12 +39,12 @@ class DatabaseConfig:
     def engine_options(self) -> Dict[str, Any]:
         return {
             "pool_recycle": self.pool_recycle,
-            "pool_pre_ping": self.pool_pre_ping,
-            "pool_timeout": self.pool_timeout,
-            "pool_size": self.pool_size,
-            "max_overflow": self.max_overflow,
+            "pool_pre_ping": False,  # Disable pre-ping for faster startup
+            "pool_timeout": 5,  # Reduced from 10
+            "pool_size": 5,  # Reduced from 20
+            "max_overflow": 10,  # Reduced from 30
             "connect_args": {
-                "connect_timeout": self.connect_timeout,
+                "connect_timeout": 5,  # Reduced from 10
                 "application_name": "healthprep_app",
                 "sslmode": "prefer",
             },

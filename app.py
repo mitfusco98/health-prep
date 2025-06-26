@@ -1273,101 +1273,78 @@ with app.app_context():
         config.security.jwt_expiration_delta,
     )
 
-    # Schedule automatic admin log cleanup
+    # Defer admin log cleanup startup for faster boot
     def schedule_admin_log_cleanup():
         """Schedule periodic cleanup of old admin logs"""
         import threading
         import time
         from datetime import datetime, timedelta
 
-        def cleanup_task():
-            while True:
-                try:
-                    # Run cleanup daily at 2 AM
-                    now = datetime.now()
-                    next_run = now.replace(hour=2, minute=0, second=0, microsecond=0)
-                    if next_run <= now:
-                        next_run += timedelta(days=1)
+        def delayed_cleanup_init():
+            # Wait 10 seconds after startup before starting cleanup scheduler
+            time.sleep(10)
+            
+            def cleanup_task():
+                while True:
+                    try:
+                        # Run cleanup daily at 2 AM
+                        now = datetime.now()
+                        next_run = now.replace(hour=2, minute=0, second=0, microsecond=0)
+                        if next_run <= now:
+                            next_run += timedelta(days=1)
 
-                    sleep_seconds = (next_run - now).total_seconds()
-                    time.sleep(sleep_seconds)
+                        sleep_seconds = (next_run - now).total_seconds()
+                        time.sleep(sleep_seconds)
 
-                    # Perform cleanup
-                    with app.app_context():
-                        from admin_log_cleanup import cleanup_old_admin_logs
+                        # Perform cleanup
+                        with app.app_context():
+                            from admin_log_cleanup import cleanup_old_admin_logs
 
-                        deleted_count = cleanup_old_admin_logs(10)
-                        if deleted_count > 0:
-                            logger.info(
-                                f"Daily cleanup: Removed {deleted_count} old admin log entries"
-                            )
+                            deleted_count = cleanup_old_admin_logs(10)
+                            if deleted_count > 0:
+                                logger.info(
+                                    f"Daily cleanup: Removed {deleted_count} old admin log entries"
+                                )
 
-                except Exception as e:
-                    logger.error(f"Error in admin log cleanup task: {str(e)}")
-                    # Sleep for 1 hour before retrying
-                    time.sleep(3600)
+                    except Exception as e:
+                        logger.error(f"Error in admin log cleanup task: {str(e)}")
+                        time.sleep(3600)
 
-        # Start cleanup thread
-        cleanup_thread = threading.Thread(target=cleanup_task, daemon=True)
-        cleanup_thread.start()
-        logger.info("Admin log cleanup scheduler started")
+            # Start cleanup thread
+            cleanup_thread = threading.Thread(target=cleanup_task, daemon=True)
+            cleanup_thread.start()
+            logger.info("Admin log cleanup scheduler started")
 
-    # Start the cleanup scheduler
+        # Start delayed initialization
+        init_thread = threading.Thread(target=delayed_cleanup_init, daemon=True)
+        init_thread.start()
+
+    # Start the deferred cleanup scheduler
     schedule_admin_log_cleanup()
 
-    # Create database tables with retry logic
-    max_retries = 5
-    retry_delay = 2
+    # Optimized database connection for faster startup
+    max_retries = 2  # Reduced from 5
+    retry_delay = 1  # Reduced from 2
 
     for attempt in range(max_retries):
         try:
-            logger.info(
-                f"Attempting database connection (attempt {attempt+1}/{max_retries})"
-            )
+            if attempt == 0:
+                logger.info("Connecting to database...")
             db.create_all()
-            logger.info("Database tables created successfully")
+            logger.info("Database ready")
             break
         except Exception as e:
-            logger.error(f"Database connection failed: {str(e)}")
             if attempt < max_retries - 1:
-                structured_logger.logger.info(
-                    f"Retrying database connection in {retry_delay} seconds",
-                    extra={
-                        "event_type": "database_retry",
-                        "attempt": attempt + 1,
-                        "max_retries": max_retries,
-                        "retry_delay": retry_delay,
-                    },
-                )
+                logger.warning(f"Database connection failed, retrying in {retry_delay}s...")
                 time.sleep(retry_delay)
-                retry_delay *= 2  # Exponential backoff
             else:
-                structured_logger.logger.error(
-                    f"Failed to connect to database after {max_retries} attempts",
-                    extra={
-                        "event_type": "database_connection_failed",
-                        "max_retries": max_retries,
-                    },
-                )
-                # Fall back to SQLite if PostgreSQL fails
+                logger.error(f"Database connection failed: {str(e)}")
+                # Quick fallback to SQLite
                 if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql"):
-                    structured_logger.logger.warning(
-                        "Falling back to SQLite database",
-                        extra={
-                            "event_type": "database_fallback",
-                            "from": "postgresql",
-                            "to": "sqlite",
-                        },
-                    )
+                    logger.warning("Falling back to SQLite for faster startup")
                     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///healthcare.db"
                     db.create_all()
-                    structured_logger.logger.info(
-                        "SQLite database tables created successfully",
-                        extra={
-                            "event_type": "database_initialized",
-                            "database_type": "sqlite",
-                        },
-                    )
+                    logger.info("SQLite database ready")
                 else:
                     raise
 
@@ -1376,25 +1353,33 @@ from logging_config import log_application_startup
 
 log_application_startup(app, structured_logger)
 
-# Register validation middleware for automatic logging
-from validation_middleware import register_validation_middleware
+# Defer heavy middleware registration for faster startup
+def init_middleware():
+    """Initialize middleware in background after startup"""
+    import threading
+    import time
+    
+    def register_middleware():
+        time.sleep(2)  # Wait 2 seconds after startup
+        try:
+            from validation_middleware import register_validation_middleware
+            from api_access_middleware import register_api_access_middleware
+            from admin_middleware import register_admin_middleware
+            from session_timeout import init_session_timeout
+            
+            register_validation_middleware(app)
+            register_api_access_middleware(app)
+            register_admin_middleware(app)
+            init_session_timeout(app)
+            
+            logger.info("Middleware initialization complete")
+        except Exception as e:
+            logger.error(f"Error initializing middleware: {e}")
+    
+    thread = threading.Thread(target=register_middleware, daemon=True)
+    thread.start()
 
-register_validation_middleware(app)
-
-# Register API access middleware for data access logging
-from api_access_middleware import register_api_access_middleware
-
-register_api_access_middleware(app)
-
-# Register admin route protection middleware
-from admin_middleware import register_admin_middleware
-
-register_admin_middleware(app)
-
-# Initialize session timeout management
-from session_timeout import init_session_timeout
-
-init_session_timeout(app)
+init_middleware()
 
 # Add route for clearing query cache
 @app.route('/api/cache/clear', methods=['POST'])
@@ -1405,12 +1390,34 @@ def clear_query_cache():
     clear_cache()
     return jsonify({'success': True, 'message': 'Cache cleared'})
 
-# Import all route modules to register them with the app
-import demo_routes
-import api_routes
+# Lazy load route modules for faster startup
+def lazy_load_routes():
+    """Load route modules in background after startup"""
+    import threading
+    import time
+    
+    def load_routes():
+        time.sleep(1)  # Wait 1 second after startup
+        try:
+            # Import route modules
+            import demo_routes
+            import api_routes
+            import auth_routes
+            import async_routes
+            import performance_routes
+            import ehr_routes
+            import checklist_routes
+            import checklist_simple_routes
+            
+            logger.info("Route modules loaded")
+        except Exception as e:
+            logger.error(f"Error loading route modules: {e}")
+    
+    thread = threading.Thread(target=load_routes, daemon=True)
+    thread.start()
+
+# Load essential auth routes immediately for security
 import auth_routes
-import async_routes
-import performance_routes
-import ehr_routes
-import checklist_routes
-import checklist_simple_routes
+
+# Defer other routes
+lazy_load_routes()
