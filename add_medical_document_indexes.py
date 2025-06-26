@@ -6,6 +6,7 @@ Run this script to optimize database performance
 """
 
 from app import app, db
+from sqlalchemy import text
 import logging
 
 def add_medical_document_indexes():
@@ -25,7 +26,7 @@ def add_medical_document_indexes():
             
             for index_sql in indexes_to_add:
                 print(f"Creating index: {index_sql}")
-                db.session.execute(index_sql)
+                db.session.execute(text(index_sql))
                 
             db.session.commit()
             print("✓ All medical_document indexes created successfully!")

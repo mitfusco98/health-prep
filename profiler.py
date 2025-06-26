@@ -251,6 +251,21 @@ def after_cursor_execute(conn, cursor, statement, parameters, context, executema
 
     if hasattr(context, "_query_start_time"):
         duration = (time.perf_counter() - context._query_start_time) * 1000
+        
+        # Skip logging PostgreSQL metadata queries that are normal during startup
+        statement_str = str(statement).lower()
+        is_metadata_query = any(pattern in statement_str for pattern in [
+            'pg_catalog.pg_class',
+            'pg_catalog.pg_namespace', 
+            'information_schema',
+            'pg_table_is_visible',
+            'relname',
+            'relkind'
+        ])
+        
+        # Don't log metadata queries unless they're extremely slow (>500ms)
+        if is_metadata_query and duration < 500:
+            return
 
         # Only record queries over 50ms to reduce profiling overhead
         if duration > 50:
