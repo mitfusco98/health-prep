@@ -247,7 +247,7 @@ def before_cursor_execute(conn, cursor, statement, parameters, context, executem
 
 @event.listens_for(Engine, "after_cursor_execute")
 def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
-    SLOW_QUERY_THRESHOLD = 50
+    SLOW_QUERY_THRESHOLD = 1000  # Increased to 1000ms to reduce console noise
 
     if hasattr(context, "_query_start_time"):
         duration = (time.perf_counter() - context._query_start_time) * 1000
@@ -263,15 +263,14 @@ def after_cursor_execute(conn, cursor, statement, parameters, context, executema
             'relkind'
         ])
         
-        # Don't log metadata queries unless they're extremely slow (>500ms)
-        if is_metadata_query and duration < 500:
+        # Don't log metadata queries unless they're extremely slow (>2000ms)
+        if is_metadata_query and duration < 2000:
             return
 
-        # Only record queries over 50ms to reduce profiling overhead
-        if duration > 50:
+        # Only record queries over 500ms to reduce profiling overhead
+        if duration > 500:
             profiler.record_db_query(statement, duration)
 
-            # Log slow queries with enhanced details
             # Log slow queries with enhanced details
             if duration > SLOW_QUERY_THRESHOLD:
                 logger.warning(
