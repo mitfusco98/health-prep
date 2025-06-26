@@ -39,14 +39,14 @@ class DatabaseConfig:
     def engine_options(self) -> Dict[str, Any]:
         return {
             "pool_recycle": self.pool_recycle,
-            "pool_pre_ping": False,  # Disable pre-ping for faster startup
-            "pool_timeout": 1,  # Minimal timeout for immediate startup
-            "pool_size": 1,  # Single connection for fastest startup
-            "max_overflow": 1,  # Minimal overflow for fastest startup
+            "pool_pre_ping": self.pool_pre_ping,
+            "pool_timeout": self.pool_timeout,
+            "pool_size": self.pool_size,
+            "max_overflow": self.max_overflow,
             "connect_args": {
-                "connect_timeout": 1,  # Ultra-fast timeout for immediate failure
+                "connect_timeout": self.connect_timeout,
                 "application_name": "healthprep_app",
-                "sslmode": "require",  # Enable SSL as required by Neon/PostgreSQL
+                "sslmode": "prefer",
             },
         }
 
