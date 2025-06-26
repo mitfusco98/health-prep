@@ -642,6 +642,26 @@ document.addEventListener('DOMContentLoaded', function() {
                             <small class="text-muted">Selected: <span id="status-list-display">{{ ', '.join(current_status_list) }}</span></small>
                         </div>
 
+                        <div class="mt-3">
+                            <label class="form-label">Custom Status Options</label>
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" id="custom_status_input" placeholder="Add custom status option...">
+                                <button class="btn btn-outline-primary" type="button" id="add_custom_status">Add</button>
+                            </div>
+                            <div class="form-text mb-2">Add your own status options to appear in autocomplete</div>
+                            <div id="custom_status_list" class="d-flex flex-wrap gap-2 mb-2">
+                                {% if settings and settings.custom_status_list %}
+                                    {% for status in settings.custom_status_list %}
+                                        <div class="custom-status-item badge bg-light text-dark p-2 d-flex align-items-center">
+                                            {{ status }}
+                                            <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="{{ status }}"></button>
+                                            <input type="hidden" name="custom_status_options" value="{{ status }}">
+                                        </div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+
                         <!-- Hidden input that will contain the final selections -->
                         <input type="hidden" id="status-selections" name="status_selections" value="{{ ','.join(current_status_list) }}">
 
@@ -785,6 +805,79 @@ function updateScreeningSelections() {
 document.addEventListener('DOMContentLoaded', function() {
     updateStatusSelections();
     updateScreeningSelections();
+    
+    // Custom status options handler
+    const addCustomStatusBtn = document.getElementById('add_custom_status');
+    const customStatusInput = document.getElementById('custom_status_input');
+    const customStatusList = document.getElementById('custom_status_list');
+
+    if (addCustomStatusBtn) {
+        addCustomStatusBtn.addEventListener('click', function() {
+            addCustomStatus();
+        });
+    }
+
+    if (customStatusInput) {
+        customStatusInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addCustomStatus();
+            }
+        });
+    }
+
+    // Add close button functionality to existing status items
+    document.querySelectorAll('.btn-close').forEach(button => {
+        button.addEventListener('click', function() {
+            const status = this.getAttribute('data-status');
+            if (status) {
+                removeCustomStatus(status, this.closest('.custom-status-item'));
+            }
+        });
+    });
+
+    // Function to add a new custom status
+    function addCustomStatus() {
+        const status = customStatusInput.value.trim();
+        if (!status) return;
+
+        // Check if status already exists
+        const existingStatuses = Array.from(customStatusList.querySelectorAll('.custom-status-item'))
+            .map(item => item.querySelector('input').value);
+
+        if (existingStatuses.includes(status)) {
+            alert('This status option already exists');
+            return;
+        }
+
+        // Create a new status item
+        const statusItem = document.createElement('div');
+        statusItem.className = 'custom-status-item badge bg-light text-dark p-2 d-flex align-items-center';
+        statusItem.innerHTML = `
+            ${status}
+            <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="${status}"></button>
+            <input type="hidden" name="custom_status_options" value="${status}">
+        `;
+
+        // Add remove functionality to the new button
+        statusItem.querySelector('.btn-close').addEventListener('click', function() {
+            removeCustomStatus(status, statusItem);
+        });
+
+        // Add to the list
+        customStatusList.appendChild(statusItem);
+
+        // Clear input
+        customStatusInput.value = '';
+        customStatusInput.focus();
+    }
+
+    // Function to remove a custom status
+    function removeCustomStatus(status, element) {
+        if (confirm(`Remove "${status}" from custom status options?`)) {
+            element.remove();
+        }
+    }
 });
 </script>
 
