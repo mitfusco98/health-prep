@@ -37,115 +37,53 @@ def checklist_settings():
     )
 
 
-@app.route("/checklist-settings/display", methods=["POST"])
+@app.route("/save-status-options-simple", methods=["POST"])
 @safe_db_operation
-def update_checklist_settings():
-    """Update display settings for the prep sheet quality checklist"""
-    # DEBUG: Print all form data
-    print("DEBUG: Display settings form data:")
-    for key, value in request.form.items():
-        print(f"  {key}: {value}")
-
-    print("DEBUG: Checkbox lists:")
-    for key in request.form.keys():
-        values = request.form.getlist(key)
-        if len(values) > 1:
-            print(f"  {key}: {values}")
-
+def save_status_options_simple():
+    """Save status options for prep sheet checklists"""
     # Get or create settings
     settings = get_or_create_settings()
 
-    # Get form data
-    layout_style = request.form.get("layout_style", "list")
+    # Get status options from form
     status_options = request.form.getlist("status_options")
-    custom_status_options = request.form.getlist("custom_status_options")
-    show_notes = "show_notes" in request.form
-
-    # DEBUG: Print parsed values
-    print(f"DEBUG: layout_style = {layout_style}")
-    print(f"DEBUG: status_options = {status_options}")
-    print(f"DEBUG: custom_status_options = {custom_status_options}")
-    print(f"DEBUG: show_notes = {show_notes}")
-
+    
     # Update settings
-    settings.layout_style = layout_style
-    settings.status_options = (
-        ",".join(status_options) if status_options else "due,due_soon"
-    )
     settings.custom_status_options = (
-        ",".join(custom_status_options) if custom_status_options else ""
+        ",".join(status_options) if status_options else ""
     )
-    settings.show_notes = show_notes
 
     # Save settings
     db.session.commit()
 
-    flash("Prep sheet display settings updated successfully!", "success")
+    flash("Status options updated successfully!", "success")
 
-    # Redirect back to the screening list page with the checklist tab active
-    return redirect(url_for("screening_list", tab="checklist"))
+    # Redirect back to checklist settings
+    return redirect(url_for("checklist_settings"))
 
 
 @app.route("/checklist-settings/generation", methods=["POST"])
 @safe_db_operation
 def update_checklist_generation():
-    """Update content generation settings for the prep sheet quality checklist"""
-    # DEBUG: Print all form data
-    print("DEBUG: All form data received:")
-    for key, value in request.form.items():
-        print(f"  {key}: {value}")
-
-    print("DEBUG: All form lists:")
-    for key in request.form.keys():
-        values = request.form.getlist(key)
-        if len(values) > 1:
-            print(f"  {key}: {values}")
-
-    print("DEBUG: Raw form data:", dict(request.form))
-
+    """Update default items for the prep sheet quality checklist"""
     # Get or create settings
     settings = get_or_create_settings()
 
-    # Get form data
-    content_sources = request.form.getlist("content_sources")
-
-    # Get selected screening types from hidden inputs (button selections)
-    selected_screening_types = request.form.getlist("selected_screening_types")
-    print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
-    print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
-
-    # Get manual default items from textarea (fallback)
+    # Get manual default items from textarea
     manual_default_items = request.form.get("default_items", "")
-    print(f"DEBUG: Manual default_items from textarea: '{manual_default_items}'")
-
+    
     # Update settings
-    settings.content_sources = (
-        ",".join(content_sources) if content_sources else "database"
-    )
-
-    # Priority logic: Button selections override manual textarea input
-    if selected_screening_types:
-        # Use button selections - join with newlines to preserve multiple selections
-        settings.default_items = '\n'.join(selected_screening_types)
-        print(f"DEBUG: Using button selections: '{settings.default_items}'")
-        print(f"DEBUG: Saved {len(selected_screening_types)} screening types")
-    else:
-        # Fall back to manual textarea input only if no buttons selected
-        settings.default_items = manual_default_items
-        print(f"DEBUG: Using manual textarea input: '{manual_default_items}'")
+    settings.default_items = manual_default_items
 
     try:
         # Save settings
         db.session.commit()
-        print(f"INFO: Successfully saved {len(selected_screening_types) if selected_screening_types else 0} default items to database")
-        flash("Prep sheet generation settings updated successfully!", "success")
+        flash("Default checklist items updated successfully!", "success")
     except Exception as e:
         db.session.rollback()
-        print(f"ERROR: Database error: {str(e)}")
         flash(f'Error updating settings: {str(e)}', 'danger')
 
-    # Redirect back to the screening list page with the checklist tab active
-    return redirect(url_for("screening_list", tab="checklist"))
+    # Redirect back to checklist settings
+    return redirect(url_for("checklist_settings"))
 
 
 @app.route("/checklist-settings/remove-custom-status", methods=["POST"])
