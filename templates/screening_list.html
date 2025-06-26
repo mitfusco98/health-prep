@@ -816,17 +816,30 @@ document.addEventListener('DOMContentLoaded', function() {
                                 
                                 // Add hidden input for each selected button
                                 const selectedButtons = document.querySelectorAll('.screening-toggle-btn.active');
-                                selectedButtons.forEach(button => {
+                                console.log(`Found ${selectedButtons.length} active buttons`);
+                                
+                                selectedButtons.forEach((button, index) => {
                                     const screeningName = button.getAttribute('data-screening-name');
-                                    const hiddenInput = document.createElement('input');
-                                    hiddenInput.type = 'hidden';
-                                    hiddenInput.name = 'selected_screening_types';
-                                    hiddenInput.value = screeningName;
-                                    container.appendChild(hiddenInput);
-                                    console.log(`Added hidden input for: ${screeningName}`);
+                                    if (screeningName) {
+                                        const hiddenInput = document.createElement('input');
+                                        hiddenInput.type = 'hidden';
+                                        hiddenInput.name = 'selected_screening_types';
+                                        hiddenInput.value = screeningName;
+                                        container.appendChild(hiddenInput);
+                                        console.log(`Added hidden input ${index + 1}: ${screeningName}`);
+                                    } else {
+                                        console.error(`Button ${index} missing data-screening-name attribute`);
+                                    }
                                 });
                                 
                                 console.log(`Updated hidden inputs: ${selectedButtons.length} items selected`);
+                                
+                                // Debug: Show all hidden inputs
+                                const allInputs = container.querySelectorAll('input[name="selected_screening_types"]');
+                                console.log(`Total hidden inputs created: ${allInputs.length}`);
+                                allInputs.forEach((input, index) => {
+                                    console.log(`Hidden input ${index}: ${input.value}`);
+                                });
                             }
                             
                             // Initialize button states on page load based on default items
@@ -845,13 +858,26 @@ document.addEventListener('DOMContentLoaded', function() {
                             const form = document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]');
                             if (form) {
                                 form.addEventListener('submit', function(e) {
-                                    console.log('Form being submitted...');
+                                    console.log('=== FORM SUBMISSION DEBUG ===');
+                                    
+                                    // Check button states before submission
+                                    const activeButtons = document.querySelectorAll('.screening-toggle-btn.active');
+                                    console.log(`Active buttons found: ${activeButtons.length}`);
+                                    activeButtons.forEach((btn, index) => {
+                                        console.log(`Active button ${index}: ${btn.getAttribute('data-screening-name')}`);
+                                    });
+                                    
+                                    // Update hidden inputs one more time to be sure
+                                    updateHiddenInputs();
+                                    
                                     const formData = new FormData(this);
                                     const selectedScreenings = formData.getAll('selected_screening_types');
                                     console.log('Selected screening types being submitted:', selectedScreenings);
+                                    console.log(`Count of selected_screening_types: ${selectedScreenings.length}`);
+                                    
                                     console.log('All form data:');
                                     for (let [key, value] of formData.entries()) {
-                                        console.log(key, value);
+                                        console.log(`  ${key}: ${value}`);
                                     }
                                     
                                     // Check if container exists and has inputs
@@ -864,6 +890,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     } else {
                                         console.error('selected-screenings-inputs container not found!');
                                     }
+                                    
+                                    console.log('=== END FORM SUBMISSION DEBUG ===');
                                 });
                             } else {
                                 console.error('Form for update_checklist_generation not found!');

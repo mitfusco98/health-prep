@@ -125,18 +125,24 @@ def update_checklist_generation():
     
     # Priority logic: Button selections override manual textarea input
     if selected_screening_types:
-        # Use button selections - join with newlines
+        # Use button selections - join with newlines to preserve multiple selections
         settings.default_items = '\n'.join(selected_screening_types)
         print(f"DEBUG: Using button selections: '{settings.default_items}'")
+        print(f"DEBUG: Saved {len(selected_screening_types)} screening types")
     else:
         # Fall back to manual textarea input only if no buttons selected
         settings.default_items = manual_default_items
         print(f"DEBUG: Using manual textarea input: '{manual_default_items}'")
 
-    # Save settings
-    db.session.commit()
-
-    flash("Prep sheet generation settings updated successfully!", "success")
+    try:
+        # Save settings
+        db.session.commit()
+        print(f"INFO: Successfully saved {len(selected_screening_types) if selected_screening_types else 0} default items to database")
+        flash("Prep sheet generation settings updated successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERROR: Database error: {str(e)}")
+        flash(f'Error updating settings: {str(e)}', 'danger')
 
     # Redirect back to the screening list page with the checklist tab active
     return redirect(url_for("screening_list", tab="checklist"))
