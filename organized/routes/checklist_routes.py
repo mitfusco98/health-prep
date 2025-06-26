@@ -45,13 +45,13 @@ def update_checklist_settings():
     print("DEBUG: Display settings form data:")
     for key, value in request.form.items():
         print(f"  {key}: {value}")
-    
+
     print("DEBUG: Checkbox lists:")
     for key in request.form.keys():
         values = request.form.getlist(key)
         if len(values) > 1:
             print(f"  {key}: {values}")
-    
+
     # Get or create settings
     settings = get_or_create_settings()
 
@@ -60,7 +60,7 @@ def update_checklist_settings():
     status_options = request.form.getlist("status_options")
     custom_status_options = request.form.getlist("custom_status_options")
     show_notes = "show_notes" in request.form
-    
+
     # DEBUG: Print parsed values
     print(f"DEBUG: layout_style = {layout_style}")
     print(f"DEBUG: status_options = {status_options}")
@@ -94,26 +94,26 @@ def update_checklist_generation():
     print("DEBUG: All form data received:")
     for key, value in request.form.items():
         print(f"  {key}: {value}")
-    
+
     print("DEBUG: All form lists:")
     for key in request.form.keys():
         values = request.form.getlist(key)
         if len(values) > 1:
             print(f"  {key}: {values}")
-    
+
     print("DEBUG: Raw form data:", dict(request.form))
-    
+
     # Get or create settings
     settings = get_or_create_settings()
 
     # Get form data
     content_sources = request.form.getlist("content_sources")
-    
+
     # Get selected screening types from hidden inputs (button selections)
     selected_screening_types = request.form.getlist("selected_screening_types")
     print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
     print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
-    
+
     # Get manual default items from textarea (fallback)
     manual_default_items = request.form.get("default_items", "")
     print(f"DEBUG: Manual default_items from textarea: '{manual_default_items}'")
@@ -122,7 +122,7 @@ def update_checklist_generation():
     settings.content_sources = (
         ",".join(content_sources) if content_sources else "database"
     )
-    
+
     # Priority logic: Button selections override manual textarea input
     if selected_screening_types:
         # Use button selections - join with newlines to preserve multiple selections
@@ -193,7 +193,7 @@ def debug_form():
                 <h2>Debug Form for Multiple Checkboxes</h2>
                 <form method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    
+
                     <h4>Test Checkboxes:</h4>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="test_options" value="option1" id="opt1">
@@ -207,55 +207,55 @@ def debug_form():
                         <input class="form-check-input" type="checkbox" name="test_options" value="option3" id="opt3">
                         <label class="form-check-label" for="opt3">Option 3</label>
                     </div>
-                    
+
                     <h4 class="mt-4">Single Checkbox:</h4>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="single_check" value="yes" id="single">
                         <label class="form-check-label" for="single">Single Option</label>
                     </div>
-                    
+
                     <h4 class="mt-4">Text Input:</h4>
                     <input type="text" name="text_input" class="form-control" placeholder="Enter some text">
-                    
+
                     <button type="submit" class="btn btn-primary mt-3">Submit for Debug</button>
                 </form>
             </div>
         </body>
         </html>
         '''
-    
+
     else:  # POST
         print("\n" + "="*50)
         print("FORM DEBUG OUTPUT")
         print("="*50)
-        
+
         # Print all form data
         print("ALL FORM DATA:")
         for key, value in request.form.items():
             print(f"  {key}: {repr(value)}")
-        
+
         print("\nFORM LISTS (for checkboxes):")
         for key in request.form.keys():
             values = request.form.getlist(key)
             print(f"  {key}: {values} (count: {len(values)})")
-        
+
         print("\nRAW FORM DICT:")
         print(f"  {dict(request.form)}")
-        
+
         print("\nMULTI DICT TO DICT:")
         print(f"  {request.form.to_dict(flat=False)}")
-        
+
         print("\nCHECKING SPECIFIC FIELDS:")
         test_options = request.form.getlist("test_options")
         single_check = request.form.get("single_check")
         text_input = request.form.get("text_input")
-        
+
         print(f"  test_options: {test_options}")
         print(f"  single_check: {repr(single_check)} (exists: {'single_check' in request.form})")
         print(f"  text_input: {repr(text_input)}")
-        
+
         print("="*50 + "\n")
-        
+
         return f'''
         <div class="container mt-5">
             <h2>Debug Results</h2>
