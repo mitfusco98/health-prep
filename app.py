@@ -1315,7 +1315,6 @@ log_application_startup(app, structured_logger)
 # Defer middleware initialization until first request for faster startup
 _middleware_initialized = False
 
-@app.before_first_request
 def initialize_middleware():
     """Initialize middleware on first request to speed up startup"""
     global _middleware_initialized
@@ -1335,6 +1334,12 @@ def initialize_middleware():
             _middleware_initialized = True
         except Exception as e:
             logger.warning(f"Some middleware failed to initialize: {e}")
+
+# Initialize middleware in before_request instead
+@app.before_request
+def ensure_middleware_initialized():
+    """Ensure middleware is initialized on first request"""
+    initialize_middleware()
 
 # Add route for clearing query cache
 @app.route('/api/cache/clear', methods=['POST'])
