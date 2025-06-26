@@ -789,6 +789,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             <script>
                             function toggleScreeningSelection(button) {
+                                console.log('Button clicked:', button.getAttribute('data-screening-name'));
+                                
                                 // Toggle button state
                                 button.classList.toggle('active');
                                 
@@ -796,56 +798,100 @@ document.addEventListener('DOMContentLoaded', function() {
                                 if (button.classList.contains('active')) {
                                     button.classList.remove('btn-outline-primary');
                                     button.classList.add('btn-primary');
+                                    console.log('Button activated:', button.getAttribute('data-screening-name'));
                                 } else {
                                     button.classList.remove('btn-primary');
                                     button.classList.add('btn-outline-primary');
+                                    console.log('Button deactivated:', button.getAttribute('data-screening-name'));
                                 }
                                 
-                                // Update hidden inputs
+                                // Update hidden inputs immediately
                                 updateHiddenInputs();
                             }
                             
                             function updateHiddenInputs() {
                                 const container = document.getElementById('selected-screenings-inputs');
                                 if (!container) {
-                                    console.error('Cannot find selected-screenings-inputs container');
+                                    console.error('ERROR: Cannot find selected-screenings-inputs container');
                                     return;
                                 }
                                 
-                                container.innerHTML = ''; // Clear existing inputs
+                                // Clear existing inputs
+                                container.innerHTML = '';
                                 
-                                // Add hidden input for each selected button
-                                const selectedButtons = document.querySelectorAll('.screening-toggle-btn.active');
-                                console.log(`Found ${selectedButtons.length} active buttons`);
+                                // Find all active buttons
+                                const activeButtons = document.querySelectorAll('.screening-toggle-btn.active');
+                                console.log(`INFO: Found ${activeButtons.length} active screening buttons`);
                                 
-                                selectedButtons.forEach((button, index) => {
+                                // Create hidden input for each active button
+                                activeButtons.forEach((button, index) => {
                                     const screeningName = button.getAttribute('data-screening-name');
                                     if (screeningName) {
                                         const hiddenInput = document.createElement('input');
                                         hiddenInput.type = 'hidden';
                                         hiddenInput.name = 'selected_screening_types';
                                         hiddenInput.value = screeningName;
+                                        hiddenInput.setAttribute('data-debug-index', index);
                                         container.appendChild(hiddenInput);
-                                        console.log(`Added hidden input ${index + 1}: ${screeningName}`);
+                                        console.log(`INFO: Created hidden input ${index + 1}: name="selected_screening_types" value="${screeningName}"`);
                                     } else {
-                                        console.error(`Button ${index} missing data-screening-name attribute`);
+                                        console.error(`ERROR: Button ${index} missing data-screening-name attribute`);
                                     }
                                 });
                                 
-                                console.log(`Updated hidden inputs: ${selectedButtons.length} items selected`);
+                                // Verify hidden inputs were created
+                                const verifyInputs = container.querySelectorAll('input[name="selected_screening_types"]');
+                                console.log(`VERIFY: ${verifyInputs.length} hidden inputs created in DOM`);
                                 
-                                // Debug: Show all hidden inputs
-                                const allInputs = container.querySelectorAll('input[name="selected_screening_types"]');
-                                console.log(`Total hidden inputs created: ${allInputs.length}`);
-                                allInputs.forEach((input, index) => {
-                                    console.log(`Hidden input ${index}: ${input.value}`);
+                                // Log each input for verification
+                                verifyInputs.forEach((input, index) => {
+                                    console.log(`VERIFY Input ${index}: ${input.name} = "${input.value}"`);
                                 });
+                                
+                                return verifyInputs.length;
                             }
                             
-                            // Initialize button states on page load based on default items
+                            // Initialize on page load
                             document.addEventListener('DOMContentLoaded', function() {
-                                console.log('Initializing screening selection JavaScript...');
-                                updateHiddenInputs(); // Ensure hidden inputs match initial button states
+                                console.log('=== INITIALIZING SCREENING SELECTION ===');
+                                
+                                // Check if container exists
+                                const container = document.getElementById('selected-screenings-inputs');
+                                if (!container) {
+                                    console.error('FATAL: selected-screenings-inputs container not found on page load');
+                                    return;
+                                }
+                                
+                                // Initialize hidden inputs for any pre-selected buttons
+                                const initialCount = updateHiddenInputs();
+                                console.log(`INIT: ${initialCount} screening types initialized`);
+                                
+                                // Add form submit handler for final verification
+                                const form = container.closest('form');
+                                if (form) {
+                                    form.addEventListener('submit', function(e) {
+                                        console.log('=== FORM SUBMIT VERIFICATION ===');
+                                        
+                                        // Force update hidden inputs one final time
+                                        const finalCount = updateHiddenInputs();
+                                        console.log(`SUBMIT: ${finalCount} screening types being submitted`);
+                                        
+                                        // Get form data for verification
+                                        const formData = new FormData(form);
+                                        const submittedValues = formData.getAll('selected_screening_types');
+                                        console.log('SUBMIT: Form data selected_screening_types:', submittedValues);
+                                        
+                                        if (submittedValues.length === 0) {
+                                            console.warn('WARNING: No selected_screening_types in form data');
+                                        }
+                                        
+                                        console.log('=== END FORM SUBMIT VERIFICATION ===');
+                                    });
+                                } else {
+                                    console.error('ERROR: Could not find form element for submit handler');
+                                }
+                                
+                                console.log('=== SCREENING SELECTION INITIALIZED ===');
                             });
                             </script>
 

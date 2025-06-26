@@ -114,7 +114,7 @@ def update_checklist_generation():
     print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
     print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
     
-    # Get manual default items from textarea
+    # Get manual default items from textarea (fallback)
     manual_default_items = request.form.get("default_items", "")
     print(f"DEBUG: Manual default_items from textarea: '{manual_default_items}'")
 
