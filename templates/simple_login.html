@@ -1,0 +1,16 @@
+{% extends "simple_base.html" %}
+{% block content %}
+<h2>Login</h2>
+<form method="post">
+    <p>
+        <label>Username:</label><br>
+        <input name="username" value="admin" required>
+    </p>
+    <p>
+        <label>Password:</label><br>
+        <input name="password" type="password" value="admin123" required>
+    </p>
+    <p><input type="submit" value="Login"></p>
+</form>
+<p><small>Default: admin/admin123</small></p>
+{% endblock %}
