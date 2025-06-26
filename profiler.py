@@ -247,6 +247,8 @@ def before_cursor_execute(conn, cursor, statement, parameters, context, executem
 
 @event.listens_for(Engine, "after_cursor_execute")
 def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    SLOW_QUERY_THRESHOLD = 50
+
     if hasattr(context, "_query_start_time"):
         duration = (time.perf_counter() - context._query_start_time) * 1000
 
@@ -254,8 +256,27 @@ def after_cursor_execute(conn, cursor, statement, parameters, context, executema
         if duration > 50:
             profiler.record_db_query(statement, duration)
 
-            # Log only extremely slow queries to reduce console noise
-            if duration > 1000:  # Threshold at 1 second
+            # Log slow queries with enhanced details
+            # Log slow queries with enhanced details
+            if duration > SLOW_QUERY_THRESHOLD:
                 logger.warning(
-                    f"Slow database query ({duration:.2f}ms): {str(statement)[:100]}..."
+                    f"Slow database query ({duration:.2f}ms): {str(statement)[:100]}...",
+                    extra={
+                        "duration_ms": duration,
+                        "query": str(statement)[:500],
+                        "event_category": "performance",
+                        "table_name": "unknown", #self._extract_table_name(statement),
+                        "query_type": "unknown" #self._extract_query_type(statement)
+                    }
                 )
+
+                # Critical alert for extremely slow queries (>10 seconds)
+                if duration > 10000:
+                    logger.critical(
+                        f"CRITICAL: Extremely slow query ({duration:.2f}ms) detected",
+                        extra={
+                            "duration_ms": duration,
+                            "query": str(statement),
+                            "event_category": "critical_performance"
+                        }
+                    )
