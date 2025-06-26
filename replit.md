@@ -120,6 +120,7 @@ A comprehensive healthcare preparation application built with Flask that manages
 - **Performance**: Indexed queries and caching layers
 
 ## Changelog
+- June 26, 2025: Added automatic session timeout with 10-minute inactivity logout. Users can stay logged in when accessing admin pages and receive warnings before timeout. Session extends automatically on user activity.
 - June 26, 2025: Rebuilt screening checklist settings page due to persistent multiple selection issues. Created simplified button-based interface with reliable form processing.
 - June 25, 2025: Initial setup
 

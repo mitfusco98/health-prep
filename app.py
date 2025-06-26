@@ -1391,6 +1391,11 @@ from admin_middleware import register_admin_middleware
 
 register_admin_middleware(app)
 
+# Initialize session timeout management
+from session_timeout import init_session_timeout
+
+init_session_timeout(app)
+
 # Import all route modules to register them with the app
 import demo_routes
 import api_routes
