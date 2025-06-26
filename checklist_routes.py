@@ -50,7 +50,8 @@ def update_checklist_settings():
     custom_status_options = request.form.getlist("custom_status_options")
     show_notes = "show_notes" in request.form
 
-    # Update settings
+    # Update settings - DEBUG THE WORKING STATUS OPTIONS
+    print(f"DEBUG STATUS OPTIONS: Received {len(status_options)} items: {status_options}")
     settings.layout_style = layout_style
     settings.status_options = (
         ",".join(status_options) if status_options else "due,due_soon"

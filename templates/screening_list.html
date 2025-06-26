@@ -720,7 +720,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <input class="form-check-input" type="checkbox" value="{{ screening_type.name }}" id="screening_{{ screening_type.id }}" name="selected_screening_types"
                                                 {% if screening_type.name in default_items_list %}checked{% endif %}
                                                 onchange="console.log('Checkbox changed:', this.name, this.value, this.checked)">
-                                            <label class="form-check-label" for="screening_{{ screening_type.id }}">
+                                            <label class="form-check-label" for="default_item_{{ screening_type.id }}">
                                                 <strong>{{ screening_type.name }}</strong>
                                                 {% if screening_type.description %}
                                                 <small class="text-muted d-block">{{ screening_type.description }}</small>
