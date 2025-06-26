@@ -807,6 +807,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             function updateHiddenInputs() {
                                 const container = document.getElementById('selected-screenings-inputs');
+                                if (!container) {
+                                    console.error('Cannot find selected-screenings-inputs container');
+                                    return;
+                                }
+                                
                                 container.innerHTML = ''; // Clear existing inputs
                                 
                                 // Add hidden input for each selected button
@@ -818,32 +823,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                     hiddenInput.name = 'selected_screening_types';
                                     hiddenInput.value = screeningName;
                                     container.appendChild(hiddenInput);
+                                    console.log(`Added hidden input for: ${screeningName}`);
                                 });
                                 
-                                // Show notice if selections were made
-                                if (selectedButtons.length > 0) {
-                                    console.log(`Selected ${selectedButtons.length} screening types for default items`);
-                                }
+                                console.log(`Updated hidden inputs: ${selectedButtons.length} items selected`);
                             }
                             
                             // Initialize button states on page load based on default items
                             document.addEventListener('DOMContentLoaded', function() {
+                                console.log('Initializing screening selection JavaScript...');
                                 updateHiddenInputs(); // Ensure hidden inputs match initial button states
-                            });
-                                    const input = document.createElement('input');
-                                    input.type = 'hidden';
-                                    input.name = 'default_items';
-                                    input.value = button.dataset.screeningName;
-                                    container.appendChild(input);
-                                });
-                                
-                                console.log(`Updated hidden inputs: ${selectedButtons.length} items selected`);
-                                selectedButtons.forEach(btn => console.log(`Selected: ${btn.dataset.screeningName}`));
-                            }
-                            
-                            // Initialize hidden inputs on page load
-                            document.addEventListener('DOMContentLoaded', function() {
-                                updateHiddenInputs();
                             });
                             </script>
 
@@ -852,14 +841,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         <script>
                         // Debug form submission
-                        document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]').addEventListener('submit', function(e) {
-                            console.log('Form being submitted...');
-                            const formData = new FormData(this);
-                            const selectedScreenings = formData.getAll('selected_screening_types');
-                            console.log('Selected screening types being submitted:', selectedScreenings);
-                            console.log('All form data:');
-                            for (let [key, value] of formData.entries()) {
-                                console.log(key, value);
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const form = document.querySelector('form[action="{{ url_for('update_checklist_generation') }}"]');
+                            if (form) {
+                                form.addEventListener('submit', function(e) {
+                                    console.log('Form being submitted...');
+                                    const formData = new FormData(this);
+                                    const selectedScreenings = formData.getAll('selected_screening_types');
+                                    console.log('Selected screening types being submitted:', selectedScreenings);
+                                    console.log('All form data:');
+                                    for (let [key, value] of formData.entries()) {
+                                        console.log(key, value);
+                                    }
+                                    
+                                    // Check if container exists and has inputs
+                                    const container = document.getElementById('selected-screenings-inputs');
+                                    if (container) {
+                                        console.log('Hidden inputs in container:', container.children.length);
+                                        Array.from(container.children).forEach((input, index) => {
+                                            console.log(`Hidden input ${index}:`, input.name, '=', input.value);
+                                        });
+                                    } else {
+                                        console.error('selected-screenings-inputs container not found!');
+                                    }
+                                });
+                            } else {
+                                console.error('Form for update_checklist_generation not found!');
                             }
                         });
                         </script>
