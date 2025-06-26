@@ -41,6 +41,17 @@ def checklist_settings():
 @safe_db_operation
 def update_checklist_settings():
     """Update display settings for the prep sheet quality checklist"""
+    # DEBUG: Print all form data
+    print("DEBUG: Display settings form data:")
+    for key, value in request.form.items():
+        print(f"  {key}: {value}")
+    
+    print("DEBUG: Checkbox lists:")
+    for key in request.form.keys():
+        values = request.form.getlist(key)
+        if len(values) > 1:
+            print(f"  {key}: {values}")
+    
     # Get or create settings
     settings = get_or_create_settings()
 
@@ -49,6 +60,12 @@ def update_checklist_settings():
     status_options = request.form.getlist("status_options")
     custom_status_options = request.form.getlist("custom_status_options")
     show_notes = "show_notes" in request.form
+    
+    # DEBUG: Print parsed values
+    print(f"DEBUG: layout_style = {layout_style}")
+    print(f"DEBUG: status_options = {status_options}")
+    print(f"DEBUG: custom_status_options = {custom_status_options}")
+    print(f"DEBUG: show_notes = {show_notes}")
 
     # Update settings
     settings.layout_style = layout_style
@@ -73,62 +90,38 @@ def update_checklist_settings():
 @safe_db_operation
 def update_checklist_generation():
     """Update content generation settings for the prep sheet quality checklist"""
+    # DEBUG: Print all form data
+    print("DEBUG: All form data received:")
+    for key, value in request.form.items():
+        print(f"  {key}: {value}")
+    
+    print("DEBUG: All form lists:")
+    for key in request.form.keys():
+        values = request.form.getlist(key)
+        if len(values) > 1:
+            print(f"  {key}: {values}")
+    
+    print("DEBUG: Raw form data:", dict(request.form))
+    
     # Get or create settings
     settings = get_or_create_settings()
 
     # Get form data
     content_sources = request.form.getlist("content_sources")
-
-    # Get selected screening types using standard checkbox processing
-    selected_screening_types = request.form.getlist("selected_screening_types")
-
-    print(f"DEBUG: ===== FORM SUBMISSION DEBUG =====")
-    print(f"DEBUG: Request method: {request.method}")
-    print(f"DEBUG: Form data keys: {list(request.form.keys())}")
-    print(f"DEBUG: content_sources: {content_sources}")
-    print(f"DEBUG: selected_screening_types (raw): {selected_screening_types}")
-    print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
-
-    # Filter out empty values while preserving the full list
-    if selected_screening_types:
-        filtered_screening_types = [item.strip() for item in selected_screening_types if item and item.strip()]
-    else:
-        filtered_screening_types = []
-
-    print(f"DEBUG: Filtered selected_screening_types: {filtered_screening_types}")
-    print(f"DEBUG: Number of filtered items: {len(filtered_screening_types)}")
-
-    print(f"DEBUG: ===== END FORM DEBUG =====")
+    default_items = request.form.get("default_items", "")
+    
+    # DEBUG: Print specific values
+    print(f"DEBUG: content_sources = {content_sources}")
+    print(f"DEBUG: default_items = '{default_items}'")
 
     # Update settings
     settings.content_sources = (
         ",".join(content_sources) if content_sources else "database"
     )
+    settings.default_items = default_items
 
-    # Update default items with selected screening types
-    if filtered_screening_types and len(filtered_screening_types) > 0:
-        # Filter out any empty strings and join with newlines
-        settings.default_items = '\n'.join(filtered_screening_types)
-        print(f"DEBUG: Updated default_items to: '{settings.default_items}'")
-        print(f"DEBUG: Length of default_items string: {len(settings.default_items)}")
-        print(f"DEBUG: Number of items stored: {len(filtered_screening_types)}")
-    else:
-        # Clear default items if no screening types selected
-        settings.default_items = ''
-        print(f"DEBUG: Cleared default_items (no selections)")
-
-    try:
-        db.session.commit()
-        print(f"DEBUG: Successfully committed to database")
-
-        # Verify the data was saved
-        db.session.refresh(settings)
-        print(f"DEBUG: After refresh, default_items: '{settings.default_items}'")
-        print(f"DEBUG: default_items_list: {settings.default_items_list}")
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error updating settings: {str(e)}', 'danger')
-        return redirect(url_for("screening_list", tab="checklist"))
+    # Save settings
+    db.session.commit()
 
     flash("Prep sheet generation settings updated successfully!", "success")
 
@@ -164,25 +157,93 @@ def remove_custom_status():
     return jsonify({"success": False, "error": "Status not found"}), 404
 
 
-@app.route("/test-checkboxes", methods=["POST"])
-def test_checkboxes():
-    """Test route to debug multiple checkbox submission"""
-    print("=== CHECKBOX TEST ROUTE ===")
-    print(f"Request method: {request.method}")
-    print(f"Content type: {request.content_type}")
-    print(f"Form data: {dict(request.form)}")
-
-    # Test different ways to get the data
-    test_items_getlist = request.form.getlist('test_items')
-    test_items_get = request.form.get('test_items')
-
-    print(f"request.form.getlist('test_items'): {test_items_getlist}")
-    print(f"request.form.get('test_items'): {test_items_get}")
-    print(f"Length of getlist result: {len(test_items_getlist)}")
-
-    return jsonify({
-        "success": True,
-        "getlist_result": test_items_getlist,
-        "get_result": test_items_get,
-        "count": len(test_items_getlist)
-    })
+@app.route("/debug-form", methods=["GET", "POST"])
+def debug_form():
+    """Debug route to inspect form data from checkboxes"""
+    if request.method == "GET":
+        # Return a simple test form
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Debug Form</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+        </head>
+        <body>
+            <div class="container mt-5">
+                <h2>Debug Form for Multiple Checkboxes</h2>
+                <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <h4>Test Checkboxes:</h4>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="test_options" value="option1" id="opt1">
+                        <label class="form-check-label" for="opt1">Option 1</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="test_options" value="option2" id="opt2">
+                        <label class="form-check-label" for="opt2">Option 2</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="test_options" value="option3" id="opt3">
+                        <label class="form-check-label" for="opt3">Option 3</label>
+                    </div>
+                    
+                    <h4 class="mt-4">Single Checkbox:</h4>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="single_check" value="yes" id="single">
+                        <label class="form-check-label" for="single">Single Option</label>
+                    </div>
+                    
+                    <h4 class="mt-4">Text Input:</h4>
+                    <input type="text" name="text_input" class="form-control" placeholder="Enter some text">
+                    
+                    <button type="submit" class="btn btn-primary mt-3">Submit for Debug</button>
+                </form>
+            </div>
+        </body>
+        </html>
+        '''
+    
+    else:  # POST
+        print("\n" + "="*50)
+        print("FORM DEBUG OUTPUT")
+        print("="*50)
+        
+        # Print all form data
+        print("ALL FORM DATA:")
+        for key, value in request.form.items():
+            print(f"  {key}: {repr(value)}")
+        
+        print("\nFORM LISTS (for checkboxes):")
+        for key in request.form.keys():
+            values = request.form.getlist(key)
+            print(f"  {key}: {values} (count: {len(values)})")
+        
+        print("\nRAW FORM DICT:")
+        print(f"  {dict(request.form)}")
+        
+        print("\nMULTI DICT TO DICT:")
+        print(f"  {request.form.to_dict(flat=False)}")
+        
+        print("\nCHECKING SPECIFIC FIELDS:")
+        test_options = request.form.getlist("test_options")
+        single_check = request.form.get("single_check")
+        text_input = request.form.get("text_input")
+        
+        print(f"  test_options: {test_options}")
+        print(f"  single_check: {repr(single_check)} (exists: {'single_check' in request.form})")
+        print(f"  text_input: {repr(text_input)}")
+        
+        print("="*50 + "\n")
+        
+        return f'''
+        <div class="container mt-5">
+            <h2>Debug Results</h2>
+            <h4>Check the console/logs for detailed output</h4>
+            <p>test_options: {test_options}</p>
+            <p>single_check: {single_check}</p>
+            <p>text_input: {text_input}</p>
+            <a href="/debug-form" class="btn btn-secondary">Try Again</a>
+        </div>
+        '''

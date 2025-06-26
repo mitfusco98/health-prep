@@ -80,38 +80,40 @@ def update_checklist_generation():
     content_sources = request.form.getlist('content_sources')
     settings.content_sources = ','.join(content_sources) if content_sources else ''
 
-    # Get selected screening types from the multiselect dropdown
+    # Get selected screening types from the checkboxes
     selected_screening_types = request.form.getlist('selected_screening_types')
-    print(f"INFO: Multiselect received {len(selected_screening_types)} screening types: {selected_screening_types}")
+    print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
+    print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
+    print(f"DEBUG: All form data: {dict(request.form)}")
+
+    # Debug: Check what's in the form data
+    for key, value in request.form.items():
+        if 'screening' in key.lower():
+            print(f"DEBUG: Form field '{key}' = '{value}'")
 
     # Update default items with selected screening types
     if selected_screening_types:
         # Join the selected screening types with newlines
         settings.default_items = '\n'.join(selected_screening_types)
-        flash(f'Successfully updated checklist with {len(selected_screening_types)} screening types', 'success')
-        print(f"SUCCESS: Saved screening types: {selected_screening_types}")
+        print(f"DEBUG: Updated default_items to: '{settings.default_items}'")
+        print(f"DEBUG: Length of default_items string: {len(settings.default_items)}")
     else:
-        # Clear default items if none selected
-        settings.default_items = ''
-        flash('Cleared default checklist items - no screening types selected', 'info')
-        print("INFO: Cleared default items - no selections made")
+        # Fall back to manual default items input if no screening types selected
+        default_items = request.form.get('default_items', '')
+        settings.default_items = default_items
+        print(f"DEBUG: Using manual default_items: '{default_items}'")
 
     try:
         db.session.commit()
-        print(f"DATABASE: Successfully committed {len(selected_screening_types)} screening types to database")
-        
-        # Verify the save
+        print(f"DEBUG: Successfully committed to database")
+
+        # Verify the data was saved
         db.session.refresh(settings)
-        saved_items = settings.default_items_list
-        print(f"VERIFIED: Saved items in database: {saved_items}")
-        
-        if len(saved_items) != len(selected_screening_types):
-            print(f"WARNING: Mismatch - sent {len(selected_screening_types)} but saved {len(saved_items)}")
-            
+        print(f"DEBUG: After refresh, default_items: '{settings.default_items}'")
+        print(f"DEBUG: default_items_list: {settings.default_items_list}")
     except Exception as e:
         db.session.rollback()
         flash(f'Error updating settings: {str(e)}', 'danger')
-        print(f"ERROR: Database save failed: {e}")
 
     return redirect(url_for('screening_list', tab='checklist'))
 
