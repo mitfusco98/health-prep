@@ -1,0 +1,32 @@
+[2025-06-26 23:00:16 +0000] [6179] [INFO] Starting gunicorn 23.0.0
+[2025-06-26 23:00:16 +0000] [6179] [INFO] Listening at: http://0.0.0.0:5000 (6179)
+[2025-06-26 23:00:16 +0000] [6179] [INFO] Using worker: sync
+[2025-06-26 23:00:19 +0000] [6179] [INFO] Handling signal: winchd: 6190
+{"timestamp": "2025-06-26T23:00:21.341295Z", "level": "ERROR", "logger": "app", "message": "Error initializing middleware: The setup method 'before_request' can no longer be called on the application. It has already handled its first request, any changes will not be applied consistently.\nMake sure all imports, decorators, functions, etc. needed to set up the application are done before running it.", "module": "app", "function": "register_middleware", "line": 1377, "thread": 140653417723584, "process": 6190}
+{"timestamp": "2025-06-26T23:00:21.341882Z", "level": "ERROR", "logger": "app", "message": "Error initializing middleware: The setup method 'before_request' can no longer be called on the application. It has already handled its first request, any changes will not be applied consistently.\nMake sure all imports, decorators, functions, etc. needed to set up the application are done before running it.", "module": "app", "function": "register_middleware", "line": 1377, "thread": 140653417723584, "process": 6190}
+[2025-06-26 23:00:23 +0000] [6179] [INFO] Handling signal: winch
+EHR connections initialized
+[2025-06-26 23:00:25 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:27 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:28 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:29 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:30 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:31 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:31 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:33 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:33 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:33 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:36 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:43 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:43 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:45 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:46 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:46 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:46 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:46 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:46 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:46 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:46 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:46 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:46 +0000] [6179] [INFO] Handling signal: winch
+[2025-06-26 23:00:46 +0000] [6179] [INFO] Handling signal: winch
