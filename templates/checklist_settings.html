@@ -167,8 +167,13 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Default Items</label>
-                                <textarea class="form-control" name="default_items" rows="4" placeholder="One item per line">{{ default_items_text }}</textarea>
-                                <div class="form-text">Default items to include in every patient's checklist</div>
+                                <textarea class="form-control" name="default_items" rows="4" placeholder="One item per line" id="default_items_textarea">{{ default_items_text }}</textarea>
+                                <div class="form-text">
+                                    Default items to include in every patient's checklist.
+                                    <span id="button-override-notice" class="text-warning fw-bold" style="display: none;">
+                                        Note: Button selections will override manual text input.
+                                    </span>
+                                </div>
                             </div>
 
                             <button type="submit" class="btn btn-primary">Save Generation Settings</button>

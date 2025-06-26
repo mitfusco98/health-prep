@@ -290,6 +290,24 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize the preview when the page loads
     initializePreview();
+    
+    // Add listener to textarea to show override notice if user types while buttons are selected
+    const textarea = document.getElementById('default_items_textarea');
+    const overrideNotice = document.getElementById('button-override-notice');
+    
+    if (textarea && overrideNotice) {
+        textarea.addEventListener('input', function() {
+            // Check if there are any selected screening buttons in the checklist tab
+            // This would need to check the screening list page state, but for now
+            // we'll show the notice if there's text and the user is typing
+            if (this.value.trim()) {
+                overrideNotice.style.display = 'inline';
+                overrideNotice.textContent = 'Note: If screening types are selected via buttons on the screening list page, they will override this manual input.';
+            } else {
+                overrideNotice.style.display = 'none';
+            }
+        });
+    }
 });
 
 // Find a button by its text content

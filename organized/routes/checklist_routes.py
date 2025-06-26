@@ -108,17 +108,30 @@ def update_checklist_generation():
 
     # Get form data
     content_sources = request.form.getlist("content_sources")
-    default_items = request.form.get("default_items", "")
     
-    # DEBUG: Print specific values
-    print(f"DEBUG: content_sources = {content_sources}")
-    print(f"DEBUG: default_items = '{default_items}'")
+    # Get selected screening types from hidden inputs (button selections)
+    selected_screening_types = request.form.getlist("selected_screening_types")
+    print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
+    print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
+    
+    # Get manual default items from textarea
+    manual_default_items = request.form.get("default_items", "")
+    print(f"DEBUG: Manual default_items from textarea: '{manual_default_items}'")
 
     # Update settings
     settings.content_sources = (
         ",".join(content_sources) if content_sources else "database"
     )
-    settings.default_items = default_items
+    
+    # Priority logic: Button selections override manual textarea input
+    if selected_screening_types:
+        # Use button selections - join with newlines
+        settings.default_items = '\n'.join(selected_screening_types)
+        print(f"DEBUG: Using button selections: '{settings.default_items}'")
+    else:
+        # Fall back to manual textarea input only if no buttons selected
+        settings.default_items = manual_default_items
+        print(f"DEBUG: Using manual textarea input: '{manual_default_items}'")
 
     # Save settings
     db.session.commit()

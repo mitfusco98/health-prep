@@ -812,6 +812,24 @@ document.addEventListener('DOMContentLoaded', function() {
                                 // Add hidden input for each selected button
                                 const selectedButtons = document.querySelectorAll('.screening-toggle-btn.active');
                                 selectedButtons.forEach(button => {
+                                    const screeningName = button.getAttribute('data-screening-name');
+                                    const hiddenInput = document.createElement('input');
+                                    hiddenInput.type = 'hidden';
+                                    hiddenInput.name = 'selected_screening_types';
+                                    hiddenInput.value = screeningName;
+                                    container.appendChild(hiddenInput);
+                                });
+                                
+                                // Show notice if selections were made
+                                if (selectedButtons.length > 0) {
+                                    console.log(`Selected ${selectedButtons.length} screening types for default items`);
+                                }
+                            }
+                            
+                            // Initialize button states on page load based on default items
+                            document.addEventListener('DOMContentLoaded', function() {
+                                updateHiddenInputs(); // Ensure hidden inputs match initial button states
+                            });
                                     const input = document.createElement('input');
                                     input.type = 'hidden';
                                     input.name = 'default_items';
