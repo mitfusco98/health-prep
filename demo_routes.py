@@ -791,7 +791,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         applicable_screenings = []
         for item_name in default_items_list:
             # Find the corresponding screening type to check demographics
-            screening_type = ScreeningType.query.filter_by(name=item_name, is_active=True, status='active').first()
+            screening_type = ScreeningType.query.filter_by(name=item_name, is_active=True).first()
             if screening_type:
                 # Check age criteria
                 age_match = True
@@ -2978,7 +2978,7 @@ def screening_list():
     if tab == "checklist":
         settings = get_or_create_settings()
         # Get active screening types instead of default_items_list
-        active_screening_types = ScreeningType.query.filter_by(is_active=True, status='active').order_by(ScreeningType.name).all()
+        active_screening_types = ScreeningType.query.filter_by(is_active=True).order_by(ScreeningType.name).all()
 
     # Create forms for screening type management
     from forms import ScreeningTypeForm

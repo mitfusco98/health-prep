@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Multiple Checkbox Submission</title>
+</head>
+<body>
+    <h1>Test Multiple Checkbox Submission</h1>
+    
+    <form method="POST" action="/test-checkboxes">
+        <input type="hidden" name="csrf_token" value="test">
+        
+        <h3>Select Multiple Items:</h3>
+        <div>
+            <input type="checkbox" name="test_items" value="Item 1" id="item1">
+            <label for="item1">Item 1</label>
+        </div>
+        <div>
+            <input type="checkbox" name="test_items" value="Item 2" id="item2">
+            <label for="item2">Item 2</label>
+        </div>
+        <div>
+            <input type="checkbox" name="test_items" value="Item 3" id="item3">
+            <label for="item3">Item 3</label>
+        </div>
+        <div>
+            <input type="checkbox" name="test_items" value="Item 4" id="item4">
+            <label for="item4">Item 4</label>
+        </div>
+        
+        <br><br>
+        <button type="button" onclick="selectAll()">Select All</button>
+        <button type="button" onclick="clearAll()">Clear All</button>
+        <button type="button" onclick="debugForm()">Debug</button>
+        <br><br>
+        <button type="submit">Submit</button>
+    </form>
+    
+    <script>
+        function selectAll() {
+            const checkboxes = document.querySelectorAll('input[name="test_items"]');
+            checkboxes.forEach(cb => cb.checked = true);
+        }
+        
+        function clearAll() {
+            const checkboxes = document.querySelectorAll('input[name="test_items"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+        
+        function debugForm() {
+            const form = document.querySelector('form');
+            const formData = new FormData(form);
+            const checked = document.querySelectorAll('input[name="test_items"]:checked');
+            
+            console.log('Checked items:', Array.from(checked).map(cb => cb.value));
+            console.log('FormData entries:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`  ${key}: ${value}`);
+            }
+            console.log('FormData.getAll("test_items"):', formData.getAll('test_items'));
+        }
+        
+        document.querySelector('form').addEventListener('submit', function(e) {
+            console.log('Form submitting...');
+            debugForm();
+        });
+    </script>
+</body>
+</html>

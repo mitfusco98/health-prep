@@ -121,6 +121,7 @@ A comprehensive healthcare preparation application built with Flask that manages
 
 ## Changelog
 - June 25, 2025. Initial setup
+- June 25, 2025. Replaced checkbox system with multiselect dropdown for screening type selection in /screenings?tab=checklist to fix multiple selection issues
 
 ## User Preferences
 
