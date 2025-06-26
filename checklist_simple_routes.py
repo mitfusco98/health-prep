@@ -14,13 +14,13 @@ def screening_checklist_rebuilt():
         settings = ChecklistSettings()
         db.session.add(settings)
         db.session.commit()
-    
+
     # Get active screening types
     active_screening_types = ScreeningType.query.filter_by(
         is_active=True, 
         status='active'
     ).order_by(ScreeningType.name).all()
-    
+
     return render_template(
         'screening_checklist_rebuilt.html',
         settings=settings,
@@ -38,26 +38,26 @@ def save_status_options_simple():
         if not settings:
             settings = ChecklistSettings()
             db.session.add(settings)
-        
+
         # Get selections from the single hidden input
         status_selections = request.form.get('status_selections', '')
         print(f"Received status selections: '{status_selections}'")
-        
+
         # Update settings
         settings.status_options = status_selections
-        
+
         # Commit to database
         db.session.commit()
-        
+
         flash(f'Successfully saved status options: {status_selections}', 'success')
         print(f"Successfully saved status options: {status_selections}")
-        
+
     except Exception as e:
         db.session.rollback()
         flash(f'Error saving status options: {str(e)}', 'danger')
         print(f"Error saving status options: {e}")
-    
-    return redirect(url_for('screening_checklist_rebuilt'))
+
+    return redirect(url_for('screening_list', tab='checklist'))
 
 
 @app.route('/save-default-items-simple', methods=['POST'])
@@ -70,95 +70,29 @@ def save_default_items_simple():
         if not settings:
             settings = ChecklistSettings()
             db.session.add(settings)
-        
+
         # Get selections from the single hidden input
         screening_selections = request.form.get('screening_selections', '')
         print(f"Received screening selections: '{screening_selections}'")
-        
+
         # Convert comma-separated to newline-separated for storage
         if screening_selections:
             default_items = screening_selections.replace(',', '\n')
         else:
             default_items = ''
-        
+
         # Update settings
         settings.default_items = default_items
-        
+
         # Commit to database
         db.session.commit()
-        
+
         flash(f'Successfully saved default items: {len(screening_selections.split(",") if screening_selections else [])} items', 'success')
         print(f"Successfully saved default items: {default_items}")
-        
+
     except Exception as e:
         db.session.rollback()
         flash(f'Error saving default items: {str(e)}', 'danger')
         print(f"Error saving default items: {e}")
-    
-    return redirect(url_for('screening_checklist_rebuilt'))
-from flask import render_template, request, redirect, url_for, flash, jsonify
-from app import app, db
-from models import ChecklistSettings, ScreeningType
-from db_utils import safe_db_operation
 
-
-def get_or_create_settings():
-    """Get or create checklist settings"""
-    settings = ChecklistSettings.query.first()
-    if not settings:
-        settings = ChecklistSettings()
-        db.session.add(settings)
-        db.session.commit()
-    return settings
-
-
-@app.route("/save-status-options-simple", methods=["POST"])
-@safe_db_operation
-def save_status_options_simple():
-    """Save status options from the simple button interface"""
-    # Get or create settings
-    settings = get_or_create_settings()
-    
-    # Get selected status options from the form
-    status_selections = request.form.get("status_selections", "")
-    
-    # Update settings
-    settings.status_options = status_selections
-    
-    try:
-        db.session.commit()
-        flash("Status options saved successfully!", "success")
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Error saving status options: {str(e)}", "danger")
-    
-    return redirect(url_for("screening_list", tab="checklist"))
-
-
-@app.route("/save-default-items-simple", methods=["POST"])
-@safe_db_operation  
-def save_default_items_simple():
-    """Save default items from the simple button interface"""
-    # Get or create settings
-    settings = get_or_create_settings()
-    
-    # Get selected screening types from the form
-    screening_selections = request.form.get("screening_selections", "")
-    
-    # Convert comma-separated values to newline-separated for storage
-    if screening_selections:
-        default_items = screening_selections.replace(',', '\n')
-    else:
-        default_items = ""
-    
-    # Update settings
-    settings.default_items = default_items
-    
-    try:
-        db.session.commit()
-        flash("Default items saved successfully!", "success")
-    except Exception as e:
-        db.session.rollback()
-        flash(f"Error saving default items: {str(e)}", "danger")
-    
-    return redirect(url_for("screening_list", tab="checklist"))
+    return redirect(url_for('screening_list', tab='checklist'))
