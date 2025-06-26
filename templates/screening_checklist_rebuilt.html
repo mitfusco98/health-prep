@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Checklist Settings - Rebuilt{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Prep Sheet Checklist Settings</h2>
+                <a href="{{ url_for('screening_list', tab='types') }}" class="btn btn-outline-primary">
+                    Back to Screening Types
+                </a>
+            </div>
+
+            <!-- Status Options Configuration -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Status Options for Prep Sheets</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">These status options will appear as autocomplete suggestions when filling out screening checklists in prep sheets.</p>
+                    
+                    <form id="status-form" method="POST" action="{{ url_for('save_status_options_simple') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Available Status Options</label>
+                            <div id="status-buttons" class="d-flex flex-wrap gap-2 mb-3">
+                                {% set current_status_list = settings.status_options_list if settings else ['due'] %}
+                                
+                                <button type="button" class="btn status-btn {% if 'due' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
+                                        data-value="due" onclick="toggleStatus(this)">Due</button>
+                                
+                                <button type="button" class="btn status-btn {% if 'due_soon' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
+                                        data-value="due_soon" onclick="toggleStatus(this)">Due Soon</button>
+                                
+                                <button type="button" class="btn status-btn {% if 'sent_incomplete' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
+                                        data-value="sent_incomplete" onclick="toggleStatus(this)">Sent & Incomplete</button>
+                                
+                                <button type="button" class="btn status-btn {% if 'completed' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
+                                        data-value="completed" onclick="toggleStatus(this)">Completed</button>
+                            </div>
+                        </div>
+                        
+                        <div id="selected-status-display" class="mb-3">
+                            <small class="text-muted">Selected: <span id="status-list-display">{{ ', '.join(current_status_list) }}</span></small>
+                        </div>
+                        
+                        <!-- Hidden input that will contain the final selections -->
+                        <input type="hidden" id="status-selections" name="status_selections" value="{{ ','.join(current_status_list) }}">
+                        
+                        <button type="submit" class="btn btn-primary">Save Status Options</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Default Items Configuration -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Default Checklist Items</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">These screening types will automatically appear in every patient's prep sheet checklist.</p>
+                    
+                    <form id="default-items-form" method="POST" action="{{ url_for('save_default_items_simple') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        {% if active_screening_types %}
+                            <div class="mb-3">
+                                <label class="form-label">Available Screening Types</label>
+                                <div id="screening-buttons" class="d-flex flex-wrap gap-2 mb-3">
+                                    {% set current_default_list = settings.default_items_list if settings else [] %}
+                                    
+                                    {% for screening in active_screening_types %}
+                                    <button type="button" class="btn screening-btn {% if screening.name in current_default_list %}btn-primary{% else %}btn-outline-primary{% endif %}" 
+                                            data-value="{{ screening.name }}" onclick="toggleScreening(this)">
+                                        {{ screening.name }}
+                                        {% if screening.formatted_frequency %}
+                                        <br><small>{{ screening.formatted_frequency }}</small>
+                                        {% endif %}
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div id="selected-screening-display" class="mb-3">
+                                <small class="text-muted">Selected: <span id="screening-list-display">{{ ', '.join(current_default_list) if current_default_list else 'None' }}</span></small>
+                            </div>
+                            
+                            <!-- Hidden input for final selections -->
+                            <input type="hidden" id="screening-selections" name="screening_selections" value="{% for item in current_default_list %}{{ item }}{% if not loop.last %},{% endif %}{% endfor %}">
+                            
+                            <button type="submit" class="btn btn-primary">Save Default Items</button>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                No active screening types found. <a href="{{ url_for('screening_list', tab='types') }}">Add screening types</a> first.
+                            </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <!-- Current Settings Display -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Current Settings Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Status Options:</h6>
+                            <ul class="list-unstyled">
+                                {% if settings and settings.status_options_list %}
+                                    {% for status in settings.status_options_list %}
+                                    <li><span class="badge bg-success">{{ status.replace('_', ' ').title() }}</span></li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li class="text-muted">None configured</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Default Items:</h6>
+                            <ul class="list-unstyled">
+                                {% if settings and settings.default_items_list %}
+                                    {% for item in settings.default_items_list %}
+                                    <li><span class="badge bg-primary">{{ item }}</span></li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li class="text-muted">None configured</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleStatus(button) {
+    // Toggle button appearance
+    if (button.classList.contains('btn-success')) {
+        button.classList.remove('btn-success');
+        button.classList.add('btn-outline-success');
+    } else {
+        button.classList.remove('btn-outline-success');
+        button.classList.add('btn-success');
+    }
+    
+    updateStatusSelections();
+}
+
+function toggleScreening(button) {
+    // Toggle button appearance
+    if (button.classList.contains('btn-primary')) {
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-outline-primary');
+    } else {
+        button.classList.remove('btn-outline-primary');
+        button.classList.add('btn-primary');
+    }
+    
+    updateScreeningSelections();
+}
+
+function updateStatusSelections() {
+    const selectedButtons = document.querySelectorAll('#status-buttons .btn-success');
+    const values = Array.from(selectedButtons).map(btn => btn.dataset.value);
+    
+    document.getElementById('status-selections').value = values.join(',');
+    document.getElementById('status-list-display').textContent = values.length > 0 ? values.join(', ') : 'None';
+    
+    console.log('Status selections updated:', values);
+}
+
+function updateScreeningSelections() {
+    const selectedButtons = document.querySelectorAll('#screening-buttons .btn-primary');
+    const values = Array.from(selectedButtons).map(btn => btn.dataset.value);
+    
+    document.getElementById('screening-selections').value = values.join(',');
+    document.getElementById('screening-list-display').textContent = values.length > 0 ? values.join(', ') : 'None';
+    
+    console.log('Screening selections updated:', values);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateStatusSelections();
+    updateScreeningSelections();
+});
+</script>
+
+{% endblock %}
