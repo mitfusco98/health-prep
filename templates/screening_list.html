@@ -619,26 +619,75 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             <div class="mb-3">
                                 <label class="form-label">Status Options</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="status_due" name="status_options" value="due" 
-                                        {% if settings and 'due' in settings.status_options_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="status_due">Due</label>
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <button type="button" 
+                                            class="btn btn-outline-info status-toggle-btn {% if settings and 'due' in settings.status_options_list %}active{% endif %}" 
+                                            data-status-value="due"
+                                            onclick="toggleStatusSelection(this)">
+                                        Due
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-outline-info status-toggle-btn {% if settings and 'due_soon' in settings.status_options_list %}active{% endif %}" 
+                                            data-status-value="due_soon"
+                                            onclick="toggleStatusSelection(this)">
+                                        Due Soon
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-outline-info status-toggle-btn {% if settings and 'sent_incomplete' in settings.status_options_list %}active{% endif %}" 
+                                            data-status-value="sent_incomplete"
+                                            onclick="toggleStatusSelection(this)">
+                                        Sent & Incomplete
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-outline-info status-toggle-btn {% if settings and 'completed' in settings.status_options_list %}active{% endif %}" 
+                                            data-status-value="completed"
+                                            onclick="toggleStatusSelection(this)">
+                                        Completed
+                                    </button>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="status_due_soon" name="status_options" value="due_soon"
-                                        {% if settings and 'due_soon' in settings.status_options_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="status_due_soon">Due Soon</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="status_sent" name="status_options" value="sent_incomplete"
-                                        {% if settings and 'sent_incomplete' in settings.status_options_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="status_sent">Sent & Incomplete</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="status_completed" name="status_options" value="completed"
-                                        {% if settings and 'completed' in settings.status_options_list %}checked{% endif %}>
-                                    <label class="form-check-label" for="status_completed">Completed</label>
-                                </div>
+                                <!-- Hidden inputs for status options -->
+                                <div id="selected-status-inputs"></div>
+                                
+                                <script>
+                                function toggleStatusSelection(button) {
+                                    // Toggle button state
+                                    button.classList.toggle('active');
+                                    
+                                    // Update button appearance
+                                    if (button.classList.contains('active')) {
+                                        button.classList.remove('btn-outline-info');
+                                        button.classList.add('btn-info');
+                                    } else {
+                                        button.classList.remove('btn-info');
+                                        button.classList.add('btn-outline-info');
+                                    }
+                                    
+                                    // Update hidden inputs for status
+                                    updateStatusHiddenInputs();
+                                }
+                                
+                                function updateStatusHiddenInputs() {
+                                    const container = document.getElementById('selected-status-inputs');
+                                    container.innerHTML = ''; // Clear existing inputs
+                                    
+                                    // Add hidden input for each selected status button
+                                    const selectedButtons = document.querySelectorAll('.status-toggle-btn.active');
+                                    selectedButtons.forEach(button => {
+                                        const input = document.createElement('input');
+                                        input.type = 'hidden';
+                                        input.name = 'status_options';
+                                        input.value = button.dataset.statusValue;
+                                        container.appendChild(input);
+                                    });
+                                    
+                                    console.log(`Updated status inputs: ${selectedButtons.length} items selected`);
+                                }
+                                
+                                // Initialize status inputs on page load
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    updateStatusHiddenInputs();
+                                });
+                                </script>
                                 <div class="mt-3">
                                     <label class="form-label">Custom Status Options</label>
                                     <div class="input-group mb-2">
@@ -712,33 +761,73 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             <div class="mb-3">
                                 <label class="form-label">Default Items</label>
-                                <div class="screening-types-checklist">
+                                <div class="screening-types-buttons mb-3">
                                     {% if active_screening_types %}
                                         {% set default_items_list = settings.default_items_list if settings else [] %}
-                                        {% for screening_type in active_screening_types %}
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" value="{{ screening_type.name }}" id="screening_{{ screening_type.id }}" name="selected_screening_types"
-                                                {% if screening_type.name in default_items_list %}checked{% endif %}
-                                                onchange="console.log('Checkbox changed:', this.name, this.value, this.checked)">
-                                            <label class="form-check-label" for="default_item_{{ screening_type.id }}">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            {% for screening_type in active_screening_types %}
+                                            <button type="button" 
+                                                    class="btn btn-outline-primary screening-toggle-btn {% if screening_type.name in default_items_list %}active{% endif %}" 
+                                                    data-screening-name="{{ screening_type.name }}"
+                                                    data-screening-id="{{ screening_type.id }}"
+                                                    onclick="toggleScreeningSelection(this)">
                                                 <strong>{{ screening_type.name }}</strong>
-                                                {% if screening_type.description %}
-                                                <small class="text-muted d-block">{{ screening_type.description }}</small>
+                                                {% if screening_type.formatted_frequency %}
+                                                <br><small>{{ screening_type.formatted_frequency }}</small>
                                                 {% endif %}
-                                                <small class="text-info">
-                                                    {% if screening_type.formatted_frequency %}{{ screening_type.formatted_frequency }}{% endif %}
-                                                    {% if screening_type.gender_specific %} • {{ screening_type.gender_specific }} only{% endif %}
-                                                    {% if screening_type.min_age or screening_type.max_age %} • Ages {{ screening_type.min_age or 0 }}-{{ screening_type.max_age or '∞' }}{% endif %}
-                                                </small>
-                                            </label>
+                                            </button>
+                                            {% endfor %}
                                         </div>
-                                        {% endfor %}
+                                        <!-- Hidden inputs to store selections -->
+                                        <div id="selected-screenings-inputs"></div>
                                     {% else %}
                                         <p class="text-muted">No active screening types found. <a href="{{ url_for('screening_list', tab='types') }}">Add screening types</a> to configure quality checklist items.</p>
                                     {% endif %}
                                 </div>
-                                <div class="form-text">Default items to include in every patient's checklist</div>
+                                <div class="form-text">Click to select/deselect default items for every patient's checklist</div>
                             </div>
+                            
+                            <script>
+                            function toggleScreeningSelection(button) {
+                                // Toggle button state
+                                button.classList.toggle('active');
+                                
+                                // Update button appearance
+                                if (button.classList.contains('active')) {
+                                    button.classList.remove('btn-outline-primary');
+                                    button.classList.add('btn-primary');
+                                } else {
+                                    button.classList.remove('btn-primary');
+                                    button.classList.add('btn-outline-primary');
+                                }
+                                
+                                // Update hidden inputs
+                                updateHiddenInputs();
+                            }
+                            
+                            function updateHiddenInputs() {
+                                const container = document.getElementById('selected-screenings-inputs');
+                                container.innerHTML = ''; // Clear existing inputs
+                                
+                                // Add hidden input for each selected button
+                                const selectedButtons = document.querySelectorAll('.screening-toggle-btn.active');
+                                selectedButtons.forEach(button => {
+                                    const input = document.createElement('input');
+                                    input.type = 'hidden';
+                                    input.name = 'default_items';
+                                    input.value = button.dataset.screeningName;
+                                    container.appendChild(input);
+                                });
+                                
+                                console.log(`Updated hidden inputs: ${selectedButtons.length} items selected`);
+                                selectedButtons.forEach(btn => console.log(`Selected: ${btn.dataset.screeningName}`));
+                            }
+                            
+                            // Initialize hidden inputs on page load
+                            document.addEventListener('DOMContentLoaded', function() {
+                                updateHiddenInputs();
+                            });
+                            </script>
 
                             <button type="submit" class="btn btn-primary">Save Generation Settings</button>
                         </form>

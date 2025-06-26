@@ -106,12 +106,7 @@ def update_checklist_generation():
 
     try:
         db.session.commit()
-        print(f"DEBUG: Successfully committed to database")
-
-        # Verify the data was saved
-        db.session.refresh(settings)
-        print(f"DEBUG: After refresh, default_items: '{settings.default_items}'")
-        print(f"DEBUG: default_items_list: {settings.default_items_list}")
+        print(f"INFO: Successfully saved {len(selected_default_items) if selected_default_items else 0} default items to database")
     except Exception as e:
         db.session.rollback()
         flash(f'Error updating settings: {str(e)}', 'danger')
