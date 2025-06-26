@@ -1299,13 +1299,41 @@ with app.app_context():
                 logger.warning("Continuing with database issues - tables may not exist")
                 return False
     
-    # Only test connection, don't create tables yet
+    # Create database tables and import routes
     try:
+        # Import models first
+        import models  # noqa: F401
+        from models import Patient, User, ScreeningType
+        
+        # Create all database tables
+        db.create_all()
+        logger.info("Database tables created")
+        
+        # Setup default admin user if not exists
+        admin_user = User.query.filter_by(username='admin').first()
+        if not admin_user:
+            from werkzeug.security import generate_password_hash
+            admin_user = User(
+                username='admin',
+                email='admin@example.com',
+                password_hash=generate_password_hash('admin123'),
+                is_admin=True
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+            print("Default admin user created: admin/admin123")
+            
+        # Import routes after models are created
+        from routes import *  # noqa: F401
+        from checklist_simple_routes import *  # noqa: F401
+        
+        # Test connection
         with db.engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         logger.info("Database connection verified")
+        
     except Exception as e:
-        logger.warning(f"Database connection test failed: {str(e)} - will retry on first request")
+        logger.warning(f"Database setup failed: {str(e)} - will retry on first request")
 
 # Log application startup information
 from logging_config import log_application_startup
