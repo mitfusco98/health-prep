@@ -1,4 +1,5 @@
 import os
+import logging
 
 # Set default FLASK_ENV if not provided
 if not os.environ.get("FLASK_ENV"):
