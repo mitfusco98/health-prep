@@ -43,14 +43,26 @@ def save_status_options_simple():
         status_selections = request.form.get('status_selections', '')
         print(f"Received status selections: '{status_selections}'")
 
+        # Get custom status options
+        custom_status_options = request.form.getlist('custom_status_options')
+        print(f"Received custom status options: {custom_status_options}")
+
         # Update settings
         settings.status_options = status_selections
+        
+        # Update custom status options
+        if custom_status_options:
+            settings.custom_status_options = ','.join(custom_status_options)
+        else:
+            settings.custom_status_options = None
 
         # Commit to database
         db.session.commit()
 
-        flash(f'Successfully saved status options: {status_selections}', 'success')
+        total_options = len(status_selections.split(',') if status_selections else []) + len(custom_status_options)
+        flash(f'Successfully saved {total_options} status options ({len(custom_status_options)} custom)', 'success')
         print(f"Successfully saved status options: {status_selections}")
+        print(f"Successfully saved custom status options: {custom_status_options}")
 
     except Exception as e:
         db.session.rollback()
