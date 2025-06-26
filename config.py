@@ -46,7 +46,7 @@ class DatabaseConfig:
             "connect_args": {
                 "connect_timeout": 2,  # Very fast timeout for immediate failure
                 "application_name": "healthprep_app",
-                "sslmode": "disable",  # Disable SSL for faster local development
+                "sslmode": "require",  # Enable SSL as required by Neon/PostgreSQL
             },
         }
 
