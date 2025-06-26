@@ -1277,45 +1277,64 @@ with app.app_context():
     # Cleanup will be handled manually or through scheduled maintenance
     logger.info("Skipping admin log cleanup for faster startup")
 
-    # Fast database connection with immediate fallback
-    try:
-        logger.info("Connecting to database...")
-        db.create_all()
-        logger.info("Database ready")
-    except Exception as e:
-        logger.warning(f"Database connection failed: {str(e)}")
-        # Immediate fallback to SQLite for faster startup
-        if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql"):
-            logger.warning("Falling back to SQLite for faster startup")
-            app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///healthcare.db"
+    # Defer database table creation for faster startup
+    def init_database():
+        """Initialize database tables on first access"""
+        try:
+            logger.info("Connecting to database...")
             db.create_all()
-            logger.info("SQLite database ready")
-        else:
-            # Still create tables even if connection issues
-            logger.warning("Continuing with database issues - tables may not exist")
-            pass
+            logger.info("Database ready")
+            return True
+        except Exception as e:
+            logger.warning(f"Database connection failed: {str(e)}")
+            # Immediate fallback to SQLite for faster startup
+            if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql"):
+                logger.warning("Falling back to SQLite for faster startup")
+                app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///healthcare.db"
+                db.create_all()
+                logger.info("SQLite database ready")
+                return True
+            else:
+                # Still create tables even if connection issues
+                logger.warning("Continuing with database issues - tables may not exist")
+                return False
+    
+    # Only test connection, don't create tables yet
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("Database connection verified")
+    except Exception as e:
+        logger.warning(f"Database connection test failed: {str(e)} - will retry on first request")
 
 # Log application startup information
 from logging_config import log_application_startup
 
 log_application_startup(app, structured_logger)
 
-# Initialize middleware immediately during startup to avoid registration errors
-try:
-    from validation_middleware import register_validation_middleware
-    from api_access_middleware import register_api_access_middleware
-    from admin_middleware import register_admin_middleware
-    from session_timeout import init_session_timeout
-    
-    register_validation_middleware(app)
-    register_api_access_middleware(app)
-    register_admin_middleware(app)
-    init_session_timeout(app)
-    
-    logger.info("Middleware initialization complete")
-except Exception as e:
-    logger.warning(f"Some middleware failed to initialize: {e}")
-    # Continue without all middleware to prevent startup failures
+# Defer middleware initialization until first request for faster startup
+_middleware_initialized = False
+
+@app.before_first_request
+def initialize_middleware():
+    """Initialize middleware on first request to speed up startup"""
+    global _middleware_initialized
+    if not _middleware_initialized:
+        try:
+            from validation_middleware import register_validation_middleware
+            from api_access_middleware import register_api_access_middleware
+            from admin_middleware import register_admin_middleware
+            from session_timeout import init_session_timeout
+            
+            register_validation_middleware(app)
+            register_api_access_middleware(app)
+            register_admin_middleware(app)
+            init_session_timeout(app)
+            
+            logger.info("Middleware initialization complete")
+            _middleware_initialized = True
+        except Exception as e:
+            logger.warning(f"Some middleware failed to initialize: {e}")
 
 # Add route for clearing query cache
 @app.route('/api/cache/clear', methods=['POST'])
@@ -1326,18 +1345,26 @@ def clear_query_cache():
     clear_cache()
     return jsonify({'success': True, 'message': 'Cache cleared'})
 
-# Load all route modules immediately during startup to avoid registration errors
-try:
-    import demo_routes
-    import api_routes
-    import auth_routes
-    import async_routes
-    import performance_routes
-    import ehr_routes
-    import checklist_routes
-    import checklist_simple_routes
-    
-    logger.info("Route modules loaded")
-except Exception as e:
-    logger.warning(f"Some route modules failed to load: {e}")
-    # Continue without all routes to prevent startup failures
+# Defer route module loading until needed for faster startup
+def load_route_modules():
+    """Load route modules on demand"""
+    try:
+        import demo_routes
+        import api_routes
+        import auth_routes
+        import async_routes
+        import performance_routes
+        import ehr_routes
+        import checklist_routes
+        import checklist_simple_routes
+        
+        logger.info("Route modules loaded")
+    except Exception as e:
+        logger.warning(f"Some route modules failed to load: {e}")
+
+# Register a simple health check route immediately
+@app.route('/health')
+def health_check():
+    """Simple health check that loads routes if needed"""
+    load_route_modules()
+    return jsonify({'status': 'ok', 'timestamp': time.time()})

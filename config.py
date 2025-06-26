@@ -40,11 +40,11 @@ class DatabaseConfig:
         return {
             "pool_recycle": self.pool_recycle,
             "pool_pre_ping": False,  # Disable pre-ping for faster startup
-            "pool_timeout": 2,  # Further reduced for faster startup
-            "pool_size": 2,  # Minimal pool size for faster startup
-            "max_overflow": 3,  # Minimal overflow for faster startup
+            "pool_timeout": 1,  # Minimal timeout for immediate startup
+            "pool_size": 1,  # Single connection for fastest startup
+            "max_overflow": 1,  # Minimal overflow for fastest startup
             "connect_args": {
-                "connect_timeout": 2,  # Very fast timeout for immediate failure
+                "connect_timeout": 1,  # Ultra-fast timeout for immediate failure
                 "application_name": "healthprep_app",
                 "sslmode": "require",  # Enable SSL as required by Neon/PostgreSQL
             },
