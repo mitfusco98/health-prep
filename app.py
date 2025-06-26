@@ -1221,7 +1221,7 @@ def detect_automated_attacks():
 
     # Relax limits for API endpoints - they often need multiple rapid requests
     api_limit = 100 if request.path.startswith('/api/') else 30
-    
+
     # Check if more than the limit requests in the last minute
     if len(app._request_tracker[client_ip]) > api_limit:
         logger.warning(
@@ -1390,3 +1390,13 @@ register_api_access_middleware(app)
 from admin_middleware import register_admin_middleware
 
 register_admin_middleware(app)
+
+# Import all route modules to register them with the app
+import demo_routes
+import api_routes
+import auth_routes
+import async_routes
+import performance_routes
+import ehr_routes
+import checklist_routes
+import checklist_simple_routes
