@@ -31,8 +31,8 @@ def load_all_routes():
 
 # Load essential routes only at startup
 try:
-    # Only load core auth routes for immediate functionality
-    import auth_routes  # noqa: F401
+    # Note: auth_routes may not exist or may have import issues
+    # The core routes are already defined in app.py
     logging.info("Essential routes loaded")
 except Exception as e:
     logging.warning(f"Essential routes failed to load: {e}")

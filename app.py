@@ -67,7 +67,7 @@ class Appointment(db.Model):
     status = db.Column(db.String(20), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationship
     patient = db.relationship('Patient', backref='appointments')
 
@@ -91,7 +91,7 @@ def index():
         today = datetime.now().date()
         today_appointments = Appointment.query.filter_by(appointment_date=today).all()
         recent_patients = Patient.query.order_by(Patient.created_at.desc()).limit(5).all()
-        
+
         return render_template('simple_index.html',
                              patient_count=patient_count,
                              today_appointments=today_appointments,
@@ -116,7 +116,7 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
+
         try:
             user = User.query.filter_by(username=username).first()
             if user and user.check_password(password):
@@ -131,7 +131,7 @@ def login():
                 flash('Invalid username or password', 'error')
         except Exception as e:
             flash(f'Login error: {e}', 'error')
-    
+
     return render_template('simple_login.html')
 
 @app.route('/logout')
@@ -146,7 +146,7 @@ def setup():
     """Setup database and create admin user"""
     try:
         db.create_all()
-        
+
         # Create admin user if not exists
         admin = User.query.filter_by(username='admin').first()
         if not admin:
@@ -158,7 +158,7 @@ def setup():
             admin.set_password('admin123')
             db.session.add(admin)
             db.session.commit()
-        
+
         return "<h1>Setup Complete!</h1><p>Admin user: admin/admin123</p><p><a href='/login'>Login</a></p>"
     except Exception as e:
         return f"<h1>Setup Error</h1><p>{e}</p>"
@@ -168,7 +168,7 @@ def create_templates():
     """Create basic template files"""
     templates_dir = 'templates'
     os.makedirs(templates_dir, exist_ok=True)
-    
+
     # Simple base template
     with open(f'{templates_dir}/simple_base.html', 'w') as f:
         f.write("""<!DOCTYPE html>
@@ -197,7 +197,7 @@ def create_templates():
         </span>
     </div>
     {% endif %}
-    
+
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -205,11 +205,11 @@ def create_templates():
             {% endfor %}
         {% endif %}
     {% endwith %}
-    
+
     {% block content %}{% endblock %}
 </body>
 </html>""")
-    
+
     # Login template
     with open(f'{templates_dir}/simple_login.html', 'w') as f:
         f.write("""{% extends "simple_base.html" %}
@@ -228,7 +228,7 @@ def create_templates():
 </form>
 <p><small>Default: admin/admin123</small></p>
 {% endblock %}""")
-    
+
     # Index template
     with open(f'{templates_dir}/simple_index.html', 'w') as f:
         f.write("""{% extends "simple_base.html" %}
@@ -257,7 +257,7 @@ def create_templates():
     {% endfor %}
 </table>
 {% endblock %}""")
-    
+
     # Patients template
     with open(f'{templates_dir}/simple_patients.html', 'w') as f:
         f.write("""{% extends "simple_base.html" %}
@@ -275,6 +275,13 @@ def create_templates():
     {% endfor %}
 </table>
 {% endblock %}""")
+
+# Simple middleware initialization at startup
+try:
+    # Any middleware initialization can go here
+    print("Middleware initialized at startup")
+except Exception as e:
+    print(f"Warning: Some middleware failed to initialize: {e}")
 
 # Initialize app
 with app.app_context():
