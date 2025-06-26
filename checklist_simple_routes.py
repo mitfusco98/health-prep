@@ -1,7 +1,7 @@
 from flask import render_template, request, redirect, url_for, flash
 from app import app, db
 from models import ChecklistSettings, ScreeningType
-from admin_middleware import login_required
+from app import login_required
 
 
 @app.route('/screening-checklist-rebuilt')
