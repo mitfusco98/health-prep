@@ -1396,6 +1396,15 @@ from session_timeout import init_session_timeout
 
 init_session_timeout(app)
 
+# Add route for clearing query cache
+@app.route('/api/cache/clear', methods=['POST'])
+@login_required
+def clear_query_cache():
+    """Clear query cache for performance testing"""
+    from query_cache import clear_cache
+    clear_cache()
+    return jsonify({'success': True, 'message': 'Cache cleared'})
+
 # Import all route modules to register them with the app
 import demo_routes
 import api_routes
