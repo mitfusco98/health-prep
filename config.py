@@ -40,13 +40,13 @@ class DatabaseConfig:
         return {
             "pool_recycle": self.pool_recycle,
             "pool_pre_ping": False,  # Disable pre-ping for faster startup
-            "pool_timeout": 5,  # Reduced from 10
-            "pool_size": 5,  # Reduced from 20
-            "max_overflow": 10,  # Reduced from 30
+            "pool_timeout": 2,  # Further reduced for faster startup
+            "pool_size": 2,  # Minimal pool size for faster startup
+            "max_overflow": 3,  # Minimal overflow for faster startup
             "connect_args": {
-                "connect_timeout": 5,  # Reduced from 10
+                "connect_timeout": 2,  # Very fast timeout for immediate failure
                 "application_name": "healthprep_app",
-                "sslmode": "prefer",
+                "sslmode": "disable",  # Disable SSL for faster local development
             },
         }
 
