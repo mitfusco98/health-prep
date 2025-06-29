@@ -539,19 +539,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Remove duplicates while preserving order
-            const uniqueKeywords = [];
-            const seen = new Set();
+            // Final duplicate protection - convert everything to strings and remove duplicates
+            const stringKeywords = this.keywords.map(k => 
+                typeof k === 'string' ? k.trim() : (k.keyword || '').trim()
+            ).filter(k => k.length > 0);
 
-            this.keywords.forEach(keyword => {
-                const keywordStr = typeof keyword === 'string' ? keyword : (keyword.keyword || '');
-                if (keywordStr && !seen.has(keywordStr.toLowerCase())) {
-                    seen.add(keywordStr.toLowerCase());
-                    uniqueKeywords.push(keywordStr);
-                }
-            });
+            const uniqueKeywords = [...new Set(stringKeywords.map(k => k.toLowerCase()))].map(k => 
+                stringKeywords.find(orig => orig.toLowerCase() === k)
+            );
 
-            // Update internal array with unique keywords
+            // Update internal array to ensure consistency
             this.keywords = uniqueKeywords;
 
             // Render each unique keyword

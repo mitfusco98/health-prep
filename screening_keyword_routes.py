@@ -12,10 +12,8 @@ import json
 
 @app.route('/api/screening-keywords/<int:screening_id>', methods=['GET'])
 def get_screening_keywords(screening_id):
-    """Get keyword configuration for a screening type - uses only current manage screening types system"""
+    """Get keyword configuration for a screening type - simplified to prevent duplication"""
     try:
-        # Force refresh the screening type from database to get latest data
-        db.session.expire_all()
         screening_type = ScreeningType.query.get(screening_id)
         if not screening_type:
             return jsonify({
@@ -23,36 +21,24 @@ def get_screening_keywords(screening_id):
                 'message': 'Screening type not found'
             }), 404
         
-        # Get keywords from current ScreeningType fields only - use content_keywords as primary source
-        unique_keywords = []
+        # Get keywords only from content_keywords field
+        content_keywords = screening_type.get_content_keywords()
         
-        try:
-            # Only use content_keywords to prevent duplication issues from legacy fields
-            content_keywords = screening_type.get_content_keywords() or []
-            
-            # Ensure we have a list and clean it up
-            if isinstance(content_keywords, list):
-                # Remove duplicates while preserving order
-                seen = set()
-                for keyword in content_keywords:
-                    if keyword and isinstance(keyword, str) and keyword.strip():
-                        clean_keyword = keyword.strip()
-                        if clean_keyword.lower() not in seen:
-                            unique_keywords.append(clean_keyword)
-                            seen.add(clean_keyword.lower())
-            else:
-                print(f"Warning: content_keywords is not a list for screening {screening_id}: {type(content_keywords)}")
-                unique_keywords = []
-                    
-        except Exception as e:
-            print(f"Error getting keywords for screening {screening_id}: {e}")
-            unique_keywords = []
+        # Ensure we return a clean list of unique strings
+        unique_keywords = []
+        if content_keywords and isinstance(content_keywords, list):
+            seen = set()
+            for keyword in content_keywords:
+                if keyword and isinstance(keyword, str):
+                    clean_keyword = keyword.strip()
+                    if clean_keyword and clean_keyword.lower() not in seen:
+                        unique_keywords.append(clean_keyword)
+                        seen.add(clean_keyword.lower())
         
         return jsonify({
             'success': True,
             'keywords': unique_keywords,
-            'screening_name': screening_type.name,
-            'source': 'manage_screening_types'
+            'screening_name': screening_type.name
         })
 
     except Exception as e:
@@ -73,7 +59,6 @@ def save_screening_keywords(screening_id):
                 'message': 'No data provided'
             }), 400
         
-        # Get screening type
         screening_type = ScreeningType.query.get(screening_id)
         if not screening_type:
             return jsonify({
@@ -81,23 +66,32 @@ def save_screening_keywords(screening_id):
                 'message': 'Screening type not found'
             }), 404
         
-        # Get keywords from request
+        # Get keywords from request and convert to simple strings
         keywords = data.get('keywords', [])
-        
-        # Convert keywords to simple list if they're objects
         keyword_list = []
+        
         for keyword in keywords:
             if isinstance(keyword, dict):
-                keyword_list.append(keyword.get('keyword', ''))
+                keyword_text = keyword.get('keyword', '')
             else:
-                keyword_list.append(str(keyword))
+                keyword_text = str(keyword)
+            
+            clean_keyword = keyword_text.strip()
+            if clean_keyword:
+                keyword_list.append(clean_keyword)
         
-        # Remove empty keywords
-        keyword_list = [k.strip() for k in keyword_list if k.strip()]
+        # Remove duplicates while preserving order
+        unique_keywords = []
+        seen = set()
+        for keyword in keyword_list:
+            if keyword.lower() not in seen:
+                unique_keywords.append(keyword)
+                seen.add(keyword.lower())
         
-        # Save only to content_keywords to prevent duplication
-        screening_type.set_content_keywords(keyword_list)
-        # Clear other fields to prevent triplication
+        # Save only to content_keywords
+        screening_type.set_content_keywords(unique_keywords)
+        
+        # Clear other keyword fields to prevent any legacy duplication
         screening_type.set_filename_keywords([])
         screening_type.set_document_keywords([])
         
