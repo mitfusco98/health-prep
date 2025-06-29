@@ -99,10 +99,11 @@ def save_screening_keywords(screening_id):
         # Remove empty keywords
         keyword_list = [k.strip() for k in keyword_list if k.strip()]
         
-        # Save to all keyword fields (this ensures compatibility)
+        # Save only to content_keywords to prevent duplication
         screening_type.set_content_keywords(keyword_list)
-        screening_type.set_filename_keywords(keyword_list)
-        screening_type.set_document_keywords(keyword_list)
+        # Clear other fields to prevent triplication
+        screening_type.set_filename_keywords([])
+        screening_type.set_document_keywords([])
         
         db.session.commit()
         

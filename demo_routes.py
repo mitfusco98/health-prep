@@ -1312,12 +1312,13 @@ def edit_screening_type(screening_type_id):
                         unique_keywords.append(keyword)
                         seen.add(keyword.lower())
                 
-                # Save to ScreeningType model directly
+                # Save to ScreeningType model directly - only use content_keywords to avoid triplication
                 if unique_keywords:
                     screening_type.set_content_keywords(unique_keywords)
-                    screening_type.set_filename_keywords(unique_keywords)
-                    screening_type.set_document_keywords(unique_keywords)
-                    print(f"Successfully saved {len(unique_keywords)} unique keywords to ScreeningType model")
+                    # Clear other keyword fields to prevent duplication
+                    screening_type.set_filename_keywords([])
+                    screening_type.set_document_keywords([])
+                    print(f"Successfully saved {len(unique_keywords)} unique keywords to content_keywords field")
                 else:
                     print("No valid keywords found after processing")
                 
