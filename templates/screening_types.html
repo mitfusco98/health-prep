@@ -584,35 +584,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         setKeywords(keywords) {
-            // Force clear everything immediately
+            // Force immediate clear of everything
             this.keywords = [];
 
+            // Clear DOM immediately
             const container = document.getElementById(this.prefix + 'KeywordsList');
             if (container) {
                 container.innerHTML = '';
             }
 
+            // Clear hidden field immediately  
             const hiddenField = document.getElementById(this.prefix + 'KeywordsData');
             if (hiddenField) {
                 hiddenField.value = '';
             }
 
-            // Only process valid arrays
+            // Only process if we have valid keywords
             if (keywords && Array.isArray(keywords) && keywords.length > 0) {
-                // Convert everything to strings and filter out empty values
-                const stringKeywords = keywords
-                    .map(k => {
-                        if (typeof k === 'string') return k.trim();
-                        if (typeof k === 'object' && k.keyword) return k.keyword.trim();
-                        return String(k).trim();
-                    })
-                    .filter(k => k.length > 0);
+                // Convert to simple strings and remove duplicates
+                const uniqueKeywords = [...new Set(keywords.map(k => 
+                    typeof k === 'string' ? k.trim() : (k.keyword || '').trim()
+                ).filter(k => k.length > 0))];
 
-                // Remove duplicates
-                this.keywords = [...new Set(stringKeywords)];
+                this.keywords = uniqueKeywords;
             }
 
-            // Immediate render
+            // Render immediately without delay
             this.renderKeywords();
             this.updateHiddenField();
         }
