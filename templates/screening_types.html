@@ -546,7 +546,16 @@ document.addEventListener('DOMContentLoaded', function() {
         updateHiddenField() {
             const hiddenField = document.getElementById(this.prefix + 'KeywordsData');
             if (hiddenField) {
-                hiddenField.value = JSON.stringify(this.keywords);
+                // Ensure clean JSON without HTML encoding
+                const cleanKeywords = this.keywords.map(k => ({
+                    keyword: k.keyword,
+                    section: k.section || 'general',
+                    weight: k.weight || 1.0,
+                    case_sensitive: k.case_sensitive || false,
+                    exact_match: k.exact_match || false,
+                    description: k.description || ''
+                }));
+                hiddenField.value = JSON.stringify(cleanKeywords);
             }
         }
 
@@ -675,29 +684,46 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Load existing keywords on page load
-    document.querySelectorAll('.keyword-tags').forEach(container => {
+    // Load existing keywords on page load with throttling
+    const keywordContainers = document.querySelectorAll('.keyword-tags');
+    let loadIndex = 0;
+    
+    function loadNextKeywords() {
+        if (loadIndex >= keywordContainers.length) return;
+        
+        const container = keywordContainers[loadIndex];
         const screeningId = container.id.split('-')[1];
+        
         fetch(`/api/screening-keywords/${screeningId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.keywords && data.keywords.length > 0) {
-                    // Only update if keywords exist
                     const keywordObjects = data.keywords.map(keyword => ({
                         keyword: keyword,
                         section: 'general'
                     }));
                     updateKeywordsDisplay(screeningId, keywordObjects);
                 } else {
-                    // Show no keywords message
                     container.innerHTML = '<small class="text-muted">No keywords defined</small>';
                 }
             })
             .catch(error => {
                 console.error('Error loading keywords for screening', screeningId, ':', error);
                 container.innerHTML = '<small class="text-muted">No keywords defined</small>';
+            })
+            .finally(() => {
+                loadIndex++;
+                // Load next with delay to prevent rate limiting
+                if (loadIndex < keywordContainers.length) {
+                    setTimeout(loadNextKeywords, 200);
+                }
             });
-    });
+    }
+    
+    // Start loading keywords with delay
+    if (keywordContainers.length > 0) {
+        setTimeout(loadNextKeywords, 100);
+    }
 
     // Utility function to show alerts
     function showAlert(message, type) {

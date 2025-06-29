@@ -25,28 +25,30 @@ def get_screening_keywords(screening_id):
         # Get keywords from current ScreeningType fields only
         keywords = []
         
-        # Get keywords from filename_keywords field
-        filename_keywords = screening_type.get_filename_keywords()
-        if filename_keywords:
+        try:
+            # Get keywords from filename_keywords field
+            filename_keywords = screening_type.get_filename_keywords() or []
             keywords.extend(filename_keywords)
-        
-        # Get keywords from content_keywords field
-        content_keywords = screening_type.get_content_keywords()
-        if content_keywords:
+            
+            # Get keywords from content_keywords field
+            content_keywords = screening_type.get_content_keywords() or []
             keywords.extend(content_keywords)
-        
-        # Get keywords from document_keywords field
-        document_keywords = screening_type.get_document_keywords()
-        if document_keywords:
+            
+            # Get keywords from document_keywords field
+            document_keywords = screening_type.get_document_keywords() or []
             keywords.extend(document_keywords)
-        
-        # Remove duplicates while preserving order
-        unique_keywords = []
-        seen = set()
-        for keyword in keywords:
-            if keyword.lower() not in seen:
-                unique_keywords.append(keyword)
-                seen.add(keyword.lower())
+            
+            # Remove duplicates while preserving order
+            unique_keywords = []
+            seen = set()
+            for keyword in keywords:
+                if keyword and keyword.strip() and keyword.lower() not in seen:
+                    unique_keywords.append(keyword.strip())
+                    seen.add(keyword.lower())
+                    
+        except Exception as e:
+            print(f"Error getting keywords for screening {screening_id}: {e}")
+            unique_keywords = []
         
         return jsonify({
             'success': True,
