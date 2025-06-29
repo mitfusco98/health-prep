@@ -608,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     })
                     .filter(k => k.length > 0);
 
-                // Remove duplicates while preserving order
+                // Remove duplicates
                 this.keywords = [...new Set(stringKeywords)];
             }
 
@@ -851,7 +851,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.warn('Invalid JSON response for keywords, using empty array:', text);
                         data = { success: true, keywords: [] };
                     }
-                    
+
                     if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
                         // Set keywords directly as strings - no object conversion needed
                         keywordManagers.edit.setKeywords(data.keywords);
