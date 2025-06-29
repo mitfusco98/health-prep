@@ -557,29 +557,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         setKeywords(keywords) {
-            // Clear existing keywords completely
+            // Force clear everything first
             this.keywords = [];
             
-            // Clear the display
+            // Clear the display immediately
             const container = document.getElementById(this.prefix + 'KeywordsList');
             if (container) {
                 container.innerHTML = '';
             }
             
-            // Clear the hidden field
+            // Clear the hidden field immediately
             const hiddenField = document.getElementById(this.prefix + 'KeywordsData');
             if (hiddenField) {
                 hiddenField.value = '';
             }
             
-            // Set new keywords
-            if (keywords && Array.isArray(keywords)) {
-                this.keywords = [...keywords];
+            // Only set new keywords if provided and valid
+            if (keywords && Array.isArray(keywords) && keywords.length > 0) {
+                // Deep clone to prevent reference issues
+                this.keywords = keywords.map(keyword => ({...keyword}));
+            } else {
+                this.keywords = [];
             }
             
-            // Render and update
-            this.renderKeywords();
-            this.updateHiddenField();
+            // Force render after a brief delay to ensure DOM is clear
+            setTimeout(() => {
+                this.renderKeywords();
+                this.updateHiddenField();
+            }, 10);
         }
     }
 
