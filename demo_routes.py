@@ -1217,36 +1217,7 @@ def edit_screening_type(screening_type_id):
         screening_type.is_active = form.is_active.data
         screening_type.status = 'active' if form.is_active.data else 'inactive'
 
-        # Process keyword fields from the form (similar to add function)
-        import json
-        try:
-            # Content keywords (for document content parsing)
-            keywords_data = request.form.get('keywords')
-            if keywords_data:
-                content_keywords = json.loads(keywords_data)
-                screening_type.set_content_keywords(content_keywords)
-            else:
-                screening_type.set_content_keywords([])
-            
-            # Store keywords in content_keywords only (edit screen)
-            filename_keywords_data = request.form.get('filename_keywords')
-            if filename_keywords_data:
-                filename_keywords = json.loads(filename_keywords_data)
-                # Use content_keywords as the primary storage
-                screening_type.set_content_keywords(filename_keywords)
-                screening_type.set_filename_keywords([])
-                screening_type.set_document_keywords([])
-            
-            # Document section as document keywords
-            document_section = request.form.get('document_section')
-            if document_section:
-                screening_type.set_document_keywords([document_section])
-            else:
-                screening_type.set_document_keywords([])
-                
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"Warning: Error processing keyword data: {e}")
-            # Continue without updating keywords if there's an error
+        # Keywords will be processed later in the unified section below
 
         # Handle trigger conditions if provided
         trigger_conditions_data = request.form.get('trigger_conditions')
