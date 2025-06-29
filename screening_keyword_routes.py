@@ -24,19 +24,25 @@ def get_screening_keywords(screening_id):
             }), 404
         
         # Get keywords from current ScreeningType fields only - use content_keywords as primary source
-        keywords = []
+        unique_keywords = []
         
         try:
             # Only use content_keywords to prevent duplication issues from legacy fields
             content_keywords = screening_type.get_content_keywords() or []
             
-            # Remove duplicates while preserving order
-            unique_keywords = []
-            seen = set()
-            for keyword in content_keywords:
-                if keyword and keyword.strip() and keyword.lower() not in seen:
-                    unique_keywords.append(keyword.strip())
-                    seen.add(keyword.lower())
+            # Ensure we have a list and clean it up
+            if isinstance(content_keywords, list):
+                # Remove duplicates while preserving order
+                seen = set()
+                for keyword in content_keywords:
+                    if keyword and isinstance(keyword, str) and keyword.strip():
+                        clean_keyword = keyword.strip()
+                        if clean_keyword.lower() not in seen:
+                            unique_keywords.append(clean_keyword)
+                            seen.add(clean_keyword.lower())
+            else:
+                print(f"Warning: content_keywords is not a list for screening {screening_id}: {type(content_keywords)}")
+                unique_keywords = []
                     
         except Exception as e:
             print(f"Error getting keywords for screening {screening_id}: {e}")

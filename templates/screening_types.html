@@ -573,9 +573,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 const fieldName = this.prefix === 'add' ? 'keywords' : 'keywords';
                 const actualField = document.querySelector(`input[name="${fieldName}"]`) || hiddenField;
 
-                // Send just the keyword strings to match backend expectations
-                const keywordStrings = this.keywords.map(k => k.keyword);
-                actualField.value = JSON.stringify(keywordStrings);
+                // Send just the keyword strings (they're already strings now)
+                try {
+                    actualField.value = JSON.stringify(this.keywords || []);
+                } catch (e) {
+                    console.error('Error stringifying keywords:', e);
+                    actualField.value = '[]';
+                }
             }
         }
 
@@ -593,19 +597,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 hiddenField.value = '';
             }
 
-            // Process keywords based on the data structure
+            // Only process valid arrays
             if (keywords && Array.isArray(keywords) && keywords.length > 0) {
-                // Handle simple string array (from API)
-                if (typeof keywords[0] === 'string') {
-                    this.keywords = keywords.slice(); // Simple copy of string array
-                } else {
-                    // Handle object array (from forms)
-                    this.keywords = keywords.map(k => k.keyword || k).filter(k => k);
-                }
-            }
+                // Convert everything to strings and filter out empty values
+                const stringKeywords = keywords
+                    .map(k => {
+                        if (typeof k === 'string') return k.trim();
+                        if (typeof k === 'object' && k.keyword) return k.keyword.trim();
+                        return String(k).trim();
+                    })
+                    .filter(k => k.length > 0);
 
-            // Remove duplicates
-            this.keywords = [...new Set(this.keywords)];
+                // Remove duplicates while preserving order
+                this.keywords = [...new Set(stringKeywords)];
+            }
 
             // Immediate render
             this.renderKeywords();
@@ -830,21 +835,26 @@ document.addEventListener('DOMContentLoaded', function() {
             keywordManagers.edit.renderKeywords();
             keywordManagers.edit.updateHiddenField();
 
-            // Load keywords for this screening
+            // Load keywords for this screening with enhanced error handling
             fetch(`/api/screening-keywords/${id}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.keywords && data.keywords.length > 0) {
-                        // Convert simple keywords to objects for the manager
-                        const keywordObjects = data.keywords.map(keyword => ({
-                            keyword: keyword,
-                            section: 'general',
-                            weight: 1.0,
-                            case_sensitive: false,
-                            exact_match: false,
-                            description: ''
-                        }));
-                        keywordManagers.edit.setKeywords(keywordObjects);
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(text => {
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        console.warn('Invalid JSON response for keywords, using empty array:', text);
+                        data = { success: true, keywords: [] };
+                    }
+                    
+                    if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
+                        // Set keywords directly as strings - no object conversion needed
+                        keywordManagers.edit.setKeywords(data.keywords);
                     } else {
                         // Ensure keywords are empty
                         keywordManagers.edit.setKeywords([]);
