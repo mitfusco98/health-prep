@@ -832,35 +832,43 @@ document.addEventListener('DOMContentLoaded', function() {
             keywordManagers.edit.renderKeywords();
             keywordManagers.edit.updateHiddenField();
 
-            // Load keywords for this screening with enhanced error handling
-            fetch(`/api/screening-keywords/${id}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}`);
-                    }
-                    return response.text();
-                })
-                .then(text => {
-                    let data;
-                    try {
-                        data = JSON.parse(text);
-                    } catch (e) {
-                        console.warn('Invalid JSON response for keywords, using empty array:', text);
-                        data = { success: true, keywords: [] };
-                    }
+            // Force complete reset before loading keywords
+            setTimeout(() => {
+                // Load keywords for this screening with enhanced error handling
+                fetch(`/api/screening-keywords/${id}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then(text => {
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            console.warn('Invalid JSON response for keywords, using empty array:', text);
+                            data = { success: true, keywords: [] };
+                        }
 
-                    if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
-                        // Set keywords directly as strings - no object conversion needed
-                        keywordManagers.edit.setKeywords(data.keywords);
-                    } else {
-                        // Ensure keywords are empty
+                        // Force another clear before setting
+                        keywordManagers.edit.keywords = [];
+                        const container = document.getElementById('editKeywordsList');
+                        if (container) container.innerHTML = '';
+
+                        if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
+                            // Remove any potential duplicates at API level
+                            const uniqueKeywords = [...new Set(data.keywords.filter(k => k && k.trim()))];
+                            keywordManagers.edit.setKeywords(uniqueKeywords);
+                        } else {
+                            keywordManagers.edit.setKeywords([]);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading keywords:', error);
                         keywordManagers.edit.setKeywords([]);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading keywords:', error);
-                    keywordManagers.edit.setKeywords([]);
-                });
+                    });
+            }, 100);
         });
     });
 
