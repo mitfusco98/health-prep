@@ -557,7 +557,27 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         setKeywords(keywords) {
-            this.keywords = keywords || [];
+            // Clear existing keywords completely
+            this.keywords = [];
+            
+            // Clear the display
+            const container = document.getElementById(this.prefix + 'KeywordsList');
+            if (container) {
+                container.innerHTML = '';
+            }
+            
+            // Clear the hidden field
+            const hiddenField = document.getElementById(this.prefix + 'KeywordsData');
+            if (hiddenField) {
+                hiddenField.value = '';
+            }
+            
+            // Set new keywords
+            if (keywords && Array.isArray(keywords)) {
+                this.keywords = [...keywords];
+            }
+            
+            // Render and update
             this.renderKeywords();
             this.updateHiddenField();
         }
@@ -765,16 +785,28 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('#editScreeningForm #max_age').value = maxAge;
             document.querySelector('#editScreeningForm #is_active').checked = active === "checked";
             
-            // Clear existing keywords first to prevent duplication
-            keywordManagers.edit.setKeywords([]);
+            // Clear the keywords display and hidden field first
+            const editKeywordsList = document.getElementById('editKeywordsList');
+            const editKeywordsData = document.getElementById('editKeywordsData');
+            if (editKeywordsList) {
+                editKeywordsList.innerHTML = '';
+            }
+            if (editKeywordsData) {
+                editKeywordsData.value = '';
+            }
+            
+            // Clear the keyword manager completely
+            keywordManagers.edit.keywords = [];
+            keywordManagers.edit.renderKeywords();
+            keywordManagers.edit.updateHiddenField();
             
             // Load keywords for this screening
             fetch(`/api/screening-keywords/${id}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
+                    if (data.success && data.keywords && data.keywords.length > 0) {
                         // Convert simple keywords to objects for the manager
-                        const keywordObjects = (data.keywords || []).map(keyword => ({
+                        const keywordObjects = data.keywords.map(keyword => ({
                             keyword: keyword,
                             section: 'general',
                             weight: 1.0,
@@ -784,6 +816,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }));
                         keywordManagers.edit.setKeywords(keywordObjects);
                     } else {
+                        // Ensure keywords are empty
                         keywordManagers.edit.setKeywords([]);
                     }
                 })

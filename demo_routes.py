@@ -1271,14 +1271,17 @@ def edit_screening_type(screening_type_id):
             screening_type.set_trigger_conditions([])
             print("Edit - Cleared trigger conditions")
 
-        # Handle keywords if provided
-        keywords_data = request.form.get('keywords')
-        print(f"Keywords data received: {keywords_data}")
-        
-        # Clear existing keywords from ScreeningType model first
+        # Handle keywords if provided - ALWAYS clear existing keywords first
+        print(f"Clearing existing keywords before processing new ones")
         screening_type.set_content_keywords([])
         screening_type.set_filename_keywords([])
         screening_type.set_document_keywords([])
+        
+        # Commit the clearing immediately to ensure it's saved
+        db.session.flush()
+        
+        keywords_data = request.form.get('keywords')
+        print(f"Keywords data received: {keywords_data}")
         
         if keywords_data and keywords_data.strip():
             try:
@@ -1301,19 +1304,29 @@ def edit_screening_type(screening_type_id):
                         elif isinstance(keyword, dict) and keyword.get('keyword'):
                             keyword_list.append(keyword['keyword'].strip())
                 
+                # Remove duplicates while preserving order
+                unique_keywords = []
+                seen = set()
+                for keyword in keyword_list:
+                    if keyword.lower() not in seen:
+                        unique_keywords.append(keyword)
+                        seen.add(keyword.lower())
+                
                 # Save to ScreeningType model directly
-                if keyword_list:
-                    screening_type.set_content_keywords(keyword_list)
-                    screening_type.set_filename_keywords(keyword_list)
-                    screening_type.set_document_keywords(keyword_list)
-                    print(f"Successfully saved {len(keyword_list)} keywords to ScreeningType model")
+                if unique_keywords:
+                    screening_type.set_content_keywords(unique_keywords)
+                    screening_type.set_filename_keywords(unique_keywords)
+                    screening_type.set_document_keywords(unique_keywords)
+                    print(f"Successfully saved {len(unique_keywords)} unique keywords to ScreeningType model")
+                else:
+                    print("No valid keywords found after processing")
                 
             except json_module.JSONDecodeError as e:
                 print(f"Error parsing keywords JSON: {str(e)} - Data: '{keywords_data[:100]}...'")
             except Exception as e:
                 print(f"Error updating keywords: {str(e)}")
         else:
-            print("No keywords data provided or empty")
+            print("No keywords data provided or empty - keywords cleared")
 
         try:
             # Store original values for change tracking

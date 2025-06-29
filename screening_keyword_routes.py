@@ -14,7 +14,8 @@ import json
 def get_screening_keywords(screening_id):
     """Get keyword configuration for a screening type - uses only current manage screening types system"""
     try:
-        # Get screening type from current system only
+        # Force refresh the screening type from database to get latest data
+        db.session.expire_all()
         screening_type = ScreeningType.query.get(screening_id)
         if not screening_type:
             return jsonify({
@@ -22,21 +23,22 @@ def get_screening_keywords(screening_id):
                 'message': 'Screening type not found'
             }), 404
         
-        # Get keywords from current ScreeningType fields only
+        # Get keywords from current ScreeningType fields only - use content_keywords as primary source
         keywords = []
         
         try:
-            # Get keywords from filename_keywords field
-            filename_keywords = screening_type.get_filename_keywords() or []
-            keywords.extend(filename_keywords)
-            
-            # Get keywords from content_keywords field
+            # Use content_keywords as the primary source (most recently updated)
             content_keywords = screening_type.get_content_keywords() or []
             keywords.extend(content_keywords)
             
-            # Get keywords from document_keywords field
-            document_keywords = screening_type.get_document_keywords() or []
-            keywords.extend(document_keywords)
+            # Only add from other sources if content_keywords is empty
+            if not keywords:
+                filename_keywords = screening_type.get_filename_keywords() or []
+                keywords.extend(filename_keywords)
+                
+                if not keywords:
+                    document_keywords = screening_type.get_document_keywords() or []
+                    keywords.extend(document_keywords)
             
             # Remove duplicates while preserving order
             unique_keywords = []
