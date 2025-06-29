@@ -772,8 +772,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Error loading keywords for screening', screeningId, ':', error);
-                container.innerHTML = '<small class="text-muted">No keywords defined</small>';
+                // Check if it's a rate limit error
+                if (error.message && error.message.includes('429')) {
+                    console.log('Rate limited, will retry for screening', screeningId);
+                    container.innerHTML = '<small class="text-muted">Loading keywords...</small>';
+                    // Retry after a longer delay
+                    setTimeout(() => {
+                        loadKeywordsForScreening(screeningId, container);
+                    }, 2000);
+                } else {
+                    console.log('No keywords found for screening', screeningId);
+                    container.innerHTML = '<small class="text-muted">No keywords defined</small>';
+                }
             })
             .finally(() => {
                 loadIndex++;
@@ -892,8 +902,33 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     })
                     .catch(error => {
-                        console.error('Error loading keywords:', error);
-                        keywordManagers.edit.setKeywords([]);
+                        // Check if it's a rate limit error
+                        if (error.message && error.message.includes('429')) {
+                            console.log('Rate limited, will retry for edit form');
+                            // Retry after delay
+                            setTimeout(() => {
+                                fetch(`/api/screening-keywords/${id}`)
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data.success && data.keywords && data.keywords.length > 0) {
+                                            const keywordObjects = data.keywords.map(keyword => ({
+                                                keyword: keyword,
+                                                section: 'general',
+                                                weight: 1.0,
+                                                case_sensitive: false,
+                                                exact_match: false,
+                                                description: ''
+                                            }));
+                                            keywordManagers.edit.setKeywords(keywordObjects);
+                                        } else {
+                                            keywordManagers.edit.setKeywords([]);
+                                        }
+                                    });
+                            }, 2000);
+                        } else {
+                            console.log('No keywords found for editing');
+                            keywordManagers.edit.setKeywords([]);
+                        }
                     });
             }, 100);
         });

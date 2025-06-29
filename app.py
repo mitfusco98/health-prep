@@ -966,7 +966,7 @@ def validate_session_security():
         if is_repository_request:
             rate_limit = 300
         elif request.path.startswith('/api/'):
-            rate_limit = 250  # Higher limit for API endpoints
+            rate_limit = 500  # Much higher limit for API endpoints to prevent false rate limiting
         elif is_navigation_request or 'screening-types' in request.path:
             rate_limit = 200  # Higher for pages that may have loading issues
         else:
