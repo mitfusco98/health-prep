@@ -1018,17 +1018,14 @@ def add_screening_type():
         # Process keyword fields from the form
         import json
         try:
-            # Content keywords (for document content parsing)
+            # Content keywords (for document content parsing) - primary keyword storage
             keywords_data = request.form.get('keywords')
             if keywords_data:
                 content_keywords = json.loads(keywords_data)
                 screening_type.set_content_keywords(content_keywords)
-            
-            # Filename keywords (for filename parsing)
-            filename_keywords_data = request.form.get('filename_keywords')
-            if filename_keywords_data:
-                filename_keywords = json.loads(filename_keywords_data)
-                screening_type.set_filename_keywords(filename_keywords)
+                # Clear other fields to prevent duplication
+                screening_type.set_filename_keywords([])
+                screening_type.set_document_keywords([])
             
             # Document section as document keywords
             document_section = request.form.get('document_section')
@@ -1103,12 +1100,13 @@ def add_screening_type():
                         elif isinstance(keyword, dict) and keyword.get('keyword'):
                             keyword_list.append(keyword['keyword'].strip())
                 
-                # Save to ScreeningType model directly
+                # Save to ScreeningType model directly - only use content_keywords
                 if keyword_list:
                     screening_type.set_content_keywords(keyword_list)
-                    screening_type.set_filename_keywords(keyword_list)
-                    screening_type.set_document_keywords(keyword_list)
-                    print(f"Successfully saved {len(keyword_list)} keywords to ScreeningType model")
+                    # Clear other fields to prevent duplication
+                    screening_type.set_filename_keywords([])
+                    screening_type.set_document_keywords([])
+                    print(f"Successfully saved {len(keyword_list)} keywords to content_keywords field")
                 
             except json.JSONDecodeError as e:
                 print(f"Error parsing keywords JSON: {str(e)} - Data: '{keywords_data[:100]}...'")
@@ -1230,13 +1228,14 @@ def edit_screening_type(screening_type_id):
             else:
                 screening_type.set_content_keywords([])
             
-            # Filename keywords (for filename parsing)
+            # Store keywords in content_keywords only (edit screen)
             filename_keywords_data = request.form.get('filename_keywords')
             if filename_keywords_data:
                 filename_keywords = json.loads(filename_keywords_data)
-                screening_type.set_filename_keywords(filename_keywords)
-            else:
+                # Use content_keywords as the primary storage
+                screening_type.set_content_keywords(filename_keywords)
                 screening_type.set_filename_keywords([])
+                screening_type.set_document_keywords([])
             
             # Document section as document keywords
             document_section = request.form.get('document_section')
