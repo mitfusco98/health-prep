@@ -27,23 +27,13 @@ def get_screening_keywords(screening_id):
         keywords = []
         
         try:
-            # Use content_keywords as the primary source (most recently updated)
+            # Only use content_keywords to prevent duplication issues from legacy fields
             content_keywords = screening_type.get_content_keywords() or []
-            keywords.extend(content_keywords)
-            
-            # Only add from other sources if content_keywords is empty
-            if not keywords:
-                filename_keywords = screening_type.get_filename_keywords() or []
-                keywords.extend(filename_keywords)
-                
-                if not keywords:
-                    document_keywords = screening_type.get_document_keywords() or []
-                    keywords.extend(document_keywords)
             
             # Remove duplicates while preserving order
             unique_keywords = []
             seen = set()
-            for keyword in keywords:
+            for keyword in content_keywords:
                 if keyword and keyword.strip() and keyword.lower() not in seen:
                     unique_keywords.append(keyword.strip())
                     seen.add(keyword.lower())
