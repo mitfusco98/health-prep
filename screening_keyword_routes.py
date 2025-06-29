@@ -21,19 +21,30 @@ def get_screening_keywords(screening_id):
                 'message': 'Screening type not found'
             }), 404
         
-        # Get keywords only from content_keywords field
-        content_keywords = screening_type.get_content_keywords()
+        # Get keywords from ALL keyword fields and combine them properly
+        content_keywords = screening_type.get_content_keywords() or []
+        document_keywords = screening_type.get_document_keywords() or []
+        filename_keywords = screening_type.get_filename_keywords() or []
         
-        # Ensure we return a clean list of unique strings
+        # Combine all keywords and ensure uniqueness
+        all_keywords = []
+        all_keywords.extend(content_keywords)
+        all_keywords.extend(document_keywords)
+        all_keywords.extend(filename_keywords)
+        
+        # Process to ensure clean unique strings
         unique_keywords = []
-        if content_keywords and isinstance(content_keywords, list):
-            seen = set()
-            for keyword in content_keywords:
-                if keyword and isinstance(keyword, str):
-                    clean_keyword = keyword.strip()
-                    if clean_keyword and clean_keyword.lower() not in seen:
-                        unique_keywords.append(clean_keyword)
-                        seen.add(clean_keyword.lower())
+        seen_lower = set()
+        
+        for keyword in all_keywords:
+            if keyword and isinstance(keyword, str):
+                clean_keyword = keyword.strip()
+                if clean_keyword and clean_keyword.lower() not in seen_lower:
+                    unique_keywords.append(clean_keyword)
+                    seen_lower.add(clean_keyword.lower())
+        
+        # Debug logging
+        print(f"DEBUG: Screening {screening_id} - Content: {len(content_keywords)}, Document: {len(document_keywords)}, Filename: {len(filename_keywords)}, Final unique: {len(unique_keywords)}")
         
         return jsonify({
             'success': True,
@@ -42,6 +53,7 @@ def get_screening_keywords(screening_id):
         })
 
     except Exception as e:
+        print(f"ERROR in get_screening_keywords: {str(e)}")
         return jsonify({
             'success': False,
             'message': str(e)
