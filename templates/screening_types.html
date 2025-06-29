@@ -748,56 +748,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Load existing keywords on page load with throttling
+    // Set default text for keyword containers without loading them automatically
     const keywordContainers = document.querySelectorAll('.keyword-tags');
-    let loadIndex = 0;
-
-    function loadNextKeywords() {
-        if (loadIndex >= keywordContainers.length) return;
-
-        const container = keywordContainers[loadIndex];
-        const screeningId = container.id.split('-')[1];
-
-        fetch(`/api/screening-keywords/${screeningId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.keywords && data.keywords.length > 0) {
-                    const keywordObjects = data.keywords.map(keyword => ({
-                        keyword: keyword,
-                        section: 'general'
-                    }));
-                    updateKeywordsDisplay(screeningId, keywordObjects);
-                } else {
-                    container.innerHTML = '<small class="text-muted">No keywords defined</small>';
-                }
-            })
-            .catch(error => {
-                // Check if it's a rate limit error
-                if (error.message && error.message.includes('429')) {
-                    console.log('Rate limited, will retry for screening', screeningId);
-                    container.innerHTML = '<small class="text-muted">Loading keywords...</small>';
-                    // Retry after a longer delay
-                    setTimeout(() => {
-                        loadKeywordsForScreening(screeningId, container);
-                    }, 2000);
-                } else {
-                    console.log('No keywords found for screening', screeningId);
-                    container.innerHTML = '<small class="text-muted">No keywords defined</small>';
-                }
-            })
-            .finally(() => {
-                loadIndex++;
-                // Load next with delay to prevent rate limiting
-                if (loadIndex < keywordContainers.length) {
-                    setTimeout(loadNextKeywords, 200);
-                }
-            });
-    }
-
-    // Start loading keywords with delay
-    if (keywordContainers.length > 0) {
-        setTimeout(loadNextKeywords, 100);
-    }
+    keywordContainers.forEach(container => {
+        container.innerHTML = '<small class="text-muted">Click edit to manage keywords</small>';
+    });
 
     // Utility function to show alerts
     function showAlert(message, type) {
