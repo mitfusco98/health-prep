@@ -1086,32 +1086,30 @@ def add_screening_type():
         keywords_data = request.form.get('keywords')
         if keywords_data and keywords_data.strip():
             try:
-                keywords = json.loads(keywords_data)
-                manager = ScreeningKeywordManager()
+                import html
                 
-                # Handle both simple keyword list and complex objects from the form
+                # Fix HTML entity encoding issues
+                keywords_data = html.unescape(keywords_data)
+                keywords_data = keywords_data.replace('&quot;', '"').replace('&#x27;', "'")
+                
+                keywords = json.loads(keywords_data)
+                
+                # Extract keyword strings from objects or use strings directly
+                keyword_list = []
                 if isinstance(keywords, list):
                     for keyword in keywords:
                         if isinstance(keyword, str) and keyword.strip():
-                            manager.add_keyword_rule(
-                                screening_type_id=screening_type.id,
-                                keyword=keyword.strip(),
-                                section='general',
-                                weight=1.0,
-                                case_sensitive=False,
-                                exact_match=False,
-                                description=f'Keyword for {screening_type.name}'
-                            )
+                            keyword_list.append(keyword.strip())
                         elif isinstance(keyword, dict) and keyword.get('keyword'):
-                            manager.add_keyword_rule(
-                                screening_type_id=screening_type.id,
-                                keyword=keyword['keyword'].strip(),
-                                section=keyword.get('section', 'general'),
-                                weight=keyword.get('weight', 1.0),
-                                case_sensitive=keyword.get('case_sensitive', False),
-                                exact_match=keyword.get('exact_match', False),
-                                description=keyword.get('description', f'Keyword for {screening_type.name}')
-                            )
+                            keyword_list.append(keyword['keyword'].strip())
+                
+                # Save to ScreeningType model directly
+                if keyword_list:
+                    screening_type.set_content_keywords(keyword_list)
+                    screening_type.set_filename_keywords(keyword_list)
+                    screening_type.set_document_keywords(keyword_list)
+                    print(f"Successfully saved {len(keyword_list)} keywords to ScreeningType model")
+                
             except json.JSONDecodeError as e:
                 print(f"Error parsing keywords JSON: {str(e)} - Data: '{keywords_data[:100]}...'")
             except Exception as e:
@@ -1277,14 +1275,10 @@ def edit_screening_type(screening_type_id):
         keywords_data = request.form.get('keywords')
         print(f"Keywords data received: {keywords_data}")
         
-        from screening_keyword_manager import ScreeningKeywordManager
-        manager = ScreeningKeywordManager()
-        
-        # Always clear existing keywords first
-        config = manager.get_keyword_config(screening_type_id)
-        if config:
-            config.keyword_rules.clear()
-            manager._save_keyword_config(config)
+        # Clear existing keywords from ScreeningType model first
+        screening_type.set_content_keywords([])
+        screening_type.set_filename_keywords([])
+        screening_type.set_document_keywords([])
         
         if keywords_data and keywords_data.strip():
             try:
@@ -1298,35 +1292,22 @@ def edit_screening_type(screening_type_id):
                 keywords = json_module.loads(keywords_data)
                 print(f"Parsed keywords: {keywords}")
                 
-                # Add new keywords - handle both simple keyword list and complex objects from form
+                # Extract keyword strings from objects or use strings directly
+                keyword_list = []
                 if isinstance(keywords, list):
-                    success_count = 0
                     for keyword in keywords:
                         if isinstance(keyword, str) and keyword.strip():
-                            success = manager.add_keyword_rule(
-                                screening_type_id=screening_type_id,
-                                keyword=keyword.strip(),
-                                section='general',
-                                weight=1.0,
-                                case_sensitive=False,
-                                exact_match=False,
-                                description=f'Keyword for {screening_type.name}'
-                            )
-                            if success:
-                                success_count += 1
+                            keyword_list.append(keyword.strip())
                         elif isinstance(keyword, dict) and keyword.get('keyword'):
-                            success = manager.add_keyword_rule(
-                                screening_type_id=screening_type_id,
-                                keyword=keyword['keyword'].strip(),
-                                section=keyword.get('section', 'general'),
-                                weight=keyword.get('weight', 1.0),
-                                case_sensitive=keyword.get('case_sensitive', False),
-                                exact_match=keyword.get('exact_match', False),
-                                description=keyword.get('description', f'Keyword for {screening_type.name}')
-                            )
-                            if success:
-                                success_count += 1
-                    print(f"Successfully added {success_count} keywords")
+                            keyword_list.append(keyword['keyword'].strip())
+                
+                # Save to ScreeningType model directly
+                if keyword_list:
+                    screening_type.set_content_keywords(keyword_list)
+                    screening_type.set_filename_keywords(keyword_list)
+                    screening_type.set_document_keywords(keyword_list)
+                    print(f"Successfully saved {len(keyword_list)} keywords to ScreeningType model")
+                
             except json_module.JSONDecodeError as e:
                 print(f"Error parsing keywords JSON: {str(e)} - Data: '{keywords_data[:100]}...'")
             except Exception as e:

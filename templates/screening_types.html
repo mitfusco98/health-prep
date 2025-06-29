@@ -185,7 +185,7 @@
                             <div id="addKeywordsList" class="keywords-display mb-2">
                                 <!-- Keywords will appear here as tags -->
                             </div>
-                            <input type="hidden" name="keywords_json" id="addKeywordsData">
+                            <input type="hidden" name="keywords" id="addKeywordsData">
                         </div>
                         <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used for document matching when FHIR codes are not available.</small>
                     </div>
@@ -289,7 +289,7 @@
                             <div id="editKeywordsList" class="keywords-display mb-2">
                                 <!-- Keywords will appear here as tags -->
                             </div>
-                            <input type="hidden" name="keywords_json" id="editKeywordsData">
+                            <input type="hidden" name="keywords" id="editKeywordsData">
                         </div>
                         <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used for document matching when FHIR codes are not available.</small>
                     </div>
@@ -546,16 +546,13 @@ document.addEventListener('DOMContentLoaded', function() {
         updateHiddenField() {
             const hiddenField = document.getElementById(this.prefix + 'KeywordsData');
             if (hiddenField) {
-                // Ensure clean JSON without HTML encoding
-                const cleanKeywords = this.keywords.map(k => ({
-                    keyword: k.keyword,
-                    section: k.section || 'general',
-                    weight: k.weight || 1.0,
-                    case_sensitive: k.case_sensitive || false,
-                    exact_match: k.exact_match || false,
-                    description: k.description || ''
-                }));
-                hiddenField.value = JSON.stringify(cleanKeywords);
+                // For form submission, use the field name expected by the backend
+                const fieldName = this.prefix === 'add' ? 'keywords' : 'keywords';
+                const actualField = document.querySelector(`input[name="${fieldName}"]`) || hiddenField;
+                
+                // Send just the keyword strings to match backend expectations
+                const keywordStrings = this.keywords.map(k => k.keyword);
+                actualField.value = JSON.stringify(keywordStrings);
             }
         }
 
@@ -768,10 +765,32 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('#editScreeningForm #max_age').value = maxAge;
             document.querySelector('#editScreeningForm #is_active').checked = active === "checked";
             
+            // Clear existing keywords first to prevent duplication
+            keywordManagers.edit.setKeywords([]);
+            
             // Load keywords for this screening
-            loadKeywords(id).then(() => {
-                keywordManagers.edit.setKeywords(keywordManagers.manage.keywords);
-            });
+            fetch(`/api/screening-keywords/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Convert simple keywords to objects for the manager
+                        const keywordObjects = (data.keywords || []).map(keyword => ({
+                            keyword: keyword,
+                            section: 'general',
+                            weight: 1.0,
+                            case_sensitive: false,
+                            exact_match: false,
+                            description: ''
+                        }));
+                        keywordManagers.edit.setKeywords(keywordObjects);
+                    } else {
+                        keywordManagers.edit.setKeywords([]);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading keywords:', error);
+                    keywordManagers.edit.setKeywords([]);
+                });
         });
     });
     
