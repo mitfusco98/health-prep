@@ -570,7 +570,16 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    keywordManagers.manage.setKeywords(data.keywords);
+                    // Convert simple keywords to objects for the manager
+                    const keywordObjects = (data.keywords || []).map(keyword => ({
+                        keyword: keyword,
+                        section: 'general',
+                        weight: 1.0,
+                        case_sensitive: false,
+                        exact_match: false,
+                        description: ''
+                    }));
+                    keywordManagers.manage.setKeywords(keywordObjects);
                 } else {
                     keywordManagers.manage.setKeywords([]);
                 }
@@ -612,7 +621,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const keywords = keywordManagers.manage.keywords;
         
-        saveKeywords(currentScreeningId, keywords)
+        // Extract just the keyword strings for saving
+        const keywordStrings = keywords.map(k => k.keyword);
+        
+        saveKeywords(currentScreeningId, keywordStrings)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -669,12 +681,21 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/api/screening-keywords/${screeningId}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    updateKeywordsDisplay(screeningId, data.keywords);
+                if (data.success && data.keywords && data.keywords.length > 0) {
+                    // Only update if keywords exist
+                    const keywordObjects = data.keywords.map(keyword => ({
+                        keyword: keyword,
+                        section: 'general'
+                    }));
+                    updateKeywordsDisplay(screeningId, keywordObjects);
+                } else {
+                    // Show no keywords message
+                    container.innerHTML = '<small class="text-muted">No keywords defined</small>';
                 }
             })
             .catch(error => {
                 console.error('Error loading keywords for screening', screeningId, ':', error);
+                container.innerHTML = '<small class="text-muted">No keywords defined</small>';
             });
     });
 

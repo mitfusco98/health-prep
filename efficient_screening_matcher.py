@@ -46,10 +46,11 @@ class EfficientScreeningMatcher:
         if not screening:
             return {'filename': [], 'content': [], 'document': []}
         
+        # Get keywords only from user-defined fields - no auto-generation
         keywords = {
-            'filename': screening.get_filename_keywords(),
-            'content': screening.get_content_keywords(),
-            'document': screening.get_document_keywords()
+            'filename': screening.get_filename_keywords() or [],
+            'content': screening.get_content_keywords() or [],
+            'document': screening.get_document_keywords() or []
         }
         
         self._keywords_cache[screening_id] = keywords

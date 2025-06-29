@@ -64,22 +64,83 @@ def get_screening_keywords(screening_id):
 
 @app.route('/api/screening-keywords/<int:screening_id>', methods=['POST'])
 def save_screening_keywords(screening_id):
-    """Save keyword configuration - redirects to manage screening types system"""
-    return jsonify({
-        'success': False,
-        'message': 'Keyword editing should be done through the manage screening types interface at /screenings?tab=types',
-        'redirect_url': '/screenings?tab=types'
-    }), 400
+    """Save keyword configuration for a screening type"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No data provided'
+            }), 400
+        
+        # Get screening type
+        screening_type = ScreeningType.query.get(screening_id)
+        if not screening_type:
+            return jsonify({
+                'success': False,
+                'message': 'Screening type not found'
+            }), 404
+        
+        # Get keywords from request
+        keywords = data.get('keywords', [])
+        
+        # Convert keywords to simple list if they're objects
+        keyword_list = []
+        for keyword in keywords:
+            if isinstance(keyword, dict):
+                keyword_list.append(keyword.get('keyword', ''))
+            else:
+                keyword_list.append(str(keyword))
+        
+        # Remove empty keywords
+        keyword_list = [k.strip() for k in keyword_list if k.strip()]
+        
+        # Save to all keyword fields (this ensures compatibility)
+        screening_type.set_content_keywords(keyword_list)
+        screening_type.set_filename_keywords(keyword_list)
+        screening_type.set_document_keywords(keyword_list)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Keywords saved successfully',
+            'keywords': keyword_list
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 
 @app.route('/api/screening-keywords/<int:screening_id>/suggestions/<section>', methods=['GET'])
 def get_keyword_suggestions(screening_id, section):
-    """Keyword suggestions - redirect to manage screening types"""
-    return jsonify({
-        'success': False,
-        'message': 'Keyword management should be done through the manage screening types interface',
-        'redirect_url': '/screenings?tab=types'
-    }), 400
+    """Get keyword suggestions for a section"""
+    try:
+        # Define common keywords by section
+        suggestions = {
+            'labs': ['glucose', 'cholesterol', 'hemoglobin', 'hba1c', 'creatinine', 'blood test', 'lab result'],
+            'imaging': ['mammogram', 'x-ray', 'ct scan', 'mri', 'ultrasound', 'radiology', 'scan'],
+            'procedures': ['colonoscopy', 'biopsy', 'endoscopy', 'surgery', 'procedure'],
+            'vitals': ['blood pressure', 'heart rate', 'weight', 'height', 'temperature', 'vital signs'],
+            'consults': ['cardiology', 'oncology', 'neurology', 'specialist', 'consultation'],
+            'medications': ['insulin', 'metformin', 'lisinopril', 'medication', 'prescription'],
+            'general': ['screening', 'test', 'result', 'report', 'medical']
+        }
+        
+        return jsonify({
+            'success': True,
+            'suggestions': suggestions.get(section, [])
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 
 @app.route('/api/screening-keywords/<int:screening_id>/test', methods=['POST'])
