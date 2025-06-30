@@ -87,6 +87,17 @@
     gap: 4px;
 }
 
+.flex-column-gap-md {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.table-cell {
+    display: table-cell;
+    vertical-align: middle;
+}
+
 .keyword-tag .remove-btn:hover {
     color: #c82333;
 }
@@ -115,7 +126,10 @@
     border-color: #17a2b8;
 }
 
-
+.keyword-tag .section-label {
+    background-color: #17a2b8;
+    color: #fff;
+}
 
 .keyword-tag .remove-btn {
     color: #dc3545;

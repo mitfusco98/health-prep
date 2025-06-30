@@ -1415,9 +1415,11 @@ def clear_query_cache():
     return jsonify({'success': True, 'message': 'Cache cleared'})
 
 # Import all route modules to register them with the app
+import demo_routes
 import api_routes
 import auth_routes
 import async_routes
 import performance_routes
+import ehr_routes
 import checklist_routes
 import checklist_simple_routes
