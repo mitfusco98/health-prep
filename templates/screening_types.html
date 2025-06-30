@@ -370,25 +370,11 @@
                 </div>
 
                 <div class="keyword-input-container">
-                    <div class="input-group mb-3">
-                        <input type="text" class="form-control" id="manageKeywordInput" placeholder="Enter keyword (e.g., 'mammogram', 'glucose')">
-                        <select class="form-select" id="manageSectionSelect" style="max-width: 150px;">
-                            <option value="labs">Labs</option>
-                            <option value="imaging">Imaging</option>
-                            <option value="procedures">Procedures</option>
-                            <option value="vitals">Vitals</option>
-                            <option value="consults">Consults</option>
-                            <option value="medications">Medications</option>
-                            <option value="general" selected>General</option>
-                        </select>
-                        <button type="button" class="btn btn-primary" id="manageAddKeywordBtn">
-                            <i class="fas fa-plus"></i> Add Keyword
-                        </button>
+                    <div class="d-flex mb-2">
+                        <input type="text" class="form-control me-2" placeholder="Enter keyword" onkeypress="if(event.key==='Enter'){addManageModalKeyword(); return false;}">
+                        <button type="button" class="btn btn-outline-primary" onclick="addManageModalKeyword()">Add</button>
                     </div>
-
-                    <div id="manageKeywordsList" class="keywords-display">
-                        <!-- Keywords will appear here as removable tags -->
-                    </div>
+                    <!-- Keywords will be rendered here -->
                 </div>
 
                 <div class="mt-4">
@@ -836,6 +822,7 @@ document.addEventListener('DOMContentLoaded', function() {
         alert.className = `alert alert-${type} alert-dismissible fade show`;
         alert.innerHTML = `
             ${message}
+            ```python
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         alertContainer.insertBefore(alert, alertContainer.firstChild);
@@ -1013,5 +1000,51 @@ document.addEventListener('DOMContentLoaded', function() {
     // and displayed by the updateKeywordDisplay() function called from loadAllKeywordsBulk()
 
 });
+</script>
+
+<script>
+// Function to add keyword to manage modal
+function addManageModalKeyword() {
+    var keywordInput = document.querySelector('#keywordManagementModal input[type="text"]');
+    var keyword = keywordInput.value.trim();
+
+    if (keyword !== "") {
+        // Check for duplicates
+        var keywordsList = document.getElementById('manageKeywordsList');
+        var existingKeywords = keywordsList.querySelectorAll('.keyword-tag');
+        var isDuplicate = false;
+
+        existingKeywords.forEach(function(existingKeyword) {
+            if (existingKeyword.textContent.trim().toLowerCase() === keyword.toLowerCase()) {
+                isDuplicate = true;
+            }
+        });
+
+        if (isDuplicate) {
+            alert('Keyword already exists.');
+            return;
+        }
+
+        // Create keyword element
+        var keywordTag = document.createElement('span');
+        keywordTag.classList.add('keyword-tag');
+        keywordTag.innerHTML = `
+            ${keyword}
+            <span class="remove-btn" onclick="removeManageModalKeyword(this)">×</span>
+        `;
+
+        // Add keyword to list
+        keywordsList.appendChild(keywordTag);
+
+        // Clear input
+        keywordInput.value = '';
+    }
+}
+
+// Function to remove keyword from manage modal
+function removeManageModalKeyword(element) {
+    element.parentElement.remove();
+}
+
 </script>
 {% endblock %}
