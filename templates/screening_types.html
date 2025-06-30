@@ -640,6 +640,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Global storage for bulk-loaded keywords
     let bulkKeywordsData = {};
 
+    // In-memory keyword cache
+    const keywordCache = new Map();
+
     // Function to load all keywords in bulk
     function loadAllKeywordsBulk() {
         fetch('/api/screening-keywords/bulk')
@@ -647,6 +650,10 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     bulkKeywordsData = data.data;
+                    // Cache the bulk data
+                    Object.keys(bulkKeywordsData).forEach(screeningId => {
+                        keywordCache.set(screeningId, { keywords: bulkKeywordsData[screeningId].keywords });
+                    });
                     // Update all keyword displays
                     Object.keys(bulkKeywordsData).forEach(screeningId => {
                         updateKeywordDisplay(screeningId, bulkKeywordsData[screeningId]);
@@ -835,7 +842,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
 
-    // Handle edit button clicks (updated to use structured frequency fields)
+    // Handle edit button clicks with improved keyword loading
     document.querySelectorAll('.edit-screening-btn').forEach(button => {
         button.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
@@ -859,7 +866,9 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('#editScreeningForm #max_age').value = maxAge;
             document.querySelector('#editScreeningForm #is_active').checked = active === "checked";
 
-            // Clear the keywords display and hidden field first
+            // Clear the keyword manager completely and immediately
+            keywordManagers.edit.keywords = [];
+
             const editKeywordsList = document.getElementById('editKeywordsList');
             const editKeywordsData = document.getElementById('editKeywordsData');
             if (editKeywordsList) {
@@ -869,31 +878,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 editKeywordsData.value = '';
             }
 
-            // Clear the keyword manager completely
-            keywordManagers.edit.keywords = [];
-            keywordManagers.edit.renderKeywords();
-            keywordManagers.edit.updateHiddenField();
+            // Load keywords using priority: cache > bulk data > empty
+            let keywordsToLoad = [];
 
-            // Force complete reset before loading keywords
-            setTimeout(() => {
-                // Always use bulk data if available to prevent duplicate API calls
-                        if (bulkKeywordsData[id] && bulkKeywordsData[id].keywords) {
-                            console.log(`Using bulk data for screening ${id}: ${bulkKeywordsData[id].keywords.length} keywords`);
-                            const keywordObjects = bulkKeywordsData[id].keywords.map(keyword => ({
-                                keyword: keyword,
-                                section: 'general',
-                                weight: 1.0,
-                                case_sensitive: false,
-                                exact_match: false,
-                                description: ''
-                            }));
-                            keywordManagers.edit.setKeywords(keywordObjects);
-                        } else {
-                            // No bulk data available - use empty set to avoid API call
-                            console.log(`No bulk data available for screening ${id}, using empty keyword set`);
-                            keywordManagers.edit.setKeywords([]);
-                        }
-            }, 100);
+            // Check cache first
+            if (keywordCache.has(id)) {
+                const cachedData = keywordCache.get(id);
+                if (cachedData.keywords) {
+                    keywordsToLoad = cachedData.keywords;
+                    console.log(`Using cached data for screening ${id}: ${keywordsToLoad.length} keywords`);
+                }
+            }
+            // Fallback to bulk data
+            else if (bulkKeywordsData[id] && bulkKeywordsData[id].keywords) {
+                keywordsToLoad = bulkKeywordsData[id].keywords;
+                console.log(`Using bulk data for screening ${id}: ${keywordsToLoad.length} keywords`);
+            }
+
+            // Set keywords immediately - no timeout needed
+            keywordManagers.edit.setKeywords(keywordsToLoad);
         });
     });
 
@@ -912,7 +915,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     // Note: Individual keyword loading removed - keywords are now loaded via bulk API
     // and displayed by the updateKeywordDisplay() function called from loadAllKeywordsBulk()
-    
+
 });
 </script>
 {% endblock %}

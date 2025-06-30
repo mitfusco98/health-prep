@@ -157,6 +157,47 @@ def get_keyword_suggestions(screening_id, section):
         }), 500
 
 
+@app.route('/api/screening-keywords/bulk', methods=['GET'])
+def get_all_screening_keywords():
+    """Get keywords for all active screening types in a single request"""
+    try:
+        # Get all active screening types
+        screening_types = ScreeningType.query.filter_by(is_active=True).all()
+        
+        bulk_data = {}
+        for screening_type in screening_types:
+            # Get only content keywords to prevent duplication
+            content_keywords = screening_type.get_content_keywords() or []
+            
+            # Process to ensure clean unique strings
+            unique_keywords = []
+            seen_lower = set()
+            
+            for keyword in content_keywords:
+                if keyword and isinstance(keyword, str):
+                    clean_keyword = keyword.strip()
+                    if clean_keyword and clean_keyword.lower() not in seen_lower:
+                        unique_keywords.append(clean_keyword)
+                        seen_lower.add(clean_keyword.lower())
+            
+            bulk_data[screening_type.id] = {
+                'keywords': unique_keywords,
+                'screening_name': screening_type.name
+            }
+        
+        return jsonify({
+            'success': True,
+            'data': bulk_data
+        })
+        
+    except Exception as e:
+        print(f"ERROR in get_all_screening_keywords: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
 @app.route('/api/screening-keywords/<int:screening_id>/test', methods=['POST'])
 def test_keyword_matching(screening_id):
     """Test keyword matching using current screening types system"""
