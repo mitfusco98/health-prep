@@ -127,10 +127,17 @@ def save_screening_keywords(screening_id):
 
         db.session.commit()
 
-        # Clear cache
+        # Clear cache for this specific screening AND bulk cache
         cache_key = f"screening_keywords_{screening_id}"
+        bulk_cache_key = "bulk_screening_keywords"
+        
         if cache_key in _request_cache:
             del _request_cache[cache_key]
+            print(f"DEBUG: Cleared cache for screening {screening_id}")
+        
+        if bulk_cache_key in _request_cache:
+            del _request_cache[bulk_cache_key]
+            print(f"DEBUG: Cleared bulk cache")
 
         print(f"DEBUG: Saved {len(unique_keywords)} keywords for screening {screening_id}")
 
@@ -152,6 +159,19 @@ def save_screening_keywords(screening_id):
 @app.route('/api/screening-keywords/bulk', methods=['GET'])
 def get_all_screening_keywords():
     """Get keywords for all active screening types - unified system only"""
+    cache_key = "bulk_screening_keywords"
+    current_time = time.time()
+
+    # Check cache first
+    if cache_key in _request_cache:
+        result, timestamp = _request_cache[cache_key]
+        if current_time - timestamp <= _cache_timeout:
+            print(f"DEBUG: Serving bulk screening keywords from cache.")
+            return result
+        else:
+            print(f"DEBUG: Bulk cache expired.")
+            del _request_cache[cache_key]
+
     try:
         screening_types = ScreeningType.query.filter_by(is_active=True).all()
 
@@ -178,10 +198,16 @@ def get_all_screening_keywords():
                 'screening_name': screening_type.name
             }
 
-        return jsonify({
+        result = jsonify({
             'success': True,
             'data': bulk_data
         })
+
+        # Cache the result
+        _request_cache[cache_key] = (result, current_time)
+        print(f"DEBUG: Cached bulk screening keywords")
+
+        return result
 
     except Exception as e:
         print(f"ERROR in get_all_screening_keywords: {str(e)}")
