@@ -585,50 +585,46 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         setKeywords(keywords) {
-            // Force immediate clear of everything
+            // Complete reset first
             this.keywords = [];
-
-            // Clear DOM immediately
+            
             const container = document.getElementById(this.prefix + 'KeywordsList');
+            const hiddenField = document.getElementById(this.prefix + 'KeywordsData');
+            
             if (container) {
                 container.innerHTML = '';
             }
-
-            // Clear hidden field immediately  
-            const hiddenField = document.getElementById(this.prefix + 'KeywordsData');
             if (hiddenField) {
-                hiddenField.value = '';
+                hiddenField.value = '[]';
             }
 
-            // Only process if we have valid keywords
-            if (keywords && Array.isArray(keywords) && keywords.length > 0) {
-                // Convert to simple strings, remove duplicates case-insensitively
-                const processedKeywords = keywords.map(k => {
-                    if (typeof k === 'string') {
-                        return k.trim();
-                    } else if (k && typeof k === 'object' && k.keyword) {
-                        return k.keyword.trim();
-                    }
-                    return '';
-                }).filter(k => k.length > 0);
+            // Only process if we have valid, non-empty keywords
+            if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+                console.log(`${this.prefix} setKeywords: no keywords provided, staying empty`);
+                return;
+            }
 
-                // Remove duplicates case-insensitively but preserve original case
-                const uniqueKeywords = [];
-                const seenLower = new Set();
+            // Simple conversion to strings with deduplication
+            const stringKeywords = [];
+            const seen = new Set();
 
-                for (const keyword of processedKeywords) {
-                    const lowerKeyword = keyword.toLowerCase();
-                    if (!seenLower.has(lowerKeyword)) {
-                        uniqueKeywords.push(keyword);
-                        seenLower.add(lowerKeyword);
-                    }
+            for (const k of keywords) {
+                let keywordText = '';
+                if (typeof k === 'string') {
+                    keywordText = k.trim();
+                } else if (k && typeof k === 'object' && k.keyword) {
+                    keywordText = k.keyword.trim();
                 }
-
-                this.keywords = uniqueKeywords;
-                console.log(`${this.prefix} setKeywords: processed ${keywords.length} -> ${uniqueKeywords.length} unique keywords`);
+                
+                if (keywordText && !seen.has(keywordText.toLowerCase())) {
+                    stringKeywords.push(keywordText);
+                    seen.add(keywordText.toLowerCase());
+                }
             }
 
-            // Render immediately without delay
+            this.keywords = stringKeywords;
+            console.log(`${this.prefix} setKeywords: set ${stringKeywords.length} unique keywords`);
+
             this.renderKeywords();
             this.updateHiddenField();
         }
@@ -838,7 +834,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
 
-    // Handle edit button clicks with improved keyword loading
+    // Handle edit button clicks with simplified keyword loading
     document.querySelectorAll('.edit-screening-btn').forEach(button => {
         button.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
@@ -862,28 +858,25 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('#editScreeningForm #max_age').value = maxAge;
             document.querySelector('#editScreeningForm #is_active').checked = active === "checked";
 
-            // Clear the keyword manager completely and immediately
+            // Immediately clear everything first
             keywordManagers.edit.keywords = [];
-
             const editKeywordsList = document.getElementById('editKeywordsList');
             const editKeywordsData = document.getElementById('editKeywordsData');
             if (editKeywordsList) {
                 editKeywordsList.innerHTML = '';
             }
             if (editKeywordsData) {
-                editKeywordsData.value = '';
+                editKeywordsData.value = '[]';
             }
 
-            // Load keywords directly when edit modal opens
-            console.log(`Loading keywords for edit modal (screening ${id})`);
-            
-            getKeywordsForScreening(id).then(keywordsToLoad => {
-                console.log(`Loaded ${keywordsToLoad.length} keywords for edit modal`);
-                keywordManagers.edit.setKeywords(keywordsToLoad);
-            }).catch(error => {
-                console.error('Error loading keywords for edit:', error);
-                keywordManagers.edit.setKeywords([]);
-            });
+            // Only load keywords if we have cached data, otherwise leave empty
+            if (keywordCache.has(id)) {
+                const cachedKeywords = keywordCache.get(id);
+                console.log(`Using cached keywords for edit modal (screening ${id}): ${cachedKeywords.length} keywords`);
+                keywordManagers.edit.setKeywords(cachedKeywords);
+            } else {
+                console.log(`No cached keywords for edit modal (screening ${id}), leaving empty`);
+            }
         });
     });
 
