@@ -127,17 +127,11 @@ def save_screening_keywords(screening_id):
 
         db.session.commit()
 
-        # Clear cache for this specific screening AND bulk cache
-        cache_key = f"screening_keywords_{screening_id}"
-        bulk_cache_key = "bulk_screening_keywords"
+        # Use comprehensive cache invalidation
+        invalidate_screening_cache(screening_id)
         
-        if cache_key in _request_cache:
-            del _request_cache[cache_key]
-            print(f"DEBUG: Cleared cache for screening {screening_id}")
-        
-        if bulk_cache_key in _request_cache:
-            del _request_cache[bulk_cache_key]
-            print(f"DEBUG: Cleared bulk cache")
+        # Force clear all cache to ensure no stale data
+        clear_all_cache()
 
         print(f"DEBUG: Saved {len(unique_keywords)} keywords for screening {screening_id}")
 
@@ -285,6 +279,28 @@ def clear_all_cache():
     global _request_cache
     _request_cache.clear()
     print("DEBUG: Cleared all keyword cache")
+
+def invalidate_screening_cache(screening_id=None):
+    """Invalidate cache for specific screening or all screenings"""
+    global _request_cache
+    
+    if screening_id:
+        # Clear specific screening cache
+        keys_to_remove = [key for key in _request_cache.keys() 
+                         if key.startswith(f"screening_keywords_{screening_id}")]
+    else:
+        # Clear all screening-related cache
+        keys_to_remove = [key for key in _request_cache.keys() 
+                         if key.startswith("screening_keywords") or key == "bulk_screening_keywords"]
+    
+    for key in keys_to_remove:
+        del _request_cache[key]
+    
+    # Also clear bulk cache when any screening is updated
+    if "bulk_screening_keywords" in _request_cache:
+        del _request_cache["bulk_screening_keywords"]
+        
+    print(f"DEBUG: Invalidated cache for screening {screening_id if screening_id else 'ALL'}")
 @app.route('/api/screening-keywords/<int:screening_id>/suggestions/<section>', methods=['GET'])
 def get_keyword_suggestions(screening_id, section):
     """Get keyword suggestions for a section"""

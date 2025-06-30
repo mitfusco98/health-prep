@@ -346,6 +346,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Final keywords value before submit:', keywordsField ? keywordsField.value : 'no field');
             }, 100);
         });
+
+        // Add success handling after form submission
+        form.addEventListener('submit', function(e) {
+            // Add a timestamp to force cache refresh on redirect
+            const actionUrl = form.action;
+            if (actionUrl && !actionUrl.includes('?')) {
+                form.action = actionUrl + '?t=' + new Date().getTime();
+            } else if (actionUrl) {
+                form.action = actionUrl + '&t=' + new Date().getTime();
+            }
+        });
     }
 });
 </script>
@@ -819,12 +830,28 @@ function renderScreeningNameSuggestions(screenings, suggestionsDiv, nameInput) {
     suggestionsDiv.style.display = 'block';
 }
 
+// Check for success message and auto-refresh parent if needed
+function checkForSuccessAndRefresh() {
+    // Check if we came from a successful save (URL parameter or flash message)
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasSuccess = urlParams.get('success') || document.querySelector('.alert-success');
+    
+    if (hasSuccess) {
+        // Clear any stale cache by adding timestamp
+        setTimeout(() => {
+            const backUrl = "{{ url_for('screening_list', tab='types') }}";
+            window.location.href = backUrl + '?t=' + new Date().getTime();
+        }, 1500); // Give time to see success message
+    }
+}
+
 // Enhanced page initialization
 document.addEventListener('DOMContentLoaded', function() {
     loadExistingKeywords();
     loadExistingTriggerConditions();
     setupConditionAutocomplete('edit-form');
     setupScreeningNameAutocomplete();
+    checkForSuccessAndRefresh();
 
     // Handle Enter key in trigger condition inputs
     document.querySelectorAll('[id$="-condition-code"], [id$="-condition-display"]').forEach(input => {
