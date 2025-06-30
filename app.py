@@ -1414,6 +1414,122 @@ def clear_query_cache():
     clear_cache()
     return jsonify({'success': True, 'message': 'Cache cleared'})
 
+# Essential routes that were moved from demo_routes
+@app.route('/')
+@app.route('/date/<date_str>')
+def index(date_str=None):
+    """Application home page"""
+    from models import Patient, MedicalDocument, LabResult, Appointment
+    from datetime import datetime, date
+    
+    # Get basic stats for the dashboard
+    patient_count = Patient.query.count()
+    
+    # Get recent documents
+    recent_documents = []
+    try:
+        recent_documents = (
+            MedicalDocument.query.order_by(MedicalDocument.created_at.desc())
+            .limit(5)
+            .all()
+        )
+    except Exception as e:
+        logging.error(f"Error fetching recent documents: {e}")
+    
+    # Parse date if provided
+    current_date = date.today()
+    if date_str:
+        try:
+            current_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            current_date = date.today()
+    
+    # Get appointments for the current date
+    appointments = []
+    try:
+        appointments = (
+            Appointment.query.filter_by(appointment_date=current_date)
+            .order_by(Appointment.appointment_time)
+            .all()
+        )
+    except Exception as e:
+        logging.error(f"Error fetching appointments: {e}")
+    
+    return render_template(
+        'index.html',
+        patient_count=patient_count,
+        recent_documents=recent_documents,
+        appointments=appointments,
+        current_date=current_date,
+        total_appointments=len(appointments)
+    )
+
+@app.route('/patients')
+def patient_list():
+    """Patient list page"""
+    from models import Patient
+    from sqlalchemy import or_
+    
+    # Get search parameter
+    search = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    
+    # Build query
+    query = Patient.query
+    
+    if search:
+        query = query.filter(
+            or_(
+                Patient.first_name.contains(search),
+                Patient.last_name.contains(search),
+                Patient.mrn.contains(search)
+            )
+        )
+    
+    # Order by last name, first name
+    query = query.order_by(Patient.last_name, Patient.first_name)
+    
+    # Paginate
+    patients = query.paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return render_template(
+        'patient_list.html',
+        patients=patients,
+        search=search
+    )
+
+@app.route('/patients/add', methods=['GET', 'POST'])
+def add_patient():
+    """Add new patient"""
+    from models import Patient
+    
+    if request.method == 'POST':
+        try:
+            # Create new patient from form data
+            patient = Patient(
+                first_name=request.form.get('first_name', '').strip(),
+                last_name=request.form.get('last_name', '').strip(),
+                email=request.form.get('email', '').strip(),
+                phone=request.form.get('phone', '').strip(),
+                date_of_birth=datetime.strptime(request.form.get('date_of_birth'), '%Y-%m-%d').date() if request.form.get('date_of_birth') else None
+            )
+            
+            db.session.add(patient)
+            db.session.commit()
+            
+            flash('Patient added successfully!', 'success')
+            return redirect(url_for('patient_list'))
+            
+        except Exception as e:
+            logging.error(f"Error adding patient: {e}")
+            flash('Error adding patient. Please try again.', 'error')
+            db.session.rollback()
+    
+    return render_template('patient_form.html', patient=None)
+
 # Import all route modules to register them with the app
 import api_routes
 import auth_routes
