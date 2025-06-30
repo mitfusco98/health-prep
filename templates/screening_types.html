@@ -371,10 +371,12 @@
 
                 <div class="keyword-input-container">
                     <div class="d-flex mb-2">
-                        <input type="text" class="form-control me-2" placeholder="Enter keyword" onkeypress="if(event.key==='Enter'){addManageModalKeyword(); return false;}">
+                        <input type="text" class="form-control me-2" id="manageKeywordInput" placeholder="Enter keyword" onkeypress="if(event.key==='Enter'){addManageModalKeyword(); return false;}">
                         <button type="button" class="btn btn-outline-primary" onclick="addManageModalKeyword()">Add</button>
                     </div>
-                    <!-- Keywords will be rendered here -->
+                    <div id="manageKeywordsList" class="keywords-display">
+                        <!-- Keywords will be rendered here -->
+                    </div>
                 </div>
 
                 <div class="mt-4">
@@ -746,20 +748,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.getElementById('modalScreeningName').textContent = screeningName;
 
-            // Load keywords directly when manage modal opens
+            // Reset manage modal keywords
+            manageModalKeywords = [];
+            document.getElementById('manageKeywordsList').innerHTML = '';
+
+            // Load keywords from API
             console.log(`Loading keywords for manage modal (screening ${currentScreeningId})`);
-
-            // Clear keywords first
-            keywordManagers.manage.keywords = [];
-            keywordManagers.manage.setKeywords([]);
-
-            // Load from API
+            
             getKeywordsForScreening(currentScreeningId).then(keywordsToLoad => {
                 console.log(`Loaded ${keywordsToLoad.length} keywords for manage modal`);
-                keywordManagers.manage.setKeywords(keywordsToLoad);
+                
+                // Set keywords ensuring they're strings
+                manageModalKeywords = keywordsToLoad.filter(k => k && typeof k === 'string').map(k => k.trim());
+                renderManageModalKeywords();
             }).catch(error => {
                 console.error('Error loading keywords for manage modal:', error);
-                keywordManagers.manage.setKeywords([]);
+                manageModalKeywords = [];
+                renderManageModalKeywords();
             });
 
             const modal = new bootstrap.Modal(document.getElementById('keywordManagementModal'));
@@ -771,10 +776,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('saveKeywordsBtn').addEventListener('click', function() {
         if (!currentScreeningId) return;
 
-        const keywords = keywordManagers.manage.keywords;
-
-        // Extract just the keyword strings for saving
-        const keywordStrings = keywords.map(k => typeof k === 'string' ? k : k.keyword);
+        // Remove duplicates from manageModalKeywords before saving
+        const uniqueKeywords = [...new Set(manageModalKeywords.map(k => k.toLowerCase()))].map(k => 
+            manageModalKeywords.find(orig => orig.toLowerCase() === k)
+        );
 
         // Save to server
         fetch(`/api/screening-keywords/${currentScreeningId}`, {
@@ -782,18 +787,18 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ keywords: keywordStrings })
+            body: JSON.stringify({ keywords: uniqueKeywords })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 // Update cache with new keywords
-                keywordCache.set(currentScreeningId, keywordStrings);
+                keywordCache.set(currentScreeningId, uniqueKeywords);
 
                 // Update the specific display
                 const container = document.querySelector(`[data-screening-id="${currentScreeningId}"] .keyword-tags`);
                 if (container) {
-                    displayCachedKeywords(container, keywordStrings);
+                    displayCachedKeywords(container, uniqueKeywords);
                 }
 
                 // Close modal
@@ -822,7 +827,6 @@ document.addEventListener('DOMContentLoaded', function() {
         alert.className = `alert alert-${type} alert-dismissible fade show`;
         alert.innerHTML = `
             ${message}
-            ```python
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         alertContainer.insertBefore(alert, alertContainer.firstChild);
@@ -1003,47 +1007,60 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
+// Manage modal keyword management
+let manageModalKeywords = [];
+
 // Function to add keyword to manage modal
 function addManageModalKeyword() {
-    var keywordInput = document.querySelector('#keywordManagementModal input[type="text"]');
-    var keyword = keywordInput.value.trim();
+    const keywordInput = document.getElementById('manageKeywordInput');
+    const keyword = keywordInput.value.trim();
 
-    if (keyword !== "") {
-        // Check for duplicates
-        var keywordsList = document.getElementById('manageKeywordsList');
-        var existingKeywords = keywordsList.querySelectorAll('.keyword-tag');
-        var isDuplicate = false;
-
-        existingKeywords.forEach(function(existingKeyword) {
-            if (existingKeyword.textContent.trim().toLowerCase() === keyword.toLowerCase()) {
-                isDuplicate = true;
-            }
-        });
-
-        if (isDuplicate) {
-            alert('Keyword already exists.');
-            return;
-        }
-
-        // Create keyword element
-        var keywordTag = document.createElement('span');
-        keywordTag.classList.add('keyword-tag');
-        keywordTag.innerHTML = `
-            ${keyword}
-            <span class="remove-btn" onclick="removeManageModalKeyword(this)">×</span>
-        `;
-
-        // Add keyword to list
-        keywordsList.appendChild(keywordTag);
-
-        // Clear input
-        keywordInput.value = '';
+    if (!keyword) {
+        return;
     }
+
+    // Check for duplicates (case-insensitive)
+    const isDuplicate = manageModalKeywords.some(k => k.toLowerCase() === keyword.toLowerCase());
+    
+    if (isDuplicate) {
+        alert('Keyword already exists.');
+        keywordInput.focus();
+        return;
+    }
+
+    // Add to array
+    manageModalKeywords.push(keyword);
+    
+    // Clear input
+    keywordInput.value = '';
+    
+    // Re-render keywords
+    renderManageModalKeywords();
 }
 
 // Function to remove keyword from manage modal
-function removeManageModalKeyword(element) {
-    element.parentElement.remove();
+function removeManageModalKeyword(index) {
+    manageModalKeywords.splice(index, 1);
+    renderManageModalKeywords();
+}
+
+// Function to render manage modal keywords
+function renderManageModalKeywords() {
+    const container = document.getElementById('manageKeywordsList');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    manageModalKeywords.forEach((keyword, index) => {
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-secondary me-2 mb-2';
+        badge.innerHTML = `
+            ${keyword}
+            <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.75em;" 
+                    onclick="removeManageModalKeyword(${index})" aria-label="Remove"></button>
+        `;
+        container.appendChild(badge);
+    });
 }
 
 </script>
