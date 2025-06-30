@@ -31,39 +31,19 @@
                 <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy')</small>
             </div>
             
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Keywords for Document Content</label>
-                        <div class="keywords-container">
-                            <div id="add-form-keywords-container" class="keywords-form-group">
-                                <div class="d-flex mb-2">
-                                    <input type="text" class="keywords-input me-2" id="add-form-keyword-input" placeholder="Enter keyword">
-                                    <button type="button" class="keywords-btn" onclick="addKeywordToForm('add-form')">Add</button>
-                                </div>
-                                <div id="add-form-keywords-list" class="keywords-display"></div>
-                            </div>
+            <div class="mb-3">
+                <label class="form-label">Keywords for Document Matching</label>
+                <div class="keywords-container">
+                    <div id="add-form-keywords-container" class="keywords-form-group">
+                        <div class="d-flex mb-2">
+                            <input type="text" class="keywords-input me-2" id="add-form-keyword-input" placeholder="Enter keyword">
+                            <button type="button" class="keywords-btn" onclick="addKeywordToForm('add-form')">Add</button>
                         </div>
-                        <small class="keywords-help-text">Keywords for matching document content</small>
-                        <input type="hidden" name="keywords" id="add-form-keywords-data">
+                        <div id="add-form-keywords-list" class="keywords-display"></div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Filename Keywords</label>
-                        <div class="keywords-container">
-                            <div id="add-form-filename-keywords-container" class="keywords-form-group">
-                                <div class="d-flex mb-2">
-                                    <input type="text" class="keywords-input me-2" id="add-form-filename-keyword-input" placeholder="Enter filename keyword">
-                                    <button type="button" class="keywords-btn" onclick="addFilenameKeywordToForm('add-form')">Add</button>
-                                </div>
-                                <div id="add-form-filename-keywords-list" class="keywords-display"></div>
-                            </div>
-                        </div>
-                        <small class="keywords-help-text">Keywords for matching filenames</small>
-                        <input type="hidden" name="filename_keywords" id="add-form-filename-keywords-data">
-                    </div>
-                </div>
+                <small class="keywords-help-text">Keywords apply to both document content and filenames (no distinction)</small>
+                <input type="hidden" name="keywords" id="add-form-keywords-data">
             </div>
             
             <div class="mb-3">

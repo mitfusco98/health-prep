@@ -141,10 +141,11 @@ def save_screening_keywords(screening_id):
                 unique_keywords.append(keyword)
                 seen.add(keyword.lower())
 
-        # Save only to content_keywords
-        screening_type.set_content_keywords(unique_keywords)
+        # Save to unified_keywords field (applies to both content and filenames)
+        screening_type.set_unified_keywords(unique_keywords)
 
-        # Clear other keyword fields to prevent any legacy duplication
+        # Clear legacy keyword fields to prevent duplication
+        screening_type.set_content_keywords([])
         screening_type.set_filename_keywords([])
         screening_type.set_document_keywords([])
 
