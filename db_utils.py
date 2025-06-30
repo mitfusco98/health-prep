@@ -1,4 +1,3 @@
-# Applying the provided changes to implement a robust retry mechanism with connection recovery for PostgreSQL SSL timeout issues.
 from functools import wraps
 from flask import flash, redirect, url_for
 import logging
@@ -94,135 +93,33 @@ from flask import flash
 from app import db
 
 
-def safe_db_operation(max_retries=5, retry_delay=2):
+def safe_db_operation(func):
     """
-    Decorator to handle database operations with retries and proper error handling
-    Enhanced with PostgreSQL connection recovery for Replit environment
-
-    Args:
-        max_retries: Maximum number of retry attempts (increased for SSL timeouts)
-        retry_delay: Delay between retries in seconds
+    Decorator to ensure database operations are properly handled.
+    This wraps a route function with proper transaction handling.
     """
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            from app import db
-            from sqlalchemy.exc import OperationalError, DisconnectionError
-            import time
-            import psycopg2
 
-            for attempt in range(max_retries):
-                try:
-                    # Check connection health before operation
-                    _ensure_db_connection(db)
-
-                    # Execute the function
-                    result = func(*args, **kwargs)
-
-                    # Commit the transaction with retry on SSL errors
-                    _safe_commit(db, attempt)
-
-                    return result
-
-                except (OperationalError, DisconnectionError, psycopg2.OperationalError) as e:
-                    error_msg = str(e).lower()
-
-                    # Handle SSL connection issues specifically
-                    if "ssl connection has been closed" in error_msg or "connection closed" in error_msg:
-                        logger.warning(f"PostgreSQL SSL connection lost (attempt {attempt + 1}/{max_retries})")
-
-                        # Force connection cleanup and recreation
-                        _recover_db_connection(db)
-
-                        if attempt == max_retries - 1:
-                            logger.error(f"Failed to recover database connection after {max_retries} attempts")
-                            raise
-
-                        # Exponential backoff for connection recovery
-                        wait_time = retry_delay * (2 ** attempt)
-                        logger.info(f"Waiting {wait_time}s before retry...")
-                        time.sleep(wait_time)
-                        continue
-                    else:
-                        # Other database errors
-                        _safe_rollback(db)
-                        if attempt == max_retries - 1:
-                            logger.error(f"Database operation failed after {max_retries} attempts: {str(e)}")
-                            raise
-                        time.sleep(retry_delay)
-                        continue
-
-                except Exception as e:
-                    # Non-database errors
-                    _safe_rollback(db)
-
-                    if attempt == max_retries - 1:
-                        logger.error(f"Operation failed after {max_retries} attempts: {str(e)}")
-                        raise
-
-                    logger.warning(f"Operation failed (attempt {attempt + 1}/{max_retries}): {str(e)}")
-                    time.sleep(retry_delay)
-
-            # This should never be reached, but just in case
-            raise Exception("Unexpected end of retry loop")
-
-        return wrapper
-    return decorator
-
-
-def _ensure_db_connection(db):
-    """Ensure database connection is healthy"""
-    try:
-        # Simple query to test connection
-        db.session.execute(db.text("SELECT 1"))
-    except Exception as e:
-        logger.warning(f"Database connection test failed: {e}")
-        _recover_db_connection(db)
-
-
-def _safe_commit(db, attempt):
-    """Safely commit with SSL error handling"""
-    try:
-        db.session.commit()
-    except Exception as e:
-        error_msg = str(e).lower()
-        if "ssl connection has been closed" in error_msg:
-            # Don't rollback on SSL errors - the connection is already lost
-            logger.warning(f"SSL connection lost during commit (attempt {attempt + 1})")
-            raise
-        else:
-            # For other commit errors, try to rollback
-            _safe_rollback(db)
-            raise
-
-
-def _safe_rollback(db):
-    """Safely rollback transaction"""
-    try:
-        db.session.rollback()
-    except Exception as rollback_error:
-        logger.warning(f"Error during rollback (connection may be lost): {rollback_error}")
-        # Force session cleanup on rollback failure
+    @wraps(func)
+    def wrapper(*args, **kwargs):
         try:
-            db.session.remove()
-        except:
-            pass
+            # Call the original function
+            result = func(*args, **kwargs)
 
+            # If the function returns a response without committing,
+            # ensure we don't leave a dangling transaction
+            if not getattr(result, "_db_committed", False):
+                db.session.commit()
 
-def _recover_db_connection(db):
-    """Recover from lost database connection"""
-    try:
-        # Clean up the current session
-        db.session.remove()
+            return result
+        except Exception as e:
+            # Roll back the session if there's an error
+            db.session.rollback()
+            print(f"Database error in {func.__name__}: {str(e)}")
+            flash(f"Database error: {str(e)}", "danger")
+            # Re-raise the exception or handle it as needed
+            raise
 
-        # Dispose of the engine's connection pool to force new connections
-        db.engine.dispose()
-
-        logger.info("Database connection pool refreshed")
-
-    except Exception as e:
-        logger.error(f"Error during connection recovery: {e}")
-        # Continue anyway - new connections will be created as needed
+    return wrapper
 
 
 def fresh_session_operation(func):

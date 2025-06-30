@@ -400,10 +400,10 @@ def add_patient():
     return render_template("patient_form.html", form=form, title="Add Patient")
 
 
-@app.route("/patients/<int:patient_id>", endpoint="patient_detail")
+@app.route("/patients/<int:patient_id>")
 @safe_db_operation
 @log_patient_operation("view_patient")
-def patient_detail_view(patient_id):
+def patient_detail(patient_id):
     """Display patient details"""
     app.logger.info(f"Viewing patient details for ID: {patient_id}")
     try:

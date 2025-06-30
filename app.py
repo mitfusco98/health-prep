@@ -120,21 +120,6 @@ def before_request():
     # Clean up any existing session at the start of each request to avoid stale transactions
     db.session.remove()
 
-    # For state-changing operations, ensure database connection is healthy
-    if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
-        try:
-            # Quick connection health check for critical operations
-            with db.engine.connect() as conn:
-                conn.execute(db.text("SELECT 1"))
-        except Exception as e:
-            error_msg = str(e).lower()
-            if "ssl connection has been closed" in error_msg or "connection closed" in error_msg:
-                logger.warning("Database connection lost, forcing reconnection")
-                try:
-                    db.engine.dispose()
-                except:
-                    pass
-
     # Log incoming request
     structured_logger.log_api_request(
         endpoint=request.endpoint or request.path,
@@ -1339,76 +1324,32 @@ with app.app_context():
     # Start the cleanup scheduler
     schedule_admin_log_cleanup()
 
-    # Enhanced database connection with PostgreSQL-specific configuration
-    def configure_postgresql_engine():
-        """Configure PostgreSQL engine for Replit environment"""
-        if app.config["SQLALCHEMY_DATABASE_URI"].startswith("postgresql"):
-            # PostgreSQL-specific configuration for Replit's Neon database
-            app.config.update({
-                # Connection pool settings for better handling of SSL timeouts
-                "SQLALCHEMY_ENGINE_OPTIONS": {
-                    "pool_size": 5,
-                    "pool_timeout": 30,
-                    "pool_recycle": 300,  # Recycle connections every 5 minutes
-                    "pool_pre_ping": True,  # Validate connections before use
-                    "max_overflow": 10,
-                    "connect_args": {
-                        "sslmode": "require",
-                        "connect_timeout": 30,
-                        "application_name": "HealthPrep_Replit",
-                    }
-                }
-            })
-            logger.info("PostgreSQL engine configured with enhanced connection handling")
-
-    # Apply PostgreSQL configuration
-    configure_postgresql_engine()
-
-    # Create database tables with enhanced retry logic
-    max_retries = 7  # Increased for PostgreSQL SSL issues
-    retry_delay = 3  # Longer initial delay
+    # Create database tables with retry logic
+    max_retries = 5
+    retry_delay = 2
 
     for attempt in range(max_retries):
         try:
             logger.info(
                 f"Attempting database connection (attempt {attempt+1}/{max_retries})"
             )
-            
-            # Test connection first
-            with db.engine.connect() as conn:
-                conn.execute(db.text("SELECT 1"))
-                
             db.create_all()
             logger.info("Database tables created successfully")
             break
-            
         except Exception as e:
-            error_msg = str(e).lower()
             logger.error(f"Database connection failed: {str(e)}")
-            
-            # Handle SSL connection issues specifically
-            if "ssl connection has been closed" in error_msg or "connection closed" in error_msg:
-                logger.warning(f"PostgreSQL SSL connection issue detected (attempt {attempt+1})")
-                
-                # Force engine disposal on SSL errors
-                try:
-                    db.engine.dispose()
-                except:
-                    pass
-                    
             if attempt < max_retries - 1:
-                wait_time = retry_delay * (1.5 ** attempt)  # Gentler exponential backoff
                 structured_logger.logger.info(
-                    f"Retrying database connection in {wait_time:.1f} seconds",
+                    f"Retrying database connection in {retry_delay} seconds",
                     extra={
                         "event_type": "database_retry",
                         "attempt": attempt + 1,
                         "max_retries": max_retries,
-                        "retry_delay": wait_time,
-                        "error_type": "ssl_timeout" if "ssl" in error_msg else "general"
+                        "retry_delay": retry_delay,
                     },
                 )
-                time.sleep(wait_time)
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
             else:
                 structured_logger.logger.error(
                     f"Failed to connect to database after {max_retries} attempts",
@@ -1428,7 +1369,6 @@ with app.app_context():
                         },
                     )
                     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///healthcare.db"
-                    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {}  # Reset engine options
                     db.create_all()
                     structured_logger.logger.info(
                         "SQLite database tables created successfully",
