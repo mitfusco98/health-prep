@@ -585,6 +585,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         setKeywords(keywords) {
+            // Only use setKeywords for add/manage modals, not edit
+            if (this.prefix === 'edit') {
+                console.log(`${this.prefix} setKeywords: skipping for edit modal to prevent duplication`);
+                return;
+            }
+            
             // Complete reset first
             this.keywords = [];
             
@@ -635,6 +641,31 @@ document.addEventListener('DOMContentLoaded', function() {
         'add': new KeywordManager('add'),
         'edit': new KeywordManager('edit'),
         'manage': new KeywordManager('manage')
+    };
+
+    // Simple reference for edit modal keyword removal
+    window.editKeywordManager = {
+        removeKeyword: function(index) {
+            const container = document.getElementById('editKeywordsList');
+            const badges = container.querySelectorAll('.badge');
+            if (badges[index]) {
+                badges[index].remove();
+                // Update internal array
+                keywordManagers.edit.keywords.splice(index, 1);
+                keywordManagers.edit.updateHiddenField();
+                // Re-render to fix indices
+                container.innerHTML = '';
+                keywordManagers.edit.keywords.forEach((keyword, newIndex) => {
+                    const keywordElement = document.createElement('span');
+                    keywordElement.className = 'badge bg-secondary me-2 mb-2';
+                    keywordElement.innerHTML = `
+                        ${keyword}
+                        <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.75em;" onclick="editKeywordManager.removeKeyword(${newIndex})"></button>
+                    `;
+                    container.appendChild(keywordElement);
+                });
+            }
+        }
     };
 
     // Cached keyword loading function to prevent duplicate API calls
@@ -858,10 +889,12 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('#editScreeningForm #max_age').value = maxAge;
             document.querySelector('#editScreeningForm #is_active').checked = active === "checked";
 
-            // Immediately clear everything first
+            // Completely reset the edit modal keywords without any caching
             keywordManagers.edit.keywords = [];
             const editKeywordsList = document.getElementById('editKeywordsList');
             const editKeywordsData = document.getElementById('editKeywordsData');
+            
+            // Clear display immediately
             if (editKeywordsList) {
                 editKeywordsList.innerHTML = '';
             }
@@ -869,14 +902,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 editKeywordsData.value = '[]';
             }
 
-            // Only load keywords if we have cached data, otherwise leave empty
-            if (keywordCache.has(id)) {
-                const cachedKeywords = keywordCache.get(id);
-                console.log(`Using cached keywords for edit modal (screening ${id}): ${cachedKeywords.length} keywords`);
-                keywordManagers.edit.setKeywords(cachedKeywords);
-            } else {
-                console.log(`No cached keywords for edit modal (screening ${id}), leaving empty`);
-            }
+            // Fresh API call for edit modal (ignore cache to prevent duplication)
+            console.log(`Fresh load for edit modal (screening ${id})`);
+            fetch(`/api/screening-keywords/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.keywords && data.keywords.length > 0) {
+                        // Simple display of keywords for edit modal only
+                        const uniqueKeywords = [...new Set(data.keywords.filter(k => k && k.trim()))];
+                        console.log(`Edit modal loaded ${uniqueKeywords.length} unique keywords`);
+                        
+                        // Direct display without going through setKeywords to avoid conflicts
+                        if (editKeywordsList) {
+                            editKeywordsList.innerHTML = '';
+                            uniqueKeywords.forEach((keyword, index) => {
+                                const keywordElement = document.createElement('span');
+                                keywordElement.className = 'badge bg-secondary me-2 mb-2';
+                                keywordElement.innerHTML = `
+                                    ${keyword}
+                                    <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.75em;" onclick="editKeywordManager.removeKeyword(${index})"></button>
+                                `;
+                                editKeywordsList.appendChild(keywordElement);
+                            });
+                        }
+                        
+                        // Set internal array for keyword manager
+                        keywordManagers.edit.keywords = uniqueKeywords;
+                        keywordManagers.edit.updateHiddenField();
+                    } else {
+                        console.log(`Edit modal: no keywords found for screening ${id}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Edit modal keyword load error:', error);
+                });
         });
     });
 
