@@ -244,10 +244,11 @@ def api_patient_detail(patient_id):
                     "date": v.date.strftime("%Y-%m-%d") if v.date else None,
                     "weight": v.weight,
                     "height": v.height,
-                    "bp": (
-                        f"{v.blood_pressure_systolic}/{v.blood_pressure_diastolic}"
-                        if v.blood_pressure_systolic and v.blood_pressure_diastolic
-                        else None
+                    "bmi": v.bmi,
+                    "temperature": v.temperature,
+                    "blood_pressure_systolic": v.blood_pressure_systolic,
+                    "blood_pressure_diastolic": v.blood_pressure_diastolic,
+                    else None
                     ),
                 }
                 for v in recent_vitals
@@ -1313,4 +1314,74 @@ def add_document_api(patient_id):
         return jsonify({"error": "Internal server error"}), 500
 
 
+@app.route('/api/screening-keywords/<int:screening_id>', methods=['GET'])
+def get_screening_keywords(screening_id):
+    """Get keywords for a specific screening type"""
+    try:
+        screening_type = ScreeningType.query.get_or_404(screening_id)
 
+        # Get all keyword types
+        content_keywords = screening_type.get_content_keywords()
+        document_keywords = screening_type.get_document_keywords() 
+        filename_keywords = screening_type.get_filename_keywords()
+
+        # Combine all unique keywords
+        all_keywords = list(set(content_keywords + document_keywords + filename_keywords))
+
+        return jsonify({
+            'success': True,
+            'keywords': all_keywords,
+            'keyword_counts': {
+                'content': len(content_keywords),
+                'document': len(document_keywords),
+                'filename': len(filename_keywords),
+                'total_unique': len(all_keywords)
+            }
+        })
+
+    except Exception as e:
+        print(f"Error getting keywords for screening {screening_id}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'keywords': []
+        }), 500
+
+@app.route('/api/screening-keywords/bulk', methods=['GET'])
+def get_all_screening_keywords():
+    """Get keywords for all screening types in a single request to reduce API calls"""
+    try:
+        screening_types = ScreeningType.query.all()
+        keywords_data = {}
+
+        for screening_type in screening_types:
+            # Get all keyword types
+            content_keywords = screening_type.get_content_keywords()
+            document_keywords = screening_type.get_document_keywords() 
+            filename_keywords = screening_type.get_filename_keywords()
+
+            # Combine all unique keywords
+            all_keywords = list(set(content_keywords + document_keywords + filename_keywords))
+
+            keywords_data[screening_type.id] = {
+                'keywords': all_keywords,
+                'keyword_counts': {
+                    'content': len(content_keywords),
+                    'document': len(document_keywords),
+                    'filename': len(filename_keywords),
+                    'total_unique': len(all_keywords)
+                }
+            }
+
+        return jsonify({
+            'success': True,
+            'data': keywords_data
+        })
+
+    except Exception as e:
+        print(f"Error getting bulk keywords: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'data': {}
+        }), 500

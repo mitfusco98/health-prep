@@ -34,7 +34,7 @@
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div class="flex-grow-1">
                                                 <strong>{{ screening_type.name }}</strong>
-                                                <div class="keyword-tags mt-2" id="keywords-{{ screening_type.id }}">
+                                                <div class="keyword-tags mt-2" id="keywords-{{ screening_type.id }}" data-screening-id="{{ screening_type.id }}">
                                                     <small class="text-muted">Loading keywords...</small>
                                                 </div>
                                             </div>
@@ -611,7 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Remove duplicates case-insensitively but preserve original case
                 const uniqueKeywords = [];
                 const seenLower = new Set();
-                
+
                 for (const keyword of processedKeywords) {
                     const lowerKeyword = keyword.toLowerCase();
                     if (!seenLower.has(lowerKeyword)) {
@@ -637,42 +637,104 @@ document.addEventListener('DOMContentLoaded', function() {
         'manage': new KeywordManager('manage')
     };
 
-    // Load keywords for a screening type
-    function loadKeywords(screeningId) {
-        fetch(`/api/screening-keywords/${screeningId}`)
+    // Global storage for bulk-loaded keywords
+    let bulkKeywordsData = {};
+
+    // Function to load all keywords in bulk
+    function loadAllKeywordsBulk() {
+        fetch('/api/screening-keywords/bulk')
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Convert simple keywords to objects for the manager
-                    const keywordObjects = (data.keywords || []).map(keyword => ({
-                        keyword: keyword,
-                        section: 'general',
-                        weight: 1.0,
-                        case_sensitive: false,
-                        exact_match: false,
-                        description: ''
-                    }));
-                    keywordManagers.manage.setKeywords(keywordObjects);
+                    bulkKeywordsData = data.data;
+                    // Update all keyword displays
+                    Object.keys(bulkKeywordsData).forEach(screeningId => {
+                        updateKeywordDisplay(screeningId, bulkKeywordsData[screeningId]);
+                    });
                 } else {
-                    keywordManagers.manage.setKeywords([]);
+                    console.error('Error loading bulk keywords:', data.error);
+                    // Fallback to showing placeholder text
+                    document.querySelectorAll('.keyword-tags').forEach(container => {
+                        container.innerHTML = '<small class="text-muted">Click edit to manage keywords</small>';
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading bulk keywords:', error);
+                // Fallback to showing placeholder text
+                document.querySelectorAll('.keyword-tags').forEach(container => {
+                    container.innerHTML = '<small class="text-muted">Click edit to manage keywords</small>';
+                });
+            });
+    }
+
+    // Function to update keyword display for a specific screening
+    function updateKeywordDisplay(screeningId, keywordData) {
+        const container = document.querySelector(`[data-screening-id="${screeningId}"] .keyword-tags`);
+        if (!container) return;
+
+        if (keywordData.keywords && keywordData.keywords.length > 0) {
+            displayKeywordsAsBadges(container, keywordData.keywords);
+        } else {
+            container.innerHTML = '<small class="text-muted">No keywords set</small>';
+        }
+    }
+
+    // Function to load keywords for display (fallback for individual requests)
+    function loadKeywordsForDisplay(screeningId) {
+        // First check if we have bulk data
+        if (bulkKeywordsData[screeningId]) {
+            updateKeywordDisplay(screeningId, bulkKeywordsData[screeningId]);
+            return;
+        }
+
+        const container = document.querySelector(`[data-screening-id="${screeningId}"] .keyword-tags`);
+        if (!container) return;
+
+        // Show loading state
+        container.innerHTML = '<small class="text-muted">Loading keywords...</small>';
+
+        fetch(`/api/screening-keywords/${screeningId}`)
+            .then(response => {
+                if (response.status === 429) {
+                    // Rate limited, show fallback message
+                    container.innerHTML = '<small class="text-muted">Keywords available - click edit to manage</small>';
+                    return null;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data) return; // Rate limited case
+
+                if (data.success && data.keywords && data.keywords.length > 0) {
+                    displayKeywordsAsBadges(container, data.keywords);
+                } else {
+                    container.innerHTML = '<small class="text-muted">No keywords set</small>';
                 }
             })
             .catch(error => {
                 console.error('Error loading keywords:', error);
-                keywordManagers.manage.setKeywords([]);
+                container.innerHTML = '<small class="text-muted">Error loading keywords</small>';
             });
     }
 
-    // Save keywords for a screening type
-    function saveKeywords(screeningId, keywords) {
-        return fetch(`/api/screening-keywords/${screeningId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ keywords: keywords })
-        });
+    // Function to display keywords as badges
+    function displayKeywordsAsBadges(container, keywords) {
+        container.innerHTML = '';
+        if (keywords && keywords.length > 0) {
+            keywords.forEach(keyword => {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-secondary me-1 mb-1';
+                badge.textContent = keyword;
+                container.appendChild(badge);
+            });
+        } else {
+            container.innerHTML = '<small class="text-muted">No keywords set</small>';
+        }
     }
+
+    // Load all keywords in bulk when the page loads
+    loadAllKeywordsBulk();
 
     // Handle manage keywords button clicks
     document.querySelectorAll('.manage-keywords-btn').forEach(button => {
@@ -748,8 +810,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Set default text for keyword containers without loading them automatically
-    const keywordContainers = document.querySelectorAll('.keyword-tags');
+    // Set default text for keyword containers without loading them automatically        const keywordContainers = document.querySelectorAll('.keyword-tags');
     keywordContainers.forEach(container => {
         container.innerHTML = '<small class="text-muted">Click edit to manage keywords</small>';
     });
@@ -814,77 +875,48 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Force complete reset before loading keywords
             setTimeout(() => {
-                // Load keywords for this screening with enhanced error handling
-                fetch(`/api/screening-keywords/${id}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}`);
-                        }
-                        return response.text();
-                    })
-                    .then(text => {
-                        console.log(`Raw API response for screening ${id}:`, text.substring(0, 200));
-                        
-                        let data;
-                        try {
-                            data = JSON.parse(text);
-                        } catch (e) {
-                            console.warn('Invalid JSON response for keywords, using empty array:', text);
-                            data = { success: true, keywords: [] };
-                        }
-
-                        console.log(`Parsed API data for screening ${id}:`, data);
-
-                        // Force another clear before setting
-                        keywordManagers.edit.keywords = [];
-                        const container = document.getElementById('editKeywordsList');
-                        if (container) container.innerHTML = '';
-
-                        if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
-                            console.log(`Setting ${data.keywords.length} keywords from API:`, data.keywords);
-                            
-                            // Remove any potential duplicates at this level too
-                            const cleanKeywords = data.keywords.filter(k => k && typeof k === 'string' && k.trim());
-                            const uniqueKeywords = [...new Set(cleanKeywords.map(k => k.trim().toLowerCase()))].map(lower => 
-                                cleanKeywords.find(k => k.trim().toLowerCase() === lower)
-                            );
-                            
-                            console.log(`After deduplication: ${uniqueKeywords.length} keywords:`, uniqueKeywords);
-                            keywordManagers.edit.setKeywords(uniqueKeywords);
+                // Check if we have bulk data first
+                        if (bulkKeywordsData[id] && bulkKeywordsData[id].keywords) {
+                            const keywordObjects = bulkKeywordsData[id].keywords.map(keyword => ({
+                                keyword: keyword,
+                                section: 'general',
+                                weight: 1.0,
+                                case_sensitive: false,
+                                exact_match: false,
+                                description: ''
+                            }));
+                            keywordManagers.edit.setKeywords(keywordObjects);
                         } else {
-                            console.log('No keywords to set, clearing');
-                            keywordManagers.edit.setKeywords([]);
+                            // Fallback to individual API call
+                            fetch(`/api/screening-keywords/${id}`)
+                                .then(response => {
+                                    if (response.status === 429) {
+                                        console.log('Rate limited, using empty keyword set for edit form');
+                                        keywordManagers.edit.setKeywords([]);
+                                        return null;
+                                    }
+                                    return response.json();
+                                })
+                                .then(data => {
+                                    if (data && data.success && data.keywords && data.keywords.length > 0) {
+                                        const keywordObjects = data.keywords.map(keyword => ({
+                                            keyword: keyword,
+                                            section: 'general',
+                                            weight: 1.0,
+                                            case_sensitive: false,
+                                            exact_match: false,
+                                            description: ''
+                                        }));
+                                        keywordManagers.edit.setKeywords(keywordObjects);
+                                    } else if (data) {
+                                        keywordManagers.edit.setKeywords([]);
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error loading existing keywords:', error);
+                                    keywordManagers.edit.setKeywords([]);
+                                });
                         }
-                    })
-                    .catch(error => {
-                        // Check if it's a rate limit error
-                        if (error.message && error.message.includes('429')) {
-                            console.log('Rate limited, will retry for edit form');
-                            // Retry after delay
-                            setTimeout(() => {
-                                fetch(`/api/screening-keywords/${id}`)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.success && data.keywords && data.keywords.length > 0) {
-                                            const keywordObjects = data.keywords.map(keyword => ({
-                                                keyword: keyword,
-                                                section: 'general',
-                                                weight: 1.0,
-                                                case_sensitive: false,
-                                                exact_match: false,
-                                                description: ''
-                                            }));
-                                            keywordManagers.edit.setKeywords(keywordObjects);
-                                        } else {
-                                            keywordManagers.edit.setKeywords([]);
-                                        }
-                                    });
-                            }, 2000);
-                        } else {
-                            console.log('No keywords found for editing');
-                            keywordManagers.edit.setKeywords([]);
-                        }
-                    });
             }, 100);
         });
     });

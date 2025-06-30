@@ -1221,7 +1221,10 @@ def detect_automated_attacks():
 
     # Relax limits for API endpoints and development - they often need multiple rapid requests
     if request.path.startswith('/api/'):
-        api_limit = 200
+        if 'bulk' in request.path:
+            api_limit = 500  # Very high limit for bulk operations
+        else:
+            api_limit = 200
     elif 'screening-types' in request.path or 'edit' in request.path:
         api_limit = 100  # Higher limit for editing pages that may have issues
     else:
