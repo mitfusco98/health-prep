@@ -65,7 +65,7 @@ app.config["WTF_CSRF_ENABLED"] = True
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=["500 per day", "150 per hour"],
     storage_uri="memory://",
     strategy="fixed-window",
 )
@@ -962,15 +962,15 @@ def validate_session_security():
         is_repository_request = any(path in request.path for path in repository_paths)
         is_navigation_request = any(path in request.path for path in navigation_paths) or request.method == "GET"
 
-        # More generous rate limits: 200 for repository, 150 for API, 100 for navigation/GET, 40 for modifications
+        # More generous rate limits: 300 for repository, 200 for API, 150 for navigation/GET, 80 for modifications
         if is_repository_request:
-            rate_limit = 200
+            rate_limit = 300
         elif request.path.startswith('/api/'):
-            rate_limit = 150  # Higher limit for API endpoints
+            rate_limit = 200  # Higher limit for API endpoints
         elif is_navigation_request:
-            rate_limit = 100
+            rate_limit = 150
         else:
-            rate_limit = 40
+            rate_limit = 80
 
         if len(session["request_timestamps"]) >= rate_limit:
             logger.warning(
@@ -1165,6 +1165,10 @@ def log_security_events(response):
 @app.before_request
 def detect_automated_attacks():
     """Detect and prevent automated attacks and bots"""
+    # Skip detection for static files to prevent false positives
+    if request.path.startswith('/static/'):
+        return
+        
     user_agent = request.headers.get("User-Agent", "").lower()
 
     # Common bot signatures that might be malicious
@@ -1219,8 +1223,13 @@ def detect_automated_attacks():
         ts for ts in app._request_tracker[client_ip] if current_time - ts < 60
     ]
 
-    # Relax limits for API endpoints - they often need multiple rapid requests
-    api_limit = 100 if request.path.startswith('/api/') else 30
+    # Relax limits for API endpoints and static files - they often need multiple rapid requests
+    if request.path.startswith('/static/'):
+        api_limit = 200  # Very high limit for static assets (CSS, JS, images)
+    elif request.path.startswith('/api/'):
+        api_limit = 150  # High limit for API endpoints
+    else:
+        api_limit = 100  # Increased limit for regular pages
 
     # Check if more than the limit requests in the last minute
     if len(app._request_tracker[client_ip]) > api_limit:
