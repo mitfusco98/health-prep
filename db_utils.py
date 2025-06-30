@@ -429,5 +429,3 @@ def serialize_appointment(appointment):
         "note": appointment.note,
         "status": appointment.status,
     }
-
-`
