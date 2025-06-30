@@ -120,7 +120,6 @@ A comprehensive healthcare preparation application built with Flask that manages
 - **Performance**: Indexed queries and caching layers
 
 ## Changelog
-- June 30, 2025: Major legacy system cleanup completed. Removed 48 obsolete files (712KB) including test files, migration scripts, and duplicate implementations. Cleaned up unused CSS classes and consolidated codebase structure. Application now runs with streamlined architecture.
 - June 26, 2025: Streamlined keyword and screening management system to eliminate redundant API calls and "old system" references. Created efficient screening matcher that uses only current 'manage screening types' system with keyword caching.
 - June 26, 2025: Fixed Flask application startup issues by replacing complex middleware system with minimal working healthcare app. Resolved route import errors and template build failures.
 - June 26, 2025: Added automatic session timeout with 10-minute inactivity logout. Users can stay logged in when accessing admin pages and receive warnings before timeout. Session extends automatically on user activity.

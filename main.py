@@ -7,19 +7,29 @@ if not os.environ.get("FLASK_ENV"):
 from app import app, db  # noqa: F401
 
 # Import all route modules
+import demo_routes  # noqa: F401
+import ehr_routes  # noqa: F401
 import checklist_routes  # noqa: F401
 import api_routes  # noqa: F401
 import performance_routes  # noqa: F401
 import screening_keyword_routes  # noqa: F401
+
+# Import modular route files
+from routes import patient_routes  # noqa: F401
+from routes import appointment_routes  # noqa: F401
+
+# Import service layers for dependency injection
+from services import patient_service, appointment_service  # noqa: F401
 import logging
 
-# Initialize connections on startup
+# Initialize EHR connections
 if __name__ != "__main__":
     try:
-        # EHR connections initialization removed as ehr_routes was moved to legacy
-        pass
+        from ehr_routes import import_connections_on_startup
+
+        import_connections_on_startup()
     except Exception as e:
-        print(f"Error during initialization: {e}")
+        print(f"Error initializing EHR connections: {e}")
 
     # Add sample data for today's appointments
     with app.app_context():
