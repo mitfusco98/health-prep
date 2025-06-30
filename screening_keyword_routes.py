@@ -36,10 +36,14 @@ def get_screening_keywords(screening_id):
                 'message': 'Screening type not found'
             }), 404
 
-        # Get unified keywords (applies to both content and filenames)
+        # Get ONLY unified keywords - completely ignore legacy fields
         unified_keywords = screening_type.get_unified_keywords() or []
         
-        # Use ONLY unified keywords - no legacy field fallback to prevent duplication
+        # Defensive check: if unified_keywords is somehow still pulling legacy data, force empty
+        if not isinstance(unified_keywords, list):
+            unified_keywords = []
+        
+        # Use ONLY unified keywords - absolutely no legacy field access
         all_keywords = unified_keywords
 
         # Process to ensure clean unique strings with multiple deduplication passes
