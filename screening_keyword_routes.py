@@ -1,21 +1,21 @@
 """
-The code caches API responses to prevent duplicate requests and clears old cache entries to manage memory usage.
+Screening Keyword Routes - Unified System Only
+Handles keyword configuration using ONLY the unified_keywords field.
+All legacy keyword fields have been removed.
 """
 from flask import request, jsonify
 from app import app, db
 from models import ScreeningType
-from screening_keyword_manager import ScreeningKeywordManager
-import json
 import time
 
-# Initialize a simple cache
+# Simple cache for API responses
 _request_cache = {}
-_cache_timeout = 60  # Cache timeout in seconds
+_cache_timeout = 60
 
 
 @app.route('/api/screening-keywords/<int:screening_id>', methods=['GET'])
 def get_screening_keywords(screening_id):
-    """Get keyword configuration for a screening type - simplified to prevent duplication"""
+    """Get keyword configuration for a screening type - unified system only"""
     cache_key = f"screening_keywords_{screening_id}"
     current_time = time.time()
 
@@ -27,6 +27,7 @@ def get_screening_keywords(screening_id):
             return result
         else:
             print(f"DEBUG: Cache expired for screening keywords {screening_id}.")
+            del _request_cache[cache_key]
 
     try:
         screening_type = ScreeningType.query.get(screening_id)
@@ -36,36 +37,26 @@ def get_screening_keywords(screening_id):
                 'message': 'Screening type not found'
             }), 404
 
-        # Get ONLY unified keywords - completely ignore legacy fields
+        # Get ONLY unified keywords - no legacy field access
         unified_keywords = screening_type.get_unified_keywords() or []
-        
-        # Defensive check: if unified_keywords is somehow still pulling legacy data, force empty
+
+        # Ensure we have a clean list
         if not isinstance(unified_keywords, list):
             unified_keywords = []
-        
-        # Use ONLY unified keywords - absolutely no legacy field access
-        all_keywords = unified_keywords
 
-        # Process to ensure clean unique strings with multiple deduplication passes
+        # Clean and deduplicate keywords
         unique_keywords = []
         seen_lower = set()
 
-        # First pass: clean and deduplicate by exact match - use all_keywords instead of content_keywords
-        cleaned_keywords = []
-        for keyword in all_keywords:
+        for keyword in unified_keywords:
             if keyword and isinstance(keyword, str):
                 clean_keyword = keyword.strip()
-                if clean_keyword and clean_keyword not in cleaned_keywords:
-                    cleaned_keywords.append(clean_keyword)
-
-        # Second pass: deduplicate by lowercase to catch case variations
-        for keyword in cleaned_keywords:
-            if keyword.lower() not in seen_lower:
-                unique_keywords.append(keyword)
-                seen_lower.add(keyword.lower())
+                if clean_keyword and clean_keyword.lower() not in seen_lower:
+                    unique_keywords.append(clean_keyword)
+                    seen_lower.add(clean_keyword.lower())
 
         # Debug logging
-        print(f"DEBUG: Screening {screening_id} - All keywords: {len(all_keywords)}, Final unique: {len(unique_keywords)}")
+        print(f"DEBUG: Screening {screening_id} - Unified keywords: {len(unified_keywords)}, Final unique: {len(unique_keywords)}")
 
         result = jsonify({
             'success': True,
@@ -75,14 +66,6 @@ def get_screening_keywords(screening_id):
 
         # Cache the result
         _request_cache[cache_key] = (result, current_time)
-
-        # Clean old cache entries
-        keys_to_remove = []
-        for key, (_, timestamp) in _request_cache.items():
-            if current_time - timestamp > _cache_timeout:
-                keys_to_remove.append(key)
-        for key in keys_to_remove:
-            del _request_cache[key]
 
         return result
 
@@ -96,7 +79,7 @@ def get_screening_keywords(screening_id):
 
 @app.route('/api/screening-keywords/<int:screening_id>', methods=['POST'])
 def save_screening_keywords(screening_id):
-    """Save keyword configuration for a screening type"""
+    """Save keyword configuration for a screening type - unified system only"""
     try:
         data = request.get_json()
         if not data:
@@ -112,7 +95,7 @@ def save_screening_keywords(screening_id):
                 'message': 'Screening type not found'
             }), 404
 
-        # Get keywords from request and convert to simple strings
+        # Get keywords from request
         keywords = data.get('keywords', [])
         keyword_list = []
 
@@ -134,66 +117,32 @@ def save_screening_keywords(screening_id):
                 unique_keywords.append(keyword)
                 seen.add(keyword.lower())
 
-        # Save to unified_keywords field (applies to both content and filenames)
+        # Save ONLY to unified_keywords field
         screening_type.set_unified_keywords(unique_keywords)
 
-        # Clear legacy keyword fields to prevent duplication
-        screening_type.set_content_keywords([])
-        screening_type.set_filename_keywords([])
-        screening_type.set_document_keywords([])
+        # Ensure legacy fields are NULL (should already be cleared)
+        screening_type.content_keywords = None
+        screening_type.filename_keywords = None
+        screening_type.document_keywords = None
 
         db.session.commit()
 
-        # Clear cache when keywords are saved
+        # Clear cache
         cache_key = f"screening_keywords_{screening_id}"
         if cache_key in _request_cache:
             del _request_cache[cache_key]
-            print(f"DEBUG: Cleared cache for screening keywords {screening_id} after save.")
-        
-        # Also clear any other cached entries that might be stale
-        keys_to_clear = [key for key in _request_cache.keys() if key.startswith('screening_keywords_')]
-        for key in keys_to_clear:
-            if key != cache_key:  # Don't double-clear the same key
-                del _request_cache[key]
-        
-        if keys_to_clear:
-            print(f"DEBUG: Cleared {len(keys_to_clear)} cached keyword entries to prevent stale data.")
+
+        print(f"DEBUG: Saved {len(unique_keywords)} keywords for screening {screening_id}")
 
         return jsonify({
             'success': True,
             'message': 'Keywords saved successfully',
-            'keywords': keyword_list
+            'keywords': unique_keywords
         })
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
-
-
-@app.route('/api/screening-keywords/<int:screening_id>/suggestions/<section>', methods=['GET'])
-def get_keyword_suggestions(screening_id, section):
-    """Get keyword suggestions for a section"""
-    try:
-        # Define common keywords by section
-        suggestions = {
-            'labs': ['glucose', 'cholesterol', 'hemoglobin', 'hba1c', 'creatinine', 'blood test', 'lab result'],
-            'imaging': ['mammogram', 'x-ray', 'ct scan', 'mri', 'ultrasound', 'radiology', 'scan'],
-            'procedures': ['colonoscopy', 'biopsy', 'endoscopy', 'surgery', 'procedure'],
-            'vitals': ['blood pressure', 'heart rate', 'weight', 'height', 'temperature', 'vital signs'],
-            'consults': ['cardiology', 'oncology', 'neurology', 'specialist', 'consultation'],
-            'medications': ['insulin', 'metformin', 'lisinopril', 'medication', 'prescription'],
-            'general': ['screening', 'test', 'result', 'report', 'medical']
-        }
-
-        return jsonify({
-            'success': True,
-            'suggestions': suggestions.get(section, [])
-        })
-
-    except Exception as e:
+        print(f"ERROR in save_screening_keywords: {str(e)}")
         return jsonify({
             'success': False,
             'message': str(e)
@@ -202,49 +151,27 @@ def get_keyword_suggestions(screening_id, section):
 
 @app.route('/api/screening-keywords/bulk', methods=['GET'])
 def get_all_screening_keywords():
-    """Get keywords for all active screening types in a single request"""
+    """Get keywords for all active screening types - unified system only"""
     try:
-        # Get all active screening types
         screening_types = ScreeningType.query.filter_by(is_active=True).all()
 
         bulk_data = {}
         for screening_type in screening_types:
-            # Get ONLY content keywords - this is the single source of truth
-            content_keywords = screening_type.get_content_keywords() or []
+            # Get ONLY unified keywords
+            unified_keywords = screening_type.get_unified_keywords() or []
 
-            # Ensure we're working with clean data from the start
-            if not content_keywords or not isinstance(content_keywords, list):
-                unique_keywords = []
-            else:
-                # Single-pass deduplication with strict validation
-                unique_keywords = []
-                seen_keywords = set()
+            # Clean and deduplicate
+            unique_keywords = []
+            seen_keywords = set()
 
-                for keyword in content_keywords:
-                    # Only process valid string keywords
-                    if keyword and isinstance(keyword, str):
-                        clean_keyword = keyword.strip()
+            for keyword in unified_keywords:
+                if keyword and isinstance(keyword, str):
+                    clean_keyword = keyword.strip()
+                    if clean_keyword and clean_keyword.lower() not in seen_keywords:
+                        unique_keywords.append(clean_keyword)
+                        seen_keywords.add(clean_keyword.lower())
 
-                        # Skip empty strings and duplicates (case-insensitive)
-                        if clean_keyword and clean_keyword.lower() not in seen_keywords:
-                            unique_keywords.append(clean_keyword)
-                            seen_keywords.add(clean_keyword.lower())
-
-            # Debug logging
-            print(f"DEBUG: Screening {screening_type.id} - Raw content: {len(content_keywords)}, Final unique: {len(unique_keywords)}")
-
-            # Additional validation - ensure no duplicates escaped
-            final_check = len(unique_keywords) == len(set(k.lower() for k in unique_keywords))
-            if not final_check:
-                print(f"WARNING: Duplicate keywords detected in final result for screening {screening_type.id}")
-                # Emergency deduplication
-                temp_seen = set()
-                temp_unique = []
-                for k in unique_keywords:
-                    if k.lower() not in temp_seen:
-                        temp_unique.append(k)
-                        temp_seen.add(k.lower())
-                unique_keywords = temp_unique
+            print(f"DEBUG: Screening {screening_type.id} - Unified: {len(unified_keywords)}, Final unique: {len(unique_keywords)}")
 
             bulk_data[screening_type.id] = {
                 'keywords': unique_keywords,
@@ -266,13 +193,12 @@ def get_all_screening_keywords():
 
 @app.route('/api/screening-keywords/<int:screening_id>/test', methods=['POST'])
 def test_keyword_matching(screening_id):
-    """Test keyword matching using current screening types system"""
+    """Test keyword matching using unified keywords only"""
     try:
         data = request.get_json()
         filename = data.get('filename', '')
         content = data.get('content', '')
 
-        # Get screening type
         screening_type = ScreeningType.query.get(screening_id)
         if not screening_type:
             return jsonify({
@@ -282,7 +208,6 @@ def test_keyword_matching(screening_id):
 
         # Test matching using DocumentScreeningMatcher
         from document_screening_matcher import DocumentScreeningMatcher
-        from models import Patient, MedicalDocument
 
         # Create a test document object
         test_doc = type('TestDoc', (), {
@@ -293,7 +218,7 @@ def test_keyword_matching(screening_id):
             'document_type': None
         })()
 
-        # Create a test patient (for demographic matching)
+        # Create a test patient
         test_patient = type('TestPatient', (), {
             'id': 999,
             'age': 50,
@@ -307,6 +232,39 @@ def test_keyword_matching(screening_id):
             'success': True,
             'match_result': result,
             'screening_name': screening_type.name
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+
+# Clear all cache on module reload
+def clear_all_cache():
+    """Clear all cached keyword data"""
+    global _request_cache
+    _request_cache.clear()
+    print("DEBUG: Cleared all keyword cache")
+@app.route('/api/screening-keywords/<int:screening_id>/suggestions/<section>', methods=['GET'])
+def get_keyword_suggestions(screening_id, section):
+    """Get keyword suggestions for a section"""
+    try:
+        # Define common keywords by section
+        suggestions = {
+            'labs': ['glucose', 'cholesterol', 'hemoglobin', 'hba1c', 'creatinine', 'blood test', 'lab result'],
+            'imaging': ['mammogram', 'x-ray', 'ct scan', 'mri', 'ultrasound', 'radiology', 'scan'],
+            'procedures': ['colonoscopy', 'biopsy', 'endoscopy', 'surgery', 'procedure'],
+            'vitals': ['blood pressure', 'heart rate', 'weight', 'height', 'temperature', 'vital signs'],
+            'consults': ['cardiology', 'oncology', 'neurology', 'specialist', 'consultation'],
+            'medications': ['insulin', 'metformin', 'lisinopril', 'medication', 'prescription'],
+            'general': ['screening', 'test', 'result', 'report', 'medical']
+        }
+
+        return jsonify({
+            'success': True,
+            'suggestions': suggestions.get(section, [])
         })
 
     except Exception as e:
