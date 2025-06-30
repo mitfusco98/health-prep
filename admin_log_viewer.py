@@ -56,6 +56,12 @@ def admin_logs():
                 date_from = month_ago.strftime("%Y-%m-%d")
                 date_to = today.strftime("%Y-%m-%d")
 
+        # Ensure fresh database session
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+        
         # Build query with left join to User table
         query = AdminLog.query.outerjoin(User, AdminLog.user_id == User.id)
 
@@ -136,32 +142,57 @@ def admin_logs():
         else:
             query = query.order_by(AdminLog.timestamp.desc())
 
-        # Paginate
-        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        # Paginate with error handling
+        try:
+            pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        except Exception as paginate_error:
+            logger.warning(f"Pagination error, retrying with simple query: {str(paginate_error)}")
+            # Fallback to simple query without filters
+            simple_query = AdminLog.query.order_by(AdminLog.timestamp.desc())
+            pagination = simple_query.paginate(page=1, per_page=per_page, error_out=False)
 
         logs = pagination.items
 
-        # Get summary statistics
-        total_logs = AdminLog.query.count()
-        today = datetime.now().date()
-        today_logs = AdminLog.query.filter(AdminLog.timestamp >= today).count()
+        # Get summary statistics with error handling
+        try:
+            total_logs = AdminLog.query.count()
+        except:
+            total_logs = 0
+            
+        try:
+            today = datetime.now().date()
+            today_logs = AdminLog.query.filter(AdminLog.timestamp >= today).count()
+        except:
+            today_logs = 0
 
-        failed_logins_today = AdminLog.query.filter(
-            and_(AdminLog.event_type == "login_fail", AdminLog.timestamp >= today)
-        ).count()
+        try:
+            failed_logins_today = AdminLog.query.filter(
+                and_(AdminLog.event_type == "login_fail", AdminLog.timestamp >= today)
+            ).count()
+        except:
+            failed_logins_today = 0
 
-        # Get recent activity (last 24 hours)
-        recent_activity = AdminLog.query.filter(
-            AdminLog.timestamp >= datetime.now() - timedelta(hours=24)
-        ).count()
+        try:
+            # Get recent activity (last 24 hours)
+            recent_activity = AdminLog.query.filter(
+                AdminLog.timestamp >= datetime.now() - timedelta(hours=24)
+            ).count()
+        except:
+            recent_activity = 0
 
-        # Get unique event types for filter dropdown
-        event_types_raw = db.session.query(AdminLog.event_type).distinct().all()
-        event_types = sorted([et[0] for et in event_types_raw])
+        try:
+            # Get unique event types for filter dropdown
+            event_types_raw = db.session.query(AdminLog.event_type).distinct().limit(100).all()
+            event_types = sorted([et[0] for et in event_types_raw])
+        except:
+            event_types = []
 
-        # Get unique users for filter dropdown
-        users_raw = db.session.query(User.username).distinct().all()
-        users = sorted([u[0] for u in users_raw if u[0]])
+        try:
+            # Get unique users for filter dropdown
+            users_raw = db.session.query(User.username).distinct().limit(100).all()
+            users = sorted([u[0] for u in users_raw if u[0]])
+        except:
+            users = []
 
         # Process logs for display
         processed_logs = []
@@ -207,31 +238,101 @@ def admin_logs():
 
     except Exception as e:
         logger.error(f"Error in admin logs viewer: {str(e)}")
-        # Ensure current_filters is defined even on error
-        current_filters = {
-            "event_type": event_type,
-            "user": user_filter,
-            "date_from": date_from,
-            "date_to": date_to,
-            "search": search_term,
-            "ip_address": ip_filter,
-            "per_page": per_page,
-            "sort": sort_order,
-            "date_range": date_range,
-        }
-        return render_template(
-            "admin_logs.html", 
-            logs=[], 
-            error=f"Error loading logs: {str(e)}",
-            current_filters=current_filters,
-            pagination=None,
-            total_logs=0,
-            today_logs=0,
-            failed_logins_today=0,
-            recent_activity=0,
-            event_types=[],
-            users=[]
-        )
+        
+        # Try to reconnect to database and retry once
+        try:
+            db.session.rollback()
+            db.session.close()
+            
+            # Retry the basic query without complex filters
+            simple_query = AdminLog.query.order_by(AdminLog.timestamp.desc())
+            pagination = simple_query.paginate(page=1, per_page=per_page, error_out=False)
+            logs = pagination.items
+            
+            # Get basic stats
+            total_logs = AdminLog.query.count()
+            today_logs = 0
+            failed_logins_today = 0
+            recent_activity = 0
+            
+            # Get simple event types and users lists
+            event_types = []
+            users = []
+            
+            # Process logs for display
+            processed_logs = []
+            for log in logs:
+                log_data = {
+                    "id": log.id,
+                    "timestamp": log.timestamp,
+                    "event_type": log.event_type,
+                    "user": log.user.username if log.user else "Anonymous",
+                    "ip_address": log.ip_address,
+                    "details": format_log_details(log),
+                    "request_id": log.request_id,
+                    "user_agent": (
+                        log.user_agent[:100] + "..."
+                        if log.user_agent and len(log.user_agent) > 100
+                        else log.user_agent
+                    ),
+                }
+                processed_logs.append(log_data)
+            
+            # Ensure current_filters is defined
+            current_filters = {
+                "event_type": event_type,
+                "user": user_filter,
+                "date_from": date_from,
+                "date_to": date_to,
+                "search": search_term,
+                "ip_address": ip_filter,
+                "per_page": per_page,
+                "sort": sort_order,
+                "date_range": date_range,
+            }
+            
+            return render_template(
+                "admin_logs.html",
+                logs=processed_logs,
+                pagination=pagination,
+                total_logs=total_logs,
+                today_logs=today_logs,
+                failed_logins_today=failed_logins_today,
+                recent_activity=recent_activity,
+                event_types=event_types,
+                users=users,
+                current_filters=current_filters,
+                error="Database connection issue occurred. Showing recent logs without filters."
+            )
+            
+        except Exception as retry_error:
+            logger.error(f"Retry failed in admin logs viewer: {str(retry_error)}")
+            
+            # Ensure current_filters is defined even on error
+            current_filters = {
+                "event_type": event_type,
+                "user": user_filter,
+                "date_from": date_from,
+                "date_to": date_to,
+                "search": search_term,
+                "ip_address": ip_filter,
+                "per_page": per_page,
+                "sort": sort_order,
+                "date_range": date_range,
+            }
+            return render_template(
+                "admin_logs.html", 
+                logs=[], 
+                error=f"Database connection error: {str(e)}. Please try again.",
+                current_filters=current_filters,
+                pagination=None,
+                total_logs=0,
+                today_logs=0,
+                failed_logins_today=0,
+                recent_activity=0,
+                event_types=[],
+                users=[]
+            )
 
 
 @app.route("/admin/logs/export")

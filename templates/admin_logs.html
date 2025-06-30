@@ -397,8 +397,33 @@
 </div>
 
 <script>
-// Auto-submit form when date range buttons are clicked
+// Add loading indicator and improve form responsiveness
 document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filterForm');
+    const submitButton = filterForm.querySelector('button[type="submit"]');
+    
+    // Add loading state function
+    function setLoadingState(loading) {
+        if (loading) {
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+            submitButton.disabled = true;
+        } else {
+            submitButton.innerHTML = '<i class="fas fa-search"></i> Apply Filters';
+            submitButton.disabled = false;
+        }
+    }
+    
+    // Handle form submission with loading state
+    filterForm.addEventListener('submit', function(e) {
+        setLoadingState(true);
+        
+        // Add a timeout to reset loading state in case of errors
+        setTimeout(() => {
+            setLoadingState(false);
+        }, 10000);
+    });
+    
+    // Auto-submit form when date range buttons are clicked
     const dateRangeInputs = document.querySelectorAll('input[name="date_range"]');
     dateRangeInputs.forEach(input => {
         input.addEventListener('change', function() {
@@ -408,6 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('date_from').value = '';
                     document.getElementById('date_to').value = '';
                 }
+                setLoadingState(true);
                 document.getElementById('filterForm').submit();
             }
         });
@@ -426,6 +452,22 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('range_all').checked = true;
         });
     });
+    
+    // Add debounced search functionality
+    const searchInput = document.getElementById('search');
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            // Optional: Auto-submit search after 2 seconds of no typing
+            // Uncomment the line below if you want auto-search
+            // filterForm.submit();
+        }, 2000);
+    });
+    
+    // Reset loading state when page loads
+    setLoadingState(false);
 });
 </script>
 {% endblock %}
