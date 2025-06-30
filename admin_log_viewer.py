@@ -13,7 +13,7 @@ from admin_middleware import admin_required
 from datetime import datetime, timedelta
 import json
 import logging
-from sqlalchemy import desc, and_, or_
+from sqlalchemy import desc, and_, or_, func
 
 logger = logging.getLogger(__name__)
 
@@ -88,15 +88,14 @@ def admin_logs():
             elif event_type == "admin_actions":
                 query = query.filter(AdminLog.event_type.like("admin_%"))
             elif event_type == "errors":
-                query = query.filter(
-                    or_(
-                        AdminLog.event_type.in_(["error", "validation_error", "error_response"]),
-                        AdminLog.event_type.like("%error%"),
-                        AdminLog.event_details.like("%error%"),
-                        AdminLog.event_details.like("%exception%"),
-                        AdminLog.event_details.like("%traceback%")
-                    )
-                )
+                error_conditions = [
+                    AdminLog.event_type.in_(["error", "validation_error", "error_response"]),
+                    AdminLog.event_type.like("%error%"),
+                    AdminLog.event_details.like("%error%"),
+                    AdminLog.event_details.like("%exception%"),
+                    AdminLog.event_details.like("%traceback%")
+                ]
+                query = query.filter(or_(*error_conditions))
             else:
                 query = query.filter(AdminLog.event_type.like(f"%{event_type}%"))
 
@@ -123,17 +122,13 @@ def admin_logs():
         if search_term:
             # Search in event_details JSON and other fields
             search_pattern = f"%{search_term}%"
-            query = query.filter(
-                or_(
-                    AdminLog.event_details.like(search_pattern),
-                    AdminLog.event_type.like(search_pattern),
-                    AdminLog.ip_address.like(search_pattern),
-                    User.username.like(search_pattern),
-                    # Enhanced search for common error terms
-                    AdminLog.event_details.ilike(search_pattern),
-                    AdminLog.event_type.ilike(search_pattern)
-                )
-            )
+            search_conditions = [
+                AdminLog.event_details.ilike(search_pattern),
+                AdminLog.event_type.ilike(search_pattern),
+                AdminLog.ip_address.ilike(search_pattern),
+                User.username.ilike(search_pattern)
+            ]
+            query = query.filter(or_(*search_conditions))
 
         # Apply sorting
         if sort_order == "asc":
