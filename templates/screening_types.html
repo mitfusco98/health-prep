@@ -637,98 +637,59 @@ document.addEventListener('DOMContentLoaded', function() {
         'manage': new KeywordManager('manage')
     };
 
-    // Single source of truth for keywords - loaded once and cached
-    let keywordsDatabase = new Map();
-    let isKeywordsLoaded = false;
-
-    // Function to load keywords once and store in memory
-    function initializeKeywordsDatabase() {
-        if (isKeywordsLoaded) {
-            console.log('Keywords already loaded, skipping initialization');
-            return Promise.resolve();
-        }
-
-        console.log('Initializing keywords database...');
-        
-        return fetch('/api/screening-keywords/bulk')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Clear and populate the single source of truth
-                    keywordsDatabase.clear();
-                    
-                    Object.keys(data.data).forEach(screeningId => {
-                        const keywords = data.data[screeningId].keywords || [];
-                        // Ensure no duplicates at storage level
-                        const uniqueKeywords = [...new Set(keywords.map(k => k.toLowerCase()))].map(k => 
-                            keywords.find(orig => orig.toLowerCase() === k)
-                        );
-                        
-                        keywordsDatabase.set(screeningId, {
-                            keywords: uniqueKeywords,
-                            screening_name: data.data[screeningId].screening_name
-                        });
-                    });
-                    
-                    isKeywordsLoaded = true;
-                    console.log(`Keywords database initialized with ${keywordsDatabase.size} screening types`);
-                    
-                    // Update all displays once
-                    updateAllKeywordDisplays();
-                } else {
-                    console.error('Error loading keywords:', data.error);
-                    setDefaultKeywordDisplays();
-                }
-            })
-            .catch(error => {
-                console.error('Error loading keywords:', error);
-                setDefaultKeywordDisplays();
-            });
-    }
-
-    // Function to update all keyword displays from the database
-    function updateAllKeywordDisplays() {
-        document.querySelectorAll('[data-screening-id]').forEach(element => {
-            const screeningId = element.getAttribute('data-screening-id');
-            const container = element.querySelector('.keyword-tags');
-            if (container) {
-                displayKeywordsFromDatabase(screeningId, container);
-            }
-        });
-    }
-
-    // Function to display keywords from the database
-    function displayKeywordsFromDatabase(screeningId, container) {
-        const data = keywordsDatabase.get(screeningId);
-        
-        if (data && data.keywords && data.keywords.length > 0) {
-            container.innerHTML = '';
-            data.keywords.forEach(keyword => {
-                const badge = document.createElement('span');
-                badge.className = 'badge bg-secondary me-1 mb-1';
-                badge.textContent = keyword;
-                container.appendChild(badge);
-            });
-        } else {
-            container.innerHTML = '<small class="text-muted">No keywords set</small>';
-        }
-    }
-
-    // Function to set default displays when keywords can't be loaded
-    function setDefaultKeywordDisplays() {
+    // Simple function to display keywords in table view (loads on demand)
+    function loadKeywordDisplaysOnDemand() {
         document.querySelectorAll('.keyword-tags').forEach(container => {
-            container.innerHTML = '<small class="text-muted">Click edit to manage keywords</small>';
+            const screeningElement = container.closest('[data-screening-id]');
+            if (screeningElement) {
+                const screeningId = screeningElement.getAttribute('data-screening-id');
+                
+                // Set loading state
+                container.innerHTML = '<small class="text-muted">Loading...</small>';
+                
+                // Load keywords for this specific screening
+                fetch(`/api/screening-keywords/${screeningId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.keywords && data.keywords.length > 0) {
+                            container.innerHTML = '';
+                            data.keywords.forEach(keyword => {
+                                const badge = document.createElement('span');
+                                badge.className = 'badge bg-secondary me-1 mb-1';
+                                badge.textContent = keyword;
+                                container.appendChild(badge);
+                            });
+                        } else {
+                            container.innerHTML = '<small class="text-muted">No keywords set</small>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error(`Error loading keywords for display (screening ${screeningId}):`, error);
+                        container.innerHTML = '<small class="text-muted">Click edit to manage keywords</small>';
+                    });
+            }
         });
     }
 
     // Function to get keywords for a specific screening (used by edit modal)
     function getKeywordsForScreening(screeningId) {
-        const data = keywordsDatabase.get(screeningId);
-        return data ? [...data.keywords] : []; // Return a copy to prevent mutations
+        // Load keywords directly from API when needed
+        return fetch(`/api/screening-keywords/${screeningId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.keywords) {
+                    return data.keywords;
+                }
+                return [];
+            })
+            .catch(error => {
+                console.error('Error loading keywords:', error);
+                return [];
+            });
     }
 
-    // Initialize keywords once when page loads
-    initializeKeywordsDatabase();
+    // Keywords will be loaded on demand when needed
+    // Removed automatic initialization to prevent duplication
 
     // Handle manage keywords button clicks
     document.querySelectorAll('.manage-keywords-btn').forEach(button => {
@@ -738,13 +699,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.getElementById('modalScreeningName').textContent = screeningName;
             
-            // Load keywords from the single source database
-            const keywordsToLoad = getKeywordsForScreening(currentScreeningId);
-            console.log(`Loading ${keywordsToLoad.length} keywords for manage modal (screening ${currentScreeningId})`);
+            // Load keywords directly when manage modal opens
+            console.log(`Loading keywords for manage modal (screening ${currentScreeningId})`);
             
-            // Clear and set keywords
+            // Clear keywords first
             keywordManagers.manage.keywords = [];
-            keywordManagers.manage.setKeywords(keywordsToLoad);
+            keywordManagers.manage.setKeywords([]);
+            
+            // Load from API
+            getKeywordsForScreening(currentScreeningId).then(keywordsToLoad => {
+                console.log(`Loaded ${keywordsToLoad.length} keywords for manage modal`);
+                keywordManagers.manage.setKeywords(keywordsToLoad);
+            }).catch(error => {
+                console.error('Error loading keywords for manage modal:', error);
+                keywordManagers.manage.setKeywords([]);
+            });
 
             const modal = new bootstrap.Modal(document.getElementById('keywordManagementModal'));
             modal.show();
@@ -771,16 +740,20 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Update the local database immediately
-                keywordsDatabase.set(currentScreeningId, {
-                    keywords: [...keywordStrings], // Store a copy
-                    screening_name: keywordsDatabase.get(currentScreeningId)?.screening_name || ''
-                });
-                
-                // Update the display
+                // Update the specific display
                 const container = document.querySelector(`[data-screening-id="${currentScreeningId}"] .keyword-tags`);
                 if (container) {
-                    displayKeywordsFromDatabase(currentScreeningId, container);
+                    if (keywordStrings.length > 0) {
+                        container.innerHTML = '';
+                        keywordStrings.forEach(keyword => {
+                            const badge = document.createElement('span');
+                            badge.className = 'badge bg-secondary me-1 mb-1';
+                            badge.textContent = keyword;
+                            container.appendChild(badge);
+                        });
+                    } else {
+                        container.innerHTML = '<small class="text-muted">No keywords set</small>';
+                    }
                 }
 
                 // Close modal
@@ -799,10 +772,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Set default loading state initially
-    document.querySelectorAll('.keyword-tags').forEach(container => {
-        container.innerHTML = '<small class="text-muted">Loading...</small>';
-    });
+    // Load keyword displays on demand when page loads
+    loadKeywordDisplaysOnDemand();
 
     // Utility function to show alerts
     function showAlert(message, type) {
@@ -859,21 +830,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 editKeywordsData.value = '';
             }
 
-            // Wait for keywords database to be ready, then load
-            const loadKeywordsForEdit = () => {
-                const keywordsToLoad = getKeywordsForScreening(id);
-                console.log(`Loading ${keywordsToLoad.length} keywords for edit modal (screening ${id})`);
-                
-                // Set keywords immediately
+            // Load keywords directly when edit modal opens
+            console.log(`Loading keywords for edit modal (screening ${id})`);
+            
+            getKeywordsForScreening(id).then(keywordsToLoad => {
+                console.log(`Loaded ${keywordsToLoad.length} keywords for edit modal`);
                 keywordManagers.edit.setKeywords(keywordsToLoad);
-            };
-
-            if (isKeywordsLoaded) {
-                loadKeywordsForEdit();
-            } else {
-                // Wait for initialization to complete
-                initializeKeywordsDatabase().then(loadKeywordsForEdit);
-            }
+            }).catch(error => {
+                console.error('Error loading keywords for edit:', error);
+                keywordManagers.edit.setKeywords([]);
+            });
         });
     });
 
