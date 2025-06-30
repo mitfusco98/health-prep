@@ -39,26 +39,8 @@ def get_screening_keywords(screening_id):
         # Get unified keywords (applies to both content and filenames)
         unified_keywords = screening_type.get_unified_keywords() or []
         
-        # Initialize all keyword lists to prevent scoping errors
-        content_keywords = []
-        document_keywords = []
-        filename_keywords = []
-        
-        # For backward compatibility, also check legacy fields if unified is empty
-        if not unified_keywords:
-            content_keywords = screening_type.get_content_keywords() or []
-            document_keywords = screening_type.get_document_keywords() or []
-            filename_keywords = screening_type.get_filename_keywords() or []
-            
-            # Combine legacy keywords if unified is not set
-            all_keywords = []
-            all_keywords.extend(content_keywords)
-            all_keywords.extend(document_keywords)
-            all_keywords.extend(filename_keywords)
-        else:
-            all_keywords = unified_keywords
-            # For legacy compatibility, also set content_keywords to unified for processing
-            content_keywords = unified_keywords
+        # Use ONLY unified keywords - no legacy field fallback to prevent duplication
+        all_keywords = unified_keywords
 
         # Process to ensure clean unique strings with multiple deduplication passes
         unique_keywords = []
@@ -163,6 +145,15 @@ def save_screening_keywords(screening_id):
         if cache_key in _request_cache:
             del _request_cache[cache_key]
             print(f"DEBUG: Cleared cache for screening keywords {screening_id} after save.")
+        
+        # Also clear any other cached entries that might be stale
+        keys_to_clear = [key for key in _request_cache.keys() if key.startswith('screening_keywords_')]
+        for key in keys_to_clear:
+            if key != cache_key:  # Don't double-clear the same key
+                del _request_cache[key]
+        
+        if keys_to_clear:
+            print(f"DEBUG: Cleared {len(keys_to_clear)} cached keyword entries to prevent stale data.")
 
         return jsonify({
             'success': True,
