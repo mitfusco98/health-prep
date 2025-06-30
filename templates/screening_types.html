@@ -165,19 +165,10 @@
                     </div>
                     
                     <div class="form-group mb-3">
-                        <label class="form-label">Document Keywords</label>
+                        <label class="form-label">Keywords for Document Matching</label>
                         <div class="keyword-input-container">
                             <div class="input-group mb-2">
                                 <input type="text" class="form-control" id="addKeywordInput" placeholder="Enter keyword (e.g., 'mammogram', 'glucose')">
-                                <select class="form-select" id="addSectionSelect" style="max-width: 150px;">
-                                    <option value="labs">Labs</option>
-                                    <option value="imaging">Imaging</option>
-                                    <option value="procedures">Procedures</option>
-                                    <option value="vitals">Vitals</option>
-                                    <option value="consults">Consults</option>
-                                    <option value="medications">Medications</option>
-                                    <option value="general" selected>General</option>
-                                </select>
                                 <button type="button" class="btn btn-outline-primary" id="addKeywordBtn">
                                     <i class="fas fa-plus"></i> Add
                                 </button>
@@ -187,7 +178,7 @@
                             </div>
                             <input type="hidden" name="keywords_json" id="addKeywordsData">
                         </div>
-                        <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used for document matching when FHIR codes are not available.</small>
+                        <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used to match both document content and filenames.</small>
                     </div>
                     
                     <div class="row mb-3">
@@ -269,19 +260,10 @@
                     </div>
                     
                     <div class="form-group mb-3">
-                        <label class="form-label">Document Keywords</label>
+                        <label class="form-label">Keywords for Document Matching</label>
                         <div class="keyword-input-container">
                             <div class="input-group mb-2">
                                 <input type="text" class="form-control" id="editKeywordInput" placeholder="Enter keyword (e.g., 'mammogram', 'glucose')">
-                                <select class="form-select" id="editSectionSelect" style="max-width: 150px;">
-                                    <option value="labs">Labs</option>
-                                    <option value="imaging">Imaging</option>
-                                    <option value="procedures">Procedures</option>
-                                    <option value="vitals">Vitals</option>
-                                    <option value="consults">Consults</option>
-                                    <option value="medications">Medications</option>
-                                    <option value="general" selected>General</option>
-                                </select>
                                 <button type="button" class="btn btn-outline-primary" id="editKeywordBtn">
                                     <i class="fas fa-plus"></i> Add
                                 </button>
@@ -291,7 +273,7 @@
                             </div>
                             <input type="hidden" name="keywords_json" id="editKeywordsData">
                         </div>
-                        <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used for document matching when FHIR codes are not available.</small>
+                        <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used to match both document content and filenames.</small>
                     </div>
                     
                     <div class="row mb-3">
@@ -372,15 +354,6 @@
                 <div class="keyword-input-container">
                     <div class="input-group mb-3">
                         <input type="text" class="form-control" id="manageKeywordInput" placeholder="Enter keyword (e.g., 'mammogram', 'glucose')">
-                        <select class="form-select" id="manageSectionSelect" style="max-width: 150px;">
-                            <option value="labs">Labs</option>
-                            <option value="imaging">Imaging</option>
-                            <option value="procedures">Procedures</option>
-                            <option value="vitals">Vitals</option>
-                            <option value="consults">Consults</option>
-                            <option value="medications">Medications</option>
-                            <option value="general" selected>General</option>
-                        </select>
                         <button type="button" class="btn btn-primary" id="manageAddKeywordBtn">
                             <i class="fas fa-plus"></i> Add Keyword
                         </button>
@@ -489,27 +462,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
         addKeyword() {
             const input = document.getElementById(this.prefix + 'KeywordInput');
-            const sectionSelect = document.getElementById(this.prefix + 'SectionSelect');
             
             const keyword = input.value.trim();
-            const section = sectionSelect.value;
             
             if (!keyword) return;
             
             // Check for duplicates
             const exists = this.keywords.some(k => 
-                k.keyword.toLowerCase() === keyword.toLowerCase() && k.section === section
+                k.keyword.toLowerCase() === keyword.toLowerCase()
             );
             
             if (exists) {
-                alert('This keyword already exists for this section');
+                alert('This keyword already exists');
                 return;
             }
             
-            // Add keyword
+            // Add keyword with simplified structure
             this.keywords.push({
                 keyword: keyword,
-                section: section,
                 weight: 1.0,
                 case_sensitive: false,
                 exact_match: false,
@@ -535,7 +505,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const tag = document.createElement('span');
                 tag.className = 'keyword-tag';
                 tag.innerHTML = `
-                    <span class="section-label">${keyword.section}</span>
                     ${keyword.keyword}
                     <span class="remove-btn" onclick="keywordManagers['${this.prefix}'].removeKeyword(${index})">&times;</span>
                 `;
@@ -576,7 +545,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Convert simple keywords to objects for the manager
                     const keywordObjects = (data.keywords || []).map(keyword => ({
                         keyword: keyword,
-                        section: 'general',
                         weight: 1.0,
                         case_sensitive: false,
                         exact_match: false,
@@ -662,20 +630,21 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Group keywords by section
-        const bySection = {};
-        keywords.forEach(k => {
-            if (!bySection[k.section]) bySection[k.section] = [];
-            bySection[k.section].push(k.keyword);
-        });
-        
-        // Display keywords by section
-        Object.entries(bySection).forEach(([section, sectionKeywords]) => {
+        // Display keywords as simple badges
+        const keywordStrings = keywords.map(k => typeof k === 'string' ? k : k.keyword);
+        keywordStrings.slice(0, 5).forEach(keyword => {
             const badge = document.createElement('span');
             badge.className = 'badge bg-secondary me-1 mb-1';
-            badge.innerHTML = `${section}: ${sectionKeywords.slice(0, 3).join(', ')}${sectionKeywords.length > 3 ? '...' : ''}`;
+            badge.textContent = keyword;
             container.appendChild(badge);
         });
+        
+        if (keywordStrings.length > 5) {
+            const moreBadge = document.createElement('span');
+            moreBadge.className = 'badge bg-light text-dark me-1 mb-1';
+            moreBadge.textContent = `+${keywordStrings.length - 5} more`;
+            container.appendChild(moreBadge);
+        }
     }
 
     // Load existing keywords on page load with throttling

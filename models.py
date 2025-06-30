@@ -747,10 +747,10 @@ class ScreeningType(db.Model):
     
     def set_content_keywords(self, keywords_list):
         """
-        Set content keywords as JSON array
+        Set unified keywords as JSON array (used for both content and filename matching)
         
         Args:
-            keywords_list: List of keywords for content parsing like ["mammogram", "breast", "screening"]
+            keywords_list: List of keywords for content and filename parsing like ["mammogram", "breast", "screening"]
         """
         if keywords_list:
             self.content_keywords = json.dumps(keywords_list)
@@ -758,7 +758,7 @@ class ScreeningType(db.Model):
             self.content_keywords = None
     
     def get_content_keywords(self):
-        """Get content keywords as list"""
+        """Get unified keywords as list (used for both content and filename matching)"""
         if not self.content_keywords:
             return []
         
@@ -769,7 +769,7 @@ class ScreeningType(db.Model):
     
     def set_document_keywords(self, keywords_list):
         """
-        Set document keywords as JSON array
+        Set document section keywords as JSON array
         
         Args:
             keywords_list: List of keywords for document type parsing like ["radiology", "lab", "pathology"]
@@ -780,7 +780,7 @@ class ScreeningType(db.Model):
             self.document_keywords = None
     
     def get_document_keywords(self):
-        """Get document keywords as list"""
+        """Get document section keywords as list"""
         if not self.document_keywords:
             return []
         
@@ -791,32 +791,26 @@ class ScreeningType(db.Model):
     
     def set_filename_keywords(self, keywords_list):
         """
-        Set filename keywords as JSON array
+        Legacy method - now redirects to set_content_keywords for unified approach
         
         Args:
             keywords_list: List of keywords for filename parsing like ["mammo", "xray", "ct"]
         """
+        # For backward compatibility, merge with existing content keywords
+        existing_keywords = self.get_content_keywords()
         if keywords_list:
-            self.filename_keywords = json.dumps(keywords_list)
-        else:
-            self.filename_keywords = None
+            all_keywords = list(set(existing_keywords + keywords_list))
+            self.set_content_keywords(all_keywords)
     
     def get_filename_keywords(self):
-        """Get filename keywords as list"""
-        if not self.filename_keywords:
-            return []
-        
-        try:
-            return json.loads(self.filename_keywords)
-        except (json.JSONDecodeError, TypeError):
-            return []
+        """Legacy method - now returns content keywords for unified approach"""
+        return self.get_content_keywords()
     
     def get_all_keywords(self):
         """Get all keywords combined for comprehensive parsing"""
         all_keywords = []
-        all_keywords.extend(self.get_content_keywords())
+        all_keywords.extend(self.get_content_keywords())  # This now includes both content and filename keywords
         all_keywords.extend(self.get_document_keywords())
-        all_keywords.extend(self.get_filename_keywords())
         return list(set(all_keywords))  # Remove duplicates
     
     def matches_keywords(self, text, keyword_type='all'):
@@ -835,12 +829,11 @@ class ScreeningType(db.Model):
         
         text_lower = text.lower()
         
-        if keyword_type == 'content':
+        if keyword_type == 'content' or keyword_type == 'filename':
+            # Both content and filename now use the same unified keywords
             keywords = self.get_content_keywords()
         elif keyword_type == 'document':
             keywords = self.get_document_keywords()
-        elif keyword_type == 'filename':
-            keywords = self.get_filename_keywords()
         else:  # 'all'
             keywords = self.get_all_keywords()
         

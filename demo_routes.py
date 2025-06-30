@@ -1018,17 +1018,20 @@ def add_screening_type():
         # Process keyword fields from the form
         import json
         try:
-            # Content keywords (for document content parsing)
-            keywords_data = request.form.get('keywords')
+            # Unified keywords (used for both content and filename parsing)
+            keywords_data = request.form.get('keywords_json') or request.form.get('keywords')
             if keywords_data:
-                content_keywords = json.loads(keywords_data)
-                screening_type.set_content_keywords(content_keywords)
-            
-            # Filename keywords (for filename parsing)
-            filename_keywords_data = request.form.get('filename_keywords')
-            if filename_keywords_data:
-                filename_keywords = json.loads(filename_keywords_data)
-                screening_type.set_filename_keywords(filename_keywords)
+                keywords = json.loads(keywords_data)
+                # Convert to simple list format if needed
+                keyword_list = []
+                for keyword in keywords:
+                    if isinstance(keyword, str) and keyword.strip():
+                        keyword_list.append(keyword.strip())
+                    elif isinstance(keyword, dict) and keyword.get('keyword'):
+                        keyword_list.append(keyword['keyword'].strip())
+                
+                if keyword_list:
+                    screening_type.set_content_keywords(keyword_list)
             
             # Document section as document keywords
             document_section = request.form.get('document_section')
@@ -1223,32 +1226,28 @@ def edit_screening_type(screening_type_id):
         screening_type.is_active = form.is_active.data
         screening_type.status = 'active' if form.is_active.data else 'inactive'
 
-        # Process keyword fields from the form (similar to add function)
+        # Process keyword fields from the form (unified approach)
         import json
         try:
-            # Content keywords (for document content parsing)
-            keywords_data = request.form.get('keywords')
+            # Unified keywords (used for both content and filename parsing)
+            keywords_data = request.form.get('keywords_json') or request.form.get('keywords')
             if keywords_data and keywords_data.strip():
                 try:
-                    content_keywords = json.loads(keywords_data)
-                    screening_type.set_content_keywords(content_keywords)
+                    keywords = json.loads(keywords_data)
+                    # Convert to simple list format if needed
+                    keyword_list = []
+                    for keyword in keywords:
+                        if isinstance(keyword, str) and keyword.strip():
+                            keyword_list.append(keyword.strip())
+                        elif isinstance(keyword, dict) and keyword.get('keyword'):
+                            keyword_list.append(keyword['keyword'].strip())
+                    
+                    screening_type.set_content_keywords(keyword_list)
                 except json.JSONDecodeError:
                     print(f"Warning: Invalid JSON in keywords field, skipping: '{keywords_data[:50]}...'")
                     screening_type.set_content_keywords([])
             else:
                 screening_type.set_content_keywords([])
-            
-            # Filename keywords (for filename parsing)
-            filename_keywords_data = request.form.get('filename_keywords')
-            if filename_keywords_data and filename_keywords_data.strip():
-                try:
-                    filename_keywords = json.loads(filename_keywords_data)
-                    screening_type.set_filename_keywords(filename_keywords)
-                except json.JSONDecodeError:
-                    print(f"Warning: Invalid JSON in filename_keywords field, skipping")
-                    screening_type.set_filename_keywords([])
-            else:
-                screening_type.set_filename_keywords([])
             
             # Document section as document keywords
             document_section = request.form.get('document_section')
