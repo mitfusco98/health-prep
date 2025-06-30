@@ -1053,8 +1053,9 @@ def add_screening_type():
         if trigger_conditions_data and trigger_conditions_data.strip():
             try:
                 import html
-                # Decode HTML entities before parsing JSON
+                # Decode HTML entities before parsing JSON more comprehensively
                 decoded_data = html.unescape(trigger_conditions_data)
+                decoded_data = decoded_data.replace('&quot;', '"').replace('&#x27;', "'").replace('&amp;', '&')
                 print(f"Decoded trigger conditions data: {decoded_data}")
                 trigger_conditions = json.loads(decoded_data)
                 print(f"Parsed trigger conditions: {trigger_conditions}")
@@ -1062,7 +1063,9 @@ def add_screening_type():
                     screening_type.set_trigger_conditions(trigger_conditions)
                     print(f"Set trigger conditions for screening type {screening_type.name}")
             except json.JSONDecodeError as e:
-                print(f"Error parsing trigger conditions JSON: {str(e)}")
+                print(f"Warning: Error processing trigger conditions data: {e}")
+                # Continue without trigger conditions if there's an error
+                pass
         else:
             # Clear trigger conditions if none provided
             screening_type.set_trigger_conditions([])
@@ -1299,11 +1302,12 @@ def edit_screening_type(screening_type_id):
                 import json as json_module
                 import html
                 
-                # Fix HTML entity encoding issues
-                keywords_data = html.unescape(keywords_data)
-                keywords_data = keywords_data.replace('&quot;', '"').replace('&#x27;', "'")
+                # Fix HTML entity encoding issues more comprehensively
+                decoded_keywords = html.unescape(keywords_data)
+                decoded_keywords = decoded_keywords.replace('&quot;', '"').replace('&#x27;', "'").replace('&amp;', '&')
+                print(f"Decoded keywords data: {decoded_keywords}")
                 
-                keywords = json_module.loads(keywords_data)
+                keywords = json_module.loads(decoded_keywords)
                 print(f"Parsed keywords: {keywords}")
                 
                 # Add new keywords - handle both simple keyword list and complex objects from form
@@ -1336,7 +1340,9 @@ def edit_screening_type(screening_type_id):
                                 success_count += 1
                     print(f"Successfully added {success_count} keywords")
             except json_module.JSONDecodeError as e:
-                print(f"Error parsing keywords JSON: {str(e)} - Data: '{keywords_data[:100]}...'")
+                print(f"Warning: Error processing keyword data: {e}")
+                # Continue without keywords if there's an error
+                pass
             except Exception as e:
                 print(f"Error updating keywords: {str(e)}")
         else:

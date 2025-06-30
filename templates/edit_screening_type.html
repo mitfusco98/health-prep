@@ -312,10 +312,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // Force a small delay to ensure data is set
-            setTimeout(() => {
-                console.log('Final keywords value before submit:', keywordsField ? keywordsField.value : 'no field');
-            }, 100);
+            // Prevent HTML entity encoding by ensuring proper JSON
+            if (keywordsField && keywordsField.value) {
+                try {
+                    // Parse and re-stringify to ensure clean JSON
+                    const parsed = JSON.parse(keywordsField.value);
+                    keywordsField.value = JSON.stringify(parsed);
+                } catch (e) {
+                    console.warn('JSON validation failed, setting empty array');
+                    keywordsField.value = '[]';
+                }
+            }
+            
+            console.log('Final keywords value before submit:', keywordsField ? keywordsField.value : 'no field');
         });
     }
 });
@@ -813,6 +822,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle form submission to ensure trigger conditions are included
     const form = document.querySelector('form');
     if (form) {
+        const existingSubmitHandler = form.onsubmit;
         form.addEventListener('submit', function(e) {
             // Update trigger conditions data before submission
             updateFormTriggerConditionsData('edit-form');
@@ -824,6 +834,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // If no trigger conditions data, set empty array
             if (!triggerConditionsValue || triggerConditionsValue.trim() === '') {
                 if (triggerConditionsField) {
+                    triggerConditionsField.value = '[]';
+                }
+            }
+            
+            // Prevent HTML entity encoding by ensuring proper JSON
+            if (triggerConditionsField && triggerConditionsField.value) {
+                try {
+                    // Parse and re-stringify to ensure clean JSON
+                    const parsed = JSON.parse(triggerConditionsField.value);
+                    triggerConditionsField.value = JSON.stringify(parsed);
+                } catch (e) {
+                    console.warn('Trigger conditions JSON validation failed, setting empty array');
                     triggerConditionsField.value = '[]';
                 }
             }

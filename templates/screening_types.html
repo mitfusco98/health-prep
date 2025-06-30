@@ -699,19 +699,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (response.status === 429) {
                     // Rate limited, wait longer and retry
                     setTimeout(() => loadNextKeywords(), 2000);
-                    return;
+                    return null;
+                }
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
                 }
                 return response.json();
             })
             .then(data => {
                 if (!data) return; // Skip if rate limited
                 
-                if (data.success && data.keywords && data.keywords.length > 0) {
-                    const keywordObjects = data.keywords.map(keyword => ({
-                        keyword: keyword,
-                        section: 'general'
-                    }));
-                    updateKeywordsDisplay(screeningId, keywordObjects);
+                if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
+                    // Display keywords as badges
+                    const keywordsHtml = data.keywords.map(keyword => 
+                        `<span class="badge bg-secondary me-1 mb-1">${keyword}</span>`
+                    ).join('');
+                    container.innerHTML = keywordsHtml;
                 } else {
                     container.innerHTML = '<small class="text-muted">No keywords defined</small>';
                 }
