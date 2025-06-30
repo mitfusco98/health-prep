@@ -117,6 +117,15 @@ class APIAccessLogger:
         "/date/",
     }
 
+    # Define rate limits for different endpoint patterns
+    RATE_LIMITS = {
+        '/api/patients': {'requests': 100, 'window': 60},  # 100 requests per minute
+        '/api/appointments': {'requests': 50, 'window': 60},  # 50 requests per minute
+        '/api/screening-keywords': {'requests': 500, 'window': 60},  # Higher limit for keyword loading
+        '/api/': {'requests': 200, 'window': 60},  # Default API rate limit
+        '/': {'requests': 1000, 'window': 60}  # General rate limit
+    }
+
     @staticmethod
     def log_api_access(route, user=None, additional_data=None):
         """
