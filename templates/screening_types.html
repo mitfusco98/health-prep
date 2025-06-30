@@ -460,6 +460,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     let currentScreeningId = null;
     let currentKeywords = [];
+    
+    // Cache to prevent duplicate API calls
+    const keywordCache = new Map();
+    const loadingStates = new Set();
 
     // Keyword management functionality
     class KeywordManager {
@@ -637,54 +641,101 @@ document.addEventListener('DOMContentLoaded', function() {
         'manage': new KeywordManager('manage')
     };
 
-    // Simple function to display keywords in table view (loads on demand)
+    // Cached keyword loading function to prevent duplicate API calls
     function loadKeywordDisplaysOnDemand() {
         document.querySelectorAll('.keyword-tags').forEach(container => {
             const screeningElement = container.closest('[data-screening-id]');
             if (screeningElement) {
                 const screeningId = screeningElement.getAttribute('data-screening-id');
                 
-                // Set loading state
+                // Skip if already loaded or currently loading
+                if (keywordCache.has(screeningId) || loadingStates.has(screeningId)) {
+                    if (keywordCache.has(screeningId)) {
+                        displayCachedKeywords(container, keywordCache.get(screeningId));
+                    }
+                    return;
+                }
+                
+                // Mark as loading
+                loadingStates.add(screeningId);
                 container.innerHTML = '<small class="text-muted">Loading...</small>';
                 
                 // Load keywords for this specific screening
                 fetch(`/api/screening-keywords/${screeningId}`)
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success && data.keywords && data.keywords.length > 0) {
-                            container.innerHTML = '';
-                            data.keywords.forEach(keyword => {
-                                const badge = document.createElement('span');
-                                badge.className = 'badge bg-secondary me-1 mb-1';
-                                badge.textContent = keyword;
-                                container.appendChild(badge);
-                            });
-                        } else {
-                            container.innerHTML = '<small class="text-muted">No keywords set</small>';
-                        }
+                        // Cache the result
+                        const keywords = data.success && data.keywords ? data.keywords : [];
+                        keywordCache.set(screeningId, keywords);
+                        
+                        // Display keywords
+                        displayCachedKeywords(container, keywords);
                     })
                     .catch(error => {
                         console.error(`Error loading keywords for display (screening ${screeningId}):`, error);
                         container.innerHTML = '<small class="text-muted">Click edit to manage keywords</small>';
+                        keywordCache.set(screeningId, []); // Cache empty result to prevent retries
+                    })
+                    .finally(() => {
+                        loadingStates.delete(screeningId);
                     });
             }
         });
     }
+    
+    // Helper function to display cached keywords
+    function displayCachedKeywords(container, keywords) {
+        if (keywords && keywords.length > 0) {
+            container.innerHTML = '';
+            keywords.forEach(keyword => {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-secondary me-1 mb-1';
+                badge.textContent = keyword;
+                container.appendChild(badge);
+            });
+        } else {
+            container.innerHTML = '<small class="text-muted">No keywords set</small>';
+        }
+    }
 
-    // Function to get keywords for a specific screening (used by edit modal)
+    // Function to get keywords for a specific screening (used by edit modal) with caching
     function getKeywordsForScreening(screeningId) {
-        // Load keywords directly from API when needed
+        // Return cached data if available
+        if (keywordCache.has(screeningId)) {
+            return Promise.resolve(keywordCache.get(screeningId));
+        }
+        
+        // Skip if already loading
+        if (loadingStates.has(screeningId)) {
+            return new Promise((resolve) => {
+                // Wait for loading to complete by checking cache periodically
+                const checkCache = () => {
+                    if (keywordCache.has(screeningId)) {
+                        resolve(keywordCache.get(screeningId));
+                    } else {
+                        setTimeout(checkCache, 100);
+                    }
+                };
+                checkCache();
+            });
+        }
+        
+        // Mark as loading and fetch from API
+        loadingStates.add(screeningId);
         return fetch(`/api/screening-keywords/${screeningId}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success && data.keywords) {
-                    return data.keywords;
-                }
-                return [];
+                const keywords = data.success && data.keywords ? data.keywords : [];
+                keywordCache.set(screeningId, keywords);
+                return keywords;
             })
             .catch(error => {
                 console.error('Error loading keywords:', error);
+                keywordCache.set(screeningId, []); // Cache empty result
                 return [];
+            })
+            .finally(() => {
+                loadingStates.delete(screeningId);
             });
     }
 
@@ -740,20 +791,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                // Update cache with new keywords
+                keywordCache.set(currentScreeningId, keywordStrings);
+                
                 // Update the specific display
                 const container = document.querySelector(`[data-screening-id="${currentScreeningId}"] .keyword-tags`);
                 if (container) {
-                    if (keywordStrings.length > 0) {
-                        container.innerHTML = '';
-                        keywordStrings.forEach(keyword => {
-                            const badge = document.createElement('span');
-                            badge.className = 'badge bg-secondary me-1 mb-1';
-                            badge.textContent = keyword;
-                            container.appendChild(badge);
-                        });
-                    } else {
-                        container.innerHTML = '<small class="text-muted">No keywords set</small>';
-                    }
+                    displayCachedKeywords(container, keywordStrings);
                 }
 
                 // Close modal
@@ -772,8 +816,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Load keyword displays on demand when page loads
-    loadKeywordDisplaysOnDemand();
+    // Load keyword displays on demand when page loads (only once)
+    setTimeout(loadKeywordDisplaysOnDemand, 500);
 
     // Utility function to show alerts
     function showAlert(message, type) {

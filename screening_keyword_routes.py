@@ -1,18 +1,33 @@
 """
-API Routes for Screening Keyword Management
-Handles loading and saving user-defined keywords for screening types
+The code caches API responses to prevent duplicate requests and clears old cache entries to manage memory usage.
 """
-
 from flask import request, jsonify
 from app import app, db
 from models import ScreeningType
 from screening_keyword_manager import ScreeningKeywordManager
 import json
+import time
+
+# Initialize a simple cache
+_request_cache = {}
+_cache_timeout = 60  # Cache timeout in seconds
 
 
 @app.route('/api/screening-keywords/<int:screening_id>', methods=['GET'])
 def get_screening_keywords(screening_id):
     """Get keyword configuration for a screening type - simplified to prevent duplication"""
+    cache_key = f"screening_keywords_{screening_id}"
+    current_time = time.time()
+
+    # Check cache first
+    if cache_key in _request_cache:
+        result, timestamp = _request_cache[cache_key]
+        if current_time - timestamp <= _cache_timeout:
+            print(f"DEBUG: Serving screening keywords {screening_id} from cache.")
+            return result
+        else:
+            print(f"DEBUG: Cache expired for screening keywords {screening_id}.")
+
     try:
         screening_type = ScreeningType.query.get(screening_id)
         if not screening_type:
@@ -51,13 +66,26 @@ def get_screening_keywords(screening_id):
                 seen_lower.add(keyword.lower())
 
         # Debug logging
-        print(f"DEBUG: Screening {screening_id} - Content: {len(content_keywords)}, Document: {len(document_keywords)}, Filename: {len(filename_keywords)}, Final unique: {len(unique_keywords)}")
+        print(f"DEBUG: Screening {screening_id} - Content: {len(content_keywords)}, Final unique: {len(unique_keywords)}")
 
-        return jsonify({
+        result = jsonify({
             'success': True,
             'keywords': unique_keywords,
             'screening_name': screening_type.name
         })
+
+        # Cache the result
+        _request_cache[cache_key] = (result, current_time)
+
+        # Clean old cache entries
+        keys_to_remove = []
+        for key, (_, timestamp) in _request_cache.items():
+            if current_time - timestamp > _cache_timeout:
+                keys_to_remove.append(key)
+        for key in keys_to_remove:
+            del _request_cache[key]
+
+        return result
 
     except Exception as e:
         print(f"ERROR in get_screening_keywords: {str(e)}")
@@ -116,6 +144,12 @@ def save_screening_keywords(screening_id):
 
         db.session.commit()
 
+        # Clear cache when keywords are saved
+        cache_key = f"screening_keywords_{screening_id}"
+        if cache_key in _request_cache:
+            del _request_cache[cache_key]
+            print(f"DEBUG: Cleared cache for screening keywords {screening_id} after save.")
+
         return jsonify({
             'success': True,
             'message': 'Keywords saved successfully',
@@ -163,33 +197,33 @@ def get_all_screening_keywords():
     try:
         # Get all active screening types
         screening_types = ScreeningType.query.filter_by(is_active=True).all()
-        
+
         bulk_data = {}
         for screening_type in screening_types:
             # Get only content keywords to prevent duplication
             content_keywords = screening_type.get_content_keywords() or []
-            
+
             # Process to ensure clean unique strings
             unique_keywords = []
             seen_lower = set()
-            
+
             for keyword in content_keywords:
                 if keyword and isinstance(keyword, str):
                     clean_keyword = keyword.strip()
                     if clean_keyword and clean_keyword.lower() not in seen_lower:
                         unique_keywords.append(clean_keyword)
                         seen_lower.add(clean_keyword.lower())
-            
+
             bulk_data[screening_type.id] = {
                 'keywords': unique_keywords,
                 'screening_name': screening_type.name
             }
-        
+
         return jsonify({
             'success': True,
             'data': bulk_data
         })
-        
+
     except Exception as e:
         print(f"ERROR in get_all_screening_keywords: {str(e)}")
         return jsonify({
