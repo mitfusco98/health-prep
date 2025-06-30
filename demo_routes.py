@@ -400,7 +400,7 @@ def add_patient():
     return render_template("patient_form.html", form=form, title="Add Patient")
 
 
-@app.route("/patients/<int:patient_id>")
+@app.route("/patients/<int:patient_id>", endpoint="patient_detail")
 @safe_db_operation
 @log_patient_operation("view_patient")
 def patient_detail_view(patient_id):
