@@ -1018,15 +1018,17 @@ def add_screening_type():
         # Process keyword fields from the form
         import json
         try:
-            # Unified keywords (applies to both content and filenames)
+            # Content keywords (for document content parsing)
             keywords_data = request.form.get('keywords')
             if keywords_data:
-                unified_keywords = json.loads(keywords_data)
-                screening_type.set_unified_keywords(unified_keywords)
-                # Clear legacy fields to prevent duplication
-                screening_type.set_content_keywords([])
-                screening_type.set_filename_keywords([])
-                screening_type.set_document_keywords([])
+                content_keywords = json.loads(keywords_data)
+                screening_type.set_content_keywords(content_keywords)
+            
+            # Filename keywords (for filename parsing)
+            filename_keywords_data = request.form.get('filename_keywords')
+            if filename_keywords_data:
+                filename_keywords = json.loads(filename_keywords_data)
+                screening_type.set_filename_keywords(filename_keywords)
             
             # Document section as document keywords
             document_section = request.form.get('document_section')
@@ -1084,32 +1086,32 @@ def add_screening_type():
         keywords_data = request.form.get('keywords')
         if keywords_data and keywords_data.strip():
             try:
-                import html
-                
-                # Fix HTML entity encoding issues
-                keywords_data = html.unescape(keywords_data)
-                keywords_data = keywords_data.replace('&quot;', '"').replace('&#x27;', "'")
-                
                 keywords = json.loads(keywords_data)
+                manager = ScreeningKeywordManager()
                 
-                # Extract keyword strings from objects or use strings directly
-                keyword_list = []
+                # Handle both simple keyword list and complex objects from the form
                 if isinstance(keywords, list):
                     for keyword in keywords:
                         if isinstance(keyword, str) and keyword.strip():
-                            keyword_list.append(keyword.strip())
+                            manager.add_keyword_rule(
+                                screening_type_id=screening_type.id,
+                                keyword=keyword.strip(),
+                                section='general',
+                                weight=1.0,
+                                case_sensitive=False,
+                                exact_match=False,
+                                description=f'Keyword for {screening_type.name}'
+                            )
                         elif isinstance(keyword, dict) and keyword.get('keyword'):
-                            keyword_list.append(keyword['keyword'].strip())
-                
-                # Save to ScreeningType model using unified keywords
-                if keyword_list:
-                    screening_type.set_unified_keywords(keyword_list)
-                    # Clear legacy fields to prevent duplication
-                    screening_type.set_content_keywords([])
-                    screening_type.set_filename_keywords([])
-                    screening_type.set_document_keywords([])
-                    print(f"Successfully saved {len(keyword_list)} keywords to unified_keywords field")
-                
+                            manager.add_keyword_rule(
+                                screening_type_id=screening_type.id,
+                                keyword=keyword['keyword'].strip(),
+                                section=keyword.get('section', 'general'),
+                                weight=keyword.get('weight', 1.0),
+                                case_sensitive=keyword.get('case_sensitive', False),
+                                exact_match=keyword.get('exact_match', False),
+                                description=keyword.get('description', f'Keyword for {screening_type.name}')
+                            )
             except json.JSONDecodeError as e:
                 print(f"Error parsing keywords JSON: {str(e)} - Data: '{keywords_data[:100]}...'")
             except Exception as e:
@@ -1219,7 +1221,35 @@ def edit_screening_type(screening_type_id):
         screening_type.is_active = form.is_active.data
         screening_type.status = 'active' if form.is_active.data else 'inactive'
 
-        # Keywords will be processed later in the unified section below
+        # Process keyword fields from the form (similar to add function)
+        import json
+        try:
+            # Content keywords (for document content parsing)
+            keywords_data = request.form.get('keywords')
+            if keywords_data:
+                content_keywords = json.loads(keywords_data)
+                screening_type.set_content_keywords(content_keywords)
+            else:
+                screening_type.set_content_keywords([])
+            
+            # Filename keywords (for filename parsing)
+            filename_keywords_data = request.form.get('filename_keywords')
+            if filename_keywords_data:
+                filename_keywords = json.loads(filename_keywords_data)
+                screening_type.set_filename_keywords(filename_keywords)
+            else:
+                screening_type.set_filename_keywords([])
+            
+            # Document section as document keywords
+            document_section = request.form.get('document_section')
+            if document_section:
+                screening_type.set_document_keywords([document_section])
+            else:
+                screening_type.set_document_keywords([])
+                
+        except (json.JSONDecodeError, ValueError) as e:
+            print(f"Warning: Error processing keyword data: {e}")
+            # Continue without updating keywords if there's an error
 
         # Handle trigger conditions if provided
         trigger_conditions_data = request.form.get('trigger_conditions')
@@ -1243,23 +1273,18 @@ def edit_screening_type(screening_type_id):
             screening_type.set_trigger_conditions([])
             print("Edit - Cleared trigger conditions")
 
-        # Handle keywords if provided - ALWAYS clear existing keywords first
-        print(f"Clearing existing keywords before processing new ones")
-        screening_type.set_content_keywords([])
-        screening_type.set_filename_keywords([])
-        screening_type.set_document_keywords([])
-        
-        # Commit the clearing immediately to ensure it's saved
-        db.session.flush()
-        
-        # Also clear the JSON fields directly to ensure no cached data
-        screening_type.content_keywords = None
-        screening_type.document_keywords = None
-        screening_type.filename_keywords = None
-        db.session.flush()
-        
+        # Handle keywords if provided
         keywords_data = request.form.get('keywords')
         print(f"Keywords data received: {keywords_data}")
+        
+        from screening_keyword_manager import ScreeningKeywordManager
+        manager = ScreeningKeywordManager()
+        
+        # Always clear existing keywords first
+        config = manager.get_keyword_config(screening_type_id)
+        if config:
+            config.keyword_rules.clear()
+            manager._save_keyword_config(config)
         
         if keywords_data and keywords_data.strip():
             try:
@@ -1273,40 +1298,41 @@ def edit_screening_type(screening_type_id):
                 keywords = json_module.loads(keywords_data)
                 print(f"Parsed keywords: {keywords}")
                 
-                # Extract keyword strings from objects or use strings directly
-                keyword_list = []
+                # Add new keywords - handle both simple keyword list and complex objects from form
                 if isinstance(keywords, list):
+                    success_count = 0
                     for keyword in keywords:
                         if isinstance(keyword, str) and keyword.strip():
-                            keyword_list.append(keyword.strip())
+                            success = manager.add_keyword_rule(
+                                screening_type_id=screening_type_id,
+                                keyword=keyword.strip(),
+                                section='general',
+                                weight=1.0,
+                                case_sensitive=False,
+                                exact_match=False,
+                                description=f'Keyword for {screening_type.name}'
+                            )
+                            if success:
+                                success_count += 1
                         elif isinstance(keyword, dict) and keyword.get('keyword'):
-                            keyword_list.append(keyword['keyword'].strip())
-                
-                # Remove duplicates while preserving order
-                unique_keywords = []
-                seen = set()
-                for keyword in keyword_list:
-                    if keyword.lower() not in seen:
-                        unique_keywords.append(keyword)
-                        seen.add(keyword.lower())
-                
-                # Save to ScreeningType model using unified keywords to eliminate duplication
-                if unique_keywords:
-                    screening_type.set_unified_keywords(unique_keywords)
-                    # Clear legacy keyword fields to prevent duplication
-                    screening_type.set_content_keywords([])
-                    screening_type.set_filename_keywords([])
-                    screening_type.set_document_keywords([])
-                    print(f"Successfully saved {len(unique_keywords)} unique keywords to unified_keywords field")
-                else:
-                    print("No valid keywords found after processing")
-                
+                            success = manager.add_keyword_rule(
+                                screening_type_id=screening_type_id,
+                                keyword=keyword['keyword'].strip(),
+                                section=keyword.get('section', 'general'),
+                                weight=keyword.get('weight', 1.0),
+                                case_sensitive=keyword.get('case_sensitive', False),
+                                exact_match=keyword.get('exact_match', False),
+                                description=keyword.get('description', f'Keyword for {screening_type.name}')
+                            )
+                            if success:
+                                success_count += 1
+                    print(f"Successfully added {success_count} keywords")
             except json_module.JSONDecodeError as e:
                 print(f"Error parsing keywords JSON: {str(e)} - Data: '{keywords_data[:100]}...'")
             except Exception as e:
                 print(f"Error updating keywords: {str(e)}")
         else:
-            print("No keywords data provided or empty - keywords cleared")
+            print("No keywords data provided or empty")
 
         try:
             # Store original values for change tracking
@@ -1408,11 +1434,6 @@ def edit_screening_type(screening_type_id):
                 user_agent=request.headers.get("User-Agent", "Unknown"),
             )
 
-            # Force cache invalidation immediately after successful update
-            from screening_keyword_routes import clear_all_cache, invalidate_screening_cache
-            invalidate_screening_cache(screening_type.id)
-            clear_all_cache()
-            
             flash(
                 f'Screening type "{screening_type.name}" has been updated successfully.',
                 "success",
@@ -1431,7 +1452,7 @@ def edit_screening_type(screening_type_id):
 
         # Redirect back to screening list with 'types' tab active and timestamp for cache busting
         timestamp = int(time_module.time())
-        return redirect(url_for("screening_list", tab="types", t=timestamp, success="1", updated=screening_type.id))
+        return redirect(url_for("screening_list", tab="types", t=timestamp))
 
     # For GET requests or if validation fails, render the form page
     timestamp = int(time_module.time())

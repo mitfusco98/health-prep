@@ -244,13 +244,11 @@ def api_patient_detail(patient_id):
                     "date": v.date.strftime("%Y-%m-%d") if v.date else None,
                     "weight": v.weight,
                     "height": v.height,
-                    "bmi": v.bmi,
-                    "temperature": v.temperature,
-                    "blood_pressure_systolic": v.blood_pressure_systolic,
-                    "blood_pressure_diastolic": v.blood_pressure_diastolic,
-                    "pulse": v.pulse,
-                    "respiratory_rate": v.respiratory_rate,
-                    "oxygen_saturation": v.oxygen_saturation,
+                    "bp": (
+                        f"{v.blood_pressure_systolic}/{v.blood_pressure_diastolic}"
+                        if v.blood_pressure_systolic and v.blood_pressure_diastolic
+                        else None
+                    ),
                 }
                 for v in recent_vitals
             ],
@@ -1313,5 +1311,6 @@ def add_document_api(patient_id):
         db.session.rollback()
         logger.error(f"Error adding medical document: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
+
 
 

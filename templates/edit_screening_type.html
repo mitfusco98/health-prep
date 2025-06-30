@@ -13,7 +13,7 @@
         <div class="card-body">
             <form method="POST">
                 {{ form.hidden_tag() }}
-
+                
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <div class="form-group" style="position: relative;">
@@ -31,7 +31,7 @@
                         </div>
                     </div>
                 </div>
-
+                
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <label class="form-label">Frequency</label>
@@ -62,7 +62,7 @@
                         <small class="form-text text-muted">Set how often this screening should be performed</small>
                     </div>
                 </div>
-
+                
                 <div class="mb-3">
                     <label class="form-label">Keywords for Document Matching</label>
                     <div class="keywords-container">
@@ -74,10 +74,10 @@
                             <div id="edit-form-keywords-list" class="keywords-display"></div>
                         </div>
                     </div>
-                    <small class="keywords-help-text">Keywords apply to both document content and filenames (no distinction)</small>
+                    <small class="keywords-help-text">Keywords help identify relevant documents for this screening type</small>
                     <input type="hidden" name="keywords" id="edit-form-keywords-data">
                 </div>
-
+                
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <div class="form-group">
@@ -122,7 +122,7 @@
                         </div>
                     </div>
                 </div>
-
+                
                 <div class="mb-3">
                     <label class="form-label">Trigger Conditions (FHIR)</label>
                     <div class="trigger-conditions-container">
@@ -166,7 +166,7 @@
                     </div>
                     {% endif %}
                 </div>
-
+                
                 <div class="d-flex justify-content-end">
                     <a href="{{ url_for('screening_list', tab='types', t=cache_timestamp) }}" class="btn btn-outline-secondary me-2">Cancel</a>
                     {{ form.submit(class="btn btn-primary") }}
@@ -181,38 +181,20 @@
 function addKeywordToForm(formPrefix) {
     const input = document.getElementById(`${formPrefix}-keyword-input`);
     const keyword = input.value.trim();
-
-    if (!keyword) {
-        return;
+    
+    if (keyword) {
+        const container = document.getElementById(`${formPrefix}-keywords-list`);
+        const keywordElement = document.createElement('span');
+        keywordElement.className = 'badge bg-primary me-2 mb-2';
+        keywordElement.innerHTML = `
+            ${keyword}
+            <button type="button" class="btn-close btn-close-white ms-1" 
+                    onclick="removeFormKeyword(this)" aria-label="Remove"></button>
+        `;
+        container.appendChild(keywordElement);
+        input.value = '';
+        updateFormKeywordsData(formPrefix);
     }
-
-    const container = document.getElementById(`${formPrefix}-keywords-list`);
-    const existingKeywords = Array.from(container.querySelectorAll('.badge')).map(badge => {
-        const clone = badge.cloneNode(true);
-        const closeButton = clone.querySelector('.btn-close');
-        if (closeButton) {
-            closeButton.remove();
-        }
-        return clone.textContent.trim().toLowerCase();
-    });
-
-    // Check for duplicates (case-insensitive)
-    if (existingKeywords.includes(keyword.toLowerCase())) {
-        alert('This keyword already exists.');
-        input.focus();
-        return;
-    }
-
-    const keywordElement = document.createElement('span');
-    keywordElement.className = 'badge bg-primary me-2 mb-2';
-    keywordElement.innerHTML = `
-        ${keyword}
-        <button type="button" class="btn-close btn-close-white ms-1" 
-                onclick="removeFormKeyword(this)" aria-label="Remove"></button>
-    `;
-    container.appendChild(keywordElement);
-    input.value = '';
-    updateFormKeywordsData(formPrefix);
 }
 
 // Remove keyword from form
@@ -235,69 +217,38 @@ function updateFormKeywordsData(formPrefix) {
         }
         return clone.textContent.trim();
     }).filter(keyword => keyword !== '');
-
-    // Deduplicate keywords using Set (case-insensitive)
-    const uniqueKeywords = [];
-    const seen = new Set();
-
-    keywords.forEach(keyword => {
-        const lowerKeyword = keyword.toLowerCase();
-        if (!seen.has(lowerKeyword)) {
-            seen.add(lowerKeyword);
-            uniqueKeywords.push(keyword);
-        }
-    });
-
+    
     const hiddenInput = document.getElementById(`${formPrefix}-keywords-data`);
     if (hiddenInput) {
-        hiddenInput.value = JSON.stringify(uniqueKeywords);
-        console.log('Updated keywords data (deduplicated):', uniqueKeywords);
+        hiddenInput.value = JSON.stringify(keywords);
+        console.log('Updated keywords data:', keywords); // Debug log
     }
 }
 
 // Load existing keywords for editing
 function loadExistingKeywords() {
     const screeningTypeId = {{ screening_type.id }};
-    console.log('Loading existing keywords for screening:', screeningTypeId);
-
-    // Add cache-busting parameter to force fresh data
-    const cacheBuster = new Date().getTime();
-    fetch(`/api/screening-keywords/${screeningTypeId}?cb=${cacheBuster}`)
-    .then(response => response.json())
+    
+    fetch(`/api/screening-keywords/${screeningTypeId}`)
+        .then(response => response.json())
         .then(data => {
             if (data.success && data.keywords.length > 0) {
                 const container = document.getElementById('edit-form-keywords-list');
-
-                // Clear container first to prevent accumulation
-                container.innerHTML = '';
-
-                // Use Set to prevent duplicates during loading
-                const uniqueKeywords = new Set();
-
                 data.keywords.forEach(keywordData => {
                     // Handle both string and object formats
                     const keywordText = typeof keywordData === 'string' ? keywordData : 
                                        (keywordData.keyword || keywordData.toString());
-
-                    const cleanKeyword = keywordText.trim().toLowerCase();
-
-                    // Only add if not already in set (case-insensitive)
-                    if (cleanKeyword && !uniqueKeywords.has(cleanKeyword)) {
-                        uniqueKeywords.add(cleanKeyword);
-
-                        const keywordElement = document.createElement('span');
-                        keywordElement.className = 'badge bg-primary me-2 mb-2';
-                        keywordElement.innerHTML = `
-                            ${keywordText.trim()}
-                            <button type="button" class="btn-close btn-close-white ms-1" 
-                                    onclick="removeFormKeyword(this)" aria-label="Remove"></button>
-                        `;
-                        container.appendChild(keywordElement);
-                    }
+                    
+                    const keywordElement = document.createElement('span');
+                    keywordElement.className = 'badge bg-primary me-2 mb-2';
+                    keywordElement.innerHTML = `
+                        ${keywordText}
+                        <button type="button" class="btn-close btn-close-white ms-1" 
+                                onclick="removeFormKeyword(this)" aria-label="Remove"></button>
+                    `;
+                    container.appendChild(keywordElement);
                 });
-
                 updateFormKeywordsData('edit-form');
-                console.log(`Loaded ${uniqueKeywords.size} unique keywords for editing`);
             }
         })
         .catch(error => {
@@ -309,7 +260,7 @@ function loadExistingKeywords() {
 document.addEventListener('DOMContentLoaded', function() {
     // Load existing keywords when page loads
     loadExistingKeywords();
-
+    
     // Handle Enter key in form keyword inputs
     document.querySelectorAll('[id$="-keyword-input"]').forEach(input => {
         input.addEventListener('keypress', function(e) {
@@ -320,42 +271,31 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
+    
     // Handle form submission to ensure keywords are included
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
             // Update keywords data before submission
             updateFormKeywordsData('edit-form');
-
+            
             // Ensure the hidden field has proper data
             const keywordsField = document.getElementById('edit-form-keywords-data');
             const keywordsValue = keywordsField ? keywordsField.value : '';
-
+            
             console.log('Form submitting with keywords:', keywordsValue);
-
+            
             // If no keywords data, set empty array
             if (!keywordsValue || keywordsValue.trim() === '') {
                 if (keywordsField) {
                     keywordsField.value = '[]';
                 }
             }
-
+            
             // Force a small delay to ensure data is set
             setTimeout(() => {
                 console.log('Final keywords value before submit:', keywordsField ? keywordsField.value : 'no field');
             }, 100);
-        });
-
-        // Add success handling after form submission
-        form.addEventListener('submit', function(e) {
-            // Add a timestamp to force cache refresh on redirect
-            const actionUrl = form.action;
-            if (actionUrl && !actionUrl.includes('?')) {
-                form.action = actionUrl + '?t=' + new Date().getTime();
-            } else if (actionUrl) {
-                form.action = actionUrl + '&t=' + new Date().getTime();
-            }
         });
     }
 });
@@ -517,11 +457,11 @@ function addTriggerConditionToForm(formPrefix) {
     const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
     const codeInput = document.getElementById(`${formPrefix}-condition-code`);
     const displayInput = document.getElementById(`${formPrefix}-condition-display`);
-
+    
     const system = systemSelect.value;
     const code = codeInput.value.trim();
     const display = displayInput.value.trim();
-
+    
     if (display) {
         // If no code provided, try to auto-assign one from autocomplete
         if (!code) {
@@ -531,15 +471,15 @@ function addTriggerConditionToForm(formPrefix) {
                 .then(data => {
                     if (data.conditions && data.conditions.length > 0) {
                         const condition = data.conditions[0];
-
+                        
                         // Try to find code for the selected system first
                         let codeForSystem = condition.codes.find(c => c.system === system);
-
+                        
                         // If no code for selected system, use primary code
                         if (!codeForSystem) {
                             codeForSystem = condition.primary_code || condition.codes[0];
                         }
-
+                        
                         if (codeForSystem) {
                             codeInput.value = codeForSystem.code;
                             systemSelect.value = codeForSystem.system;
@@ -578,13 +518,13 @@ function addTriggerConditionElement(formPrefix, system, code, display) {
                 onclick="removeFormTriggerCondition(this)" aria-label="Remove"></button>
     `;
     container.appendChild(conditionElement);
-
+    
     // Clear inputs
     const displayInput = document.getElementById(`${formPrefix}-condition-display`);
     const codeInput = document.getElementById(`${formPrefix}-condition-code`);
     if (displayInput) displayInput.value = '';
     if (codeInput) codeInput.value = '';
-
+    
     updateFormTriggerConditionsData(formPrefix);
 }
 
@@ -606,7 +546,7 @@ function updateFormTriggerConditionsData(formPrefix) {
             display: badge.getAttribute('data-display')
         };
     });
-
+    
     const hiddenInput = document.getElementById(`${formPrefix}-trigger-conditions-data`);
     if (hiddenInput) {
         hiddenInput.value = JSON.stringify(conditions);
@@ -617,11 +557,11 @@ function updateFormTriggerConditionsData(formPrefix) {
 // Load existing trigger conditions for editing
 function loadExistingTriggerConditions() {
     const triggerConditions = {{ screening_type.get_trigger_conditions() | tojson }};
-
+    
     if (triggerConditions && triggerConditions.length > 0) {
         const container = document.getElementById('edit-form-trigger-conditions-list');
         container.innerHTML = '';
-
+        
         triggerConditions.forEach(condition => {
             const conditionElement = document.createElement('span');
             conditionElement.className = 'badge bg-info me-2 mb-2';
@@ -635,7 +575,7 @@ function loadExistingTriggerConditions() {
             `;
             container.appendChild(conditionElement);
         });
-
+        
         updateFormTriggerConditionsData('edit-form');
     }
 }
@@ -646,37 +586,37 @@ function setupConditionAutocomplete(formPrefix) {
     const codeInput = document.getElementById(`${formPrefix}-condition-code`);
     const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
     const suggestionsDiv = document.getElementById(`${formPrefix}-condition-suggestions`);
-
+    
     if (!displayInput || !suggestionsDiv) return;
-
+    
     let debounceTimer;
     let currentConditionData = null;
-
+    
     displayInput.addEventListener('input', function() {
         const query = this.value.trim();
-
+        
         clearTimeout(debounceTimer);
-
+        
         if (query.length < 2) {
             suggestionsDiv.style.display = 'none';
             currentConditionData = null;
             return;
         }
-
+        
         debounceTimer = setTimeout(() => {
             fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect, (conditionData) => {
                 currentConditionData = conditionData;
             });
         }, 300);
     });
-
+    
     // Handle system selection change
     systemSelect.addEventListener('change', function() {
         if (currentConditionData && displayInput.value.trim()) {
             updateCodeForSystem(currentConditionData, this.value, codeInput, displayInput);
         }
     });
-
+    
     // Hide suggestions when clicking outside
     document.addEventListener('click', function(e) {
         if (!displayInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
@@ -703,28 +643,28 @@ function fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInpu
 
 function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, codeInput, systemSelect, onConditionSelected) {
     suggestionsDiv.innerHTML = '';
-
+    
     conditions.forEach(condition => {
         const suggestionDiv = document.createElement('div');
         suggestionDiv.className = 'condition-suggestion';
-
+        
         const nameDiv = document.createElement('div');
         nameDiv.className = 'condition-name';
         nameDiv.textContent = condition.condition_name;
-
+        
         const codesDiv = document.createElement('div');
         codesDiv.className = 'condition-codes';
-
+        
         condition.codes.slice(0, 3).forEach(code => {
             const codeSpan = document.createElement('span');
             codeSpan.className = 'condition-code';
             codeSpan.textContent = code.code;
             codesDiv.appendChild(codeSpan);
         });
-
+        
         suggestionDiv.appendChild(nameDiv);
         suggestionDiv.appendChild(codesDiv);
-
+        
         suggestionDiv.addEventListener('click', function() {
             const primaryCode = condition.primary_code || condition.codes[0];
             if (primaryCode) {
@@ -737,20 +677,20 @@ function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, co
                 }
             }
         });
-
+        
         suggestionsDiv.appendChild(suggestionDiv);
     });
-
+    
     suggestionsDiv.style.display = 'block';
 }
 
 // Function to update code when system changes
 function updateCodeForSystem(conditionData, selectedSystem, codeInput, displayInput) {
     if (!conditionData || !conditionData.codes) return;
-
+    
     // Find code for the selected system
     const codeForSystem = conditionData.codes.find(code => code.system === selectedSystem);
-
+    
     if (codeForSystem) {
         codeInput.value = codeForSystem.code;
         displayInput.value = codeForSystem.display;
@@ -767,26 +707,26 @@ function updateCodeForSystem(conditionData, selectedSystem, codeInput, displayIn
 function setupScreeningNameAutocomplete() {
     const nameInput = document.getElementById('screening-name-input');
     const suggestionsDiv = document.getElementById('screening-name-suggestions');
-
+    
     if (!nameInput || !suggestionsDiv) return;
-
+    
     let debounceTimer;
-
+    
     nameInput.addEventListener('input', function() {
         const query = this.value.trim();
-
+        
         clearTimeout(debounceTimer);
-
+        
         if (query.length < 2) {
             suggestionsDiv.style.display = 'none';
             return;
         }
-
+        
         debounceTimer = setTimeout(() => {
             fetchScreeningNameSuggestions(query, suggestionsDiv, nameInput);
         }, 300);
     });
-
+    
     // Hide suggestions when clicking outside
     document.addEventListener('click', function(e) {
         if (!nameInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
@@ -813,55 +753,21 @@ function fetchScreeningNameSuggestions(query, suggestionsDiv, nameInput) {
 
 function renderScreeningNameSuggestions(screenings, suggestionsDiv, nameInput) {
     suggestionsDiv.innerHTML = '';
-
+    
     screenings.forEach(screening => {
         const suggestionDiv = document.createElement('div');
         suggestionDiv.className = 'screening-name-suggestion';
         suggestionDiv.textContent = screening;
-
+        
         suggestionDiv.addEventListener('click', function() {
             nameInput.value = screening;
             suggestionsDiv.style.display = 'none';
         });
-
+        
         suggestionsDiv.appendChild(suggestionDiv);
     });
-
-    suggestionsDiv.style.display = 'block';
-}
-
-// Check for success message and auto-refresh parent if needed
-function checkForSuccessAndRefresh() {
-    // Check if we came from a successful save (URL parameter or flash message)
-    const urlParams = new URLSearchParams(window.location.search);
-    const hasSuccess = urlParams.get('success') || document.querySelector('.alert-success');
     
-    if (hasSuccess) {
-        // Clear any stale cache by adding timestamp
-        setTimeout(() => {
-            const backUrl = "{{ url_for('screening_list', tab='types') }}";
-            window.location.href = backUrl + '?t=' + new Date().getTime() + '&refresh=1';
-        }, 1500); // Give time to see success message
-    }
-}
-
-// Force refresh after successful form submission
-function forceRefreshAfterSave() {
-    const form = document.querySelector('form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            // Add a hidden field to indicate this is a save operation
-            const saveIndicator = document.createElement('input');
-            saveIndicator.type = 'hidden';
-            saveIndicator.name = 'force_refresh';
-            saveIndicator.value = '1';
-            form.appendChild(saveIndicator);
-            
-            // Set a flag in sessionStorage to trigger refresh after redirect
-            sessionStorage.setItem('screening_edit_success', 'true');
-            sessionStorage.setItem('screening_edit_timestamp', new Date().getTime().toString());
-        });
-    }
+    suggestionsDiv.style.display = 'block';
 }
 
 // Enhanced page initialization
@@ -870,9 +776,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadExistingTriggerConditions();
     setupConditionAutocomplete('edit-form');
     setupScreeningNameAutocomplete();
-    checkForSuccessAndRefresh();
-    forceRefreshAfterSave();
-
+    
     // Handle Enter key in trigger condition inputs
     document.querySelectorAll('[id$="-condition-code"], [id$="-condition-display"]').forEach(input => {
         input.addEventListener('keypress', function(e) {
@@ -885,25 +789,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
+    
     // Handle form submission to ensure trigger conditions are included
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
             // Update trigger conditions data before submission
             updateFormTriggerConditionsData('edit-form');
-
+            
             // Ensure the hidden field has proper data
             const triggerConditionsField = document.getElementById('edit-form-trigger-conditions-data');
             const triggerConditionsValue = triggerConditionsField ? triggerConditionsField.value : '';
-
+            
             // If no trigger conditions data, set empty array
             if (!triggerConditionsValue || triggerConditionsValue.trim() === '') {
                 if (triggerConditionsField) {
                     triggerConditionsField.value = '[]';
                 }
             }
-
+            
             console.log('Final trigger conditions value before submit:', triggerConditionsField ? triggerConditionsField.value : 'no field');
         });
     }

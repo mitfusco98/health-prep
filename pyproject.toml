@@ -31,5 +31,4 @@ dependencies = [
     "redis>=6.2.0",
     "asyncpg>=0.30.0",
     "aiofiles>=24.1.0",
-    "beautifulsoup4>=4.13.4",
 ]

@@ -136,15 +136,14 @@ class DocumentScreeningMatcher:
         document: MedicalDocument
     ) -> Tuple[bool, str]:
         """Check if document filename matches screening filename keywords"""
-        # Use only unified keywords to prevent duplication
-        unified_keywords = screening_type.unified_keywords or []
-        if not unified_keywords:
+        filename_keywords = screening_type.get_filename_keywords()
+        if not filename_keywords:
             return False, "No filename keywords defined"
         
         filename = document.filename.lower() if document.filename else ""
         matched_keywords = []
         
-        for keyword in unified_keywords:
+        for keyword in filename_keywords:
             if keyword.lower() in filename:
                 matched_keywords.append(keyword)
         
@@ -159,9 +158,8 @@ class DocumentScreeningMatcher:
         document: MedicalDocument
     ) -> Tuple[bool, str]:
         """Check if document content matches screening content keywords"""
-        # Use only unified keywords to prevent duplication
-        unified_keywords = screening_type.unified_keywords or []
-        if not unified_keywords:
+        content_keywords = screening_type.get_content_keywords()
+        if not content_keywords:
             return False, "No content keywords defined"
         
         # Combine searchable text from document
@@ -175,7 +173,7 @@ class DocumentScreeningMatcher:
             return False, "No document content available for matching"
         
         matched_keywords = []
-        for keyword in unified_keywords:
+        for keyword in content_keywords:
             if keyword.lower() in searchable_text:
                 matched_keywords.append(keyword)
         
@@ -190,9 +188,8 @@ class DocumentScreeningMatcher:
         document: MedicalDocument
     ) -> Tuple[bool, str]:
         """Check if document.section matches screening_type document keywords"""
-        # Use only unified keywords to prevent duplication
-        unified_keywords = screening_type.unified_keywords or []
-        if not unified_keywords:
+        document_keywords = screening_type.get_document_keywords()
+        if not document_keywords:
             return False, "No document section keywords defined"
         
         # Get document section - check multiple possible attributes
@@ -208,7 +205,7 @@ class DocumentScreeningMatcher:
             return False, "No document section available for matching"
         
         matched_keywords = []
-        for keyword in unified_keywords:
+        for keyword in document_keywords:
             keyword_lower = keyword.lower()
             # Check exact match or contains match
             if (keyword_lower == document_section or 

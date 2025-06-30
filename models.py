@@ -633,11 +633,7 @@ class ScreeningType(db.Model):
     # === DOCUMENT SECTION MAPPINGS ===
     document_section_mappings = db.Column(db.Text)  # JSON mapping of document sections to FHIR categories
     
-    # === UNIFIED KEYWORD FIELD FOR DYNAMIC PARSING ===
-    # Single unified field that applies to both document content AND filenames
-    unified_keywords = db.Column(db.Text)  # JSON array of keywords for content and filename parsing
-    
-    # Legacy fields kept for backward compatibility during transition
+    # === KEYWORD FIELDS FOR DYNAMIC PARSING ===
     content_keywords = db.Column(db.Text)  # JSON array of keywords for content parsing
     document_keywords = db.Column(db.Text)  # JSON array of keywords for document type parsing
     filename_keywords = db.Column(db.Text)  # JSON array of keywords for filename parsing
@@ -749,66 +745,6 @@ class ScreeningType(db.Model):
         
         return False
     
-    # === UNIFIED KEYWORD METHODS ===
-    def set_unified_keywords(self, keywords_list):
-        """
-        Set unified keywords that apply to both content and filename parsing
-        
-        Args:
-            keywords_list: List of keywords like ["mammogram", "breast", "screening", "mammo"]
-        """
-        if keywords_list:
-            # Remove duplicates and convert to lowercase for consistency
-            unique_keywords = list(set([keyword.lower().strip() for keyword in keywords_list if keyword.strip()]))
-            self.unified_keywords = json.dumps(unique_keywords)
-        else:
-            self.unified_keywords = None
-    
-    def get_unified_keywords(self):
-        """Get unified keywords as list"""
-        if not self.unified_keywords:
-            return []
-        
-        try:
-            return json.loads(self.unified_keywords)
-        except (json.JSONDecodeError, TypeError):
-            return []
-    
-    def add_unified_keyword(self, keyword):
-        """Add a single keyword to the unified keywords list"""
-        current_keywords = self.get_unified_keywords()
-        keyword_clean = keyword.lower().strip()
-        if keyword_clean and keyword_clean not in current_keywords:
-            current_keywords.append(keyword_clean)
-            self.set_unified_keywords(current_keywords)
-    
-    def remove_unified_keyword(self, keyword):
-        """Remove a single keyword from the unified keywords list"""
-        current_keywords = self.get_unified_keywords()
-        keyword_clean = keyword.lower().strip()
-        if keyword_clean in current_keywords:
-            current_keywords.remove(keyword_clean)
-            self.set_unified_keywords(current_keywords)
-    
-    def matches_unified_keywords(self, text):
-        """
-        Check if text matches any unified keywords (works for both content and filenames)
-        
-        Args:
-            text: Text to search in (document content or filename)
-            
-        Returns:
-            bool: True if any keywords match
-        """
-        if not text:
-            return False
-        
-        text_lower = text.lower()
-        keywords = self.get_unified_keywords()
-        
-        return any(keyword in text_lower for keyword in keywords)
-    
-    # === LEGACY KEYWORD METHODS (for backward compatibility) ===
     def set_content_keywords(self, keywords_list):
         """
         Set content keywords as JSON array
