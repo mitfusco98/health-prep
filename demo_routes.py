@@ -1250,6 +1250,12 @@ def edit_screening_type(screening_type_id):
         # Commit the clearing immediately to ensure it's saved
         db.session.flush()
         
+        # Also clear the JSON fields directly to ensure no cached data
+        screening_type.content_keywords = None
+        screening_type.document_keywords = None
+        screening_type.filename_keywords = None
+        db.session.flush()
+        
         keywords_data = request.form.get('keywords')
         print(f"Keywords data received: {keywords_data}")
         
