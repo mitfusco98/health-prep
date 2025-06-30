@@ -1505,17 +1505,18 @@ def patient_list():
 def add_patient():
     """Add new patient"""
     from models import Patient
+    from datetime import datetime
     
     if request.method == 'POST':
         try:
             # Create new patient from form data
-            patient = Patient(
-                first_name=request.form.get('first_name', '').strip(),
-                last_name=request.form.get('last_name', '').strip(),
-                email=request.form.get('email', '').strip(),
-                phone=request.form.get('phone', '').strip(),
-                date_of_birth=datetime.strptime(request.form.get('date_of_birth'), '%Y-%m-%d').date() if request.form.get('date_of_birth') else None
-            )
+            patient = Patient()
+            patient.first_name = request.form.get('first_name', '').strip()
+            patient.last_name = request.form.get('last_name', '').strip()
+            patient.email = request.form.get('email', '').strip()
+            patient.phone = request.form.get('phone', '').strip()
+            if request.form.get('date_of_birth'):
+                patient.date_of_birth = datetime.strptime(request.form.get('date_of_birth'), '%Y-%m-%d').date()
             
             db.session.add(patient)
             db.session.commit()
@@ -1529,6 +1530,117 @@ def add_patient():
             db.session.rollback()
     
     return render_template('patient_form.html', patient=None)
+
+# Stub routes for templates that reference removed functionality
+@app.route('/screenings')
+def screening_list():
+    """Screening list page - legacy route"""
+    flash('Screening management functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/admin')
+def admin_dashboard():
+    """Admin dashboard - legacy route"""
+    flash('Admin functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/appointments/add')
+def add_appointment():
+    """Add appointment - legacy route"""
+    flash('Appointment management functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/login')
+def login():
+    """Login page - legacy route"""
+    flash('Login functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/logout')
+def logout():
+    """Logout - legacy route"""
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('index'))
+
+# Additional stub routes for template compatibility
+@app.route('/ehr')
+def ehr_integration():
+    """EHR integration - legacy route"""
+    flash('EHR integration functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/register')
+def register():
+    """Register - legacy route"""
+    flash('Registration functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/upload')
+def upload_data():
+    """Upload data - legacy route"""
+    flash('Data upload functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/documents')
+def document_repository():
+    """Document repository - legacy route"""
+    flash('Document repository functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/visits')
+def all_visits():
+    """All visits - legacy route"""
+    flash('Visits functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/admin/logs')
+def admin_logs():
+    """Admin logs - legacy route"""
+    flash('Admin logs functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/screenings/add')
+def add_screening_form():
+    """Add screening form - legacy route"""
+    flash('Screening functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/screenings/types/add')
+def add_screening_type():
+    """Add screening type - legacy route"""
+    flash('Screening type management is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/screening-engine')
+def run_screening_engine():
+    """Run screening engine - legacy route"""
+    flash('Screening engine functionality is under maintenance.', 'info')
+    return redirect(url_for('index'))
+
+# Context processor for template functions (restored from legacy demo_routes)
+@app.context_processor
+def utility_processor():
+    def get_all_patients():
+        from models import Patient
+        try:
+            return Patient.query.order_by(Patient.last_name, Patient.first_name).limit(100).all()
+        except Exception as e:
+            logging.error(f"Error getting all patients: {e}")
+            return []
+    
+    def get_patient_name_by_id(patient_id):
+        from models import Patient
+        try:
+            patient = Patient.query.get(patient_id)
+            return f"{patient.first_name} {patient.last_name}" if patient else "Unknown Patient"
+        except Exception as e:
+            logging.error(f"Error getting patient name: {e}")
+            return "Unknown Patient"
+    
+    return dict(
+        get_all_patients=get_all_patients,
+        get_patient_name_by_id=get_patient_name_by_id
+    )
 
 # Import all route modules to register them with the app
 import api_routes
