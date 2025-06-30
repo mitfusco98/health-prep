@@ -1018,12 +1018,13 @@ def add_screening_type():
         # Process keyword fields from the form
         import json
         try:
-            # Content keywords (for document content parsing) - primary keyword storage
+            # Unified keywords (applies to both content and filenames)
             keywords_data = request.form.get('keywords')
             if keywords_data:
-                content_keywords = json.loads(keywords_data)
-                screening_type.set_content_keywords(content_keywords)
-                # Clear other fields to prevent duplication
+                unified_keywords = json.loads(keywords_data)
+                screening_type.set_unified_keywords(unified_keywords)
+                # Clear legacy fields to prevent duplication
+                screening_type.set_content_keywords([])
                 screening_type.set_filename_keywords([])
                 screening_type.set_document_keywords([])
             
@@ -1100,13 +1101,14 @@ def add_screening_type():
                         elif isinstance(keyword, dict) and keyword.get('keyword'):
                             keyword_list.append(keyword['keyword'].strip())
                 
-                # Save to ScreeningType model directly - only use content_keywords
+                # Save to ScreeningType model using unified keywords
                 if keyword_list:
-                    screening_type.set_content_keywords(keyword_list)
-                    # Clear other fields to prevent duplication
+                    screening_type.set_unified_keywords(keyword_list)
+                    # Clear legacy fields to prevent duplication
+                    screening_type.set_content_keywords([])
                     screening_type.set_filename_keywords([])
                     screening_type.set_document_keywords([])
-                    print(f"Successfully saved {len(keyword_list)} keywords to content_keywords field")
+                    print(f"Successfully saved {len(keyword_list)} keywords to unified_keywords field")
                 
             except json.JSONDecodeError as e:
                 print(f"Error parsing keywords JSON: {str(e)} - Data: '{keywords_data[:100]}...'")
@@ -1288,13 +1290,14 @@ def edit_screening_type(screening_type_id):
                         unique_keywords.append(keyword)
                         seen.add(keyword.lower())
                 
-                # Save to ScreeningType model directly - only use content_keywords to avoid triplication
+                # Save to ScreeningType model using unified keywords to eliminate duplication
                 if unique_keywords:
-                    screening_type.set_content_keywords(unique_keywords)
-                    # Clear other keyword fields to prevent duplication
+                    screening_type.set_unified_keywords(unique_keywords)
+                    # Clear legacy keyword fields to prevent duplication
+                    screening_type.set_content_keywords([])
                     screening_type.set_filename_keywords([])
                     screening_type.set_document_keywords([])
-                    print(f"Successfully saved {len(unique_keywords)} unique keywords to content_keywords field")
+                    print(f"Successfully saved {len(unique_keywords)} unique keywords to unified_keywords field")
                 else:
                     print("No valid keywords found after processing")
                 
