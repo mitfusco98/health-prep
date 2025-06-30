@@ -1408,6 +1408,11 @@ def edit_screening_type(screening_type_id):
                 user_agent=request.headers.get("User-Agent", "Unknown"),
             )
 
+            # Force cache invalidation immediately after successful update
+            from screening_keyword_routes import clear_all_cache, invalidate_screening_cache
+            invalidate_screening_cache(screening_type.id)
+            clear_all_cache()
+            
             flash(
                 f'Screening type "{screening_type.name}" has been updated successfully.',
                 "success",
@@ -1426,7 +1431,7 @@ def edit_screening_type(screening_type_id):
 
         # Redirect back to screening list with 'types' tab active and timestamp for cache busting
         timestamp = int(time_module.time())
-        return redirect(url_for("screening_list", tab="types", t=timestamp))
+        return redirect(url_for("screening_list", tab="types", t=timestamp, success="1", updated=screening_type.id))
 
     # For GET requests or if validation fails, render the form page
     timestamp = int(time_module.time())

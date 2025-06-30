@@ -840,8 +840,27 @@ function checkForSuccessAndRefresh() {
         // Clear any stale cache by adding timestamp
         setTimeout(() => {
             const backUrl = "{{ url_for('screening_list', tab='types') }}";
-            window.location.href = backUrl + '?t=' + new Date().getTime();
+            window.location.href = backUrl + '?t=' + new Date().getTime() + '&refresh=1';
         }, 1500); // Give time to see success message
+    }
+}
+
+// Force refresh after successful form submission
+function forceRefreshAfterSave() {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Add a hidden field to indicate this is a save operation
+            const saveIndicator = document.createElement('input');
+            saveIndicator.type = 'hidden';
+            saveIndicator.name = 'force_refresh';
+            saveIndicator.value = '1';
+            form.appendChild(saveIndicator);
+            
+            // Set a flag in sessionStorage to trigger refresh after redirect
+            sessionStorage.setItem('screening_edit_success', 'true');
+            sessionStorage.setItem('screening_edit_timestamp', new Date().getTime().toString());
+        });
     }
 }
 
@@ -852,6 +871,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupConditionAutocomplete('edit-form');
     setupScreeningNameAutocomplete();
     checkForSuccessAndRefresh();
+    forceRefreshAfterSave();
 
     // Handle Enter key in trigger condition inputs
     document.querySelectorAll('[id$="-condition-code"], [id$="-condition-display"]').forEach(input => {

@@ -47,6 +47,32 @@ function loadKeywordsAsBadges() {
 
 // Initialize keyword display when page loads
 document.addEventListener('DOMContentLoaded', function() {
+    // Check for successful edit and force refresh
+    if (sessionStorage.getItem('screening_edit_success') === 'true') {
+        const editTimestamp = sessionStorage.getItem('screening_edit_timestamp');
+        const currentTime = new Date().getTime();
+
+        // If edit was within last 10 seconds, force refresh to show updated data
+        if (editTimestamp && (currentTime - parseInt(editTimestamp)) < 10000) {
+            sessionStorage.removeItem('screening_edit_success');
+            sessionStorage.removeItem('screening_edit_timestamp');
+
+            // Add cache busting parameter and reload
+            const url = new URL(window.location);
+            url.searchParams.set('refresh', currentTime.toString());
+            window.location.href = url.toString();
+        }
+    }
+
+    // Modal functionality
+    const addModal = document.getElementById('addScreeningTypeModal');
+    const editModal = document.getElementById('editScreeningTypeModal');
+
+    // Add screening type button
+    document.getElementById('addScreeningTypeBtn').addEventListener('click', function() {
+        bootstrap.Modal.getOrCreateInstance(addModal).show();
+    });
+
     console.log('DOM Content Loaded - checking for keyword containers...');
 
     // Check if keyword containers exist
@@ -694,8 +720,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         {% if screening.formatted_frequency %}
                                         <br><small>{{ screening.formatted_frequency }}</small>
                                         {% endif %}
-                                    </button>
-                                    {% endfor %}
+                                    </button>                                    {% endfor %}
                                 </div>
                             </div>
 
@@ -805,7 +830,7 @@ function updateScreeningSelections() {
 document.addEventListener('DOMContentLoaded', function() {
     updateStatusSelections();
     updateScreeningSelections();
-    
+
     // Custom status options handler
     const addCustomStatusBtn = document.getElementById('add_custom_status');
     const customStatusInput = document.getElementById('custom_status_input');
@@ -881,7 +906,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-        
+
     </div>
 </div>
 {% endif %}
