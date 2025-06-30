@@ -206,32 +206,44 @@ def test_keyword_matching(screening_id):
                 'message': 'Screening type not found'
             }), 404
 
-        # Test matching using DocumentScreeningMatcher
-        from document_screening_matcher import DocumentScreeningMatcher
-
-        # Create a test document object
-        test_doc = type('TestDoc', (), {
-            'id': 999,
-            'filename': filename,
-            'content': content,
-            'extracted_text': content,
-            'document_type': None
-        })()
-
-        # Create a test patient
-        test_patient = type('TestPatient', (), {
-            'id': 999,
-            'age': 50,
-            'sex': 'M'
-        })()
-
-        matcher = DocumentScreeningMatcher()
-        result = matcher.match_document_to_screening(screening_type, test_doc, test_patient)
+        # Test matching using unified keywords only
+        unified_keywords = screening_type.unified_keywords or []
+        
+        # Test filename matching
+        filename_matches = []
+        if filename:
+            for keyword in unified_keywords:
+                if keyword.lower() in filename.lower():
+                    filename_matches.append(keyword)
+        
+        # Test content matching
+        content_matches = []
+        if content:
+            for keyword in unified_keywords:
+                if keyword.lower() in content.lower():
+                    content_matches.append(keyword)
+        
+        # Create test result
+        has_matches = bool(filename_matches or content_matches)
+        match_notes = []
+        if filename_matches:
+            match_notes.append(f"Filename: {', '.join(filename_matches)}")
+        if content_matches:
+            match_notes.append(f"Content: {', '.join(content_matches)}")
+        
+        result = {
+            'matched': has_matches,
+            'match_method': 'unified_keywords',
+            'notes': '; '.join(match_notes) if match_notes else 'No keyword matches found',
+            'status': 'matched' if has_matches else 'no_match'
+        }
 
         return jsonify({
             'success': True,
             'match_result': result,
-            'screening_name': screening_type.name
+            'screening_name': screening_type.name,
+            'unified_keywords': unified_keywords,
+            'total_keywords': len(unified_keywords)
         })
 
     except Exception as e:
