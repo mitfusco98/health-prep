@@ -79,11 +79,14 @@ def validate_appointment_data(form_data):
 
     # Date validation
     if form_data.get("appointment_date"):
-        is_valid, date_errors = validate_date_format(
-            form_data["appointment_date"], "Appointment date"
-        )
-        if not is_valid:
-            errors.extend(date_errors)
+        try:
+            # Try to parse the date directly
+            parsed_date = datetime.strptime(form_data["appointment_date"], "%Y-%m-%d").date()
+            # Check if date is in the past
+            if parsed_date < date.today():
+                errors.append("Appointment date cannot be in the past")
+        except ValueError:
+            errors.append("Invalid appointment date format")
     else:
         errors.append("Appointment date is required")
 
