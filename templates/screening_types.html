@@ -546,16 +546,10 @@ document.addEventListener('DOMContentLoaded', function() {
         updateHiddenField() {
             const hiddenField = document.getElementById(this.prefix + 'KeywordsData');
             if (hiddenField) {
-                // Ensure clean JSON without HTML encoding
-                const cleanKeywords = this.keywords.map(k => ({
-                    keyword: k.keyword,
-                    section: k.section || 'general',
-                    weight: k.weight || 1.0,
-                    case_sensitive: k.case_sensitive || false,
-                    exact_match: k.exact_match || false,
-                    description: k.description || ''
-                }));
-                hiddenField.value = JSON.stringify(cleanKeywords);
+                // Store as simple array of keyword strings to avoid encoding issues
+                const keywordStrings = this.keywords.map(k => k.keyword).filter(k => k && k.trim());
+                hiddenField.value = JSON.stringify(keywordStrings);
+                console.log(`Updated ${this.prefix} keywords:`, keywordStrings);
             }
         }
 

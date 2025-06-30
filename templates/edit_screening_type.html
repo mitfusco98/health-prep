@@ -75,7 +75,7 @@
                         </div>
                     </div>
                     <small class="keywords-help-text">Keywords help identify relevant documents for this screening type</small>
-                    <input type="hidden" name="keywords" id="edit-form-keywords-data">
+                    <input type="hidden" name="keywords_json" id="edit-form-keywords-data">
                 </div>
                 
                 <div class="row mb-3">
@@ -221,7 +221,7 @@ function updateFormKeywordsData(formPrefix) {
     const hiddenInput = document.getElementById(`${formPrefix}-keywords-data`);
     if (hiddenInput) {
         hiddenInput.value = JSON.stringify(keywords);
-        console.log('Updated keywords data:', keywords); // Debug log
+        console.log('Updated keywords data:', keywords);
     }
 }
 
@@ -229,29 +229,30 @@ function updateFormKeywordsData(formPrefix) {
 function loadExistingKeywords() {
     const screeningTypeId = {{ screening_type.id }};
     
-    fetch(`/api/screening-keywords/${screeningTypeId}`)
-        .then(response => {
-            if (response.status === 429) {
-                // Rate limited, don't try to load keywords
-                console.warn('Rate limited while loading keywords');
-                return null;
-            }
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.text(); // Get as text first to handle empty responses
-        })
-        .then(text => {
-            if (!text) return; // Skip if empty response
-            
-            try {
-                const data = JSON.parse(text);
-                if (data && data.success && data.keywords && data.keywords.length > 0) {
+    // Add delay to avoid rate limiting
+    setTimeout(() => {
+        fetch(`/api/screening-keywords/${screeningTypeId}`)
+            .then(response => {
+                if (response.status === 429) {
+                    console.warn('Rate limited while loading keywords');
+                    return null;
+                }
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data) return; // Skip if rate limited
+                
+                if (data && data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
                     const container = document.getElementById('edit-form-keywords-list');
-                    data.keywords.forEach(keywordData => {
+                    container.innerHTML = ''; // Clear existing
+                    
+                    data.keywords.forEach(keyword => {
                         // Handle both string and object formats
-                        const keywordText = typeof keywordData === 'string' ? keywordData : 
-                                           (keywordData.keyword || keywordData.toString());
+                        const keywordText = typeof keyword === 'string' ? keyword : 
+                                           (keyword.keyword || keyword.toString());
                         
                         if (keywordText && keywordText.trim()) {
                             const keywordElement = document.createElement('span');
@@ -265,15 +266,13 @@ function loadExistingKeywords() {
                         }
                     });
                     updateFormKeywordsData('edit-form');
+                    console.log('Loaded existing keywords:', data.keywords);
                 }
-            } catch (jsonError) {
-                console.warn('JSON parsing error for keywords (this is usually harmless):', jsonError.message);
-                // Don't show error to user as this is often just empty data
-            }
-        })
-        .catch(error => {
-            console.error('Error loading existing keywords:', error);
-        });
+            })
+            .catch(error => {
+                console.error('Error loading existing keywords:', error);
+            });
+    }, 500); // 500ms delay to avoid rate limiting
 }
 
 // Handle Enter key in keyword inputs and form submission
