@@ -695,8 +695,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const screeningId = container.id.split('-')[1];
         
         fetch(`/api/screening-keywords/${screeningId}`)
-            .then(response => response.json())
+            .then(response => {
+                if (response.status === 429) {
+                    // Rate limited, wait longer and retry
+                    setTimeout(() => loadNextKeywords(), 2000);
+                    return;
+                }
+                return response.json();
+            })
             .then(data => {
+                if (!data) return; // Skip if rate limited
+                
                 if (data.success && data.keywords && data.keywords.length > 0) {
                     const keywordObjects = data.keywords.map(keyword => ({
                         keyword: keyword,
@@ -709,20 +718,20 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error loading keywords for screening', screeningId, ':', error);
-                container.innerHTML = '<small class="text-muted">No keywords defined</small>';
+                container.innerHTML = '<small class="text-muted">Error loading keywords</small>';
             })
             .finally(() => {
                 loadIndex++;
-                // Load next with delay to prevent rate limiting
+                // Load next with longer delay to prevent rate limiting
                 if (loadIndex < keywordContainers.length) {
-                    setTimeout(loadNextKeywords, 200);
+                    setTimeout(loadNextKeywords, 1000);
                 }
             });
     }
     
-    // Start loading keywords with delay
+    // Start loading keywords with longer initial delay
     if (keywordContainers.length > 0) {
-        setTimeout(loadNextKeywords, 100);
+        setTimeout(loadNextKeywords, 500);
     }
 
     // Utility function to show alerts

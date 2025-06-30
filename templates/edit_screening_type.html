@@ -230,23 +230,34 @@ function loadExistingKeywords() {
     const screeningTypeId = {{ screening_type.id }};
     
     fetch(`/api/screening-keywords/${screeningTypeId}`)
-        .then(response => response.json())
+        .then(response => {
+            if (response.status === 429) {
+                // Rate limited, don't try to load keywords
+                console.warn('Rate limited while loading keywords');
+                return;
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.success && data.keywords.length > 0) {
+            if (!data) return; // Skip if rate limited
+            
+            if (data.success && data.keywords && data.keywords.length > 0) {
                 const container = document.getElementById('edit-form-keywords-list');
                 data.keywords.forEach(keywordData => {
                     // Handle both string and object formats
                     const keywordText = typeof keywordData === 'string' ? keywordData : 
                                        (keywordData.keyword || keywordData.toString());
                     
-                    const keywordElement = document.createElement('span');
-                    keywordElement.className = 'badge bg-primary me-2 mb-2';
-                    keywordElement.innerHTML = `
-                        ${keywordText}
-                        <button type="button" class="btn-close btn-close-white ms-1" 
-                                onclick="removeFormKeyword(this)" aria-label="Remove"></button>
-                    `;
-                    container.appendChild(keywordElement);
+                    if (keywordText && keywordText.trim()) {
+                        const keywordElement = document.createElement('span');
+                        keywordElement.className = 'badge bg-primary me-2 mb-2';
+                        keywordElement.innerHTML = `
+                            ${keywordText}
+                            <button type="button" class="btn-close btn-close-white ms-1" 
+                                    onclick="removeFormKeyword(this)" aria-label="Remove"></button>
+                        `;
+                        container.appendChild(keywordElement);
+                    }
                 });
                 updateFormKeywordsData('edit-form');
             }
