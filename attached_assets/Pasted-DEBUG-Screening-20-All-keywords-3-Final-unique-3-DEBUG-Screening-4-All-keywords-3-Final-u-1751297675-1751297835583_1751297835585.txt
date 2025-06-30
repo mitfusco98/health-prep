@@ -1,0 +1,48 @@
+DEBUG-Screening-20-All-keywords-3-Final-unique-3-DEBUG-Screening-4-All-keywords-3-Final-u-1751297675307_1751297675309.txt
+DEBUG: Screening 20 - All keywords: 3, Final unique: 3
+DEBUG: Screening 4 - All keywords: 3, Final unique: 3
+DEBUG: Screening 19 - All keywords: 7, Final unique: 7
+DEBUG: Screening 10 - All keywords: 5, Final unique: 5
+DEBUG: Screening 2 - All keywords: 5, Final unique: 5
+DEBUG: Screening 6 - All keywords: 7, Final unique: 7
+DEBUG: Screening 8 - All keywords: 0, Final unique: 0
+DEBUG: Screening 5 - All keywords: 9, Final unique: 9
+DEBUG: Screening 21 - All keywords: 0, Final unique: 0
+DEBUG: Serving screening keywords 20 from cache.
+DEBUG: Serving screening keywords 4 from cache.
+DEBUG: Serving screening keywords 19 from cache.
+DEBUG: Serving screening keywords 10 from cache.
+DEBUG: Serving screening keywords 2 from cache.
+DEBUG: Serving screening keywords 6 from cache.
+DEBUG: Serving screening keywords 21 from cache.
+DEBUG: Serving screening keywords 5 from cache.
+DEBUG: Serving screening keywords 8 from cache.
+DEBUG: Cache expired for screening keywords 20.
+DEBUG: Screening 20 - All keywords: 3, Final unique: 3
+DEBUG: Serving screening keywords 20 from cache.
+Edit - Trigger conditions data received: [{&quot;system&quot;:&quot;http://snomed.info/sct&quot;,&quot;code&quot;:&quot;64859006&quot;,&quot;display&quot;:&quot;Osteoporosis&quot;}]
+Edit - Decoded trigger conditions data: [{"system":"http://snomed.info/sct","code":"64859006","display":"Osteoporosis"}]
+Edit - Parsed trigger conditions: [{'system': 'http://snomed.info/sct', 'code': '64859006', 'display': 'Osteoporosis'}]
+Edit - Set trigger conditions for screening type Bone Density Screening
+Clearing existing keywords before processing new ones
+Keywords data received: [&quot;dxa&quot;,&quot;dexa&quot;]
+Parsed keywords: ['dxa', 'dexa']
+Successfully saved 2 unique keywords to unified_keywords field
+DEBUG: Screening 4 - All keywords: 3, Final unique: 3
+DEBUG: Serving screening keywords 20 from cache.
+DEBUG: Screening 10 - All keywords: 5, Final unique: 5
+DEBUG: Screening 19 - All keywords: 7, Final unique: 7
+DEBUG: Screening 2 - All keywords: 5, Final unique: 5
+DEBUG: Screening 6 - All keywords: 7, Final unique: 7
+DEBUG: Screening 8 - All keywords: 0, Final unique: 0
+DEBUG: Screening 5 - All keywords: 9, Final unique: 9
+DEBUG: Screening 21 - All keywords: 0, Final unique: 0
+DEBUG: Serving screening keywords 20 from cache.
+DEBUG: Serving screening keywords 4 from cache.
+DEBUG: Serving screening keywords 10 from cache.
+DEBUG: Serving screening keywords 19 from cache.
+DEBUG: Serving screening keywords 2 from cache.
+DEBUG: Serving screening keywords 8 from cache.
+DEBUG: Serving screening keywords 6 from cache.
+DEBUG: Serving screening keywords 5 from cache.
+DEBUG: Serving screening keywords 21 from cache.
