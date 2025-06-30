@@ -200,19 +200,42 @@ def get_all_screening_keywords():
 
         bulk_data = {}
         for screening_type in screening_types:
-            # Get only content keywords to prevent duplication
+            # Get ONLY content keywords - this is the single source of truth
             content_keywords = screening_type.get_content_keywords() or []
 
-            # Process to ensure clean unique strings
-            unique_keywords = []
-            seen_lower = set()
+            # Ensure we're working with clean data from the start
+            if not content_keywords or not isinstance(content_keywords, list):
+                unique_keywords = []
+            else:
+                # Single-pass deduplication with strict validation
+                unique_keywords = []
+                seen_keywords = set()
 
-            for keyword in content_keywords:
-                if keyword and isinstance(keyword, str):
-                    clean_keyword = keyword.strip()
-                    if clean_keyword and clean_keyword.lower() not in seen_lower:
-                        unique_keywords.append(clean_keyword)
-                        seen_lower.add(clean_keyword.lower())
+                for keyword in content_keywords:
+                    # Only process valid string keywords
+                    if keyword and isinstance(keyword, str):
+                        clean_keyword = keyword.strip()
+
+                        # Skip empty strings and duplicates (case-insensitive)
+                        if clean_keyword and clean_keyword.lower() not in seen_keywords:
+                            unique_keywords.append(clean_keyword)
+                            seen_keywords.add(clean_keyword.lower())
+
+            # Debug logging
+            print(f"DEBUG: Screening {screening_type.id} - Raw content: {len(content_keywords)}, Final unique: {len(unique_keywords)}")
+
+            # Additional validation - ensure no duplicates escaped
+            final_check = len(unique_keywords) == len(set(k.lower() for k in unique_keywords))
+            if not final_check:
+                print(f"WARNING: Duplicate keywords detected in final result for screening {screening_type.id}")
+                # Emergency deduplication
+                temp_seen = set()
+                temp_unique = []
+                for k in unique_keywords:
+                    if k.lower() not in temp_seen:
+                        temp_unique.append(k)
+                        temp_seen.add(k.lower())
+                unique_keywords = temp_unique
 
             bulk_data[screening_type.id] = {
                 'keywords': unique_keywords,

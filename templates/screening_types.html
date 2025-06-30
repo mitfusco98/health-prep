@@ -460,7 +460,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     let currentScreeningId = null;
     let currentKeywords = [];
-    
+
     // Cache to prevent duplicate API calls
     const keywordCache = new Map();
     const loadingStates = new Set();
@@ -590,13 +590,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log(`${this.prefix} setKeywords: skipping for edit modal to prevent duplication`);
                 return;
             }
-            
+
             // Complete reset first
             this.keywords = [];
-            
+
             const container = document.getElementById(this.prefix + 'KeywordsList');
             const hiddenField = document.getElementById(this.prefix + 'KeywordsData');
-            
+
             if (container) {
                 container.innerHTML = '';
             }
@@ -621,7 +621,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (k && typeof k === 'object' && k.keyword) {
                     keywordText = k.keyword.trim();
                 }
-                
+
                 if (keywordText && !seen.has(keywordText.toLowerCase())) {
                     stringKeywords.push(keywordText);
                     seen.add(keywordText.toLowerCase());
@@ -657,7 +657,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const screeningElement = container.closest('[data-screening-id]');
             if (screeningElement) {
                 const screeningId = screeningElement.getAttribute('data-screening-id');
-                
+
                 // Skip if already loaded or currently loading
                 if (keywordCache.has(screeningId) || loadingStates.has(screeningId)) {
                     if (keywordCache.has(screeningId)) {
@@ -665,11 +665,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     return;
                 }
-                
+
                 // Mark as loading
                 loadingStates.add(screeningId);
                 container.innerHTML = '<small class="text-muted">Loading...</small>';
-                
+
                 // Load keywords for this specific screening
                 fetch(`/api/screening-keywords/${screeningId}`)
                     .then(response => response.json())
@@ -677,7 +677,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Cache the result
                         const keywords = data.success && data.keywords ? data.keywords : [];
                         keywordCache.set(screeningId, keywords);
-                        
+
                         // Display keywords
                         displayCachedKeywords(container, keywords);
                     })
@@ -692,7 +692,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Helper function to display cached keywords
     function displayCachedKeywords(container, keywords) {
         if (keywords && keywords.length > 0) {
@@ -714,7 +714,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (keywordCache.has(screeningId)) {
             return Promise.resolve(keywordCache.get(screeningId));
         }
-        
+
         // Skip if already loading
         if (loadingStates.has(screeningId)) {
             return new Promise((resolve) => {
@@ -729,7 +729,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 checkCache();
             });
         }
-        
+
         // Mark as loading and fetch from API
         loadingStates.add(screeningId);
         return fetch(`/api/screening-keywords/${screeningId}`)
@@ -759,14 +759,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const screeningName = this.getAttribute('data-screening-name');
 
             document.getElementById('modalScreeningName').textContent = screeningName;
-            
+
             // Load keywords directly when manage modal opens
             console.log(`Loading keywords for manage modal (screening ${currentScreeningId})`);
-            
+
             // Clear keywords first
             keywordManagers.manage.keywords = [];
             keywordManagers.manage.setKeywords([]);
-            
+
             // Load from API
             getKeywordsForScreening(currentScreeningId).then(keywordsToLoad => {
                 console.log(`Loaded ${keywordsToLoad.length} keywords for manage modal`);
@@ -803,7 +803,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 // Update cache with new keywords
                 keywordCache.set(currentScreeningId, keywordStrings);
-                
+
                 // Update the specific display
                 const container = document.querySelector(`[data-screening-id="${currentScreeningId}"] .keyword-tags`);
                 if (container) {
@@ -850,17 +850,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fresh edit modal implementation - completely isolated from other keyword systems
     let editModalKeywords = [];
-    
+
     // Simple function to render edit modal keywords
     function renderEditModalKeywords() {
         const container = document.getElementById('editKeywordsList');
         const hiddenField = document.getElementById('editKeywordsData');
-        
+
         if (!container) return;
-        
+
         // Clear completely
         container.innerHTML = '';
-        
+
         // Render each keyword as a badge
         editModalKeywords.forEach((keyword, index) => {
             const badge = document.createElement('span');
@@ -872,31 +872,72 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             container.appendChild(badge);
         });
-        
+
         // Update hidden field
         if (hiddenField) {
             hiddenField.value = JSON.stringify(editModalKeywords);
         }
     }
-    
+
     // Function to remove keyword from edit modal
     window.removeEditModalKeyword = function(index) {
         editModalKeywords.splice(index, 1);
         renderEditModalKeywords();
     };
-    
-    // Function to add keyword to edit modal
+
+    // Function to add keyword to edit modal with comprehensive duplicate prevention
     window.addEditModalKeyword = function() {
         const input = document.getElementById('editKeywordInput');
         const keyword = input.value.trim();
-        
-        if (keyword && !editModalKeywords.includes(keyword)) {
-            editModalKeywords.push(keyword);
-            input.value = '';
-            renderEditModalKeywords();
+
+        if (!keyword) {
+            console.log('Empty keyword attempted, ignoring');
+            return;
         }
+
+        // Ensure editModalKeywords is always an array
+        if (!Array.isArray(editModalKeywords)) {
+            editModalKeywords = [];
+        }
+
+        // Triple-check for duplicates with comprehensive validation
+        const lowerKeyword = keyword.toLowerCase();
+
+        // Check 1: Exact match
+        if (editModalKeywords.includes(keyword)) {
+            alert('This exact keyword already exists.');
+            input.focus();
+            return;
+        }
+
+        // Check 2: Case-insensitive match
+        const hasCaseInsensitiveDuplicate = editModalKeywords.some(k => 
+            k && typeof k === 'string' && k.toLowerCase() === lowerKeyword
+        );
+
+        if (hasCaseInsensitiveDuplicate) {
+            alert('A keyword with this text already exists (case-insensitive match).');
+            input.focus();
+            return;
+        }
+
+        // Check 3: Verify array integrity before adding
+        const currentLength = editModalKeywords.length;
+        editModalKeywords.push(keyword);
+
+        // Check 4: Verify addition was successful and no duplicates created
+        const newLength = editModalKeywords.length;
+        if (newLength !== currentLength + 1) {
+            console.error('Keyword array manipulation error detected');
+            editModalKeywords = editModalKeywords.filter((k, i, arr) => arr.indexOf(k) === i); // Emergency dedup
+        }
+
+        input.value = '';
+        renderEditModalKeywords();
+
+        console.log(`Successfully added keyword: "${keyword}". Total keywords: ${editModalKeywords.length}`);
     };
-    
+
     // Handle edit button clicks with completely fresh implementation
     document.querySelectorAll('.edit-screening-btn').forEach(button => {
         button.addEventListener('click', function() {
@@ -937,7 +978,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             .filter(k => k && typeof k === 'string' && k.trim())
                             .map(k => k.trim())
                             .filter((k, i, arr) => arr.indexOf(k) === i); // Remove duplicates
-                        
+
                         editModalKeywords = cleanKeywords;
                         console.log(`Edit modal: loaded ${cleanKeywords.length} unique keywords`);
                         renderEditModalKeywords();
