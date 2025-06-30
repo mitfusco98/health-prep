@@ -39,6 +39,11 @@ def get_screening_keywords(screening_id):
         # Get unified keywords (applies to both content and filenames)
         unified_keywords = screening_type.get_unified_keywords() or []
         
+        # Initialize all keyword lists to prevent scoping errors
+        content_keywords = []
+        document_keywords = []
+        filename_keywords = []
+        
         # For backward compatibility, also check legacy fields if unified is empty
         if not unified_keywords:
             content_keywords = screening_type.get_content_keywords() or []
@@ -52,14 +57,16 @@ def get_screening_keywords(screening_id):
             all_keywords.extend(filename_keywords)
         else:
             all_keywords = unified_keywords
+            # For legacy compatibility, also set content_keywords to unified for processing
+            content_keywords = unified_keywords
 
         # Process to ensure clean unique strings with multiple deduplication passes
         unique_keywords = []
         seen_lower = set()
 
-        # First pass: clean and deduplicate by exact match
+        # First pass: clean and deduplicate by exact match - use all_keywords instead of content_keywords
         cleaned_keywords = []
-        for keyword in content_keywords:
+        for keyword in all_keywords:
             if keyword and isinstance(keyword, str):
                 clean_keyword = keyword.strip()
                 if clean_keyword and clean_keyword not in cleaned_keywords:
@@ -72,7 +79,7 @@ def get_screening_keywords(screening_id):
                 seen_lower.add(keyword.lower())
 
         # Debug logging
-        print(f"DEBUG: Screening {screening_id} - Content: {len(content_keywords)}, Final unique: {len(unique_keywords)}")
+        print(f"DEBUG: Screening {screening_id} - All keywords: {len(all_keywords)}, Final unique: {len(unique_keywords)}")
 
         result = jsonify({
             'success': True,
