@@ -89,7 +89,13 @@ def admin_logs():
                 query = query.filter(AdminLog.event_type.like("admin_%"))
             elif event_type == "errors":
                 query = query.filter(
-                    AdminLog.event_type.in_(["error", "validation_error"])
+                    or_(
+                        AdminLog.event_type.in_(["error", "validation_error", "error_response"]),
+                        AdminLog.event_type.like("%error%"),
+                        AdminLog.event_details.like("%error%"),
+                        AdminLog.event_details.like("%exception%"),
+                        AdminLog.event_details.like("%traceback%")
+                    )
                 )
             else:
                 query = query.filter(AdminLog.event_type.like(f"%{event_type}%"))
@@ -116,12 +122,16 @@ def admin_logs():
 
         if search_term:
             # Search in event_details JSON and other fields
+            search_pattern = f"%{search_term}%"
             query = query.filter(
                 or_(
-                    AdminLog.event_details.like(f"%{search_term}%"),
-                    AdminLog.event_type.like(f"%{search_term}%"),
-                    AdminLog.ip_address.like(f"%{search_term}%"),
-                    User.username.like(f"%{search_term}%"),
+                    AdminLog.event_details.like(search_pattern),
+                    AdminLog.event_type.like(search_pattern),
+                    AdminLog.ip_address.like(search_pattern),
+                    User.username.like(search_pattern),
+                    # Enhanced search for common error terms
+                    AdminLog.event_details.ilike(search_pattern),
+                    AdminLog.event_type.ilike(search_pattern)
                 )
             )
 
