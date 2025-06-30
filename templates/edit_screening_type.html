@@ -182,19 +182,37 @@ function addKeywordToForm(formPrefix) {
     const input = document.getElementById(`${formPrefix}-keyword-input`);
     const keyword = input.value.trim();
     
-    if (keyword) {
-        const container = document.getElementById(`${formPrefix}-keywords-list`);
-        const keywordElement = document.createElement('span');
-        keywordElement.className = 'badge bg-primary me-2 mb-2';
-        keywordElement.innerHTML = `
-            ${keyword}
-            <button type="button" class="btn-close btn-close-white ms-1" 
-                    onclick="removeFormKeyword(this)" aria-label="Remove"></button>
-        `;
-        container.appendChild(keywordElement);
-        input.value = '';
-        updateFormKeywordsData(formPrefix);
+    if (!keyword) {
+        return;
     }
+    
+    const container = document.getElementById(`${formPrefix}-keywords-list`);
+    const existingKeywords = Array.from(container.querySelectorAll('.badge')).map(badge => {
+        const clone = badge.cloneNode(true);
+        const closeButton = clone.querySelector('.btn-close');
+        if (closeButton) {
+            closeButton.remove();
+        }
+        return clone.textContent.trim().toLowerCase();
+    });
+    
+    // Check for duplicates (case-insensitive)
+    if (existingKeywords.includes(keyword.toLowerCase())) {
+        alert('This keyword already exists.');
+        input.focus();
+        return;
+    }
+    
+    const keywordElement = document.createElement('span');
+    keywordElement.className = 'badge bg-primary me-2 mb-2';
+    keywordElement.innerHTML = `
+        ${keyword}
+        <button type="button" class="btn-close btn-close-white ms-1" 
+                onclick="removeFormKeyword(this)" aria-label="Remove"></button>
+    `;
+    container.appendChild(keywordElement);
+    input.value = '';
+    updateFormKeywordsData(formPrefix);
 }
 
 // Remove keyword from form
@@ -218,10 +236,22 @@ function updateFormKeywordsData(formPrefix) {
         return clone.textContent.trim();
     }).filter(keyword => keyword !== '');
     
+    // Deduplicate keywords using Set (case-insensitive)
+    const uniqueKeywords = [];
+    const seen = new Set();
+    
+    keywords.forEach(keyword => {
+        const lowerKeyword = keyword.toLowerCase();
+        if (!seen.has(lowerKeyword)) {
+            seen.add(lowerKeyword);
+            uniqueKeywords.push(keyword);
+        }
+    });
+    
     const hiddenInput = document.getElementById(`${formPrefix}-keywords-data`);
     if (hiddenInput) {
-        hiddenInput.value = JSON.stringify(keywords);
-        console.log('Updated keywords data:', keywords); // Debug log
+        hiddenInput.value = JSON.stringify(uniqueKeywords);
+        console.log('Updated keywords data (deduplicated):', uniqueKeywords);
     }
 }
 
@@ -234,21 +264,37 @@ function loadExistingKeywords() {
         .then(data => {
             if (data.success && data.keywords.length > 0) {
                 const container = document.getElementById('edit-form-keywords-list');
+                
+                // Clear container first to prevent accumulation
+                container.innerHTML = '';
+                
+                // Use Set to prevent duplicates during loading
+                const uniqueKeywords = new Set();
+                
                 data.keywords.forEach(keywordData => {
                     // Handle both string and object formats
                     const keywordText = typeof keywordData === 'string' ? keywordData : 
                                        (keywordData.keyword || keywordData.toString());
                     
-                    const keywordElement = document.createElement('span');
-                    keywordElement.className = 'badge bg-primary me-2 mb-2';
-                    keywordElement.innerHTML = `
-                        ${keywordText}
-                        <button type="button" class="btn-close btn-close-white ms-1" 
-                                onclick="removeFormKeyword(this)" aria-label="Remove"></button>
-                    `;
-                    container.appendChild(keywordElement);
+                    const cleanKeyword = keywordText.trim().toLowerCase();
+                    
+                    // Only add if not already in set (case-insensitive)
+                    if (cleanKeyword && !uniqueKeywords.has(cleanKeyword)) {
+                        uniqueKeywords.add(cleanKeyword);
+                        
+                        const keywordElement = document.createElement('span');
+                        keywordElement.className = 'badge bg-primary me-2 mb-2';
+                        keywordElement.innerHTML = `
+                            ${keywordText.trim()}
+                            <button type="button" class="btn-close btn-close-white ms-1" 
+                                    onclick="removeFormKeyword(this)" aria-label="Remove"></button>
+                        `;
+                        container.appendChild(keywordElement);
+                    }
                 });
+                
                 updateFormKeywordsData('edit-form');
+                console.log(`Loaded ${uniqueKeywords.size} unique keywords for editing`);
             }
         })
         .catch(error => {
