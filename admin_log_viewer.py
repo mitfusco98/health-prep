@@ -207,8 +207,30 @@ def admin_logs():
 
     except Exception as e:
         logger.error(f"Error in admin logs viewer: {str(e)}")
+        # Ensure current_filters is defined even on error
+        current_filters = {
+            "event_type": event_type,
+            "user": user_filter,
+            "date_from": date_from,
+            "date_to": date_to,
+            "search": search_term,
+            "ip_address": ip_filter,
+            "per_page": per_page,
+            "sort": sort_order,
+            "date_range": date_range,
+        }
         return render_template(
-            "admin_logs.html", logs=[], error=f"Error loading logs: {str(e)}"
+            "admin_logs.html", 
+            logs=[], 
+            error=f"Error loading logs: {str(e)}",
+            current_filters=current_filters,
+            pagination=None,
+            total_logs=0,
+            today_logs=0,
+            failed_logins_today=0,
+            recent_activity=0,
+            event_types=[],
+            users=[]
         )
 
 

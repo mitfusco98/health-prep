@@ -92,7 +92,7 @@
                         </button>
                     </h5>
                 </div>
-                <div id="filtersPanel" class="collapse {% if current_filters.event_type or current_filters.user or current_filters.date_from or current_filters.search %}show{% endif %}">
+                <div id="filtersPanel" class="collapse {% if current_filters and (current_filters.event_type or current_filters.user or current_filters.date_from or current_filters.search) %}show{% endif %}">
                     <div class="card-body">
                         <form method="GET" action="{{ url_for('admin_logs') }}" id="filterForm">
                             <div class="row">
@@ -100,19 +100,19 @@
                                 <div class="col-12 mb-3">
                                     <label class="form-label">Quick Date Ranges:</label>
                                     <div class="btn-group" role="group">
-                                        <input type="radio" class="btn-check" name="date_range" id="range_all" value="" {% if not current_filters.date_range %}checked{% endif %}>
+                                        <input type="radio" class="btn-check" name="date_range" id="range_all" value="" {% if not current_filters or not current_filters.date_range %}checked{% endif %}>
                                         <label class="btn btn-outline-primary btn-sm" for="range_all">All Time</label>
                                         
-                                        <input type="radio" class="btn-check" name="date_range" id="range_today" value="today" {% if current_filters.date_range == 'today' %}checked{% endif %}>
+                                        <input type="radio" class="btn-check" name="date_range" id="range_today" value="today" {% if current_filters and current_filters.date_range == 'today' %}checked{% endif %}>
                                         <label class="btn btn-outline-primary btn-sm" for="range_today">Today</label>
                                         
-                                        <input type="radio" class="btn-check" name="date_range" id="range_yesterday" value="yesterday" {% if current_filters.date_range == 'yesterday' %}checked{% endif %}>
+                                        <input type="radio" class="btn-check" name="date_range" id="range_yesterday" value="yesterday" {% if current_filters and current_filters.date_range == 'yesterday' %}checked{% endif %}>
                                         <label class="btn btn-outline-primary btn-sm" for="range_yesterday">Yesterday</label>
                                         
-                                        <input type="radio" class="btn-check" name="date_range" id="range_week" value="week" {% if current_filters.date_range == 'week' %}checked{% endif %}>
+                                        <input type="radio" class="btn-check" name="date_range" id="range_week" value="week" {% if current_filters and current_filters.date_range == 'week' %}checked{% endif %}>
                                         <label class="btn btn-outline-primary btn-sm" for="range_week">Last 7 Days</label>
                                         
-                                        <input type="radio" class="btn-check" name="date_range" id="range_month" value="month" {% if current_filters.date_range == 'month' %}checked{% endif %}>
+                                        <input type="radio" class="btn-check" name="date_range" id="range_month" value="month" {% if current_filters and current_filters.date_range == 'month' %}checked{% endif %}>
                                         <label class="btn btn-outline-primary btn-sm" for="range_month">Last 30 Days</label>
                                     </div>
                                 </div>
@@ -123,7 +123,7 @@
                                 <div class="col-md-3">
                                     <label for="search" class="form-label">Search</label>
                                     <input type="text" class="form-control" id="search" name="search" 
-                                           value="{{ current_filters.search }}" placeholder="Search logs...">
+                                           value="{{ current_filters.search if current_filters else '' }}" placeholder="Search logs...">
                                 </div>
 
                                 <!-- Event Type -->
@@ -132,17 +132,17 @@
                                     <select class="form-control" id="event_type" name="event_type">
                                         <option value="">All Events</option>
                                         <optgroup label="Categories">
-                                            <option value="authentication" {% if current_filters.event_type == 'authentication' %}selected{% endif %}>Authentication</option>
-                                            <option value="patient_operations" {% if current_filters.event_type == 'patient_operations' %}selected{% endif %}>Patient Operations</option>
-                                            <option value="alert_operations" {% if current_filters.event_type == 'alert_operations' %}selected{% endif %}>Alert Operations</option>
-                                            <option value="appointment_operations" {% if current_filters.event_type == 'appointment_operations' %}selected{% endif %}>Appointment Operations</option>
-                                            <option value="data_modifications" {% if current_filters.event_type == 'data_modifications' %}selected{% endif %}>Data Modifications</option>
-                                            <option value="admin_actions" {% if current_filters.event_type == 'admin_actions' %}selected{% endif %}>Admin Actions</option>
-                                            <option value="errors" {% if current_filters.event_type == 'errors' %}selected{% endif %}>Errors</option>
+                                            <option value="authentication" {% if current_filters and current_filters.event_type == 'authentication' %}selected{% endif %}>Authentication</option>
+                                            <option value="patient_operations" {% if current_filters and current_filters.event_type == 'patient_operations' %}selected{% endif %}>Patient Operations</option>
+                                            <option value="alert_operations" {% if current_filters and current_filters.event_type == 'alert_operations' %}selected{% endif %}>Alert Operations</option>
+                                            <option value="appointment_operations" {% if current_filters and current_filters.event_type == 'appointment_operations' %}selected{% endif %}>Appointment Operations</option>
+                                            <option value="data_modifications" {% if current_filters and current_filters.event_type == 'data_modifications' %}selected{% endif %}>Data Modifications</option>
+                                            <option value="admin_actions" {% if current_filters and current_filters.event_type == 'admin_actions' %}selected{% endif %}>Admin Actions</option>
+                                            <option value="errors" {% if current_filters and current_filters.event_type == 'errors' %}selected{% endif %}>Errors</option>
                                         </optgroup>
                                         <optgroup label="Specific Events">
                                             {% for event_type in event_types %}
-                                            <option value="{{ event_type }}" {% if current_filters.event_type == event_type %}selected{% endif %}>
+                                            <option value="{{ event_type }}" {% if current_filters and current_filters.event_type == event_type %}selected{% endif %}>
                                                 {{ event_type }}
                                             </option>
                                             {% endfor %}
@@ -156,7 +156,7 @@
                                     <select class="form-control" id="user" name="user">
                                         <option value="">All Users</option>
                                         {% for user in users %}
-                                        <option value="{{ user }}" {% if current_filters.user == user %}selected{% endif %}>
+                                        <option value="{{ user }}" {% if current_filters and current_filters.user == user %}selected{% endif %}>
                                             {{ user }}
                                         </option>
                                         {% endfor %}
@@ -167,15 +167,15 @@
                                 <div class="col-md-2">
                                     <label for="ip_address" class="form-label">IP Address</label>
                                     <input type="text" class="form-control" id="ip_address" name="ip_address" 
-                                           value="{{ current_filters.ip_address }}" placeholder="IP Address">
+                                           value="{{ current_filters.ip_address if current_filters else '' }}" placeholder="IP Address">
                                 </div>
 
                                 <!-- Sort Order -->
                                 <div class="col-md-2">
                                     <label for="sort" class="form-label">Sort Order</label>
                                     <select class="form-control" id="sort" name="sort">
-                                        <option value="desc" {% if current_filters.sort == 'desc' %}selected{% endif %}>Newest First</option>
-                                        <option value="asc" {% if current_filters.sort == 'asc' %}selected{% endif %}>Oldest First</option>
+                                        <option value="desc" {% if not current_filters or current_filters.sort == 'desc' %}selected{% endif %}>Newest First</option>
+                                        <option value="asc" {% if current_filters and current_filters.sort == 'asc' %}selected{% endif %}>Oldest First</option>
                                     </select>
                                 </div>
                             </div>
@@ -185,23 +185,23 @@
                                 <div class="col-md-3">
                                     <label for="date_from" class="form-label">From Date</label>
                                     <input type="date" class="form-control" id="date_from" name="date_from" 
-                                           value="{{ current_filters.date_from }}">
+                                           value="{{ current_filters.date_from if current_filters else '' }}">
                                 </div>
 
                                 <div class="col-md-3">
                                     <label for="date_to" class="form-label">To Date</label>
                                     <input type="date" class="form-control" id="date_to" name="date_to" 
-                                           value="{{ current_filters.date_to }}">
+                                           value="{{ current_filters.date_to if current_filters else '' }}">
                                 </div>
 
                                 <!-- Results per page -->
                                 <div class="col-md-2">
                                     <label for="per_page" class="form-label">Per Page</label>
                                     <select class="form-control" id="per_page" name="per_page">
-                                        <option value="10" {% if current_filters.per_page == 10 %}selected{% endif %}>10</option>
-                                        <option value="25" {% if current_filters.per_page == 25 %}selected{% endif %}>25</option>
-                                        <option value="50" {% if current_filters.per_page == 50 %}selected{% endif %}>50</option>
-                                        <option value="100" {% if current_filters.per_page == 100 %}selected{% endif %}>100</option>
+                                        <option value="10" {% if current_filters and current_filters.per_page == 10 %}selected{% endif %}>10</option>
+                                        <option value="25" {% if not current_filters or current_filters.per_page == 25 %}selected{% endif %}>25</option>
+                                        <option value="50" {% if current_filters and current_filters.per_page == 50 %}selected{% endif %}>50</option>
+                                        <option value="100" {% if current_filters and current_filters.per_page == 100 %}selected{% endif %}>100</option>
                                     </select>
                                 </div>
 
@@ -227,7 +227,7 @@
                 Showing {{ (pagination.page - 1) * pagination.per_page + 1 }} to 
                 {{ (pagination.page - 1) * pagination.per_page + pagination.items|length }} 
                 of {{ pagination.total }} log entries
-                {% if current_filters.event_type or current_filters.user or current_filters.date_from or current_filters.search %}
+                {% if current_filters and (current_filters.event_type or current_filters.user or current_filters.date_from or current_filters.search) %}
                 (filtered)
                 {% endif %}
             </div>
