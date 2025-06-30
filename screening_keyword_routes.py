@@ -36,16 +36,22 @@ def get_screening_keywords(screening_id):
                 'message': 'Screening type not found'
             }), 404
 
-        # Get keywords from ALL keyword fields and combine them properly
-        content_keywords = screening_type.get_content_keywords() or []
-        document_keywords = screening_type.get_document_keywords() or []
-        filename_keywords = screening_type.get_filename_keywords() or []
-
-        # Combine all keywords and ensure uniqueness
-        all_keywords = []
-        all_keywords.extend(content_keywords)
-        all_keywords.extend(document_keywords)
-        all_keywords.extend(filename_keywords)
+        # Get unified keywords (applies to both content and filenames)
+        unified_keywords = screening_type.get_unified_keywords() or []
+        
+        # For backward compatibility, also check legacy fields if unified is empty
+        if not unified_keywords:
+            content_keywords = screening_type.get_content_keywords() or []
+            document_keywords = screening_type.get_document_keywords() or []
+            filename_keywords = screening_type.get_filename_keywords() or []
+            
+            # Combine legacy keywords if unified is not set
+            all_keywords = []
+            all_keywords.extend(content_keywords)
+            all_keywords.extend(document_keywords)
+            all_keywords.extend(filename_keywords)
+        else:
+            all_keywords = unified_keywords
 
         # Process to ensure clean unique strings with multiple deduplication passes
         unique_keywords = []
