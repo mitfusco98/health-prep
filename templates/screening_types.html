@@ -282,7 +282,7 @@
                                     <option value="medications">Medications</option>
                                     <option value="general" selected>General</option>
                                 </select>
-                                <button type="button" class="btn btn-outline-primary" id="editKeywordBtn">
+                                <button type="button" class="btn btn-outline-primary" onclick="addEditModalKeyword()">
                                     <i class="fas fa-plus"></i> Add
                                 </button>
                             </div>
@@ -643,30 +643,13 @@ document.addEventListener('DOMContentLoaded', function() {
         'manage': new KeywordManager('manage')
     };
 
-    // Simple reference for edit modal keyword removal
-    window.editKeywordManager = {
-        removeKeyword: function(index) {
-            const container = document.getElementById('editKeywordsList');
-            const badges = container.querySelectorAll('.badge');
-            if (badges[index]) {
-                badges[index].remove();
-                // Update internal array
-                keywordManagers.edit.keywords.splice(index, 1);
-                keywordManagers.edit.updateHiddenField();
-                // Re-render to fix indices
-                container.innerHTML = '';
-                keywordManagers.edit.keywords.forEach((keyword, newIndex) => {
-                    const keywordElement = document.createElement('span');
-                    keywordElement.className = 'badge bg-secondary me-2 mb-2';
-                    keywordElement.innerHTML = `
-                        ${keyword}
-                        <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.75em;" onclick="editKeywordManager.removeKeyword(${newIndex})"></button>
-                    `;
-                    container.appendChild(keywordElement);
-                });
-            }
+    // Add Enter key support for edit modal keyword input
+    document.addEventListener('keypress', function(e) {
+        if (e.target.id === 'editKeywordInput' && e.key === 'Enter') {
+            e.preventDefault();
+            addEditModalKeyword();
         }
-    };
+    });
 
     // Cached keyword loading function to prevent duplicate API calls
     function loadKeywordDisplaysOnDemand() {
@@ -865,7 +848,56 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
 
-    // Handle edit button clicks with simplified keyword loading
+    // Fresh edit modal implementation - completely isolated from other keyword systems
+    let editModalKeywords = [];
+    
+    // Simple function to render edit modal keywords
+    function renderEditModalKeywords() {
+        const container = document.getElementById('editKeywordsList');
+        const hiddenField = document.getElementById('editKeywordsData');
+        
+        if (!container) return;
+        
+        // Clear completely
+        container.innerHTML = '';
+        
+        // Render each keyword as a badge
+        editModalKeywords.forEach((keyword, index) => {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-secondary me-2 mb-2';
+            badge.innerHTML = `
+                ${keyword}
+                <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.75em;" 
+                        onclick="removeEditModalKeyword(${index})" aria-label="Remove"></button>
+            `;
+            container.appendChild(badge);
+        });
+        
+        // Update hidden field
+        if (hiddenField) {
+            hiddenField.value = JSON.stringify(editModalKeywords);
+        }
+    }
+    
+    // Function to remove keyword from edit modal
+    window.removeEditModalKeyword = function(index) {
+        editModalKeywords.splice(index, 1);
+        renderEditModalKeywords();
+    };
+    
+    // Function to add keyword to edit modal
+    window.addEditModalKeyword = function() {
+        const input = document.getElementById('editKeywordInput');
+        const keyword = input.value.trim();
+        
+        if (keyword && !editModalKeywords.includes(keyword)) {
+            editModalKeywords.push(keyword);
+            input.value = '';
+            renderEditModalKeywords();
+        }
+    };
+    
+    // Handle edit button clicks with completely fresh implementation
     document.querySelectorAll('.edit-screening-btn').forEach(button => {
         button.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
@@ -889,52 +921,36 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('#editScreeningForm #max_age').value = maxAge;
             document.querySelector('#editScreeningForm #is_active').checked = active === "checked";
 
-            // Completely reset the edit modal keywords without any caching
-            keywordManagers.edit.keywords = [];
-            const editKeywordsList = document.getElementById('editKeywordsList');
-            const editKeywordsData = document.getElementById('editKeywordsData');
-            
-            // Clear display immediately
-            if (editKeywordsList) {
-                editKeywordsList.innerHTML = '';
-            }
-            if (editKeywordsData) {
-                editKeywordsData.value = '[]';
-            }
+            // Reset edit modal keywords completely
+            editModalKeywords = [];
+            document.getElementById('editKeywordsList').innerHTML = '';
+            document.getElementById('editKeywordsData').value = '[]';
 
-            // Fresh API call for edit modal (ignore cache to prevent duplication)
-            console.log(`Fresh load for edit modal (screening ${id})`);
+            // Load keywords with fresh API call
+            console.log(`Loading keywords for edit modal (screening ${id})`);
             fetch(`/api/screening-keywords/${id}`)
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success && data.keywords && data.keywords.length > 0) {
-                        // Simple display of keywords for edit modal only
-                        const uniqueKeywords = [...new Set(data.keywords.filter(k => k && k.trim()))];
-                        console.log(`Edit modal loaded ${uniqueKeywords.length} unique keywords`);
+                    if (data.success && data.keywords && Array.isArray(data.keywords)) {
+                        // Simple string filtering and deduplication
+                        const cleanKeywords = data.keywords
+                            .filter(k => k && typeof k === 'string' && k.trim())
+                            .map(k => k.trim())
+                            .filter((k, i, arr) => arr.indexOf(k) === i); // Remove duplicates
                         
-                        // Direct display without going through setKeywords to avoid conflicts
-                        if (editKeywordsList) {
-                            editKeywordsList.innerHTML = '';
-                            uniqueKeywords.forEach((keyword, index) => {
-                                const keywordElement = document.createElement('span');
-                                keywordElement.className = 'badge bg-secondary me-2 mb-2';
-                                keywordElement.innerHTML = `
-                                    ${keyword}
-                                    <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.75em;" onclick="editKeywordManager.removeKeyword(${index})"></button>
-                                `;
-                                editKeywordsList.appendChild(keywordElement);
-                            });
-                        }
-                        
-                        // Set internal array for keyword manager
-                        keywordManagers.edit.keywords = uniqueKeywords;
-                        keywordManagers.edit.updateHiddenField();
+                        editModalKeywords = cleanKeywords;
+                        console.log(`Edit modal: loaded ${cleanKeywords.length} unique keywords`);
+                        renderEditModalKeywords();
                     } else {
                         console.log(`Edit modal: no keywords found for screening ${id}`);
+                        editModalKeywords = [];
+                        renderEditModalKeywords();
                     }
                 })
                 .catch(error => {
                     console.error('Edit modal keyword load error:', error);
+                    editModalKeywords = [];
+                    renderEditModalKeywords();
                 });
         });
     });
