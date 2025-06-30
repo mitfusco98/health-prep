@@ -234,32 +234,41 @@ function loadExistingKeywords() {
             if (response.status === 429) {
                 // Rate limited, don't try to load keywords
                 console.warn('Rate limited while loading keywords');
-                return;
+                return null;
             }
-            return response.json();
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text(); // Get as text first to handle empty responses
         })
-        .then(data => {
-            if (!data) return; // Skip if rate limited
+        .then(text => {
+            if (!text) return; // Skip if empty response
             
-            if (data.success && data.keywords && data.keywords.length > 0) {
-                const container = document.getElementById('edit-form-keywords-list');
-                data.keywords.forEach(keywordData => {
-                    // Handle both string and object formats
-                    const keywordText = typeof keywordData === 'string' ? keywordData : 
-                                       (keywordData.keyword || keywordData.toString());
-                    
-                    if (keywordText && keywordText.trim()) {
-                        const keywordElement = document.createElement('span');
-                        keywordElement.className = 'badge bg-primary me-2 mb-2';
-                        keywordElement.innerHTML = `
-                            ${keywordText}
-                            <button type="button" class="btn-close btn-close-white ms-1" 
-                                    onclick="removeFormKeyword(this)" aria-label="Remove"></button>
-                        `;
-                        container.appendChild(keywordElement);
-                    }
-                });
-                updateFormKeywordsData('edit-form');
+            try {
+                const data = JSON.parse(text);
+                if (data && data.success && data.keywords && data.keywords.length > 0) {
+                    const container = document.getElementById('edit-form-keywords-list');
+                    data.keywords.forEach(keywordData => {
+                        // Handle both string and object formats
+                        const keywordText = typeof keywordData === 'string' ? keywordData : 
+                                           (keywordData.keyword || keywordData.toString());
+                        
+                        if (keywordText && keywordText.trim()) {
+                            const keywordElement = document.createElement('span');
+                            keywordElement.className = 'badge bg-primary me-2 mb-2';
+                            keywordElement.innerHTML = `
+                                ${keywordText}
+                                <button type="button" class="btn-close btn-close-white ms-1" 
+                                        onclick="removeFormKeyword(this)" aria-label="Remove"></button>
+                            `;
+                            container.appendChild(keywordElement);
+                        }
+                    });
+                    updateFormKeywordsData('edit-form');
+                }
+            } catch (jsonError) {
+                console.warn('JSON parsing error for keywords (this is usually harmless):', jsonError.message);
+                // Don't show error to user as this is often just empty data
             }
         })
         .catch(error => {

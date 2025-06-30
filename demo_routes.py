@@ -1226,28 +1226,36 @@ def edit_screening_type(screening_type_id):
         try:
             # Content keywords (for document content parsing)
             keywords_data = request.form.get('keywords')
-            if keywords_data:
-                content_keywords = json.loads(keywords_data)
-                screening_type.set_content_keywords(content_keywords)
+            if keywords_data and keywords_data.strip():
+                try:
+                    content_keywords = json.loads(keywords_data)
+                    screening_type.set_content_keywords(content_keywords)
+                except json.JSONDecodeError:
+                    print(f"Warning: Invalid JSON in keywords field, skipping: '{keywords_data[:50]}...'")
+                    screening_type.set_content_keywords([])
             else:
                 screening_type.set_content_keywords([])
             
             # Filename keywords (for filename parsing)
             filename_keywords_data = request.form.get('filename_keywords')
-            if filename_keywords_data:
-                filename_keywords = json.loads(filename_keywords_data)
-                screening_type.set_filename_keywords(filename_keywords)
+            if filename_keywords_data and filename_keywords_data.strip():
+                try:
+                    filename_keywords = json.loads(filename_keywords_data)
+                    screening_type.set_filename_keywords(filename_keywords)
+                except json.JSONDecodeError:
+                    print(f"Warning: Invalid JSON in filename_keywords field, skipping")
+                    screening_type.set_filename_keywords([])
             else:
                 screening_type.set_filename_keywords([])
             
             # Document section as document keywords
             document_section = request.form.get('document_section')
-            if document_section:
+            if document_section and document_section.strip():
                 screening_type.set_document_keywords([document_section])
             else:
                 screening_type.set_document_keywords([])
                 
-        except (json.JSONDecodeError, ValueError) as e:
+        except Exception as e:
             print(f"Warning: Error processing keyword data: {e}")
             # Continue without updating keywords if there's an error
 
