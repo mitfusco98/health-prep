@@ -248,8 +248,9 @@ def api_patient_detail(patient_id):
                     "temperature": v.temperature,
                     "blood_pressure_systolic": v.blood_pressure_systolic,
                     "blood_pressure_diastolic": v.blood_pressure_diastolic,
-                    else None
-                    ),
+                    "pulse": v.pulse,
+                    "respiratory_rate": v.respiratory_rate,
+                    "oxygen_saturation": v.oxygen_saturation,
                 }
                 for v in recent_vitals
             ],
