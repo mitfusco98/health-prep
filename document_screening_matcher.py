@@ -166,8 +166,6 @@ class DocumentScreeningMatcher:
         searchable_text = ""
         if document.content:
             searchable_text += document.content.lower()
-        if document.extracted_text:
-            searchable_text += " " + document.extracted_text.lower()
         
         if not searchable_text.strip():
             return False, "No document content available for matching"
@@ -192,14 +190,24 @@ class DocumentScreeningMatcher:
         if not document_keywords:
             return False, "No document section keywords defined"
         
-        # Get document section - check multiple possible attributes
+        # Get document section - check metadata first, then document_type
         document_section = ""
-        if hasattr(document, 'section') and document.section:
-            document_section = document.section.lower()
-        elif hasattr(document, 'document_type') and document.document_type:
-            document_section = document.document_type.value.lower()
-        elif hasattr(document, 'category') and document.category:
-            document_section = document.category.lower()
+        
+        # Try to extract section from metadata
+        if document.doc_metadata:
+            try:
+                import json
+                metadata = json.loads(document.doc_metadata)
+                if 'section' in metadata:
+                    document_section = metadata['section'].lower()
+                elif 'category' in metadata:
+                    document_section = metadata['category'].lower()
+            except (json.JSONDecodeError, AttributeError):
+                pass
+        
+        # Fallback to document_type if no section found
+        if not document_section and document.document_type:
+            document_section = document.document_type.lower()
         
         if not document_section:
             return False, "No document section available for matching"

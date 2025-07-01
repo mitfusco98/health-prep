@@ -120,6 +120,7 @@ A comprehensive healthcare preparation application built with Flask that manages
 - **Performance**: Indexed queries and caching layers
 
 ## Changelog
+- July 1, 2025: Enhanced document screening functionality with multi-criteria matching system. Added confidence scoring, match source tracking, and integrated document matching into prep sheet template. Created 18 sample medical documents (8 matching, 10 non-matching) to test screening logic. Documents now display in status/notes boxes with confidence badges and visual styling.
 - June 26, 2025: Streamlined keyword and screening management system to eliminate redundant API calls and "old system" references. Created efficient screening matcher that uses only current 'manage screening types' system with keyword caching.
 - June 26, 2025: Fixed Flask application startup issues by replacing complex middleware system with minimal working healthcare app. Resolved route import errors and template build failures.
 - June 26, 2025: Added automatic session timeout with 10-minute inactivity logout. Users can stay logged in when accessing admin pages and receive warnings before timeout. Session extends automatically on user activity.

@@ -208,7 +208,7 @@ def show_document_summary():
         
         for doc in documents:
             # Check if content might match screening keywords
-            content_lower = (doc.extracted_text or '').lower()
+            content_lower = (doc.content or '').lower()
             filename_lower = doc.filename.lower()
             
             potential_matches = []
