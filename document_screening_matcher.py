@@ -320,6 +320,351 @@ class DocumentScreeningMatcher:
         return recommendations
 
 
+def generate_prep_sheet_screening_recommendations(
+    patient_id: int, 
+    enable_ai_fuzzy: bool = True,
+    include_confidence_scores: bool = True
+) -> Dict[str, Any]:
+    """
+    Generate comprehensive prep sheet screening recommendations with document matching
+    
+    Args:
+        patient_id: Patient ID
+        enable_ai_fuzzy: Enable fuzzy/AI matching (currently uses keyword matching)
+        include_confidence_scores: Include confidence scoring for matches
+        
+    Returns:
+        Dict containing:
+            - screening_recommendations: List of screening recommendations with document matches
+            - document_matches: Detailed document matching results
+            - summary: Summary statistics
+            - generation_metadata: Generation details
+    """
+    from models import Patient, MedicalDocument, ScreeningType
+    from checklist_routes import get_or_create_settings
+    
+    try:
+        # Get patient and related data
+        patient = Patient.query.get(patient_id)
+        if not patient:
+            return _empty_screening_recommendations_response(f"Patient {patient_id} not found")
+        
+        # Get patient's documents
+        documents = MedicalDocument.query.filter_by(patient_id=patient_id).all()
+        
+        # Get checklist settings to determine which screenings to include
+        checklist_settings = get_or_create_settings()
+        content_sources = checklist_settings.content_sources_list if checklist_settings else ['age_based', 'existing_screenings']
+        
+        # Get active screening types from prep sheet settings
+        active_screening_types = _get_active_screening_types_for_prep_sheet(patient, content_sources)
+        
+        # Initialize matcher
+        matcher = DocumentScreeningMatcher()
+        
+        # Generate recommendations for each screening type
+        screening_recommendations = []
+        all_document_matches = []
+        
+        for screening_type in active_screening_types:
+            recommendation = _analyze_screening_with_documents(
+                screening_type, patient, documents, matcher, include_confidence_scores
+            )
+            screening_recommendations.append(recommendation)
+            
+            # Collect document matches for this screening
+            if recommendation.get('document_matches'):
+                all_document_matches.extend(recommendation['document_matches'])
+        
+        # Generate summary statistics
+        summary = _generate_screening_summary(screening_recommendations, documents)
+        
+        # Prepare response
+        response = {
+            'patient_id': patient_id,
+            'patient_name': patient.full_name,
+            'document_count': len(documents),
+            'screening_recommendations': screening_recommendations,
+            'document_matches': all_document_matches,
+            'summary': summary,
+            'generation_metadata': {
+                'generated_at': datetime.now().isoformat(),
+                'method': 'document_screening_matcher',
+                'fuzzy_matching_enabled': enable_ai_fuzzy,
+                'confidence_scoring_enabled': include_confidence_scores,
+                'content_sources': content_sources,
+                'total_screening_types_analyzed': len(active_screening_types)
+            }
+        }
+        
+        return response
+        
+    except Exception as e:
+        return _empty_screening_recommendations_response(f"Error generating recommendations: {str(e)}")
+
+
+def _get_active_screening_types_for_prep_sheet(patient: Patient, content_sources: List[str]) -> List[ScreeningType]:
+    """Get active screening types based on prep sheet settings and patient criteria"""
+    from models import ScreeningType, Screening
+    
+    screening_types = set()
+    
+    # Age-based screenings
+    if 'age_based' in content_sources:
+        age_based = ScreeningType.query.filter(
+            ScreeningType.is_active == True,
+            ScreeningType.status == 'active'
+        ).all()
+        
+        for st in age_based:
+            # Check age criteria
+            if st.min_age and patient.age < st.min_age:
+                continue
+            if st.max_age and patient.age > st.max_age:
+                continue
+            
+            # Check gender criteria
+            if st.gender_specific and patient.sex.lower() != st.gender_specific.lower():
+                continue
+                
+            screening_types.add(st)
+    
+    # Existing screenings in database
+    if 'existing_screenings' in content_sources:
+        existing_screenings = Screening.query.filter_by(patient_id=patient.id).all()
+        for screening in existing_screenings:
+            screening_type = ScreeningType.query.filter_by(
+                name=screening.screening_type, 
+                is_active=True
+            ).first()
+            if screening_type:
+                screening_types.add(screening_type)
+    
+    # Gender-based screenings (additional logic)
+    if 'gender_based' in content_sources:
+        gender_specific = ScreeningType.query.filter(
+            ScreeningType.is_active == True,
+            ScreeningType.gender_specific == patient.sex.lower()
+        ).all()
+        screening_types.update(gender_specific)
+    
+    # Condition-based screenings (if conditions exist)
+    if 'condition_based' in content_sources:
+        from models import Condition
+        patient_conditions = Condition.query.filter_by(patient_id=patient.id).all()
+        if patient_conditions:
+            # Add screening types that match patient conditions
+            condition_triggered = ScreeningType.query.filter(
+                ScreeningType.is_active == True,
+                ScreeningType.trigger_conditions.isnot(None)
+            ).all()
+            
+            for st in condition_triggered:
+                if _patient_matches_trigger_conditions(patient_conditions, st):
+                    screening_types.add(st)
+    
+    return list(screening_types)
+
+
+def _patient_matches_trigger_conditions(patient_conditions: List, screening_type: ScreeningType) -> bool:
+    """Check if patient conditions match screening type trigger conditions"""
+    if not screening_type.trigger_conditions:
+        return False
+    
+    try:
+        trigger_conditions = json.loads(screening_type.trigger_conditions) if isinstance(screening_type.trigger_conditions, str) else screening_type.trigger_conditions
+        if not trigger_conditions:
+            return False
+        
+        patient_condition_names = [c.name.lower() for c in patient_conditions]
+        
+        for trigger in trigger_conditions:
+            trigger_name = trigger.get('condition', '').lower()
+            if any(trigger_name in condition for condition in patient_condition_names):
+                return True
+        
+        return False
+        
+    except (json.JSONDecodeError, AttributeError):
+        return False
+
+
+def _analyze_screening_with_documents(
+    screening_type: ScreeningType, 
+    patient: Patient, 
+    documents: List, 
+    matcher: DocumentScreeningMatcher,
+    include_confidence: bool = True
+) -> Dict[str, Any]:
+    """Analyze a screening type against patient documents to generate recommendation"""
+    
+    # Basic screening info
+    recommendation = {
+        'screening_type_id': screening_type.id,
+        'screening_name': screening_type.name,
+        'screening_description': screening_type.description,
+        'frequency': screening_type.formatted_frequency or 'As recommended',
+        'document_matches': [],
+        'best_match': None,
+        'match_confidence': 0.0,
+        'match_sources': [],
+        'recommendation_status': 'no_documents',
+        'status_notes': ''
+    }
+    
+    if not documents:
+        recommendation['status_notes'] = 'No documents available for analysis'
+        return recommendation
+    
+    # Analyze each document for matches
+    document_matches = []
+    best_match = None
+    highest_confidence = 0.0
+    
+    for document in documents:
+        match_result = matcher.match_document_to_screening(screening_type, document, patient)
+        
+        if match_result['matched']:
+            # Calculate confidence score
+            confidence = _calculate_match_confidence(match_result, screening_type, document)
+            
+            document_match = {
+                'document_id': document.id,
+                'document_name': document.filename or 'Unnamed Document',
+                'document_type': document.document_type.value if hasattr(document.document_type, 'value') else str(document.document_type),
+                'match_method': match_result['match_method'],
+                'match_confidence': confidence,
+                'match_confidence_percent': int(confidence * 100),
+                'match_source': _format_match_source(match_result['match_method']),
+                'match_notes': match_result['notes'],
+                'status': match_result['status']
+            }
+            
+            document_matches.append(document_match)
+            
+            # Track best match
+            if confidence > highest_confidence:
+                highest_confidence = confidence
+                best_match = document_match
+    
+    # Update recommendation with results
+    recommendation['document_matches'] = document_matches
+    recommendation['best_match'] = best_match
+    recommendation['match_confidence'] = highest_confidence
+    
+    if document_matches:
+        # Determine recommendation status and notes
+        if highest_confidence >= 0.8:
+            recommendation['recommendation_status'] = 'high_confidence'
+            recommendation['status_notes'] = f"Strong match found: {best_match['document_name']} ({best_match['match_source']})"
+        elif highest_confidence >= 0.6:
+            recommendation['recommendation_status'] = 'medium_confidence'
+            recommendation['status_notes'] = f"Possible match: {best_match['document_name']} ({best_match['match_source']})"
+        else:
+            recommendation['recommendation_status'] = 'low_confidence'
+            recommendation['status_notes'] = f"Weak match: {best_match['document_name']} ({best_match['match_source']})"
+        
+        # Collect unique match sources
+        recommendation['match_sources'] = list(set([m['match_source'] for m in document_matches]))
+    else:
+        recommendation['recommendation_status'] = 'no_matches'
+        recommendation['status_notes'] = 'No document matches found for this screening'
+    
+    return recommendation
+
+
+def _calculate_match_confidence(match_result: Dict, screening_type: ScreeningType, document) -> float:
+    """Calculate confidence score for a document match"""
+    base_confidence = {
+        'content': 0.9,      # Content matches are most reliable
+        'filename': 0.7,     # Filename matches are moderately reliable  
+        'keywords': 0.6      # Section/keyword matches are less reliable
+    }
+    
+    confidence = base_confidence.get(match_result['match_method'], 0.5)
+    
+    # Adjust confidence based on additional factors
+    
+    # Boost confidence if multiple keyword matches
+    if 'keywords matched:' in match_result['notes']:
+        keyword_count = match_result['notes'].count(',') + 1
+        if keyword_count > 1:
+            confidence = min(confidence + (keyword_count * 0.05), 1.0)
+    
+    # Boost confidence for exact document type matches
+    if hasattr(document, 'document_type') and screening_type.name.lower() in str(document.document_type).lower():
+        confidence = min(confidence + 0.1, 1.0)
+    
+    # Reduce confidence for very old documents
+    if hasattr(document, 'created_at'):
+        days_old = (datetime.now() - document.created_at).days
+        if days_old > 365:  # Older than 1 year
+            confidence *= 0.9
+        elif days_old > 730:  # Older than 2 years
+            confidence *= 0.8
+    
+    return round(confidence, 2)
+
+
+def _format_match_source(match_method: str) -> str:
+    """Format match source for display"""
+    source_map = {
+        'content': 'Document content',
+        'filename': 'Filename keywords',
+        'keywords': 'Document section/keywords'
+    }
+    return source_map.get(match_method, match_method)
+
+
+def _generate_screening_summary(recommendations: List[Dict], documents: List) -> Dict[str, Any]:
+    """Generate summary statistics for screening recommendations"""
+    total_screenings = len(recommendations)
+    matched_screenings = len([r for r in recommendations if r['document_matches']])
+    high_confidence = len([r for r in recommendations if r['match_confidence'] >= 0.8])
+    medium_confidence = len([r for r in recommendations if 0.6 <= r['match_confidence'] < 0.8])
+    low_confidence = len([r for r in recommendations if 0.3 <= r['match_confidence'] < 0.6])
+    
+    return {
+        'total_screenings_analyzed': total_screenings,
+        'screenings_with_matches': matched_screenings,
+        'match_percentage': round((matched_screenings / total_screenings * 100) if total_screenings > 0 else 0, 1),
+        'high_confidence_matches': high_confidence,
+        'medium_confidence_matches': medium_confidence,
+        'low_confidence_matches': low_confidence,
+        'total_documents_analyzed': len(documents),
+        'average_confidence': round(
+            sum([r['match_confidence'] for r in recommendations if r['match_confidence'] > 0]) / 
+            max(matched_screenings, 1), 2
+        ) if matched_screenings > 0 else 0.0
+    }
+
+
+def _empty_screening_recommendations_response(error_message: str) -> Dict[str, Any]:
+    """Return empty response structure for error cases"""
+    return {
+        'patient_id': None,
+        'patient_name': None,
+        'document_count': 0,
+        'screening_recommendations': [],
+        'document_matches': [],
+        'summary': {
+            'total_screenings_analyzed': 0,
+            'screenings_with_matches': 0,
+            'match_percentage': 0,
+            'high_confidence_matches': 0,
+            'medium_confidence_matches': 0,
+            'low_confidence_matches': 0,
+            'total_documents_analyzed': 0,
+            'average_confidence': 0.0
+        },
+        'generation_metadata': {
+            'generated_at': datetime.now().isoformat(),
+            'method': 'document_screening_matcher',
+            'error': error_message
+        }
+    }
+
+
 # Convenience function for direct use
 def match_document_to_screening(
     screening_type: ScreeningType, 

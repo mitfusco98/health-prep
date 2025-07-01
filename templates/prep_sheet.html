@@ -490,10 +490,27 @@
                             </td>
                             <td>
                                 <div class="screening-field-container">
-                                    <input type="text" class="form-control form-control-sm screening-consolidated-field" 
-                                           id="screening_status_note_{{ loop.index }}" 
-                                           list="statusOptions_{{ loop.index }}"
-                                           placeholder="Type or select status/notes...">
+                                    {% set match_data = screening_document_matches.get(item) %}
+                                    {% if match_data %}
+                                        <input type="text" class="form-control form-control-sm screening-consolidated-field has-content" 
+                                               id="screening_status_note_{{ loop.index }}" 
+                                               list="statusOptions_{{ loop.index }}"
+                                               value="{{ match_data.status_notes }}"
+                                               placeholder="Type or select status/notes..."
+                                               title="Document Match: {{ match_data.document_name }} ({{ match_data.confidence_percent }}% confidence)">
+                                        <small class="text-muted">
+                                            <i class="fas fa-file-medical"></i> 
+                                            {{ match_data.document_name }} 
+                                            <span class="badge bg-{{ 'success' if match_data.confidence >= 0.8 else 'warning' if match_data.confidence >= 0.6 else 'secondary' }}">
+                                                {{ match_data.confidence_percent }}%
+                                            </span>
+                                        </small>
+                                    {% else %}
+                                        <input type="text" class="form-control form-control-sm screening-consolidated-field" 
+                                               id="screening_status_note_{{ loop.index }}" 
+                                               list="statusOptions_{{ loop.index }}"
+                                               placeholder="Type or select status/notes...">
+                                    {% endif %}
                                     
                                     <datalist id="statusOptions_{{ loop.index }}">
                                         {% for status in status_options %}

@@ -909,6 +909,36 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         past_appointments,
     )
 
+    # Generate enhanced screening recommendations with document matching
+    from document_screening_matcher import generate_prep_sheet_screening_recommendations
+    
+    try:
+        document_screening_data = generate_prep_sheet_screening_recommendations(
+            patient_id=patient_id,
+            enable_ai_fuzzy=True,
+            include_confidence_scores=True
+        )
+        
+        # Create mapping of screening names to document match data for template
+        screening_document_matches = {}
+        for rec in document_screening_data.get('screening_recommendations', []):
+            screening_name = rec['screening_name']
+            if rec.get('best_match'):
+                screening_document_matches[screening_name] = {
+                    'status_notes': rec['status_notes'],
+                    'confidence': rec['match_confidence'],
+                    'confidence_percent': int(rec['match_confidence'] * 100),
+                    'document_name': rec['best_match']['document_name'],
+                    'match_source': rec['best_match']['match_source'],
+                    'recommendation_status': rec['recommendation_status']
+                }
+        
+    except Exception as e:
+        # Fallback - don't break prep sheet if document matching fails
+        print(f"Document matching error: {str(e)}")
+        document_screening_data = None
+        screening_document_matches = {}
+
     # Generate timestamp for cache busting
     cache_timestamp = int(time_module.time())
 
@@ -939,6 +969,9 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             today=datetime.now(),
             cache_timestamp=cache_timestamp,
             checklist_settings=checklist_settings,
+            # Enhanced document matching data
+            document_screening_data=document_screening_data,
+            screening_document_matches=screening_document_matches,
         )
     )
 
