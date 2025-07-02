@@ -949,15 +949,44 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         screening_document_matches = {}
         for rec in document_screening_data.get('screening_recommendations', []):
             screening_name = rec['screening_name']
+            
+            # Create comprehensive status notes with document information
+            status_notes = ""
             if rec.get('best_match'):
-                screening_document_matches[screening_name] = {
-                    'status_notes': rec['status_notes'],
-                    'confidence': rec['match_confidence'],
-                    'confidence_percent': int(rec['match_confidence'] * 100),
-                    'document_name': rec['best_match']['document_name'],
-                    'match_source': rec['best_match']['match_source'],
-                    'recommendation_status': rec['recommendation_status']
-                }
+                best_match = rec['best_match']
+                confidence_percent = int(rec['match_confidence'] * 100)
+                
+                if rec['match_confidence'] >= 0.8:
+                    status_icon = "✓"
+                    status_text = "Completed"
+                elif rec['match_confidence'] >= 0.6:
+                    status_icon = "~"
+                    status_text = "Likely Completed"
+                else:
+                    status_icon = "?"
+                    status_text = "Possible Match"
+                
+                status_notes = f"{status_icon} {status_text} - {best_match['document_name']} ({confidence_percent}% match via {best_match['match_source']})"
+                
+                # Add date if available
+                document = MedicalDocument.query.get(best_match.get('document_id'))
+                if document and document.document_date:
+                    status_notes += f" - {document.document_date.strftime('%m/%d/%Y')}"
+            elif rec['recommendation_status'] == 'no_documents':
+                status_notes = "⚬ No documents found"
+            else:
+                status_notes = "⚬ No matching documents found"
+            
+            screening_document_matches[screening_name] = {
+                'status_notes': status_notes,
+                'confidence': rec['match_confidence'],
+                'confidence_percent': int(rec['match_confidence'] * 100),
+                'document_name': rec.get('best_match', {}).get('document_name', ''),
+                'match_source': rec.get('best_match', {}).get('match_source', ''),
+                'recommendation_status': rec['recommendation_status'],
+                'has_match': rec.get('best_match') is not None,
+                'document_count': len(rec.get('document_matches', []))
+            }
         
     except Exception as e:
         # Fallback - don't break prep sheet if document matching fails
