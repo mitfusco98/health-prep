@@ -509,23 +509,34 @@ def patient_detail(patient_id):
         .all()
     )
 
-    # Organize documents by type
-    lab_documents = [
-        doc for doc in documents if doc.document_type == DocumentType.LAB_REPORT.value
-    ]
-    imaging_documents = [
-        doc
-        for doc in documents
-        if doc.document_type == DocumentType.RADIOLOGY_REPORT.value
-    ]
-    consult_documents = [
-        doc for doc in documents if doc.document_type == DocumentType.CONSULTATION.value
-    ]
-    hospital_documents = [
-        doc
-        for doc in documents
-        if doc.document_type == DocumentType.DISCHARGE_SUMMARY.value
-    ]
+    # Organize documents by type - handle both enum values and string values
+    lab_documents = []
+    imaging_documents = []
+    consult_documents = []
+    hospital_documents = []
+    
+    for doc in documents:
+        doc_type = doc.document_type
+        if doc_type in ['LAB_REPORT', 'Lab Report', 'Laboratory Results', 'Lab Result']:
+            lab_documents.append(doc)
+        elif doc_type in ['RADIOLOGY_REPORT', 'Radiology Report', 'Imaging', 'X-Ray', 'CT Scan', 'MRI', 'Ultrasound']:
+            imaging_documents.append(doc)
+        elif doc_type in ['CONSULTATION', 'Consultation', 'Consultation Note', 'Specialist Report']:
+            consult_documents.append(doc)
+        elif doc_type in ['DISCHARGE_SUMMARY', 'Hospital Summary', 'Discharge Summary', 'Admission Summary']:
+            hospital_documents.append(doc)
+        elif doc_type in ['CLINICAL_NOTE', 'Clinical Note', 'Progress Note']:
+            # Add clinical notes to consult documents for now
+            consult_documents.append(doc)
+        # Add other documents to appropriate categories based on content or filename
+        elif 'lab' in (doc.filename or '').lower() or 'lab' in (doc.document_name or '').lower():
+            lab_documents.append(doc)
+        elif any(keyword in (doc.filename or '').lower() for keyword in ['xray', 'ct', 'mri', 'scan', 'imaging', 'radiology']):
+            imaging_documents.append(doc)
+        elif any(keyword in (doc.filename or '').lower() for keyword in ['consult', 'specialist', 'referral']):
+            consult_documents.append(doc)
+        elif any(keyword in (doc.filename or '').lower() for keyword in ['hospital', 'discharge', 'admission']):
+            hospital_documents.append(doc)
 
     # Helper function for templates to access current date
     def now():
@@ -537,10 +548,25 @@ def patient_detail(patient_id):
     # Generate timestamp for cache busting
     cache_timestamp = int(time_module.time())
 
+    # Create patient_data object that the template expects
+    patient_data = {
+        "patient": patient,
+        "documents": documents,
+        "conditions": active_conditions,
+        "vitals": all_vitals,
+        "screenings": screenings,
+        "immunizations": immunizations,
+        "lab_documents": lab_documents,
+        "imaging_documents": imaging_documents,
+        "consult_documents": consult_documents,
+        "hospital_documents": hospital_documents
+    }
+
     response = make_response(
         render_template(
             "patient_detail.html",
             patient=patient,
+            patient_data=patient_data,
             recent_vitals=recent_vitals,
             all_vitals=all_vitals,
             recent_labs=recent_labs,
