@@ -694,44 +694,27 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         .all()
     )
 
-    # Get recent data for the prep sheet
+    # Get recent data for the prep sheet using enhanced medical data parser
+    from medical_data_parser import MedicalDataParser
+    
+    # Get checklist settings for cutoff dates
+    from checklist_routes import get_or_create_settings
+    checklist_settings = get_or_create_settings()
+    
+    # Initialize medical data parser with patient-specific settings
+    data_parser = MedicalDataParser(patient_id, checklist_settings)
+    filtered_medical_data = data_parser.get_all_filtered_data()
+    
+    # Extract filtered data for template compatibility
+    recent_labs = filtered_medical_data['labs']['data']
+    recent_imaging = filtered_medical_data['imaging']['data']
+    recent_consults = filtered_medical_data['consults']['data']
+    recent_hospital = filtered_medical_data['hospital_visits']['data']
+    
+    # Get recent vitals (using original cutoff logic for now)
     recent_vitals = (
         Vital.query.filter(Vital.patient_id == patient_id, Vital.date > cutoff_date)
         .order_by(Vital.date.desc())
-        .all()
-    )
-
-    recent_labs = (
-        LabResult.query.filter(
-            LabResult.patient_id == patient_id, LabResult.test_date > cutoff_date
-        )
-        .order_by(LabResult.test_date.desc())
-        .all()
-    )
-
-    recent_imaging = (
-        ImagingStudy.query.filter(
-            ImagingStudy.patient_id == patient_id, ImagingStudy.study_date > cutoff_date
-        )
-        .order_by(ImagingStudy.study_date.desc())
-        .all()
-    )
-
-    recent_consults = (
-        ConsultReport.query.filter(
-            ConsultReport.patient_id == patient_id,
-            ConsultReport.report_date > cutoff_date,
-        )
-        .order_by(ConsultReport.report_date.desc())
-        .all()
-    )
-
-    recent_hospital = (
-        HospitalSummary.query.filter(
-            HospitalSummary.patient_id == patient_id,
-            HospitalSummary.admission_date > cutoff_date,
-        )
-        .order_by(HospitalSummary.admission_date.desc())
         .all()
     )
 
@@ -972,6 +955,8 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             # Enhanced document matching data
             document_screening_data=document_screening_data,
             screening_document_matches=screening_document_matches,
+            # Enhanced medical data with documents and cutoff filtering
+            filtered_medical_data=filtered_medical_data,
         )
     )
 

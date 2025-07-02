@@ -611,7 +611,176 @@
             {% endif %}
         </div>
         
-        <!-- Section headings for other data -->
+        <!-- Enhanced Medical Data Sections with Document Parsing -->
+        {% if filtered_medical_data %}
+        
+        <!-- Laboratories Section -->
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Laboratories</h6>
+                <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    Showing data from last {{ filtered_medical_data.labs.cutoff_months }} months
+                </small>
+            </div>
+            
+            <!-- Lab Results -->
+            {% if filtered_medical_data.labs.data %}
+            <div class="mb-2">
+                <strong>Lab Results:</strong>
+                {% for lab in filtered_medical_data.labs.data[:3] %}
+                    {{ lab.test_name }}: {{ lab.result_value }} {{ lab.unit or '' }} ({{ lab.test_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% if filtered_medical_data.labs.data|length > 3 %}
+                    and {{ filtered_medical_data.labs.data|length - 3 }} more results
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Lab Documents -->
+            {% if filtered_medical_data.labs.documents %}
+            <div class="mb-2">
+                <strong>Lab Documents:</strong>
+                {% for doc in filtered_medical_data.labs.documents[:3] %}
+                    {{ doc.filename }}{% if doc.upload_date %} ({{ doc.upload_date.strftime('%Y-%m-%d') }}){% endif %}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% if filtered_medical_data.labs.documents|length > 3 %}
+                    and {{ filtered_medical_data.labs.documents|length - 3 }} more documents
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if not filtered_medical_data.labs.data and not filtered_medical_data.labs.documents %}
+            <p class="text-muted mb-2">No laboratory data found within the selected time period.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Imaging Section -->
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Imaging</h6>
+                <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    Showing data from last {{ filtered_medical_data.imaging.cutoff_months }} months
+                </small>
+            </div>
+            
+            <!-- Imaging Studies -->
+            {% if filtered_medical_data.imaging.data %}
+            <div class="mb-2">
+                <strong>Imaging Studies:</strong>
+                {% for img in filtered_medical_data.imaging.data[:3] %}
+                    {{ img.study_type }} ({{ img.study_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% if filtered_medical_data.imaging.data|length > 3 %}
+                    and {{ filtered_medical_data.imaging.data|length - 3 }} more studies
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Imaging Documents -->
+            {% if filtered_medical_data.imaging.documents %}
+            <div class="mb-2">
+                <strong>Imaging Documents:</strong>
+                {% for doc in filtered_medical_data.imaging.documents[:3] %}
+                    {{ doc.filename }}{% if doc.upload_date %} ({{ doc.upload_date.strftime('%Y-%m-%d') }}){% endif %}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% if filtered_medical_data.imaging.documents|length > 3 %}
+                    and {{ filtered_medical_data.imaging.documents|length - 3 }} more documents
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if not filtered_medical_data.imaging.data and not filtered_medical_data.imaging.documents %}
+            <p class="text-muted mb-2">No imaging data found within the selected time period.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Consults Section -->
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Consults</h6>
+                <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    Showing data from last {{ filtered_medical_data.consults.cutoff_months }} months
+                </small>
+            </div>
+            
+            <!-- Consult Reports -->
+            {% if filtered_medical_data.consults.data %}
+            <div class="mb-2">
+                <strong>Consult Reports:</strong>
+                {% for consult in filtered_medical_data.consults.data[:3] %}
+                    {{ consult.specialty }} ({{ consult.report_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% if filtered_medical_data.consults.data|length > 3 %}
+                    and {{ filtered_medical_data.consults.data|length - 3 }} more consults
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Consult Documents -->
+            {% if filtered_medical_data.consults.documents %}
+            <div class="mb-2">
+                <strong>Consult Documents:</strong>
+                {% for doc in filtered_medical_data.consults.documents[:3] %}
+                    {{ doc.filename }}{% if doc.upload_date %} ({{ doc.upload_date.strftime('%Y-%m-%d') }}){% endif %}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% if filtered_medical_data.consults.documents|length > 3 %}
+                    and {{ filtered_medical_data.consults.documents|length - 3 }} more documents
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if not filtered_medical_data.consults.data and not filtered_medical_data.consults.documents %}
+            <p class="text-muted mb-2">No consult data found within the selected time period.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Hospital Visits Section -->
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Hospital Visits</h6>
+                <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    Showing data from last {{ filtered_medical_data.hospital_visits.cutoff_months }} months
+                </small>
+            </div>
+            
+            <!-- Hospital Summaries -->
+            {% if filtered_medical_data.hospital_visits.data %}
+            <div class="mb-2">
+                <strong>Hospital Summaries:</strong>
+                {% for stay in filtered_medical_data.hospital_visits.data[:3] %}
+                    {{ stay.hospital_name }} ({{ stay.admission_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% if filtered_medical_data.hospital_visits.data|length > 3 %}
+                    and {{ filtered_medical_data.hospital_visits.data|length - 3 }} more visits
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <!-- Hospital Documents -->
+            {% if filtered_medical_data.hospital_visits.documents %}
+            <div class="mb-2">
+                <strong>Hospital Documents:</strong>
+                {% for doc in filtered_medical_data.hospital_visits.documents[:3] %}
+                    {{ doc.filename }}{% if doc.upload_date %} ({{ doc.upload_date.strftime('%Y-%m-%d') }}){% endif %}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+                {% if filtered_medical_data.hospital_visits.documents|length > 3 %}
+                    and {{ filtered_medical_data.hospital_visits.documents|length - 3 }} more documents
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if not filtered_medical_data.hospital_visits.data and not filtered_medical_data.hospital_visits.documents %}
+            <p class="text-muted mb-2">No hospital visit data found within the selected time period.</p>
+            {% endif %}
+        </div>
+        
+        {% else %}
+        
+        <!-- Fallback to original format -->
         <div class="mb-3">
             <h6>Laboratories</h6>
             <p>
@@ -663,6 +832,8 @@
                 {% endif %}
             </p>
         </div>
+        
+        {% endif %}
     </div>
 </div>
 

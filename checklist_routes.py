@@ -70,6 +70,38 @@ def update_checklist_settings():
     return redirect(url_for("screening_list", tab="checklist"))
 
 
+@app.route("/checklist-settings/cutoff", methods=["POST"])
+@safe_db_operation
+def update_checklist_cutoff_settings():
+    """Update time-based cutoff settings for medical data filtering"""
+    # Get or create settings
+    settings = get_or_create_settings()
+
+    # Get form data
+    labs_cutoff = request.form.get("labs_cutoff_months", type=int)
+    imaging_cutoff = request.form.get("imaging_cutoff_months", type=int)
+    consults_cutoff = request.form.get("consults_cutoff_months", type=int)
+    hospital_cutoff = request.form.get("hospital_cutoff_months", type=int)
+
+    # Validate and update settings
+    if labs_cutoff is not None and labs_cutoff > 0:
+        settings.labs_cutoff_months = labs_cutoff
+    if imaging_cutoff is not None and imaging_cutoff > 0:
+        settings.imaging_cutoff_months = imaging_cutoff
+    if consults_cutoff is not None and consults_cutoff > 0:
+        settings.consults_cutoff_months = consults_cutoff
+    if hospital_cutoff is not None and hospital_cutoff > 0:
+        settings.hospital_cutoff_months = hospital_cutoff
+
+    # Save settings
+    db.session.commit()
+
+    flash("Data cutoff settings updated successfully!", "success")
+
+    # Redirect back to the screening list page with the checklist tab active
+    return redirect(url_for("screening_list", tab="checklist"))
+
+
 @app.route("/checklist-settings/generation", methods=["POST"])
 @safe_db_operation
 def update_checklist_generation():
