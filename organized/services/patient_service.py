@@ -113,9 +113,7 @@ class PatientService:
             "vitals": Vital.query.filter_by(patient_id=patient_id)
             .order_by(Vital.date.desc())
             .all(),
-            "documents": MedicalDocument.query.filter_by(patient_id=patient_id)
-            .order_by(MedicalDocument.created_at.desc())
-            .all(),
+            "documents": MedicalDocument.query.filter_by(patient_id=patient_id).all(),
             "immunizations": Immunization.query.filter_by(patient_id=patient_id).all(),
             "alerts": PatientAlert.query.filter_by(patient_id=patient_id).all(),
             "screenings": Screening.query.filter_by(patient_id=patient_id).all(),
