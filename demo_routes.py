@@ -689,12 +689,22 @@ def edit_patient(patient_id):
 @app.route("/patients/<int:patient_id>/prep_sheet", defaults={"cache_buster": None})
 @app.route("/patients/<int:patient_id>/prep_sheet/<int:cache_buster>")
 def generate_patient_prep_sheet(patient_id, cache_buster=None):
-    """Generate a preparation sheet for the patient"""
+    """Generate a preparation sheet for the patient with enhanced medical subsection parsing"""
 
     def now():
         return datetime.now()
 
     patient = Patient.query.get_or_404(patient_id)
+    
+    # Check for custom cutoff date from query parameters
+    custom_cutoff = request.args.get('cutoff_date')
+    if custom_cutoff:
+        try:
+            cutoff_date = datetime.strptime(custom_cutoff, '%Y-%m-%d')
+        except ValueError:
+            cutoff_date = None
+    else:
+        cutoff_date = None
 
     # Get the date of the last visit
     last_visit = (
@@ -704,10 +714,12 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     )
     last_visit_date = last_visit.visit_date if last_visit else None
 
-    # Get data since the last visit or in the last 90 days if no previous visit
-    cutoff_date = (
-        last_visit_date if last_visit_date else datetime.now() - timedelta(days=90)
-    )
+    # Use custom cutoff date if provided, otherwise default behavior
+    if not cutoff_date:
+        # Get data since the last visit or in the last 90 days if no previous visit
+        cutoff_date = (
+            last_visit_date if last_visit_date else datetime.now() - timedelta(days=90)
+        )
 
     # Get past 3 appointments for the patient
     past_appointments = (
