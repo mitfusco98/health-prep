@@ -980,6 +980,11 @@ class ChecklistSettings(db.Model):
     default_items = db.Column(
         db.Text, nullable=True
     )  # Newline-separated list of default items
+    # Time-based filtering settings
+    labs_cutoff_months = db.Column(db.Integer, default=6)  # Exclude labs older than X months
+    imaging_cutoff_months = db.Column(db.Integer, default=12)  # Exclude imaging older than X months  
+    consults_cutoff_months = db.Column(db.Integer, default=12)  # Exclude consults older than X months
+    hospital_cutoff_months = db.Column(db.Integer, default=24)  # Exclude hospital visits older than X months
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
