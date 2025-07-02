@@ -313,3 +313,26 @@ Adding CSS for document matching indicators in the prep sheet by replacing the s
 .screening-status[value*="⚬"] {
     border-left: 3px solid #6c757d;
 }
+
+/* Document hyperlink styling */
+.screening-field-container a {
+    color: #17a2b8;
+    font-weight: 500;
+    transition: color 0.15s ease-in-out;
+}
+
+.screening-field-container a:hover {
+    color: #138496;
+    text-decoration: underline !important;
+}
+
+.screening-field-container a:focus {
+    outline: 2px solid rgba(23, 162, 184, 0.25);
+    outline-offset: 2px;
+}
+
+/* Document link icon animation */
+.screening-field-container a:hover i.fas {
+    transform: scale(1.1);
+    transition: transform 0.15s ease-in-out;
+}

@@ -589,7 +589,16 @@
                                        title="Document Match: {{ match_data.document_name }} ({{ match_data.confidence_percent }}% confidence)">
                                 <small class="text-muted">
                                     <i class="fas fa-file-medical"></i> 
-                                    {{ match_data.document_name }} 
+                                    {% if screening_document_matches.get(item, {}).get('document_id') %}
+                                        <a href="/documents/{{ screening_document_matches[item]['document_id'] }}?return_to={{ url_for('generate_patient_prep_sheet', patient_id=patient.id) }}" 
+                                           class="text-info text-decoration-none" 
+                                           target="_blank"
+                                           title="Click to view document">
+                                            {{ match_data.document_name }}
+                                        </a>
+                                    {% else %}
+                                        {{ match_data.document_name }}
+                                    {% endif %}
                                     <span class="badge bg-{{ 'success' if match_data.confidence >= 0.8 else 'warning' if match_data.confidence >= 0.6 else 'secondary' }}">
                                         {{ match_data.confidence_percent }}%
                                     </span>

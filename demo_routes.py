@@ -982,6 +982,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
                 'confidence': rec['match_confidence'],
                 'confidence_percent': int(rec['match_confidence'] * 100),
                 'document_name': rec.get('best_match', {}).get('document_name', ''),
+                'document_id': rec.get('best_match', {}).get('document_id', None),
                 'match_source': rec.get('best_match', {}).get('match_source', ''),
                 'recommendation_status': rec['recommendation_status'],
                 'has_match': rec.get('best_match') is not None,
