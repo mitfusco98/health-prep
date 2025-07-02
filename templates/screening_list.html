@@ -716,6 +716,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
 
+            <!-- Data Cutoff Settings -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Data Cutoff Settings</h5>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#cutoffModal">
+                        <i class="fas fa-cog me-1"></i>Configure Cutoffs
+                    </button>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Control how far back to look for medical data in prep sheet quality checklists.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-primary">Laboratories</h6>
+                                <span class="badge bg-info">{{ settings.labs_cutoff_months if settings else 6 }} months</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-success">Imaging</h6>
+                                <span class="badge bg-info">{{ settings.imaging_cutoff_months if settings else 12 }} months</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-warning">Consults</h6>
+                                <span class="badge bg-info">{{ settings.consults_cutoff_months if settings else 12 }} months</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h6 class="text-danger">Hospital Visits</h6>
+                                <span class="badge bg-info">{{ settings.hospital_cutoff_months if settings else 24 }} months</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Current Settings Display -->
             <div class="card">
                 <div class="card-header">
@@ -754,7 +794,109 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
+<!-- Data Cutoff Configuration Modal -->
+<div class="modal fade" id="cutoffModal" tabindex="-1" aria-labelledby="cutoffModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cutoffModalLabel">Configure Data Cutoff Windows</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('update_checklist_cutoff_settings') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p class="text-muted mb-4">
+                        Set how far back to look for medical data in prep sheet quality checklists. 
+                        For example, excluding labs older than 6 months helps focus on recent results.
+                    </p>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="labs_cutoff_months" class="form-label">
+                                <i class="fas fa-vial text-primary me-2"></i>Laboratory Results
+                            </label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="labs_cutoff_months" 
+                                       name="labs_cutoff_months" min="1" max="120" 
+                                       value="{{ settings.labs_cutoff_months if settings else 6 }}" required>
+                                <span class="input-group-text">months</span>
+                            </div>
+                            <div class="form-text">How old lab results to include</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="imaging_cutoff_months" class="form-label">
+                                <i class="fas fa-x-ray text-success me-2"></i>Imaging Studies
+                            </label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="imaging_cutoff_months" 
+                                       name="imaging_cutoff_months" min="1" max="120" 
+                                       value="{{ settings.imaging_cutoff_months if settings else 12 }}" required>
+                                <span class="input-group-text">months</span>
+                            </div>
+                            <div class="form-text">How old imaging studies to include</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="consults_cutoff_months" class="form-label">
+                                <i class="fas fa-user-md text-warning me-2"></i>Consult Reports
+                            </label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="consults_cutoff_months" 
+                                       name="consults_cutoff_months" min="1" max="120" 
+                                       value="{{ settings.consults_cutoff_months if settings else 12 }}" required>
+                                <span class="input-group-text">months</span>
+                            </div>
+                            <div class="form-text">How old consult reports to include</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="hospital_cutoff_months" class="form-label">
+                                <i class="fas fa-hospital text-danger me-2"></i>Hospital Visits
+                            </label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="hospital_cutoff_months" 
+                                       name="hospital_cutoff_months" min="1" max="120" 
+                                       value="{{ settings.hospital_cutoff_months if settings else 24 }}" required>
+                                <span class="input-group-text">months</span>
+                            </div>
+                            <div class="form-text">How old hospital visits to include</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h6>Quick Preset Options</h6>
+                        <div class="btn-group" role="group" aria-label="Cutoff presets">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(3, 6, 6, 12)">
+                                Conservative (3m/6m/6m/12m)
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(6, 12, 12, 24)">
+                                Standard (6m/12m/12m/24m)
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(12, 24, 24, 36)">
+                                Extended (12m/24m/24m/36m)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Cutoff Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+// Preset cutoff configuration function
+function setPresetCutoffs(labs, imaging, consults, hospital) {
+    document.getElementById('labs_cutoff_months').value = labs;
+    document.getElementById('imaging_cutoff_months').value = imaging;
+    document.getElementById('consults_cutoff_months').value = consults;
+    document.getElementById('hospital_cutoff_months').value = hospital;
+}
+
 function toggleStatus(button) {
     // Toggle button appearance
     if (button.classList.contains('btn-success')) {
