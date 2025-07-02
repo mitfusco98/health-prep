@@ -242,9 +242,22 @@ document.addEventListener('DOMContentLoaded', function() {
         const statusInput = row.querySelector('.screening-status');
 
         // If there's a status but checkbox isn't checked, update the data
-        if (statusInput && statusInput.value && !checkbox.checked) {
+        if (statusInput && statusInput.value && (!checkbox || !checkbox.checked)) {
             updateScreeningData(screeningName, false, statusInput.value);
         }
+    });
+
+    // Initialize document match indicators
+    const hasContentFields = document.querySelectorAll('.screening-consolidated-field.has-content');
+    hasContentFields.forEach(field => {
+        console.log('Found field with document match:', field.getAttribute('data-screening'), 'Value:', field.value);
+    });
+
+    // Log document match data for debugging
+    const documentLinks = document.querySelectorAll('.screening-field-container a');
+    console.log(`Found ${documentLinks.length} document links in prep sheet`);
+    documentLinks.forEach(link => {
+        console.log('Document link:', link.textContent, 'URL:', link.href);
     });
 });
 

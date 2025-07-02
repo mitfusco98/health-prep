@@ -589,7 +589,7 @@
                     <div class="screening-status-note-cell">
                         <div class="screening-field-container">
                             {% set match_data = screening_document_matches.get(item) %}
-                            {% if match_data and match_data.status_notes %}
+                            {% if match_data and match_data.get('status_notes') %}
                                 <input type="text" 
                                        class="form-control form-control-sm screening-consolidated-field has-content screening-status" 
                                        id="screening_status_note_{{ loop.index }}" 
@@ -597,22 +597,22 @@
                                        list="statusOptions_{{ loop.index }}"
                                        value="{{ match_data.status_notes }}"
                                        placeholder="Type or select status/notes..."
-                                       title="Document Match: {{ match_data.document_name }} ({{ match_data.confidence_percent }}% confidence)"
+                                       title="Document Match: {{ match_data.get('document_name', 'Unknown Document') }} ({{ match_data.get('confidence_percent', 0) }}% confidence)"
                                        onchange="updateScreeningData('{{ item }}', null, this.value)">
                                 <small class="text-muted">
                                     <i class="fas fa-file-medical"></i> 
-                                    {% if match_data.document_id %}
+                                    {% if match_data.get('document_id') %}
                                         <a href="/documents/{{ match_data.document_id }}?return_to={{ url_for('generate_patient_prep_sheet', patient_id=patient.id) }}" 
                                            class="text-info text-decoration-none" 
                                            target="_blank"
                                            title="Click to view document">
-                                            {{ match_data.document_name }}
+                                            {{ match_data.get('document_name', 'Document') }}
                                         </a>
                                     {% else %}
-                                        {{ match_data.document_name }}
+                                        {{ match_data.get('document_name', 'Document') }}
                                     {% endif %}
-                                    <span class="badge bg-{{ 'success' if match_data.confidence >= 0.8 else 'warning' if match_data.confidence >= 0.6 else 'secondary' }}">
-                                        {{ match_data.confidence_percent }}%
+                                    <span class="badge bg-{{ 'success' if match_data.get('confidence', 0) >= 0.8 else 'warning' if match_data.get('confidence', 0) >= 0.6 else 'secondary' }}">
+                                        {{ match_data.get('confidence_percent', 0) }}%
                                     </span>
                                 </small>
                             {% else %}

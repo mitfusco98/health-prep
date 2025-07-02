@@ -993,7 +993,15 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         print(f"DEBUG: Document screening data found: {len(document_screening_data.get('screening_recommendations', []))} recommendations")
         print(f"DEBUG: Screening document matches: {list(screening_document_matches.keys())}")
         for name, data in screening_document_matches.items():
-            print(f"DEBUG: {name}: has_match={data['has_match']}, status_notes='{data['status_notes'][:50]}...'")
+            print(f"DEBUG: {name}: has_match={data['has_match']}, status_notes='{data['status_notes'][:50] if data['status_notes'] else 'None'}', document_id={data.get('document_id', 'None')}")
+        
+        # Additional debug for template
+        print(f"DEBUG: Total recommended screenings: {len(recommended_screenings)}")
+        print(f"DEBUG: Recommended screenings list: {recommended_screenings}")
+        
+        # Check if any screening has document matches
+        has_any_matches = any(data.get('has_match', False) for data in screening_document_matches.values())
+        print(f"DEBUG: Any screenings have document matches: {has_any_matches}")
         
     except Exception as e:
         # Fallback - don't break prep sheet if document matching fails
