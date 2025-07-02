@@ -1021,6 +1021,38 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         document_screening_data = None
         screening_document_matches = {}
 
+    # Enhanced Medical Subsection Parsing
+    try:
+        from medical_subsection_parser import MedicalSubsectionParser, format_cutoff_date_options
+        
+        # Initialize the parser
+        subsection_parser = MedicalSubsectionParser()
+        
+        # Parse all medical subsections with the cutoff date
+        subsection_results = subsection_parser.parse_all_subsections(
+            patient_id, cutoff_date, limit_per_section=10
+        )
+        
+        # Get cutoff date options for the modal
+        cutoff_date_options = format_cutoff_date_options(patient_id)
+        
+        # Format current cutoff date for display
+        current_cutoff_info = {
+            'date': cutoff_date.strftime('%Y-%m-%d'),
+            'days_ago': (datetime.now() - cutoff_date).days,
+            'is_custom': custom_cutoff is not None
+        }
+        
+    except Exception as e:
+        print(f"Medical subsection parsing error: {str(e)}")
+        subsection_results = {}
+        cutoff_date_options = []
+        current_cutoff_info = {
+            'date': cutoff_date.strftime('%Y-%m-%d') if cutoff_date else '',
+            'days_ago': 0,
+            'is_custom': False
+        }
+
     # Generate timestamp for cache busting
     cache_timestamp = int(time_module.time())
 
@@ -1054,6 +1086,10 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             # Enhanced document matching data
             document_screening_data=document_screening_data,
             screening_document_matches=screening_document_matches,
+            # Medical subsection parsing data
+            subsection_results=subsection_results,
+            cutoff_date_options=cutoff_date_options,
+            current_cutoff_info=current_cutoff_info,
         )
     )
 

@@ -131,9 +131,15 @@ class MedicalSubsectionParser:
         
         # Apply date filter if provided
         if cutoff_date:
-            query = query.filter(MedicalDocument.upload_date >= cutoff_date)
+            # Use created_at for upload date and document_date for clinical date
+            query = query.filter(
+                db.or_(
+                    MedicalDocument.created_at >= cutoff_date,
+                    MedicalDocument.document_date >= cutoff_date
+                )
+            )
         
-        documents = query.order_by(MedicalDocument.upload_date.desc()).all()
+        documents = query.order_by(MedicalDocument.created_at.desc()).all()
         
         # Filter by keywords and document types
         matching_documents = []

@@ -643,57 +643,227 @@
             {% endif %}
         </div>
 
-        <!-- Section headings for other data -->
-        <div class="mb-3">
-            <h6>Laboratories</h6>
-            <p>
-                {% if recent_labs %}
-                    {% for lab in recent_labs[:3] %}
-                        {{ lab.test_name }}: {{ lab.result_value }} {{ lab.unit }} ({{ lab.test_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                {% else %}
-                    No recent laboratory results.
-                {% endif %}
-            </p>
-        </div>
+        <!-- Enhanced Medical Subsection Data with Date Filtering -->
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Medical Data Summary</h6>
+                <div class="d-flex align-items-center">
+                    <small class="text-muted me-2">
+                        {% if current_cutoff_info %}
+                            Data since: {{ current_cutoff_info.date }} ({{ current_cutoff_info.days_ago }} days ago)
+                            {% if current_cutoff_info.is_custom %}<span class="badge bg-info">Custom</span>{% endif %}
+                        {% endif %}
+                    </small>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#dateFilterModal">
+                        <i class="fas fa-calendar-alt me-1"></i>Filter Dates
+                    </button>
+                </div>
+            </div>
+            
+            {% if subsection_results %}
+                <!-- Laboratories Section -->
+                {% set lab_data = subsection_results.get('laboratories') %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-1">Laboratories</h6>
+                        {% if lab_data %}
+                            <small class="text-muted">{{ lab_data.parsing_summary }}</small>
+                        {% endif %}
+                    </div>
+                    {% if lab_data and (lab_data.structured_data_found or lab_data.documents_found) %}
+                        <div class="border-start border-primary ps-3">
+                            <!-- Structured Lab Data -->
+                            {% if lab_data.structured_data_found %}
+                                {% for lab in lab_data.structured_data_found[:3] %}
+                                    <div class="mb-1">
+                                        <strong>{{ lab.test_name }}:</strong> {{ lab.result_value }} {{ lab.unit }} 
+                                        <small class="text-muted">({{ lab.test_date.strftime('%Y-%m-%d') }})</small>
+                                        {% if lab.is_abnormal %}<span class="badge bg-warning">Abnormal</span>{% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                            <!-- Lab Documents -->
+                            {% if lab_data.documents_found %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Documents: </small>
+                                    {% for doc in lab_data.documents_found[:2] %}
+                                        <span class="badge bg-light text-dark me-1">{{ doc.filename }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No laboratory data found for the selected time period.</p>
+                    {% endif %}
+                </div>
 
-        <div class="mb-3">
-            <h6>Imaging</h6>
-            <p>
-                {% if recent_imaging %}
-                    {% for img in recent_imaging[:3] %}
-                        {{ img.study_type }} ({{ img.study_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                {% else %}
-                    No recent imaging studies.
-                {% endif %}
-            </p>
-        </div>
+                <!-- Imaging Section -->
+                {% set imaging_data = subsection_results.get('imaging') %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-1">Imaging Studies</h6>
+                        {% if imaging_data %}
+                            <small class="text-muted">{{ imaging_data.parsing_summary }}</small>
+                        {% endif %}
+                    </div>
+                    {% if imaging_data and (imaging_data.structured_data_found or imaging_data.documents_found) %}
+                        <div class="border-start border-success ps-3">
+                            <!-- Structured Imaging Data -->
+                            {% if imaging_data.structured_data_found %}
+                                {% for img in imaging_data.structured_data_found[:3] %}
+                                    <div class="mb-1">
+                                        <strong>{{ img.study_type }}</strong>{% if img.body_site %} - {{ img.body_site }}{% endif %}
+                                        <small class="text-muted">({{ img.study_date.strftime('%Y-%m-%d') }})</small>
+                                        {% if img.impression %}
+                                            <div class="small text-muted">{{ img.impression[:100] }}{% if img.impression|length > 100 %}...{% endif %}</div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                            <!-- Imaging Documents -->
+                            {% if imaging_data.documents_found %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Documents: </small>
+                                    {% for doc in imaging_data.documents_found[:2] %}
+                                        <span class="badge bg-light text-dark me-1">{{ doc.filename }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No imaging studies found for the selected time period.</p>
+                    {% endif %}
+                </div>
 
-        <div class="mb-3">
-            <h6>Consults</h6>
-            <p>
-                {% if recent_consults %}
-                    {% for consult in recent_consults[:3] %}
-                        {{ consult.specialty }} ({{ consult.report_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                {% else %}
-                    No recent consult reports.
-                {% endif %}
-            </p>
-        </div>
+                <!-- Consults Section -->
+                {% set consult_data = subsection_results.get('consults') %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-1">Specialist Consults</h6>
+                        {% if consult_data %}
+                            <small class="text-muted">{{ consult_data.parsing_summary }}</small>
+                        {% endif %}
+                    </div>
+                    {% if consult_data and (consult_data.structured_data_found or consult_data.documents_found) %}
+                        <div class="border-start border-info ps-3">
+                            <!-- Structured Consult Data -->
+                            {% if consult_data.structured_data_found %}
+                                {% for consult in consult_data.structured_data_found[:3] %}
+                                    <div class="mb-1">
+                                        <strong>{{ consult.specialty }}</strong>{% if consult.specialist %} - {{ consult.specialist }}{% endif %}
+                                        <small class="text-muted">({{ consult.report_date.strftime('%Y-%m-%d') }})</small>
+                                        {% if consult.recommendations %}
+                                            <div class="small text-muted">{{ consult.recommendations[:100] }}{% if consult.recommendations|length > 100 %}...{% endif %}</div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                            <!-- Consult Documents -->
+                            {% if consult_data.documents_found %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Documents: </small>
+                                    {% for doc in consult_data.documents_found[:2] %}
+                                        <span class="badge bg-light text-dark me-1">{{ doc.filename }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No specialist consults found for the selected time period.</p>
+                    {% endif %}
+                </div>
 
-        <div class="mb-3">
-            <h6>Hospital Visits</h6>
-            <p>
-                {% if recent_hospital %}
-                    {% for stay in recent_hospital[:3] %}
-                        {{ stay.hospital_name }} ({{ stay.admission_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                {% else %}
-                    No recent hospital visits.
-                {% endif %}
-            </p>
+                <!-- Hospital Visits Section -->
+                {% set hospital_data = subsection_results.get('hospital_visits') %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-1">Hospital Visits</h6>
+                        {% if hospital_data %}
+                            <small class="text-muted">{{ hospital_data.parsing_summary }}</small>
+                        {% endif %}
+                    </div>
+                    {% if hospital_data and (hospital_data.structured_data_found or hospital_data.documents_found) %}
+                        <div class="border-start border-danger ps-3">
+                            <!-- Structured Hospital Data -->
+                            {% if hospital_data.structured_data_found %}
+                                {% for stay in hospital_data.structured_data_found[:3] %}
+                                    <div class="mb-1">
+                                        <strong>{{ stay.hospital_name }}</strong>
+                                        <small class="text-muted">({{ stay.admission_date.strftime('%Y-%m-%d') }})</small>
+                                        {% if stay.discharge_diagnosis %}
+                                            <div class="small text-muted">{{ stay.discharge_diagnosis[:100] }}{% if stay.discharge_diagnosis|length > 100 %}...{% endif %}</div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                            <!-- Hospital Documents -->
+                            {% if hospital_data.documents_found %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Documents: </small>
+                                    {% for doc in hospital_data.documents_found[:2] %}
+                                        <span class="badge bg-light text-dark me-1">{{ doc.filename }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No hospital visits found for the selected time period.</p>
+                    {% endif %}
+                </div>
+            {% else %}
+                <!-- Fallback to original simple display -->
+                <div class="mb-3">
+                    <h6>Laboratories</h6>
+                    <p>
+                        {% if recent_labs %}
+                            {% for lab in recent_labs[:3] %}
+                                {{ lab.test_name }}: {{ lab.result_value }} {{ lab.unit }} ({{ lab.test_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            No recent laboratory results.
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6>Imaging</h6>
+                    <p>
+                        {% if recent_imaging %}
+                            {% for img in recent_imaging[:3] %}
+                                {{ img.study_type }} ({{ img.study_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            No recent imaging studies.
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6>Consults</h6>
+                    <p>
+                        {% if recent_consults %}
+                            {% for consult in recent_consults[:3] %}
+                                {{ consult.specialty }} ({{ consult.report_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            No recent consult reports.
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <h6>Hospital Visits</h6>
+                    <p>
+                        {% if recent_hospital %}
+                            {% for stay in recent_hospital[:3] %}
+                                {{ stay.hospital_name }} ({{ stay.admission_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            No recent hospital visits.
+                        {% endif %}
+                    </p>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -961,6 +1131,149 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Error saving prep sheet. Please try again.');
         });
     });
+});
+</script>
+
+<!-- Date Filter Modal -->
+<div class="modal fade" id="dateFilterModal" tabindex="-1" aria-labelledby="dateFilterModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dateFilterModalLabel">
+                    <i class="fas fa-calendar-alt me-2"></i>Configure Date Filter
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Choose a cutoff date to filter medical data. Only data after this date will be shown in the prep sheet.</p>
+                
+                {% if cutoff_date_options %}
+                    <div class="mb-4">
+                        <h6>Quick Options</h6>
+                        <div class="row">
+                            {% for option in cutoff_date_options %}
+                                {% if option.type == 'preset' %}
+                                    <div class="col-md-6 mb-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm w-100 date-option-btn" 
+                                                data-date="{{ option.value }}" data-type="preset">
+                                            {{ option.text }}
+                                        </button>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6>Previous Appointments</h6>
+                        <div class="list-group">
+                            {% for option in cutoff_date_options %}
+                                {% if option.type == 'appointment' %}
+                                    <button type="button" class="list-group-item list-group-item-action date-option-btn" 
+                                            data-date="{{ option.value }}" data-type="appointment">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>{{ option.text }}</span>
+                                            <small class="text-muted">{{ option.days_back }} days ago</small>
+                                        </div>
+                                    </button>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <h6>Custom Date</h6>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-calendar"></i>
+                        </span>
+                        <input type="date" class="form-control" id="customDateInput" 
+                               value="{{ current_cutoff_info.date if current_cutoff_info else '' }}">
+                    </div>
+                    <small class="text-muted">Select any date to use as the cutoff</small>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Current filter:</strong> 
+                    {% if current_cutoff_info %}
+                        Data since {{ current_cutoff_info.date }} ({{ current_cutoff_info.days_ago }} days ago)
+                    {% else %}
+                        Default (last visit or 90 days)
+                    {% endif %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-danger" id="clearFilterBtn">Clear Filter</button>
+                <button type="button" class="btn btn-primary" id="applyFilterBtn">Apply Filter</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Date filter modal functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('dateFilterModal');
+    const customDateInput = document.getElementById('customDateInput');
+    const applyFilterBtn = document.getElementById('applyFilterBtn');
+    const clearFilterBtn = document.getElementById('clearFilterBtn');
+    const dateOptionBtns = document.querySelectorAll('.date-option-btn');
+    
+    let selectedDate = customDateInput.value;
+    
+    // Handle preset and appointment date options
+    dateOptionBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Remove active state from all buttons
+            dateOptionBtns.forEach(b => b.classList.remove('active'));
+            
+            // Add active state to clicked button
+            this.classList.add('active');
+            
+            // Set the selected date
+            selectedDate = this.dataset.date;
+            customDateInput.value = selectedDate;
+        });
+    });
+    
+    // Handle custom date input
+    customDateInput.addEventListener('change', function() {
+        // Remove active state from all preset buttons
+        dateOptionBtns.forEach(b => b.classList.remove('active'));
+        
+        selectedDate = this.value;
+    });
+    
+    // Apply filter button
+    applyFilterBtn.addEventListener('click', function() {
+        if (selectedDate) {
+            // Redirect to prep sheet with cutoff date parameter
+            const currentUrl = window.location.pathname;
+            const newUrl = `${currentUrl}?cutoff_date=${selectedDate}`;
+            window.location.href = newUrl;
+        } else {
+            alert('Please select a date to apply as filter.');
+        }
+    });
+    
+    // Clear filter button
+    clearFilterBtn.addEventListener('click', function() {
+        // Redirect to prep sheet without cutoff date parameter
+        const currentUrl = window.location.pathname;
+        window.location.href = currentUrl;
+    });
+    
+    // Highlight current selection if it matches an option
+    if (selectedDate) {
+        dateOptionBtns.forEach(btn => {
+            if (btn.dataset.date === selectedDate) {
+                btn.classList.add('active');
+            }
+        });
+    }
 });
 </script>
 
