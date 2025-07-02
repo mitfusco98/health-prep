@@ -509,34 +509,23 @@ def patient_detail(patient_id):
         .all()
     )
 
-    # Organize documents by type - handle both enum values and string values
-    lab_documents = []
-    imaging_documents = []
-    consult_documents = []
-    hospital_documents = []
-    
-    for doc in documents:
-        doc_type = doc.document_type
-        if doc_type in ['LAB_REPORT', 'Lab Report', 'Laboratory Results', 'Lab Result']:
-            lab_documents.append(doc)
-        elif doc_type in ['RADIOLOGY_REPORT', 'Radiology Report', 'Imaging', 'X-Ray', 'CT Scan', 'MRI', 'Ultrasound']:
-            imaging_documents.append(doc)
-        elif doc_type in ['CONSULTATION', 'Consultation', 'Consultation Note', 'Specialist Report']:
-            consult_documents.append(doc)
-        elif doc_type in ['DISCHARGE_SUMMARY', 'Hospital Summary', 'Discharge Summary', 'Admission Summary']:
-            hospital_documents.append(doc)
-        elif doc_type in ['CLINICAL_NOTE', 'Clinical Note', 'Progress Note']:
-            # Add clinical notes to consult documents for now
-            consult_documents.append(doc)
-        # Add other documents to appropriate categories based on content or filename
-        elif 'lab' in (doc.filename or '').lower() or 'lab' in (doc.document_name or '').lower():
-            lab_documents.append(doc)
-        elif any(keyword in (doc.filename or '').lower() for keyword in ['xray', 'ct', 'mri', 'scan', 'imaging', 'radiology']):
-            imaging_documents.append(doc)
-        elif any(keyword in (doc.filename or '').lower() for keyword in ['consult', 'specialist', 'referral']):
-            consult_documents.append(doc)
-        elif any(keyword in (doc.filename or '').lower() for keyword in ['hospital', 'discharge', 'admission']):
-            hospital_documents.append(doc)
+    # Organize documents by type
+    lab_documents = [
+        doc for doc in documents if doc.document_type == DocumentType.LAB_REPORT.value
+    ]
+    imaging_documents = [
+        doc
+        for doc in documents
+        if doc.document_type == DocumentType.RADIOLOGY_REPORT.value
+    ]
+    consult_documents = [
+        doc for doc in documents if doc.document_type == DocumentType.CONSULTATION.value
+    ]
+    hospital_documents = [
+        doc
+        for doc in documents
+        if doc.document_type == DocumentType.DISCHARGE_SUMMARY.value
+    ]
 
     # Helper function for templates to access current date
     def now():
@@ -548,25 +537,10 @@ def patient_detail(patient_id):
     # Generate timestamp for cache busting
     cache_timestamp = int(time_module.time())
 
-    # Create patient_data object that the template expects
-    patient_data = {
-        "patient": patient,
-        "documents": documents,
-        "conditions": active_conditions,
-        "vitals": all_vitals,
-        "screenings": screenings,
-        "immunizations": immunizations,
-        "lab_documents": lab_documents,
-        "imaging_documents": imaging_documents,
-        "consult_documents": consult_documents,
-        "hospital_documents": hospital_documents
-    }
-
     response = make_response(
         render_template(
             "patient_detail.html",
             patient=patient,
-            patient_data=patient_data,
             recent_vitals=recent_vitals,
             all_vitals=all_vitals,
             recent_labs=recent_labs,
@@ -689,22 +663,12 @@ def edit_patient(patient_id):
 @app.route("/patients/<int:patient_id>/prep_sheet", defaults={"cache_buster": None})
 @app.route("/patients/<int:patient_id>/prep_sheet/<int:cache_buster>")
 def generate_patient_prep_sheet(patient_id, cache_buster=None):
-    """Generate a preparation sheet for the patient with enhanced medical subsection parsing"""
+    """Generate a preparation sheet for the patient"""
 
     def now():
         return datetime.now()
 
     patient = Patient.query.get_or_404(patient_id)
-    
-    # Check for custom cutoff date from query parameters
-    custom_cutoff = request.args.get('cutoff_date')
-    if custom_cutoff:
-        try:
-            cutoff_date = datetime.strptime(custom_cutoff, '%Y-%m-%d')
-        except ValueError:
-            cutoff_date = None
-    else:
-        cutoff_date = None
 
     # Get the date of the last visit
     last_visit = (
@@ -714,12 +678,10 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     )
     last_visit_date = last_visit.visit_date if last_visit else None
 
-    # Use custom cutoff date if provided, otherwise default behavior
-    if not cutoff_date:
-        # Get data since the last visit or in the last 90 days if no previous visit
-        cutoff_date = (
-            last_visit_date if last_visit_date else datetime.now() - timedelta(days=90)
-        )
+    # Get data since the last visit or in the last 90 days if no previous visit
+    cutoff_date = (
+        last_visit_date if last_visit_date else datetime.now() - timedelta(days=90)
+    )
 
     # Get past 3 appointments for the patient
     past_appointments = (
@@ -961,97 +923,21 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         screening_document_matches = {}
         for rec in document_screening_data.get('screening_recommendations', []):
             screening_name = rec['screening_name']
-            
-            # Create comprehensive status notes with document information
-            status_notes = ""
             if rec.get('best_match'):
-                best_match = rec['best_match']
-                confidence_percent = int(rec['match_confidence'] * 100)
-                
-                if rec['match_confidence'] >= 0.8:
-                    status_icon = "✓"
-                    status_text = "Completed"
-                elif rec['match_confidence'] >= 0.6:
-                    status_icon = "~"
-                    status_text = "Likely Completed"
-                else:
-                    status_icon = "?"
-                    status_text = "Possible Match"
-                
-                status_notes = f"{status_icon} {status_text} - {best_match['document_name']} ({confidence_percent}% match via {best_match['match_source']})"
-                
-                # Add date if available
-                document = MedicalDocument.query.get(best_match.get('document_id'))
-                if document and document.document_date:
-                    status_notes += f" - {document.document_date.strftime('%m/%d/%Y')}"
-            elif rec['recommendation_status'] == 'no_documents':
-                status_notes = "⚬ No documents found"
-            else:
-                status_notes = "⚬ No matching documents found"
-            
-            screening_document_matches[screening_name] = {
-                'status_notes': status_notes,
-                'confidence': rec['match_confidence'],
-                'confidence_percent': int(rec['match_confidence'] * 100),
-                'document_name': rec.get('best_match', {}).get('document_name', ''),
-                'document_id': rec.get('best_match', {}).get('document_id', None),
-                'match_source': rec.get('best_match', {}).get('match_source', ''),
-                'recommendation_status': rec['recommendation_status'],
-                'has_match': rec.get('best_match') is not None,
-                'document_count': len(rec.get('document_matches', []))
-            }
-        
-        # Debug output for troubleshooting
-        print(f"DEBUG: Document screening data found: {len(document_screening_data.get('screening_recommendations', []))} recommendations")
-        print(f"DEBUG: Screening document matches: {list(screening_document_matches.keys())}")
-        for name, data in screening_document_matches.items():
-            print(f"DEBUG: {name}: has_match={data['has_match']}, status_notes='{data['status_notes'][:50] if data['status_notes'] else 'None'}', document_id={data.get('document_id', 'None')}")
-        
-        # Additional debug for template
-        print(f"DEBUG: Total recommended screenings: {len(recommended_screenings)}")
-        print(f"DEBUG: Recommended screenings list: {recommended_screenings}")
-        
-        # Check if any screening has document matches
-        has_any_matches = any(data.get('has_match', False) for data in screening_document_matches.values())
-        print(f"DEBUG: Any screenings have document matches: {has_any_matches}")
+                screening_document_matches[screening_name] = {
+                    'status_notes': rec['status_notes'],
+                    'confidence': rec['match_confidence'],
+                    'confidence_percent': int(rec['match_confidence'] * 100),
+                    'document_name': rec['best_match']['document_name'],
+                    'match_source': rec['best_match']['match_source'],
+                    'recommendation_status': rec['recommendation_status']
+                }
         
     except Exception as e:
         # Fallback - don't break prep sheet if document matching fails
         print(f"Document matching error: {str(e)}")
         document_screening_data = None
         screening_document_matches = {}
-
-    # Enhanced Medical Subsection Parsing
-    try:
-        from medical_subsection_parser import MedicalSubsectionParser, format_cutoff_date_options
-        
-        # Initialize the parser
-        subsection_parser = MedicalSubsectionParser()
-        
-        # Parse all medical subsections with the cutoff date
-        subsection_results = subsection_parser.parse_all_subsections(
-            patient_id, cutoff_date, limit_per_section=10
-        )
-        
-        # Get cutoff date options for the modal
-        cutoff_date_options = format_cutoff_date_options(patient_id)
-        
-        # Format current cutoff date for display
-        current_cutoff_info = {
-            'date': cutoff_date.strftime('%Y-%m-%d'),
-            'days_ago': (datetime.now() - cutoff_date).days,
-            'is_custom': custom_cutoff is not None
-        }
-        
-    except Exception as e:
-        print(f"Medical subsection parsing error: {str(e)}")
-        subsection_results = {}
-        cutoff_date_options = []
-        current_cutoff_info = {
-            'date': cutoff_date.strftime('%Y-%m-%d') if cutoff_date else '',
-            'days_ago': 0,
-            'is_custom': False
-        }
 
     # Generate timestamp for cache busting
     cache_timestamp = int(time_module.time())
@@ -1086,10 +972,6 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             # Enhanced document matching data
             document_screening_data=document_screening_data,
             screening_document_matches=screening_document_matches,
-            # Medical subsection parsing data
-            subsection_results=subsection_results,
-            cutoff_date_options=cutoff_date_options,
-            current_cutoff_info=current_cutoff_info,
         )
     )
 

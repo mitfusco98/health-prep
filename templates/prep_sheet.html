@@ -17,37 +17,37 @@
     .screening-field-container {
         position: relative;
     }
-
+    
     .screening-consolidated-field {
         margin-bottom: 0.25rem;
     }
-
+    
     .screening-consolidated-field:focus {
         border-color: rgba(var(--bs-primary-rgb), 0.5);
         box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
     }
-
+    
     .screening-preset-buttons {
         display: flex;
         flex-wrap: wrap;
         gap: 0.25rem;
     }
-
+    
     .screening-preset-btn {
         padding: 0.2rem 0.5rem;
         font-size: 0.8rem;
     }
-
+    
     .screening-preset-btn.active {
         background-color: var(--bs-primary);
         color: white;
     }
-
+    
     /* Highlight field with content */
     .screening-consolidated-field.has-content {
         background-color: rgba(var(--bs-primary-rgb), 0.05);
     }
-
+    
     /* Styling for the unified status note cell */
     .screening-status-note-cell {
         display: table-cell;
@@ -55,24 +55,24 @@
         padding: 3px 10px 3px 0;
         width: 65%;
     }
-
+    
     /* Document matching styles */
     .screening-consolidated-field.has-content {
         border-left: 3px solid #28a745;
         background-color: #f8fff8;
     }
-
+    
     .screening-field-container small {
         display: block;
         margin-top: 0.25rem;
         font-size: 0.75rem;
     }
-
+    
     .screening-field-container .badge {
         font-size: 0.7rem;
         padding: 0.1rem 0.3rem;
     }
-
+    
     .screening-field-container i.fas {
         color: #6c757d;
         margin-right: 0.2rem;
@@ -134,7 +134,7 @@
     </div>
     <div class="card-body">
         <p class="lead">{{ prep_sheet.summary }}</p>
-
+        
         <!-- Patient Alerts Section - Managed Section -->
         <div class="card border-0 mb-4">
             <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center">
@@ -198,7 +198,7 @@
                 {% endif %}
             </div>
         </div>
-
+        
         {% if past_appointments %}
         <h6>Recent Visit History:</h6>
         <ul class="mb-3">
@@ -209,7 +209,7 @@
             {% endfor %}
         </ul>
         {% endif %}
-
+        
         {% if active_conditions %}
         <h6>Active Conditions:</h6>
         <ul class="mb-3">
@@ -218,7 +218,7 @@
             {% endfor %}
         </ul>
         {% endif %}
-
+        
         {% if immunizations %}
         <h6>Immunization History:</h6>
         <ul class="mb-3">
@@ -475,7 +475,7 @@
                 </div>
             </div>
         </div>
-
+        
         <!-- Screening Checklist -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h6 class="mb-0">Screening Checklist</h6>
@@ -487,7 +487,7 @@
             {% set layout_style = checklist_settings.layout_style if checklist_settings is defined else 'list' %}
             {% set status_options = checklist_settings.status_options_list if checklist_settings is defined else ['due', 'due_soon', 'sent_incomplete', 'completed'] %}
             {% set show_notes = checklist_settings.show_notes if checklist_settings is defined else true %}
-
+            
             {% if layout_style == 'table' %}
             <!-- Table Layout -->
             <div class="table-responsive">
@@ -500,62 +500,54 @@
                         </tr>
                     </thead>
                     <tbody>
-                    {% for screening_name in recommended_screenings %}
-                        <tr class="screening-row" data-screening="{{ screening_name }}">
-                            <td>
-                                <div class="form-check">
-                                    <input class="form-check-input screening-checkbox" type="checkbox" 
-                                           id="screening_{{ loop.index }}" 
-                                           data-screening="{{ screening_name }}"
-                                           {% if screening_document_matches.get(screening_name, {}).get('has_match') %}checked{% endif %}
-                                           onchange="updateScreeningData('{{ screening_name }}', this.checked)">
-                                    <label class="form-check-label" for="screening_{{ loop.index }}">
-                                        {{ screening_name }}
-                                        {% if screening_document_matches.get(screening_name, {}).get('has_match') %}
-                                            <span class="badge bg-success ms-1" title="Document match found">
-                                                {{ screening_document_matches[screening_name]['confidence_percent'] }}%
-                                            </span>
-                                        {% endif %}
-                                    </label>
-                                </div>
+                    {% for item in recommended_screenings %}
+                        <tr>
+                            <td class="text-center">
+                                <input class="form-check-input" type="checkbox" id="screening_{{ loop.index }}">
                             </td>
                             <td>
-                                <div class="input-group input-group-sm">
-                                    <input type="text" 
-                                           class="form-control screening-status" 
-                                           id="status_{{ loop.index }}" 
-                                           data-screening="{{ screening_name }}"
-                                           placeholder="Status & Notes"
-                                           value="{{ screening_document_matches.get(screening_name, {}).get('status_notes', '') }}"
-                                           onchange="updateScreeningData('{{ screening_name }}', null, this.value)">
-                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
-                                            data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="fas fa-caret-down"></i>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        {% for option in settings.status_options_list %}
-                                        <li><a class="dropdown-item status-option" href="#" 
-                                               data-status="{{ option }}" 
-                                               data-screening="{{ screening_name }}"
-                                               onclick="setStatus('{{ screening_name }}', '{{ option }}')">{{ option }}</a></li>
+                                <label class="form-check-label" for="screening_{{ loop.index }}">
+                                    {{ item }}
+                                </label>
+                            </td>
+                            <td>
+                                <div class="screening-field-container">
+                                    {% set match_data = screening_document_matches.get(item) %}
+                                    {% if match_data %}
+                                        <input type="text" class="form-control form-control-sm screening-consolidated-field has-content" 
+                                               id="screening_status_note_{{ loop.index }}" 
+                                               list="statusOptions_{{ loop.index }}"
+                                               value="{{ match_data.status_notes }}"
+                                               placeholder="Type or select status/notes..."
+                                               title="Document Match: {{ match_data.document_name }} ({{ match_data.confidence_percent }}% confidence)">
+                                        <small class="text-muted">
+                                            <i class="fas fa-file-medical"></i> 
+                                            {{ match_data.document_name }} 
+                                            <span class="badge bg-{{ 'success' if match_data.confidence >= 0.8 else 'warning' if match_data.confidence >= 0.6 else 'secondary' }}">
+                                                {{ match_data.confidence_percent }}%
+                                            </span>
+                                        </small>
+                                    {% else %}
+                                        <input type="text" class="form-control form-control-sm screening-consolidated-field" 
+                                               id="screening_status_note_{{ loop.index }}" 
+                                               list="statusOptions_{{ loop.index }}"
+                                               placeholder="Type or select status/notes...">
+                                    {% endif %}
+                                    
+                                    <datalist id="statusOptions_{{ loop.index }}">
+                                        {% for status in status_options %}
+                                            <option value="{{ status|replace('_', ' ')|title }}">
                                         {% endfor %}
-                                        {% if screening_document_matches.get(screening_name, {}).get('has_match') %}
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-info" href="#" 
-                                               onclick="setStatus('{{ screening_name }}', '{{ screening_document_matches[screening_name]['status_notes'] }}')">
-                                               <i class="fas fa-file-medical"></i> Use Document Match
-                                        </a></li>
+                                        {% if settings.custom_status_list %}
+                                            {% for custom_status in settings.custom_status_list %}
+                                            <option value="{{ custom_status }}">
+                                            {% endfor %}
                                         {% endif %}
-                                    </ul>
+                                    </datalist>
                                 </div>
-                                {% if screening_document_matches.get(screening_name, {}).get('document_count', 0) > 1 %}
-                                <small class="text-muted d-block mt-1">
-                                    {{ screening_document_matches[screening_name]['document_count'] }} matching documents found
-                                </small>
-                                {% endif %}
                             </td>
                         </tr>
-                        {% endfor %}
+                    {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -566,70 +558,46 @@
                     <div class="screening-cell">Screening</div>
                     <div class="screening-status-note-cell">Status/Notes</div>
                 </div>
-
+                    
                 {% for item in recommended_screenings %}
-                <div class="screening-row" data-screening="{{ item }}">
+                <div class="screening-row">
                     <div class="screening-cell">
                         <div class="form-check">
-                            <input class="form-check-input screening-checkbox" type="checkbox" 
-                                   id="screening_{{ loop.index }}" 
-                                   data-screening="{{ item }}"
-                                   {% if screening_document_matches.get(item, {}).get('has_match') %}checked{% endif %}
-                                   onchange="updateScreeningData('{{ item }}', this.checked)">
+                            <input class="form-check-input" type="checkbox" id="screening_{{ loop.index }}">
                             <label class="form-check-label" for="screening_{{ loop.index }}">
                                 {{ item }}
-                                {% if screening_document_matches.get(item, {}).get('has_match') %}
-                                    <span class="badge bg-success ms-1" title="Document match found">
-                                        {{ screening_document_matches[item]['confidence_percent'] }}%
-                                    </span>
-                                {% endif %}
                             </label>
                         </div>
                     </div>
                     <div class="screening-status-note-cell">
                         <div class="screening-field-container">
                             {% set match_data = screening_document_matches.get(item) %}
-                            {% if match_data and match_data.get('status_notes') %}
-                                <input type="text" 
-                                       class="form-control form-control-sm screening-consolidated-field has-content screening-status" 
+                            {% if match_data %}
+                                <input type="text" class="form-control form-control-sm screening-consolidated-field has-content" 
                                        id="screening_status_note_{{ loop.index }}" 
-                                       data-screening="{{ item }}"
                                        list="statusOptions_{{ loop.index }}"
                                        value="{{ match_data.status_notes }}"
                                        placeholder="Type or select status/notes..."
-                                       title="Document Match: {{ match_data.get('document_name', 'Unknown Document') }} ({{ match_data.get('confidence_percent', 0) }}% confidence)"
-                                       onchange="updateScreeningData('{{ item }}', null, this.value)">
+                                       title="Document Match: {{ match_data.document_name }} ({{ match_data.confidence_percent }}% confidence)">
                                 <small class="text-muted">
                                     <i class="fas fa-file-medical"></i> 
-                                    {% if match_data.get('document_id') %}
-                                        <a href="/documents/{{ match_data.document_id }}?return_to={{ url_for('generate_patient_prep_sheet', patient_id=patient.id) }}" 
-                                           class="text-info text-decoration-none" 
-                                           target="_blank"
-                                           title="Click to view document">
-                                            {{ match_data.get('document_name', 'Document') }}
-                                        </a>
-                                    {% else %}
-                                        {{ match_data.get('document_name', 'Document') }}
-                                    {% endif %}
-                                    <span class="badge bg-{{ 'success' if match_data.get('confidence', 0) >= 0.8 else 'warning' if match_data.get('confidence', 0) >= 0.6 else 'secondary' }}">
-                                        {{ match_data.get('confidence_percent', 0) }}%
+                                    {{ match_data.document_name }} 
+                                    <span class="badge bg-{{ 'success' if match_data.confidence >= 0.8 else 'warning' if match_data.confidence >= 0.6 else 'secondary' }}">
+                                        {{ match_data.confidence_percent }}%
                                     </span>
                                 </small>
                             {% else %}
-                                <input type="text" 
-                                       class="form-control form-control-sm screening-consolidated-field screening-status" 
+                                <input type="text" class="form-control form-control-sm screening-consolidated-field" 
                                        id="screening_status_note_{{ loop.index }}" 
-                                       data-screening="{{ item }}"
                                        list="statusOptions_{{ loop.index }}"
-                                       placeholder="Type or select status/notes..."
-                                       onchange="updateScreeningData('{{ item }}', null, this.value)">
+                                       placeholder="Type or select status/notes...">
                             {% endif %}
-
+                            
                             <datalist id="statusOptions_{{ loop.index }}">
                                 {% for status in status_options %}
                                     <option value="{{ status|replace('_', ' ')|title }}">
                                 {% endfor %}
-                                {% if settings and settings.custom_status_list %}
+                                {% if settings.custom_status_list %}
                                     {% for custom_status in settings.custom_status_list %}
                                     <option value="{{ custom_status }}">
                                     {% endfor %}
@@ -642,228 +610,58 @@
             </div>
             {% endif %}
         </div>
-
-        <!-- Enhanced Medical Subsection Data with Date Filtering -->
-        <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">Medical Data Summary</h6>
-                <div class="d-flex align-items-center">
-                    <small class="text-muted me-2">
-                        {% if current_cutoff_info %}
-                            Data since: {{ current_cutoff_info.date }} ({{ current_cutoff_info.days_ago }} days ago)
-                            {% if current_cutoff_info.is_custom %}<span class="badge bg-info">Custom</span>{% endif %}
-                        {% endif %}
-                    </small>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#dateFilterModal">
-                        <i class="fas fa-calendar-alt me-1"></i>Filter Dates
-                    </button>
-                </div>
-            </div>
-            
-            {% if subsection_results %}
-                <!-- Laboratories Section -->
-                {% set lab_data = subsection_results.get('laboratories') %}
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-1">Laboratories</h6>
-                        {% if lab_data %}
-                            <small class="text-muted">{{ lab_data.parsing_summary }}</small>
-                        {% endif %}
-                    </div>
-                    {% if lab_data and (lab_data.structured_data_found or lab_data.documents_found) %}
-                        <div class="border-start border-primary ps-3">
-                            <!-- Structured Lab Data -->
-                            {% if lab_data.structured_data_found %}
-                                {% for lab in lab_data.structured_data_found[:3] %}
-                                    <div class="mb-1">
-                                        <strong>{{ lab.test_name }}:</strong> {{ lab.result_value }} {{ lab.unit }} 
-                                        <small class="text-muted">({{ lab.test_date.strftime('%Y-%m-%d') }})</small>
-                                        {% if lab.is_abnormal %}<span class="badge bg-warning">Abnormal</span>{% endif %}
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-                            <!-- Lab Documents -->
-                            {% if lab_data.documents_found %}
-                                <div class="mt-2">
-                                    <small class="text-muted">Documents: </small>
-                                    {% for doc in lab_data.documents_found[:2] %}
-                                        <span class="badge bg-light text-dark me-1">{{ doc.filename }}</span>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No laboratory data found for the selected time period.</p>
-                    {% endif %}
-                </div>
-
-                <!-- Imaging Section -->
-                {% set imaging_data = subsection_results.get('imaging') %}
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-1">Imaging Studies</h6>
-                        {% if imaging_data %}
-                            <small class="text-muted">{{ imaging_data.parsing_summary }}</small>
-                        {% endif %}
-                    </div>
-                    {% if imaging_data and (imaging_data.structured_data_found or imaging_data.documents_found) %}
-                        <div class="border-start border-success ps-3">
-                            <!-- Structured Imaging Data -->
-                            {% if imaging_data.structured_data_found %}
-                                {% for img in imaging_data.structured_data_found[:3] %}
-                                    <div class="mb-1">
-                                        <strong>{{ img.study_type }}</strong>{% if img.body_site %} - {{ img.body_site }}{% endif %}
-                                        <small class="text-muted">({{ img.study_date.strftime('%Y-%m-%d') }})</small>
-                                        {% if img.impression %}
-                                            <div class="small text-muted">{{ img.impression[:100] }}{% if img.impression|length > 100 %}...{% endif %}</div>
-                                        {% endif %}
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-                            <!-- Imaging Documents -->
-                            {% if imaging_data.documents_found %}
-                                <div class="mt-2">
-                                    <small class="text-muted">Documents: </small>
-                                    {% for doc in imaging_data.documents_found[:2] %}
-                                        <span class="badge bg-light text-dark me-1">{{ doc.filename }}</span>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No imaging studies found for the selected time period.</p>
-                    {% endif %}
-                </div>
-
-                <!-- Consults Section -->
-                {% set consult_data = subsection_results.get('consults') %}
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-1">Specialist Consults</h6>
-                        {% if consult_data %}
-                            <small class="text-muted">{{ consult_data.parsing_summary }}</small>
-                        {% endif %}
-                    </div>
-                    {% if consult_data and (consult_data.structured_data_found or consult_data.documents_found) %}
-                        <div class="border-start border-info ps-3">
-                            <!-- Structured Consult Data -->
-                            {% if consult_data.structured_data_found %}
-                                {% for consult in consult_data.structured_data_found[:3] %}
-                                    <div class="mb-1">
-                                        <strong>{{ consult.specialty }}</strong>{% if consult.specialist %} - {{ consult.specialist }}{% endif %}
-                                        <small class="text-muted">({{ consult.report_date.strftime('%Y-%m-%d') }})</small>
-                                        {% if consult.recommendations %}
-                                            <div class="small text-muted">{{ consult.recommendations[:100] }}{% if consult.recommendations|length > 100 %}...{% endif %}</div>
-                                        {% endif %}
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-                            <!-- Consult Documents -->
-                            {% if consult_data.documents_found %}
-                                <div class="mt-2">
-                                    <small class="text-muted">Documents: </small>
-                                    {% for doc in consult_data.documents_found[:2] %}
-                                        <span class="badge bg-light text-dark me-1">{{ doc.filename }}</span>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No specialist consults found for the selected time period.</p>
-                    {% endif %}
-                </div>
-
-                <!-- Hospital Visits Section -->
-                {% set hospital_data = subsection_results.get('hospital_visits') %}
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-1">Hospital Visits</h6>
-                        {% if hospital_data %}
-                            <small class="text-muted">{{ hospital_data.parsing_summary }}</small>
-                        {% endif %}
-                    </div>
-                    {% if hospital_data and (hospital_data.structured_data_found or hospital_data.documents_found) %}
-                        <div class="border-start border-danger ps-3">
-                            <!-- Structured Hospital Data -->
-                            {% if hospital_data.structured_data_found %}
-                                {% for stay in hospital_data.structured_data_found[:3] %}
-                                    <div class="mb-1">
-                                        <strong>{{ stay.hospital_name }}</strong>
-                                        <small class="text-muted">({{ stay.admission_date.strftime('%Y-%m-%d') }})</small>
-                                        {% if stay.discharge_diagnosis %}
-                                            <div class="small text-muted">{{ stay.discharge_diagnosis[:100] }}{% if stay.discharge_diagnosis|length > 100 %}...{% endif %}</div>
-                                        {% endif %}
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-                            <!-- Hospital Documents -->
-                            {% if hospital_data.documents_found %}
-                                <div class="mt-2">
-                                    <small class="text-muted">Documents: </small>
-                                    {% for doc in hospital_data.documents_found[:2] %}
-                                        <span class="badge bg-light text-dark me-1">{{ doc.filename }}</span>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No hospital visits found for the selected time period.</p>
-                    {% endif %}
-                </div>
-            {% else %}
-                <!-- Fallback to original simple display -->
-                <div class="mb-3">
-                    <h6>Laboratories</h6>
-                    <p>
-                        {% if recent_labs %}
-                            {% for lab in recent_labs[:3] %}
-                                {{ lab.test_name }}: {{ lab.result_value }} {{ lab.unit }} ({{ lab.test_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            No recent laboratory results.
-                        {% endif %}
-                    </p>
-                </div>
-
-                <div class="mb-3">
-                    <h6>Imaging</h6>
-                    <p>
-                        {% if recent_imaging %}
-                            {% for img in recent_imaging[:3] %}
-                                {{ img.study_type }} ({{ img.study_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            No recent imaging studies.
-                        {% endif %}
-                    </p>
-                </div>
-
-                <div class="mb-3">
-                    <h6>Consults</h6>
-                    <p>
-                        {% if recent_consults %}
-                            {% for consult in recent_consults[:3] %}
-                                {{ consult.specialty }} ({{ consult.report_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            No recent consult reports.
-                        {% endif %}
-                    </p>
-                </div>
-
-                <div class="mb-3">
-                    <h6>Hospital Visits</h6>
-                    <p>
-                        {% if recent_hospital %}
-                            {% for stay in recent_hospital[:3] %}
-                                {{ stay.hospital_name }} ({{ stay.admission_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            No recent hospital visits.
-                        {% endif %}
-                    </p>
-                </div>
-            {% endif %}
+        
+        <!-- Section headings for other data -->
+        <div class="mb-3">
+            <h6>Laboratories</h6>
+            <p>
+                {% if recent_labs %}
+                    {% for lab in recent_labs[:3] %}
+                        {{ lab.test_name }}: {{ lab.result_value }} {{ lab.unit }} ({{ lab.test_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    No recent laboratory results.
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="mb-3">
+            <h6>Imaging</h6>
+            <p>
+                {% if recent_imaging %}
+                    {% for img in recent_imaging[:3] %}
+                        {{ img.study_type }} ({{ img.study_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    No recent imaging studies.
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="mb-3">
+            <h6>Consults</h6>
+            <p>
+                {% if recent_consults %}
+                    {% for consult in recent_consults[:3] %}
+                        {{ consult.specialty }} ({{ consult.report_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    No recent consult reports.
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="mb-3">
+            <h6>Hospital Visits</h6>
+            <p>
+                {% if recent_hospital %}
+                    {% for stay in recent_hospital[:3] %}
+                        {{ stay.hospital_name }} ({{ stay.admission_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    No recent hospital visits.
+                {% endif %}
+            </p>
         </div>
     </div>
 </div>
@@ -921,22 +719,22 @@
     .btn, nav, footer {
         display: none !important;
     }
-
+    
     body {
         background-color: white !important;
     }
-
+    
     .card {
         break-inside: avoid;
         border: 1px solid #ddd !important;
         margin-bottom: 20px !important;
     }
-
+    
     .card-header, .card-body {
         background-color: white !important;
         color: black !important;
     }
-
+    
     .text-muted {
         color: #444 !important;
     }
@@ -953,17 +751,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const patientId = '{{ patient.id }}';
     const resetButton = document.getElementById('reset-checkboxes');
     const saveButton = document.getElementById('save-prep-sheet');
-
+    
     // Weight unit conversion functionality
     const toggleWeightButtons = document.querySelectorAll('.toggle-weight-unit');
-
+    
     toggleWeightButtons.forEach(button => {
         button.addEventListener('click', function() {
             const cardBody = this.closest('.card-body');
             const kgDisplay = cardBody.querySelector('.weight-kg');
             const lbDisplay = cardBody.querySelector('.weight-lb');
             const weightInfo = cardBody.querySelector('.weight-info');
-
+            
             // Toggle display
             if (kgDisplay.style.display === 'none') {
                 kgDisplay.style.display = 'inline';
@@ -977,66 +775,66 @@ document.addEventListener('DOMContentLoaded', function() {
                 weightInfo.textContent = '(Imperial)';
             }
         });
-
+        
         // Initialize button text
         button.textContent = 'Show lbs';
         const weightInfo = button.closest('.card-body').querySelector('.weight-info');
         weightInfo.textContent = '(Metric)';
     });
-
+    
     // Function to get storage key for form elements
     function getStorageKey(elementId, type = 'checkbox') {
         return `patient_${patientId}_${elementId}_${type}`;
     }
-
+    
     // Load saved states for checkboxes
     checkboxes.forEach(function(checkbox) {
         const checkboxId = checkbox.id;
         const storageKey = getStorageKey(checkboxId);
         const savedState = localStorage.getItem(storageKey);
-
+        
         if (savedState === 'true') {
             checkbox.checked = true;
         }
-
+        
         // Add event listener to save state on change
         checkbox.addEventListener('change', function() {
             localStorage.setItem(storageKey, this.checked);
         });
     });
-
+    
     // Load saved states for status selects
     statusSelects.forEach(function(select) {
         const selectId = select.id;
         const storageKey = getStorageKey(selectId, 'status');
         const savedStatus = localStorage.getItem(storageKey);
-
+        
         if (savedStatus) {
             select.value = savedStatus;
         }
-
+        
         // Add event listener to save state on change
         select.addEventListener('change', function() {
             localStorage.setItem(storageKey, this.value);
         });
     });
-
+    
     // Load saved states for screening notes
     screeningNotes.forEach(function(note) {
         const noteId = note.id;
         const storageKey = getStorageKey(noteId, 'note');
         const savedNote = localStorage.getItem(storageKey);
-
+        
         if (savedNote) {
             note.value = savedNote;
         }
-
+        
         // Add event listener to save state on change
         note.addEventListener('input', function() {
             localStorage.setItem(storageKey, this.value);
         });
     });
-
+    
     // Reset button functionality
     resetButton.addEventListener('click', function() {
         if (confirm('Are you sure you want to reset all screening data (checkboxes, statuses, and notes)?')) {
@@ -1044,47 +842,47 @@ document.addEventListener('DOMContentLoaded', function() {
             checkboxes.forEach(function(checkbox) {
                 const checkboxId = checkbox.id;
                 const storageKey = getStorageKey(checkboxId);
-
+                
                 // Clear localStorage and uncheck the box
                 localStorage.removeItem(storageKey);
                 checkbox.checked = false;
             });
-
+            
             // Reset status selects
             statusSelects.forEach(function(select) {
                 const selectId = select.id;
                 const storageKey = getStorageKey(selectId, 'status');
-
+                
                 // Clear localStorage and reset select
                 localStorage.removeItem(storageKey);
                 select.value = '';
             });
-
+            
             // Reset notes
             screeningNotes.forEach(function(note) {
                 const noteId = note.id;
                 const storageKey = getStorageKey(noteId, 'note');
-
+                
                 // Clear localStorage and empty note
                 localStorage.removeItem(storageKey);
                 note.value = '';
             });
         }
     });
-
+    
     // Save button functionality
     saveButton.addEventListener('click', function() {
         // Gather checked screening items and their statuses/notes
         const screeningData = [];
-
+        
         checkboxes.forEach(function(checkbox, index) {
             // Get the label text for this screening item
             const screeningName = checkbox.nextElementSibling.textContent.trim();
-
+            
             // Get the corresponding status and note elements
             const statusSelect = statusSelects[index];
             const noteInput = screeningNotes[index];
-
+            
             // Create data object for this screening item
             const screeningItem = {
                 name: screeningName,
@@ -1092,16 +890,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 status: statusSelect.value,
                 note: noteInput.value
             };
-
+            
             // Add to the collection
             screeningData.push(screeningItem);
         });
-
+        
         // Get just the checked screening names for backward compatibility
         const checkedScreenings = screeningData
             .filter(item => item.checked)
             .map(item => item.name);
-
+        
         // Send data to backend to save as document
         fetch(`/patients/${patientId}/save_prep_sheet`, {
             method: 'POST',
@@ -1131,149 +929,6 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Error saving prep sheet. Please try again.');
         });
     });
-});
-</script>
-
-<!-- Date Filter Modal -->
-<div class="modal fade" id="dateFilterModal" tabindex="-1" aria-labelledby="dateFilterModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="dateFilterModalLabel">
-                    <i class="fas fa-calendar-alt me-2"></i>Configure Date Filter
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted">Choose a cutoff date to filter medical data. Only data after this date will be shown in the prep sheet.</p>
-                
-                {% if cutoff_date_options %}
-                    <div class="mb-4">
-                        <h6>Quick Options</h6>
-                        <div class="row">
-                            {% for option in cutoff_date_options %}
-                                {% if option.type == 'preset' %}
-                                    <div class="col-md-6 mb-2">
-                                        <button type="button" class="btn btn-outline-primary btn-sm w-100 date-option-btn" 
-                                                data-date="{{ option.value }}" data-type="preset">
-                                            {{ option.text }}
-                                        </button>
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h6>Previous Appointments</h6>
-                        <div class="list-group">
-                            {% for option in cutoff_date_options %}
-                                {% if option.type == 'appointment' %}
-                                    <button type="button" class="list-group-item list-group-item-action date-option-btn" 
-                                            data-date="{{ option.value }}" data-type="appointment">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span>{{ option.text }}</span>
-                                            <small class="text-muted">{{ option.days_back }} days ago</small>
-                                        </div>
-                                    </button>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endif %}
-                
-                <div class="mb-3">
-                    <h6>Custom Date</h6>
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="fas fa-calendar"></i>
-                        </span>
-                        <input type="date" class="form-control" id="customDateInput" 
-                               value="{{ current_cutoff_info.date if current_cutoff_info else '' }}">
-                    </div>
-                    <small class="text-muted">Select any date to use as the cutoff</small>
-                </div>
-                
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Current filter:</strong> 
-                    {% if current_cutoff_info %}
-                        Data since {{ current_cutoff_info.date }} ({{ current_cutoff_info.days_ago }} days ago)
-                    {% else %}
-                        Default (last visit or 90 days)
-                    {% endif %}
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-outline-danger" id="clearFilterBtn">Clear Filter</button>
-                <button type="button" class="btn btn-primary" id="applyFilterBtn">Apply Filter</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-// Date filter modal functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('dateFilterModal');
-    const customDateInput = document.getElementById('customDateInput');
-    const applyFilterBtn = document.getElementById('applyFilterBtn');
-    const clearFilterBtn = document.getElementById('clearFilterBtn');
-    const dateOptionBtns = document.querySelectorAll('.date-option-btn');
-    
-    let selectedDate = customDateInput.value;
-    
-    // Handle preset and appointment date options
-    dateOptionBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            // Remove active state from all buttons
-            dateOptionBtns.forEach(b => b.classList.remove('active'));
-            
-            // Add active state to clicked button
-            this.classList.add('active');
-            
-            // Set the selected date
-            selectedDate = this.dataset.date;
-            customDateInput.value = selectedDate;
-        });
-    });
-    
-    // Handle custom date input
-    customDateInput.addEventListener('change', function() {
-        // Remove active state from all preset buttons
-        dateOptionBtns.forEach(b => b.classList.remove('active'));
-        
-        selectedDate = this.value;
-    });
-    
-    // Apply filter button
-    applyFilterBtn.addEventListener('click', function() {
-        if (selectedDate) {
-            // Redirect to prep sheet with cutoff date parameter
-            const currentUrl = window.location.pathname;
-            const newUrl = `${currentUrl}?cutoff_date=${selectedDate}`;
-            window.location.href = newUrl;
-        } else {
-            alert('Please select a date to apply as filter.');
-        }
-    });
-    
-    // Clear filter button
-    clearFilterBtn.addEventListener('click', function() {
-        // Redirect to prep sheet without cutoff date parameter
-        const currentUrl = window.location.pathname;
-        window.location.href = currentUrl;
-    });
-    
-    // Highlight current selection if it matches an option
-    if (selectedDate) {
-        dateOptionBtns.forEach(btn => {
-            if (btn.dataset.date === selectedDate) {
-                btn.classList.add('active');
-            }
-        });
-    }
 });
 </script>
 
