@@ -18,14 +18,14 @@ from models import Patient, MedicalDocument, ScreeningType
 
 def create_sample_documents():
     """Create sample medical documents for testing screening logic"""
-    
+
     with app.app_context():
         # Get existing patients
         patients = Patient.query.limit(5).all()
         if not patients:
             print("No patients found. Please add patients first.")
             return
-        
+
         # Sample documents that SHOULD match screening types
         matching_documents = [
             {
@@ -85,7 +85,7 @@ def create_sample_documents():
                 'category': 'Preventive Care'
             }
         ]
-        
+
         # Sample documents that should NOT match screening types
         non_matching_documents = [
             {
@@ -124,24 +124,24 @@ def create_sample_documents():
                 'category': 'Diagnostic'
             }
         ]
-        
+
         # Combine all documents
         all_documents = matching_documents + non_matching_documents
-        
+
         print(f"Creating {len(all_documents)} sample documents for {len(patients)} patients...")
-        
+
         documents_created = 0
-        
+
         for i, patient in enumerate(patients):
             # Assign 3-4 documents per patient, mixing matching and non-matching
             num_docs = random.randint(3, 4)
             selected_docs = random.sample(all_documents, num_docs)
-            
+
             for doc_data in selected_docs:
                 # Create document with realistic dates (last 2 years)
                 days_ago = random.randint(30, 730)
                 upload_date = datetime.now() - timedelta(days=days_ago)
-                
+
                 # Create metadata dictionary
                 metadata = {
                     'section': doc_data['section'],
@@ -151,7 +151,7 @@ def create_sample_documents():
                     'fhir_document_reference_id': f"doc-{patient.id}-{documents_created + 1}",
                     'status': 'completed'
                 }
-                
+
                 new_document = MedicalDocument(
                     patient_id=patient.id,
                     filename=f"{patient.last_name}_{doc_data['filename']}",
@@ -164,32 +164,32 @@ def create_sample_documents():
                     is_processed=True,
                     mime_type='application/pdf'
                 )
-                
+
                 try:
                     db.session.add(new_document)
                     documents_created += 1
                     print(f"  Created: {new_document.filename} for {patient.full_name}")
                 except Exception as e:
                     print(f"  Error creating document {doc_data['filename']}: {e}")
-        
+
         # Commit all documents
         try:
             db.session.commit()
             print(f"\n✓ Successfully created {documents_created} medical documents")
-            
+
             # Show summary of what was created
             print("\nDocument Summary:")
             print("MATCHING documents (should trigger screenings):")
             for doc in matching_documents:
                 print(f"  - {doc['filename']}: Tests {doc['section']} screening")
-            
+
             print("\nNON-MATCHING documents (should not trigger screenings):")
             for doc in non_matching_documents:
                 print(f"  - {doc['filename']}: {doc['section']} - not screening related")
-                
+
             print(f"\nTotal patients with documents: {len(patients)}")
             print("You can now test the prep sheet screening logic!")
-            
+
         except Exception as e:
             db.session.rollback()
             print(f"Error committing documents: {e}")
@@ -198,19 +198,19 @@ def show_document_summary():
     """Show summary of existing documents for testing"""
     with app.app_context():
         documents = MedicalDocument.query.join(Patient).all()
-        
+
         if not documents:
             print("No documents found in the database.")
             return
-            
+
         print(f"\nExisting Medical Documents ({len(documents)} total):")
         print("-" * 80)
-        
+
         for doc in documents:
             # Check if content might match screening keywords
             content_lower = (doc.content or '').lower()
             filename_lower = doc.filename.lower()
-            
+
             potential_matches = []
             screening_keywords = [
                 ('Colonoscopy', ['colonoscopy', 'colo', 'gastroentero']),
@@ -222,13 +222,13 @@ def show_document_summary():
                 ('Bone Density', ['dexa', 'dxa', 'bone density']),
                 ('Vaccination', ['vaccination', 'vaccine', 'immunization'])
             ]
-            
+
             for screening_name, keywords in screening_keywords:
                 if any(keyword in content_lower or keyword in filename_lower for keyword in keywords):
                     potential_matches.append(screening_name)
-            
+
             match_str = f" → Matches: {', '.join(potential_matches)}" if potential_matches else " → No matches"
-            
+
             print(f"{doc.patient.full_name}: {doc.filename}{match_str}")
 
 if __name__ == '__main__':
