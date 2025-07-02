@@ -201,6 +201,26 @@ document.addEventListener('DOMContentLoaded', function() {
     document.head.appendChild(style);
 });
 
+// Global screening data storage
+let screeningData = {};
+
+// Function to update screening data (used by template)
+function updateScreeningData(screeningName, checked, statusNotes) {
+    if (!screeningData[screeningName]) {
+        screeningData[screeningName] = {};
+    }
+    
+    if (checked !== null) {
+        screeningData[screeningName].checked = checked;
+    }
+    
+    if (statusNotes !== undefined) {
+        screeningData[screeningName].statusNotes = statusNotes;
+    }
+    
+    console.log(`Updated screening data for ${screeningName}:`, screeningData[screeningName]);
+}
+
 // Initialize screening data when page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Prep sheet JavaScript loaded');

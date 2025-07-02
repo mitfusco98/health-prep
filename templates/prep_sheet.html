@@ -568,29 +568,41 @@
                 </div>
 
                 {% for item in recommended_screenings %}
-                <div class="screening-row">
+                <div class="screening-row" data-screening="{{ item }}">
                     <div class="screening-cell">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="screening_{{ loop.index }}">
+                            <input class="form-check-input screening-checkbox" type="checkbox" 
+                                   id="screening_{{ loop.index }}" 
+                                   data-screening="{{ item }}"
+                                   {% if screening_document_matches.get(item, {}).get('has_match') %}checked{% endif %}
+                                   onchange="updateScreeningData('{{ item }}', this.checked)">
                             <label class="form-check-label" for="screening_{{ loop.index }}">
                                 {{ item }}
+                                {% if screening_document_matches.get(item, {}).get('has_match') %}
+                                    <span class="badge bg-success ms-1" title="Document match found">
+                                        {{ screening_document_matches[item]['confidence_percent'] }}%
+                                    </span>
+                                {% endif %}
                             </label>
                         </div>
                     </div>
                     <div class="screening-status-note-cell">
                         <div class="screening-field-container">
                             {% set match_data = screening_document_matches.get(item) %}
-                            {% if match_data %}
-                                <input type="text" class="form-control form-control-sm screening-consolidated-field has-content" 
+                            {% if match_data and match_data.status_notes %}
+                                <input type="text" 
+                                       class="form-control form-control-sm screening-consolidated-field has-content screening-status" 
                                        id="screening_status_note_{{ loop.index }}" 
+                                       data-screening="{{ item }}"
                                        list="statusOptions_{{ loop.index }}"
                                        value="{{ match_data.status_notes }}"
                                        placeholder="Type or select status/notes..."
-                                       title="Document Match: {{ match_data.document_name }} ({{ match_data.confidence_percent }}% confidence)">
+                                       title="Document Match: {{ match_data.document_name }} ({{ match_data.confidence_percent }}% confidence)"
+                                       onchange="updateScreeningData('{{ item }}', null, this.value)">
                                 <small class="text-muted">
                                     <i class="fas fa-file-medical"></i> 
-                                    {% if screening_document_matches.get(item, {}).get('document_id') %}
-                                        <a href="/documents/{{ screening_document_matches[item]['document_id'] }}?return_to={{ url_for('generate_patient_prep_sheet', patient_id=patient.id) }}" 
+                                    {% if match_data.document_id %}
+                                        <a href="/documents/{{ match_data.document_id }}?return_to={{ url_for('generate_patient_prep_sheet', patient_id=patient.id) }}" 
                                            class="text-info text-decoration-none" 
                                            target="_blank"
                                            title="Click to view document">
@@ -604,17 +616,20 @@
                                     </span>
                                 </small>
                             {% else %}
-                                <input type="text" class="form-control form-control-sm screening-consolidated-field" 
+                                <input type="text" 
+                                       class="form-control form-control-sm screening-consolidated-field screening-status" 
                                        id="screening_status_note_{{ loop.index }}" 
+                                       data-screening="{{ item }}"
                                        list="statusOptions_{{ loop.index }}"
-                                       placeholder="Type or select status/notes...">
+                                       placeholder="Type or select status/notes..."
+                                       onchange="updateScreeningData('{{ item }}', null, this.value)">
                             {% endif %}
 
                             <datalist id="statusOptions_{{ loop.index }}">
                                 {% for status in status_options %}
                                     <option value="{{ status|replace('_', ' ')|title }}">
                                 {% endfor %}
-                                {% if settings.custom_status_list %}
+                                {% if settings and settings.custom_status_list %}
                                     {% for custom_status in settings.custom_status_list %}
                                     <option value="{{ custom_status }}">
                                     {% endfor %}

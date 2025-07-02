@@ -989,6 +989,12 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
                 'document_count': len(rec.get('document_matches', []))
             }
         
+        # Debug output for troubleshooting
+        print(f"DEBUG: Document screening data found: {len(document_screening_data.get('screening_recommendations', []))} recommendations")
+        print(f"DEBUG: Screening document matches: {list(screening_document_matches.keys())}")
+        for name, data in screening_document_matches.items():
+            print(f"DEBUG: {name}: has_match={data['has_match']}, status_notes='{data['status_notes'][:50]}...'")
+        
     except Exception as e:
         # Fallback - don't break prep sheet if document matching fails
         print(f"Document matching error: {str(e)}")
