@@ -753,6 +753,25 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>
                     </div>
+                    
+                    {% if active_screening_types %}
+                    <hr class="my-4">
+                    <h6 class="mb-3">Active Screening Types Cutoffs</h6>
+                    <p class="text-muted small mb-3">These cutoffs apply to all active screening types in default checklist items</p>
+                    <div class="row">
+                        {% for screening in active_screening_types %}
+                            {% if screening.name in (settings.default_items_list if settings else []) %}
+                            <div class="col-md-4 col-lg-3 mb-2">
+                                <div class="text-center">
+                                    <span class="badge bg-primary">{{ screening.name }}</span>
+                                    <br>
+                                    <small class="text-muted">Uses general cutoffs above</small>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -802,7 +821,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h5 class="modal-title" id="cutoffModalLabel">Configure Data Cutoff Windows</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('update_checklist_cutoff_settings') }}">
+            <form method="POST" action="{{ url_for('save_cutoff_settings') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <p class="text-muted mb-4">
@@ -866,7 +885,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <div class="mt-4">
                         <h6>Quick Preset Options</h6>
-                        <div class="btn-group" role="group" aria-label="Cutoff presets">
+                        <div class="btn-group mb-3" role="group" aria-label="Cutoff presets">
                             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(3, 6, 6, 12)">
                                 Conservative (3m/6m/6m/12m)
                             </button>
@@ -876,6 +895,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(12, 24, 24, 36)">
                                 Extended (12m/24m/24m/36m)
                             </button>
+                        </div>
+                        
+                        <h6>Appointment-Based Cutoffs</h6>
+                        <p class="small text-muted">Set cutoff dates based on past appointment dates</p>
+                        <div id="appointment-presets" class="d-flex flex-wrap gap-2">
+                            <div class="text-muted small">Loading appointment dates...</div>
                         </div>
                     </div>
                 </div>
@@ -895,6 +920,69 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
     document.getElementById('imaging_cutoff_months').value = imaging;
     document.getElementById('consults_cutoff_months').value = consults;
     document.getElementById('hospital_cutoff_months').value = hospital;
+}
+
+// Calculate months between two dates
+function monthsBetween(date1, date2) {
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    const months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+    return Math.max(1, months); // Minimum of 1 month
+}
+
+// Set cutoffs based on appointment date
+function setAppointmentBasedCutoffs(appointmentDate) {
+    const today = new Date();
+    const months = monthsBetween(appointmentDate, today);
+    
+    // Set all cutoffs to the calculated months from the appointment date
+    document.getElementById('labs_cutoff_months').value = months;
+    document.getElementById('imaging_cutoff_months').value = months;
+    document.getElementById('consults_cutoff_months').value = months;
+    document.getElementById('hospital_cutoff_months').value = months;
+}
+
+// Load recent appointments when modal is shown
+document.addEventListener('DOMContentLoaded', function() {
+    const cutoffModal = document.getElementById('cutoffModal');
+    if (cutoffModal) {
+        cutoffModal.addEventListener('show.bs.modal', function() {
+            loadRecentAppointments();
+        });
+    }
+});
+
+// Load recent appointments for appointment-based cutoffs
+function loadRecentAppointments() {
+    fetch('/api/recent-appointments')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('appointment-presets');
+            if (data.success && data.appointments.length > 0) {
+                container.innerHTML = '';
+                data.appointments.forEach((apt, index) => {
+                    const label = index === 0 ? 'Last appointment' : 
+                                  index === 1 ? 'Second last' : 
+                                  index === 2 ? 'Third last' : 
+                                  `${index + 1}th last`;
+                    
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn btn-outline-info btn-sm';
+                    button.innerHTML = `${label}<br><small>${apt.formatted_date}</small>`;
+                    button.onclick = () => setAppointmentBasedCutoffs(apt.date);
+                    
+                    container.appendChild(button);
+                });
+            } else {
+                container.innerHTML = '<div class="text-muted small">No recent appointments found</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading appointments:', error);
+            const container = document.getElementById('appointment-presets');
+            container.innerHTML = '<div class="text-muted small">Error loading appointments</div>';
+        });
 }
 
 function toggleStatus(button) {

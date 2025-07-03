@@ -1,7 +1,8 @@
 from flask import render_template, request, redirect, url_for, flash, jsonify
 import time as time_module
+from datetime import datetime, timedelta
 from app import app, db
-from models import ChecklistSettings
+from models import ChecklistSettings, Appointment
 from db_utils import safe_db_operation
 
 
@@ -172,3 +173,57 @@ def remove_custom_status():
         return jsonify({"success": True})
 
     return jsonify({"success": False, "error": "Status not found"}), 404
+
+
+@app.route("/save-cutoff-settings", methods=["POST"])
+@safe_db_operation
+def save_cutoff_settings():
+    """Update data cutoff settings for medical data parsing"""
+    settings = get_or_create_settings()
+    
+    # Get cutoff values from form
+    try:
+        settings.labs_cutoff_months = int(request.form.get("labs_cutoff_months", 6))
+        settings.imaging_cutoff_months = int(request.form.get("imaging_cutoff_months", 12))
+        settings.consults_cutoff_months = int(request.form.get("consults_cutoff_months", 12))
+        settings.hospital_cutoff_months = int(request.form.get("hospital_cutoff_months", 24))
+        
+        db.session.commit()
+        flash("Data cutoff settings updated successfully!", "success")
+        
+    except (ValueError, TypeError) as e:
+        flash("Invalid cutoff values provided. Please enter valid numbers.", "error")
+        
+    return redirect(url_for("screening_list", tab="checklist"))
+
+
+@app.route("/api/recent-appointments")
+def get_recent_appointments():
+    """Get recent appointment dates for cutoff configuration"""
+    try:
+        # Get the last 5 appointment dates across all patients
+        recent_appointments = db.session.query(Appointment.date)\
+            .filter(Appointment.date.isnot(None))\
+            .order_by(Appointment.date.desc())\
+            .limit(5)\
+            .all()
+        
+        # Convert to list of date strings
+        appointment_dates = []
+        for apt in recent_appointments:
+            if apt.date:
+                appointment_dates.append({
+                    'date': apt.date.strftime('%Y-%m-%d'),
+                    'formatted_date': apt.date.strftime('%B %d, %Y')
+                })
+        
+        return jsonify({
+            'success': True,
+            'appointments': appointment_dates
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
