@@ -17,37 +17,37 @@
     .screening-field-container {
         position: relative;
     }
-
+    
     .screening-consolidated-field {
         margin-bottom: 0.25rem;
     }
-
+    
     .screening-consolidated-field:focus {
         border-color: rgba(var(--bs-primary-rgb), 0.5);
         box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
     }
-
+    
     .screening-preset-buttons {
         display: flex;
         flex-wrap: wrap;
         gap: 0.25rem;
     }
-
+    
     .screening-preset-btn {
         padding: 0.2rem 0.5rem;
         font-size: 0.8rem;
     }
-
+    
     .screening-preset-btn.active {
         background-color: var(--bs-primary);
         color: white;
     }
-
+    
     /* Highlight field with content */
     .screening-consolidated-field.has-content {
         background-color: rgba(var(--bs-primary-rgb), 0.05);
     }
-
+    
     /* Styling for the unified status note cell */
     .screening-status-note-cell {
         display: table-cell;
@@ -55,24 +55,24 @@
         padding: 3px 10px 3px 0;
         width: 65%;
     }
-
+    
     /* Document matching styles */
     .screening-consolidated-field.has-content {
         border-left: 3px solid #28a745;
         background-color: #f8fff8;
     }
-
+    
     .screening-field-container small {
         display: block;
         margin-top: 0.25rem;
         font-size: 0.75rem;
     }
-
+    
     .screening-field-container .badge {
         font-size: 0.7rem;
         padding: 0.1rem 0.3rem;
     }
-
+    
     .screening-field-container i.fas {
         color: #6c757d;
         margin-right: 0.2rem;
@@ -134,7 +134,7 @@
     </div>
     <div class="card-body">
         <p class="lead">{{ prep_sheet.summary }}</p>
-
+        
         <!-- Patient Alerts Section - Managed Section -->
         <div class="card border-0 mb-4">
             <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center">
@@ -153,7 +153,7 @@
                                 <th style="width: 30%;">Description</th>
                                 <th style="width: 10%;">Severity</th>
                                 <th style="width: 15%;">Start Date</th>
-                                <th style:width: 15%;">End Date</th>
+                                <th style="width: 15%;">End Date</th>
                                 <th style="width: 15%;">Actions</th>
                             </tr>
                         </thead>
@@ -198,7 +198,7 @@
                 {% endif %}
             </div>
         </div>
-
+        
         {% if past_appointments %}
         <h6>Recent Visit History:</h6>
         <ul class="mb-3">
@@ -209,7 +209,7 @@
             {% endfor %}
         </ul>
         {% endif %}
-
+        
         {% if active_conditions %}
         <h6>Active Conditions:</h6>
         <ul class="mb-3">
@@ -218,7 +218,7 @@
             {% endfor %}
         </ul>
         {% endif %}
-
+        
         {% if immunizations %}
         <h6>Immunization History:</h6>
         <ul class="mb-3">
@@ -475,7 +475,7 @@
                 </div>
             </div>
         </div>
-
+        
         <!-- Screening Checklist -->
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h6 class="mb-0">Screening Checklist</h6>
@@ -484,21 +484,10 @@
             </button>
         </div>
         <div class="mb-4">
-            <!-- Quick date presets for screening cutoffs -->
-            <div class="mb-3">
-                <small class="text-muted d-block mb-2">Quick date presets:</small>
-                <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-secondary" onclick="setScreeningCutoffMonths(3)">3 months</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="setScreeningCutoffMonths(6)">6 months</button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="setScreeningCutoffMonths(12)">12 months</button>
-                    <button type="button" class="btn btn-outline-info" id="cutoff-last-appointment">To Last Appointment</button>
-                </div>
-            </div>
-            
             {% set layout_style = checklist_settings.layout_style if checklist_settings is defined else 'list' %}
             {% set status_options = checklist_settings.status_options_list if checklist_settings is defined else ['due', 'due_soon', 'sent_incomplete', 'completed'] %}
             {% set show_notes = checklist_settings.show_notes if checklist_settings is defined else true %}
-
+            
             {% if layout_style == 'table' %}
             <!-- Table Layout -->
             <div class="table-responsive">
@@ -544,7 +533,7 @@
                                                list="statusOptions_{{ loop.index }}"
                                                placeholder="Type or select status/notes...">
                                     {% endif %}
-
+                                    
                                     <datalist id="statusOptions_{{ loop.index }}">
                                         {% for status in status_options %}
                                             <option value="{{ status|replace('_', ' ')|title }}">
@@ -569,7 +558,7 @@
                     <div class="screening-cell">Screening</div>
                     <div class="screening-status-note-cell">Status/Notes</div>
                 </div>
-
+                    
                 {% for item in recommended_screenings %}
                 <div class="screening-row">
                     <div class="screening-cell">
@@ -603,7 +592,7 @@
                                        list="statusOptions_{{ loop.index }}"
                                        placeholder="Type or select status/notes...">
                             {% endif %}
-
+                            
                             <datalist id="statusOptions_{{ loop.index }}">
                                 {% for status in status_options %}
                                     <option value="{{ status|replace('_', ' ')|title }}">
@@ -621,10 +610,10 @@
             </div>
             {% endif %}
         </div>
-
+        
         <!-- Enhanced Medical Data Sections with Document Parsing -->
         {% if filtered_medical_data %}
-
+        
         <!-- Laboratories Section -->
         <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -634,7 +623,7 @@
                     Showing data from last {{ filtered_medical_data.labs.cutoff_months }} months
                 </small>
             </div>
-
+            
             <!-- Lab Results -->
             {% if filtered_medical_data.labs.data %}
             <div class="mb-2">
@@ -647,7 +636,7 @@
                 {% endif %}
             </div>
             {% endif %}
-
+            
             <!-- Lab Documents -->
             {% if filtered_medical_data.labs.documents %}
             <div class="mb-2">
@@ -660,12 +649,12 @@
                 {% endif %}
             </div>
             {% endif %}
-
+            
             {% if not filtered_medical_data.labs.data and not filtered_medical_data.labs.documents %}
             <p class="text-muted mb-2">No laboratory data found within the selected time period.</p>
             {% endif %}
         </div>
-
+        
         <!-- Imaging Section -->
         <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -675,7 +664,7 @@
                     Showing data from last {{ filtered_medical_data.imaging.cutoff_months }} months
                 </small>
             </div>
-
+            
             <!-- Imaging Studies -->
             {% if filtered_medical_data.imaging.data %}
             <div class="mb-2">
@@ -688,7 +677,7 @@
                 {% endif %}
             </div>
             {% endif %}
-
+            
             <!-- Imaging Documents -->
             {% if filtered_medical_data.imaging.documents %}
             <div class="mb-2">
@@ -701,12 +690,12 @@
                 {% endif %}
             </div>
             {% endif %}
-
+            
             {% if not filtered_medical_data.imaging.data and not filtered_medical_data.imaging.documents %}
             <p class="text-muted mb-2">No imaging data found within the selected time period.</p>
             {% endif %}
         </div>
-
+        
         <!-- Consults Section -->
         <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -716,7 +705,7 @@
                     Showing data from last {{ filtered_medical_data.consults.cutoff_months }} months
                 </small>
             </div>
-
+            
             <!-- Consult Reports -->
             {% if filtered_medical_data.consults.data %}
             <div class="mb-2">
@@ -729,7 +718,7 @@
                 {% endif %}
             </div>
             {% endif %}
-
+            
             <!-- Consult Documents -->
             {% if filtered_medical_data.consults.documents %}
             <div class="mb-2">
@@ -742,12 +731,12 @@
                 {% endif %}
             </div>
             {% endif %}
-
+            
             {% if not filtered_medical_data.consults.data and not filtered_medical_data.consults.documents %}
             <p class="text-muted mb-2">No consult data found within the selected time period.</p>
             {% endif %}
         </div>
-
+        
         <!-- Hospital Visits Section -->
         <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -757,7 +746,7 @@
                     Showing data from last {{ filtered_medical_data.hospital_visits.cutoff_months }} months
                 </small>
             </div>
-
+            
             <!-- Hospital Summaries -->
             {% if filtered_medical_data.hospital_visits.data %}
             <div class="mb-2">
@@ -770,7 +759,7 @@
                 {% endif %}
             </div>
             {% endif %}
-
+            
             <!-- Hospital Documents -->
             {% if filtered_medical_data.hospital_visits.documents %}
             <div class="mb-2">
@@ -783,14 +772,14 @@
                 {% endif %}
             </div>
             {% endif %}
-
+            
             {% if not filtered_medical_data.hospital_visits.data and not filtered_medical_data.hospital_visits.documents %}
             <p class="text-muted mb-2">No hospital visit data found within the selected time period.</p>
             {% endif %}
         </div>
-
+        
         {% else %}
-
+        
         <!-- Fallback to original format -->
         <div class="mb-3">
             <h6>Laboratories</h6>
@@ -799,11 +788,12 @@
                     {% for lab in recent_labs[:3] %}
                         {{ lab.test_name }}: {{ lab.result_value }} {{ lab.unit }} ({{ lab.test_date.strftime('%Y-%m-%d') }}){% if not loop.last %}, {% endif %}
                     {% endfor %}
-                {% else %}                    No recent laboratory results.
+                {% else %}
+                    No recent laboratory results.
                 {% endif %}
             </p>
         </div>
-
+        
         <div class="mb-3">
             <h6>Imaging</h6>
             <p>
@@ -816,7 +806,7 @@
                 {% endif %}
             </p>
         </div>
-
+        
         <div class="mb-3">
             <h6>Consults</h6>
             <p>
@@ -829,7 +819,7 @@
                 {% endif %}
             </p>
         </div>
-
+        
         <div class="mb-3">
             <h6>Hospital Visits</h6>
             <p>
@@ -842,7 +832,7 @@
                 {% endif %}
             </p>
         </div>
-
+        
         {% endif %}
     </div>
 </div>
@@ -900,76 +890,27 @@
     .btn, nav, footer {
         display: none !important;
     }
-
+    
     body {
         background-color: white !important;
     }
-
+    
     .card {
         break-inside: avoid;
         border: 1px solid #ddd !important;
         margin-bottom: 20px !important;
     }
-
+    
     .card-header, .card-body {
         background-color: white !important;
         color: black !important;
     }
-
+    
     .text-muted {
         color: #444 !important;
     }
 }
 </style>
-
-<script>
-    // Set patient ID globally for JavaScript functions - ensure it's properly quoted
-    window.patientId = '{{ patient.id }}';
-    
-    // Set it as a data attribute on the body
-    document.body.setAttribute('data-patient-id', '{{ patient.id }}');
-    
-    // Also set a global variable for immediate access (as string for safety)
-    window.PATIENT_ID = '{{ patient.id }}';
-    
-    // Set it in the URL for extraction
-    window.CURRENT_PATIENT_ID = '{{ patient.id }}';
-    
-    // Debug logging
-    console.log('Template set patient ID:', '{{ patient.id }}');
-    console.log('window.patientId:', window.patientId);
-    console.log('window.PATIENT_ID:', window.PATIENT_ID);
-    console.log('Current URL:', window.location.pathname);
-    
-    // Validate that all patient ID sources are consistent
-    const urlMatch = window.location.pathname.match(/\/patients\/(\d+)/);
-    const urlPatientId = urlMatch ? urlMatch[1] : null;
-    console.log('URL extracted patient ID:', urlPatientId);
-    
-    if (urlPatientId && urlPatientId !== '{{ patient.id }}') {
-        console.warn('Patient ID mismatch between template and URL!', {
-            template: '{{ patient.id }}',
-            url: urlPatientId
-        });
-    }</script>
-    
-    // Helper function for setting screening cutoff months
-    function setScreeningCutoffMonths(months) {
-        const cutoffDate = new Date();
-        cutoffDate.setMonth(cutoffDate.getMonth() - months);
-        const dateString = cutoffDate.toISOString().split('T')[0];
-        
-        // Set any cutoff date inputs that exist
-        const cutoffInputs = document.querySelectorAll('.cutoff-date-input, .screening-cutoff');
-        cutoffInputs.forEach(input => {
-            input.value = dateString;
-        });
-        
-        if (cutoffInputs.length > 0) {
-            alert(`Set cutoff to ${months} months ago (${cutoffDate.toLocaleDateString()})`);
-        }
-    }
-</script>
 
 <script>
 // Handle checkboxes, reset, and save functionality
@@ -981,17 +922,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const patientId = '{{ patient.id }}';
     const resetButton = document.getElementById('reset-checkboxes');
     const saveButton = document.getElementById('save-prep-sheet');
-
+    
     // Weight unit conversion functionality
     const toggleWeightButtons = document.querySelectorAll('.toggle-weight-unit');
-
+    
     toggleWeightButtons.forEach(button => {
         button.addEventListener('click', function() {
             const cardBody = this.closest('.card-body');
             const kgDisplay = cardBody.querySelector('.weight-kg');
             const lbDisplay = cardBody.querySelector('.weight-lb');
             const weightInfo = cardBody.querySelector('.weight-info');
-
+            
             // Toggle display
             if (kgDisplay.style.display === 'none') {
                 kgDisplay.style.display = 'inline';
@@ -1005,66 +946,66 @@ document.addEventListener('DOMContentLoaded', function() {
                 weightInfo.textContent = '(Imperial)';
             }
         });
-
+        
         // Initialize button text
         button.textContent = 'Show lbs';
         const weightInfo = button.closest('.card-body').querySelector('.weight-info');
         weightInfo.textContent = '(Metric)';
     });
-
+    
     // Function to get storage key for form elements
     function getStorageKey(elementId, type = 'checkbox') {
         return `patient_${patientId}_${elementId}_${type}`;
     }
-
+    
     // Load saved states for checkboxes
     checkboxes.forEach(function(checkbox) {
         const checkboxId = checkbox.id;
         const storageKey = getStorageKey(checkboxId);
         const savedState = localStorage.getItem(storageKey);
-
+        
         if (savedState === 'true') {
             checkbox.checked = true;
         }
-
+        
         // Add event listener to save state on change
         checkbox.addEventListener('change', function() {
             localStorage.setItem(storageKey, this.checked);
         });
     });
-
+    
     // Load saved states for status selects
     statusSelects.forEach(function(select) {
         const selectId = select.id;
         const storageKey = getStorageKey(selectId, 'status');
         const savedStatus = localStorage.getItem(storageKey);
-
+        
         if (savedStatus) {
             select.value = savedStatus;
         }
-
+        
         // Add event listener to save state on change
         select.addEventListener('change', function() {
             localStorage.setItem(storageKey, this.value);
         });
     });
-
+    
     // Load saved states for screening notes
     screeningNotes.forEach(function(note) {
         const noteId = note.id;
         const storageKey = getStorageKey(noteId, 'note');
         const savedNote = localStorage.getItem(storageKey);
-
+        
         if (savedNote) {
             note.value = savedNote;
         }
-
+        
         // Add event listener to save state on change
         note.addEventListener('input', function() {
             localStorage.setItem(storageKey, this.value);
         });
     });
-
+    
     // Reset button functionality
     resetButton.addEventListener('click', function() {
         if (confirm('Are you sure you want to reset all screening data (checkboxes, statuses, and notes)?')) {
@@ -1072,47 +1013,47 @@ document.addEventListener('DOMContentLoaded', function() {
             checkboxes.forEach(function(checkbox) {
                 const checkboxId = checkbox.id;
                 const storageKey = getStorageKey(checkboxId);
-
+                
                 // Clear localStorage and uncheck the box
                 localStorage.removeItem(storageKey);
                 checkbox.checked = false;
             });
-
+            
             // Reset status selects
             statusSelects.forEach(function(select) {
                 const selectId = select.id;
                 const storageKey = getStorageKey(selectId, 'status');
-
+                
                 // Clear localStorage and reset select
                 localStorage.removeItem(storageKey);
                 select.value = '';
             });
-
+            
             // Reset notes
             screeningNotes.forEach(function(note) {
                 const noteId = note.id;
                 const storageKey = getStorageKey(noteId, 'note');
-
+                
                 // Clear localStorage and empty note
                 localStorage.removeItem(storageKey);
                 note.value = '';
             });
         }
     });
-
+    
     // Save button functionality
     saveButton.addEventListener('click', function() {
         // Gather checked screening items and their statuses/notes
         const screeningData = [];
-
+        
         checkboxes.forEach(function(checkbox, index) {
             // Get the label text for this screening item
             const screeningName = checkbox.nextElementSibling.textContent.trim();
-
+            
             // Get the corresponding status and note elements
             const statusSelect = statusSelects[index];
             const noteInput = screeningNotes[index];
-
+            
             // Create data object for this screening item
             const screeningItem = {
                 name: screeningName,
@@ -1120,16 +1061,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 status: statusSelect.value,
                 note: noteInput.value
             };
-
+            
             // Add to the collection
             screeningData.push(screeningItem);
         });
-
+        
         // Get just the checked screening names for backward compatibility
         const checkedScreenings = screeningData
             .filter(item => item.checked)
             .map(item => item.name);
-
+        
         // Send data to backend to save as document
         fetch(`/patients/${patientId}/save_prep_sheet`, {
             method: 'POST',

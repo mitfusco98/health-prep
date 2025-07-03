@@ -1049,32 +1049,6 @@ class ChecklistSettings(db.Model):
         cutoffs[screening_name] = int(months)
         import json
         self.screening_cutoffs = json.dumps(cutoffs)
-    
-    def get_cutoff_date(self, cutoff_months, base_date=None):
-        """Convert months to a cutoff date from base_date (or today)"""
-        from datetime import datetime, timedelta
-        import calendar
-        
-        if base_date is None:
-            base_date = datetime.now().date()
-        elif isinstance(base_date, str):
-            base_date = datetime.strptime(base_date, '%Y-%m-%d').date()
-        elif isinstance(base_date, datetime):
-            base_date = base_date.date()
-            
-        # Go back the specified number of months
-        year = base_date.year
-        month = base_date.month - cutoff_months
-        
-        while month <= 0:
-            month += 12
-            year -= 1
-            
-        # Handle day overflow (e.g., Jan 31 -> Feb 28)
-        max_day = calendar.monthrange(year, month)[1]
-        day = min(base_date.day, max_day)
-        
-        return datetime(year, month, day).date()
 
     def __repr__(self):
         return f"<ChecklistSettings id={self.id}>"

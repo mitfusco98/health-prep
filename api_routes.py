@@ -732,59 +732,6 @@ def api_appointments():
         return jsonify({"error": "Internal server error"}), 500
 
 
-@app.route("/api/patients/<int:patient_id>/last_appointment", methods=["GET"])
-@csrf.exempt
-def get_last_appointment(patient_id):
-    """Get the last appointment date for a patient"""
-    try:
-        logger.info(f"Getting last appointment for patient ID: {patient_id}")
-        
-        # Validate patient exists
-        patient = Patient.query.get(patient_id)
-        if not patient:
-            logger.warning(f"Patient with ID {patient_id} not found")
-            return jsonify({
-                "success": False,
-                "message": f"Patient with ID {patient_id} not found"
-            }), 404
-        
-        # Get the most recent appointment for this patient
-        last_appointment = (
-            Appointment.query.filter_by(patient_id=patient_id)
-            .order_by(Appointment.appointment_date.desc())
-            .first()
-        )
-        
-        if last_appointment:
-            logger.info(f"Found last appointment for patient {patient_id}: {last_appointment.appointment_date}")
-            return jsonify({
-                "success": True,
-                "last_appointment_date": last_appointment.appointment_date.strftime("%Y-%m-%d"),
-                "appointment_id": last_appointment.id,
-                "formatted_date": last_appointment.appointment_date.strftime("%B %d, %Y"),
-                "patient_name": patient.full_name
-            })
-        else:
-            logger.info(f"No appointments found for patient {patient_id}")
-            return jsonify({
-                "success": False,
-                "message": f"No appointments found for patient {patient.full_name}"
-            })
-            
-    except ValueError as e:
-        logger.error(f"Invalid patient ID format: {patient_id}")
-        return jsonify({
-            "success": False,
-            "error": "Invalid patient ID format"
-        }), 400
-    except Exception as e:
-        logger.error(f"Error getting last appointment for patient {patient_id}: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
-
-
 @app.route("/api/cache/stats", methods=["GET"])
 @csrf.exempt
 @jwt_required

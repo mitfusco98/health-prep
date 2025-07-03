@@ -726,7 +726,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="card-body">
                     <p class="text-muted mb-3">Control how far back to look for medical data in prep sheet quality checklists.</p>
-
+                    
                     <div class="row">
                         <div class="col-md-3">
                             <div class="text-center">
@@ -753,7 +753,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>
                     </div>
-
+                    
                     {% if active_screening_types %}
                     <hr class="my-4">
                     <h6 class="mb-3">Active Screening Types Cutoffs</h6>
@@ -765,13 +765,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="text-center">
                                     <span class="badge bg-primary">{{ screening.name }}</span>
                                     <br>
-                                    <small class="text-muted">
-                                        {% if settings %}
-                                            {{ settings.get_screening_cutoff(screening.name) }} months cutoff
-                                        {% else %}
-                                            12 months cutoff
-                                        {% endif %}
-                                    </small>
+                                    <small class="text-muted">Uses general cutoffs above</small>
                                 </div>
                             </div>
                             {% endif %}
@@ -834,7 +828,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         Set how far back to look for medical data in prep sheet quality checklists. 
                         For example, excluding labs older than 6 months helps focus on recent results.
                     </p>
-
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="labs_cutoff_months" class="form-label">
@@ -848,7 +842,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="form-text">How old lab results to include</div>
                         </div>
-
+                        
                         <div class="col-md-6 mb-3">
                             <label for="imaging_cutoff_months" class="form-label">
                                 <i class="fas fa-x-ray text-success me-2"></i>Imaging Studies
@@ -861,7 +855,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="form-text">How old imaging studies to include</div>
                         </div>
-
+                        
                         <div class="col-md-6 mb-3">
                             <label for="consults_cutoff_months" class="form-label">
                                 <i class="fas fa-user-md text-warning me-2"></i>Consult Reports
@@ -874,7 +868,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="form-text">How old consult reports to include</div>
                         </div>
-
+                        
                         <div class="col-md-6 mb-3">
                             <label for="hospital_cutoff_months" class="form-label">
                                 <i class="fas fa-hospital text-danger me-2"></i>Hospital Visits
@@ -888,7 +882,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="form-text">How old hospital visits to include</div>
                         </div>
                     </div>
-
+                    
                     {% if active_screening_types %}
                     <hr class="my-4">
                     <h6 class="mb-3">Active Screening Types Cutoffs</h6>
@@ -914,7 +908,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         {% endfor %}
                     </div>
                     {% endif %}
-
+                    
                     <div class="mt-4">
                         <h6>Quick Preset Options</h6>
                         <div class="d-flex flex-wrap gap-2 mb-3">
@@ -949,7 +943,7 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
     document.getElementById('imaging_cutoff_months').value = imaging;
     document.getElementById('consults_cutoff_months').value = consults;
     document.getElementById('hospital_cutoff_months').value = hospital;
-
+    
     // Also apply to all screening-specific cutoffs
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     screeningInputs.forEach(input => {
@@ -957,34 +951,26 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
     });
 }
 
+// Set all cutoffs to reach back to last appointment date
 function setToLastAppointmentDate() {
-    // Fetch the last appointment date for the current patient
-    const patientId = document.body.getAttribute('data-patient-id') || 
-                     window.location.pathname.split('/')[2];
-
-    fetch(`/api/patients/${patientId}/last_appointment`)
+    fetch('/api/recent-appointments')
         .then(response => response.json())
         .then(data => {
-            if (data.success && data.last_appointment_date) {
-                const lastAppointmentDate = new Date(data.last_appointment_date);
-                const today = new Date();
-                const months = calculateExactMonthsDifference(lastAppointmentDate, today);
-
-                // Set all cutoffs to the calculated months
+            if (data.success && data.appointments.length > 0) {
+                const lastAppointmentDate = data.appointments[0].date;
+                const months = monthsBetween(lastAppointmentDate, new Date());
+                
+                // Set all medical data cutoffs
                 document.getElementById('labs_cutoff_months').value = months;
                 document.getElementById('imaging_cutoff_months').value = months;
                 document.getElementById('consults_cutoff_months').value = months;
                 document.getElementById('hospital_cutoff_months').value = months;
-
+                
                 // Set all screening-specific cutoffs
                 const screeningInputs = document.querySelectorAll('.screening-cutoff');
                 screeningInputs.forEach(input => {
                     input.value = months;
                 });
-
-                // Show confirmation with the exact date
-                const formattedDate = lastAppointmentDate.toLocaleDateString();
-                alert(`Cutoffs set to include data from ${formattedDate} to today (${months} months)`);
             } else {
                 alert('No recent appointments found to set cutoff date.');
             }
@@ -995,32 +981,19 @@ function setToLastAppointmentDate() {
         });
 }
 
-// Calculate exact months difference between two dates
-function calculateExactMonthsDifference(startDate, endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    let months = (end.getFullYear() - start.getFullYear()) * 12;
-    months += end.getMonth() - start.getMonth();
-
-    // If the day hasn't been reached yet in the final month, subtract one
-    if (end.getDate() < start.getDate()) {
-        months--;
-    }
-
-    return Math.max(1, Math.ceil(months)); // Always at least 1 month, rounded up
-}
-
-// Calculate months between two dates (legacy function for compatibility)
+// Calculate months between two dates
 function monthsBetween(date1, date2) {
-    return calculateExactMonthsDifference(date1, date2);
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    const months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+    return Math.max(1, months); // Minimum of 1 month
 }
 
 // Set cutoffs based on appointment date
 function setAppointmentBasedCutoffs(appointmentDate) {
     const today = new Date();
     const months = monthsBetween(appointmentDate, today);
-
+    
     // Set all cutoffs to the calculated months from the appointment date
     document.getElementById('labs_cutoff_months').value = months;
     document.getElementById('imaging_cutoff_months').value = months;
@@ -1051,13 +1024,13 @@ function loadRecentAppointments() {
                                   index === 1 ? 'Second last' : 
                                   index === 2 ? 'Third last' : 
                                   `${index + 1}th last`;
-
+                    
                     const button = document.createElement('button');
                     button.type = 'button';
                     button.className = 'btn btn-outline-info btn-sm';
                     button.innerHTML = `${label}<br><small>${apt.formatted_date}</small>`;
                     button.onclick = () => setAppointmentBasedCutoffs(apt.date);
-
+                    
                     container.appendChild(button);
                 });
             } else {
@@ -1121,7 +1094,7 @@ function updateScreeningSelections() {
 document.addEventListener('DOMContentLoaded', function() {
     updateStatusSelections();
     updateScreeningSelections();
-
+    
     // Custom status options handler
     const addCustomStatusBtn = document.getElementById('add_custom_status');
     const customStatusInput = document.getElementById('custom_status_input');
@@ -1197,7 +1170,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-
+        
     </div>
 </div>
 {% endif %}

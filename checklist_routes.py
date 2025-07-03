@@ -139,7 +139,7 @@ def update_checklist_generation():
 
     try:
         db.session.commit()
-        print(f"INFO: Successfully saved {len(selected_screening_types) if selected_screening_types else 0} default items to database")
+        print(f"INFO: Successfully saved {len(selected_default_items) if selected_default_items else 0} default items to database")
     except Exception as e:
         db.session.rollback()
         flash(f'Error updating settings: {str(e)}', 'danger')
