@@ -188,6 +188,14 @@ def save_cutoff_settings():
         settings.consults_cutoff_months = int(request.form.get("consults_cutoff_months", 12))
         settings.hospital_cutoff_months = int(request.form.get("hospital_cutoff_months", 24))
         
+        # Handle screening-specific cutoffs
+        for key, value in request.form.items():
+            if key.startswith("screening_") and key.endswith("_cutoff_months"):
+                # Extract screening name from field name
+                screening_name = key.replace("screening_", "").replace("_cutoff_months", "").replace("_", " ").title()
+                months = int(value)
+                settings.set_screening_cutoff(screening_name, months)
+        
         db.session.commit()
         flash("Data cutoff settings updated successfully!", "success")
         
@@ -202,19 +210,19 @@ def get_recent_appointments():
     """Get recent appointment dates for cutoff configuration"""
     try:
         # Get the last 5 appointment dates across all patients
-        recent_appointments = db.session.query(Appointment.date)\
-            .filter(Appointment.date.isnot(None))\
-            .order_by(Appointment.date.desc())\
+        recent_appointments = db.session.query(Appointment)\
+            .filter(Appointment.appointment_date.isnot(None))\
+            .order_by(Appointment.appointment_date.desc())\
             .limit(5)\
             .all()
         
         # Convert to list of date strings
         appointment_dates = []
         for apt in recent_appointments:
-            if apt.date:
+            if apt.appointment_date:
                 appointment_dates.append({
-                    'date': apt.date.strftime('%Y-%m-%d'),
-                    'formatted_date': apt.date.strftime('%B %d, %Y')
+                    'date': apt.appointment_date.strftime('%Y-%m-%d'),
+                    'formatted_date': apt.appointment_date.strftime('%B %d, %Y')
                 })
         
         return jsonify({

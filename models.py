@@ -985,6 +985,8 @@ class ChecklistSettings(db.Model):
     imaging_cutoff_months = db.Column(db.Integer, default=12)  # Exclude imaging older than X months  
     consults_cutoff_months = db.Column(db.Integer, default=12)  # Exclude consults older than X months
     hospital_cutoff_months = db.Column(db.Integer, default=24)  # Exclude hospital visits older than X months
+    # Screening-specific cutoffs (JSON format: {"screening_name": months})
+    screening_cutoffs = db.Column(db.Text, nullable=True)  # JSON string of screening-specific cutoffs
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -1024,6 +1026,29 @@ class ChecklistSettings(db.Model):
         if not self.default_items:
             return []
         return [item.strip() for item in self.default_items.split("\n") if item.strip()]
+    
+    @property
+    def screening_cutoffs_dict(self):
+        """Return screening-specific cutoffs as a dictionary"""
+        if not self.screening_cutoffs:
+            return {}
+        try:
+            import json
+            return json.loads(self.screening_cutoffs)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    
+    def get_screening_cutoff(self, screening_name, default=12):
+        """Get cutoff months for a specific screening type"""
+        cutoffs = self.screening_cutoffs_dict
+        return cutoffs.get(screening_name, default)
+    
+    def set_screening_cutoff(self, screening_name, months):
+        """Set cutoff months for a specific screening type"""
+        cutoffs = self.screening_cutoffs_dict
+        cutoffs[screening_name] = int(months)
+        import json
+        self.screening_cutoffs = json.dumps(cutoffs)
 
     def __repr__(self):
         return f"<ChecklistSettings id={self.id}>"
