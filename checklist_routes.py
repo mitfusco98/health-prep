@@ -31,7 +31,7 @@ def checklist_settings():
     )
 
     return render_template(
-        "checklist_settings.html",
+        "checklist_settings_updated.html",
         settings=settings,
         default_items_text=default_items_text,
         cache_timestamp=cache_timestamp,
@@ -235,3 +235,68 @@ def get_recent_appointments():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@app.route("/update-cutoff-settings", methods=["POST"])
+@safe_db_operation
+def update_cutoff_settings():
+    """Update general cutoff settings for prep sheet data"""
+    # Get or create settings
+    settings = get_or_create_settings()
+
+    # Get form data
+    cutoff_months = request.form.get("cutoff_months")
+    
+    # Update general cutoff setting
+    if cutoff_months and cutoff_months.strip():
+        try:
+            settings.cutoff_months = int(cutoff_months)
+        except ValueError:
+            flash("Invalid cutoff months value", "danger")
+            return redirect(url_for("checklist_settings"))
+    else:
+        # If empty, set to None to use last appointment date fallback
+        settings.cutoff_months = None
+
+    # Save settings
+    db.session.commit()
+
+    if settings.cutoff_months:
+        flash(f"General cutoff period set to {settings.cutoff_months} months!", "success")
+    else:
+        flash("Cutoff period reset to use last appointment date for each patient", "success")
+
+    # Redirect back to checklist settings
+    return redirect(url_for("checklist_settings"))
+
+
+@app.route("/update-individual-cutoffs", methods=["POST"])
+@safe_db_operation
+def update_individual_cutoffs():
+    """Update individual cutoff settings for different medical data types"""
+    # Get or create settings
+    settings = get_or_create_settings()
+
+    # Get form data
+    labs_cutoff = request.form.get("labs_cutoff_months", type=int)
+    imaging_cutoff = request.form.get("imaging_cutoff_months", type=int)
+    consults_cutoff = request.form.get("consults_cutoff_months", type=int)
+    hospital_cutoff = request.form.get("hospital_cutoff_months", type=int)
+
+    # Update individual cutoff settings
+    if labs_cutoff is not None and labs_cutoff > 0:
+        settings.labs_cutoff_months = labs_cutoff
+    if imaging_cutoff is not None and imaging_cutoff > 0:
+        settings.imaging_cutoff_months = imaging_cutoff
+    if consults_cutoff is not None and consults_cutoff > 0:
+        settings.consults_cutoff_months = consults_cutoff
+    if hospital_cutoff is not None and hospital_cutoff > 0:
+        settings.hospital_cutoff_months = hospital_cutoff
+
+    # Save settings
+    db.session.commit()
+
+    flash("Individual data type cutoffs updated successfully!", "success")
+
+    # Redirect back to checklist settings
+    return redirect(url_for("checklist_settings"))

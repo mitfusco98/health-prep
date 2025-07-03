@@ -483,6 +483,17 @@ class ChecklistSettings(db.Model):
     default_items = db.Column(
         db.Text, nullable=True
     )  # Newline-separated list of default items
+    
+    # Cutoff settings for different medical data types
+    labs_cutoff_months = db.Column(db.Integer, default=6)
+    imaging_cutoff_months = db.Column(db.Integer, default=12)
+    consults_cutoff_months = db.Column(db.Integer, default=12)
+    hospital_cutoff_months = db.Column(db.Integer, default=24)
+    screening_cutoffs = db.Column(db.Text, nullable=True)  # JSON string for screening-specific cutoffs
+    
+    # General cutoff months for prep sheet items
+    cutoff_months = db.Column(db.Integer, nullable=True)  # If set, overrides specific cutoffs
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
