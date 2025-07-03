@@ -208,28 +208,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const lastAppointmentButton = document.getElementById('cutoff-last-appointment');
     if (lastAppointmentButton) {
         lastAppointmentButton.addEventListener('click', function() {
-            // Get patient ID from the global variables set in the template
-            let patientId = window.PATIENT_ID || window.patientId;
+            console.log('Last appointment button clicked');
             
-            // If not found, try extracting from URL
+            // Try multiple methods to get patient ID with detailed logging
+            let patientId = null;
+            
+            // Method 1: Global variables
+            if (window.PATIENT_ID && window.PATIENT_ID !== 'undefined' && window.PATIENT_ID !== 'null') {
+                patientId = window.PATIENT_ID;
+                console.log('Found patient ID via window.PATIENT_ID:', patientId);
+            } else if (window.patientId && window.patientId !== 'undefined' && window.patientId !== 'null') {
+                patientId = window.patientId;
+                console.log('Found patient ID via window.patientId:', patientId);
+            }
+            
+            // Method 2: URL extraction
             if (!patientId) {
                 const urlMatch = window.location.pathname.match(/\/patients\/(\d+)/);
-                if (urlMatch) {
+                if (urlMatch && urlMatch[1]) {
                     patientId = urlMatch[1];
+                    console.log('Found patient ID via URL:', patientId);
                 }
             }
             
-            // If still not found, try data attributes
+            // Method 3: Data attributes
             if (!patientId) {
-                patientId = document.body.getAttribute('data-patient-id');
+                const dataPatientId = document.body.getAttribute('data-patient-id');
+                if (dataPatientId && dataPatientId !== 'undefined' && dataPatientId !== 'null') {
+                    patientId = dataPatientId;
+                    console.log('Found patient ID via data attribute:', patientId);
+                }
             }
 
-            console.log('Patient ID found:', patientId);
-            console.log('Window.PATIENT_ID:', window.PATIENT_ID);
-            console.log('Window.patientId:', window.patientId);
+            // Debug all available information
+            console.log('Debug info:');
+            console.log('- window.PATIENT_ID:', window.PATIENT_ID);
+            console.log('- window.patientId:', window.patientId);
+            console.log('- URL pathname:', window.location.pathname);
+            console.log('- Data attribute:', document.body.getAttribute('data-patient-id'));
+            console.log('- Final patientId:', patientId);
 
-            if (!patientId || patientId === 'undefined' || patientId === 'null') {
-                console.error('Patient ID not found or undefined');
+            if (!patientId || patientId === 'undefined' || patientId === 'null' || patientId.toString().trim() === '') {
+                console.error('Patient ID not found or invalid');
                 alert('Patient ID not found. Please refresh the page and try again.');
                 return;
             }

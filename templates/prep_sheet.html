@@ -912,8 +912,8 @@
 </style>
 
 <script>
-    // Set patient ID globally for JavaScript functions
-    window.patientId = {{ patient.id }};
+    // Set patient ID globally for JavaScript functions - ensure it's properly quoted
+    window.patientId = '{{ patient.id }}';
     
     // Set it as a data attribute on the body
     document.body.setAttribute('data-patient-id', '{{ patient.id }}');
@@ -923,6 +923,8 @@
     
     // Debug logging
     console.log('Template set patient ID:', '{{ patient.id }}');
+    console.log('window.patientId:', window.patientId);
+    console.log('window.PATIENT_ID:', window.PATIENT_ID);
 </script>
 
 <script>
