@@ -232,19 +232,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(data => {
                     console.log('Last appointment response:', data);
                     if (data.success && data.last_appointment_date) {
-                        // Set all cutoff dates to the last appointment date
-                        const cutoffInputs = document.querySelectorAll('.cutoff-date-input');
+                        // Calculate months difference from last appointment to now
+                        const lastAppointmentDate = new Date(data.last_appointment_date);
+                        const today = new Date();
+                        const monthsDiff = calculateMonthsDifference(lastAppointmentDate, today);
+                        
+                        // Set all cutoff inputs to the calculated months
+                        const cutoffInputs = document.querySelectorAll('.cutoff-date-input, input[id$="_cutoff_months"]');
                         cutoffInputs.forEach(input => {
-                            input.value = data.last_appointment_date;
+                            input.value = monthsDiff;
                         });
                         
                         // Also update any screening-specific cutoff inputs
                         const screeningCutoffs = document.querySelectorAll('.screening-cutoff');
                         screeningCutoffs.forEach(input => {
-                            input.value = data.last_appointment_date;
+                            input.value = monthsDiff;
                         });
                         
-                        alert(`Set cutoff to last appointment: ${data.formatted_date} for ${data.patient_name || 'patient'}`);
+                        alert(`Set cutoff to ${monthsDiff} months (from last appointment: ${data.formatted_date}) for ${data.patient_name || 'patient'}`);
                     } else {
                         alert(data.message || 'No previous appointments found for this patient');
                     }
@@ -260,22 +265,21 @@ document.addEventListener('DOMContentLoaded', function() {
     function extractPatientId() {
         let patientId = null;
         
-        // Method 1: Global variables (template-set)
+        // Method 1: URL extraction (most reliable first)
+        const urlMatch = window.location.pathname.match(/\/patients\/(\d+)/);
+        if (urlMatch && urlMatch[1] && isValidPatientId(urlMatch[1])) {
+            patientId = urlMatch[1];
+            console.log('Found patient ID via URL:', patientId);
+            return patientId;
+        }
+        
+        // Method 2: Global variables (template-set)
         if (window.PATIENT_ID && isValidPatientId(window.PATIENT_ID)) {
             patientId = window.PATIENT_ID;
             console.log('Found patient ID via window.PATIENT_ID:', patientId);
         } else if (window.patientId && isValidPatientId(window.patientId)) {
             patientId = window.patientId;
             console.log('Found patient ID via window.patientId:', patientId);
-        }
-        
-        // Method 2: URL extraction (most reliable)
-        if (!patientId) {
-            const urlMatch = window.location.pathname.match(/\/patients\/(\d+)/);
-            if (urlMatch && urlMatch[1]) {
-                patientId = urlMatch[1];
-                console.log('Found patient ID via URL:', patientId);
-            }
         }
         
         // Method 3: Data attributes
@@ -298,9 +302,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Debug logging
         console.log('Patient ID extraction debug:');
+        console.log('- URL pathname:', window.location.pathname);
+        console.log('- URL match result:', urlMatch);
         console.log('- window.PATIENT_ID:', window.PATIENT_ID);
         console.log('- window.patientId:', window.patientId);
-        console.log('- URL pathname:', window.location.pathname);
         console.log('- Data attribute:', document.body.getAttribute('data-patient-id'));
         console.log('- Final extracted patientId:', patientId);
 
@@ -315,5 +320,12 @@ document.addEventListener('DOMContentLoaded', function() {
                id.toString().trim() !== '' &&
                !isNaN(parseInt(id)) &&
                parseInt(id) > 0;
+    }
+    
+    // Helper function to calculate months difference
+    function calculateMonthsDifference(fromDate, toDate) {
+        const yearDiff = toDate.getFullYear() - fromDate.getFullYear();
+        const monthDiff = toDate.getMonth() - fromDate.getMonth();
+        return Math.max(1, yearDiff * 12 + monthDiff);
     }
 });

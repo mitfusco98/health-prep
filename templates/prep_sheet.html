@@ -932,10 +932,26 @@
     // Also set a global variable for immediate access (as string for safety)
     window.PATIENT_ID = '{{ patient.id }}';
     
+    // Set it in the URL for extraction
+    window.CURRENT_PATIENT_ID = '{{ patient.id }}';
+    
     // Debug logging
     console.log('Template set patient ID:', '{{ patient.id }}');
     console.log('window.patientId:', window.patientId);
     console.log('window.PATIENT_ID:', window.PATIENT_ID);
+    console.log('Current URL:', window.location.pathname);
+    
+    // Validate that all patient ID sources are consistent
+    const urlMatch = window.location.pathname.match(/\/patients\/(\d+)/);
+    const urlPatientId = urlMatch ? urlMatch[1] : null;
+    console.log('URL extracted patient ID:', urlPatientId);
+    
+    if (urlPatientId && urlPatientId !== '{{ patient.id }}') {
+        console.warn('Patient ID mismatch between template and URL!', {
+            template: '{{ patient.id }}',
+            url: urlPatientId
+        });
+    }</script>
     
     // Helper function for setting screening cutoff months
     function setScreeningCutoffMonths(months) {
