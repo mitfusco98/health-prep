@@ -765,7 +765,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="text-center">
                                     <span class="badge bg-primary">{{ screening.name }}</span>
                                     <br>
-                                    <small class="text-muted">Uses general cutoffs above</small>
+                                    <small class="text-muted">
+                                        {% if settings %}
+                                            {{ settings.get_screening_cutoff(screening.name) }} months cutoff
+                                        {% else %}
+                                            12 months cutoff
+                                        {% endif %}
+                                    </small>
                                 </div>
                             </div>
                             {% endif %}
@@ -957,10 +963,11 @@ function setToLastAppointmentDate() {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.appointments.length > 0) {
-                const lastAppointmentDate = data.appointments[0].date;
-                const months = monthsBetween(lastAppointmentDate, new Date());
+                const lastAppointmentDate = new Date(data.appointments[0].date);
+                const today = new Date();
+                const months = calculateExactMonthsDifference(lastAppointmentDate, today);
                 
-                // Set all medical data cutoffs
+                // Set all medical data cutoffs to exact months from appointment to today
                 document.getElementById('labs_cutoff_months').value = months;
                 document.getElementById('imaging_cutoff_months').value = months;
                 document.getElementById('consults_cutoff_months').value = months;
@@ -971,6 +978,10 @@ function setToLastAppointmentDate() {
                 screeningInputs.forEach(input => {
                     input.value = months;
                 });
+                
+                // Show confirmation with the exact date
+                const formattedDate = lastAppointmentDate.toLocaleDateString();
+                alert(`Cutoffs set to include data from ${formattedDate} to today (${months} months)`);
             } else {
                 alert('No recent appointments found to set cutoff date.');
             }
@@ -981,12 +992,25 @@ function setToLastAppointmentDate() {
         });
 }
 
-// Calculate months between two dates
+// Calculate exact months difference between two dates
+function calculateExactMonthsDifference(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    let months = (end.getFullYear() - start.getFullYear()) * 12;
+    months += end.getMonth() - start.getMonth();
+    
+    // If the day hasn't been reached yet in the final month, subtract one
+    if (end.getDate() < start.getDate()) {
+        months--;
+    }
+    
+    return Math.max(1, Math.ceil(months)); // Always at least 1 month, rounded up
+}
+
+// Calculate months between two dates (legacy function for compatibility)
 function monthsBetween(date1, date2) {
-    const d1 = new Date(date1);
-    const d2 = new Date(date2);
-    const months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
-    return Math.max(1, months); // Minimum of 1 month
+    return calculateExactMonthsDifference(date1, date2);
 }
 
 // Set cutoffs based on appointment date
