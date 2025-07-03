@@ -20,15 +20,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusSelects = document.querySelectorAll('.screening-status-select');
     // Find all note inputs
     const noteInputs = document.querySelectorAll('.screening-note');
-    
+
     // Toggle weight unit display
     const weightToggleButtons = document.querySelectorAll('.toggle-weight-unit');
-    
+
     weightToggleButtons.forEach(function(button) {
         const parent = button.closest('.card-body');
         const kgDisplay = parent.querySelector('.weight-kg');
         const lbDisplay = parent.querySelector('.weight-lb');
-        
+
         button.addEventListener('click', function() {
             // Toggle display
             if (kgDisplay.style.display === 'none') {
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 weightInfo.textContent = '(Imperial)';
             }
         });
-        
+
         // Initialize button text
         button.textContent = 'Show lbs';
         const weightInfo = button.closest('.card-body').querySelector('.weight-info');
@@ -57,37 +57,37 @@ document.addEventListener('DOMContentLoaded', function() {
         const checkboxId = checkbox.id;
         const storageKey = getStorageKey(checkboxId);
         const savedState = localStorage.getItem(storageKey);
-        
+
         if (savedState === 'true') {
             checkbox.checked = true;
         }
-        
+
         // Add event listener to save state on change
         checkbox.addEventListener('change', function() {
             localStorage.setItem(storageKey, this.checked);
         });
     });
-    
+
     // Load saved states for status dropdowns
     statusSelects.forEach(function(select) {
         const selectId = select.id;
         const storageKey = getStorageKey(selectId, 'status');
         const savedStatus = localStorage.getItem(storageKey);
-        
+
         if (savedStatus) {
             select.value = savedStatus;
         }
-        
+
         // Add event listener to save state on change
         select.addEventListener('change', function() {
             localStorage.setItem(storageKey, this.value);
-            
+
             // Custom status handling
             if (this.value === 'custom') {
                 // Find the associated note field
                 const index = this.id.split('_').pop();
                 const noteInput = document.getElementById(`screening_note_${index}`);
-                
+
                 if (noteInput) {
                     // Focus the note field
                     noteInput.focus();
@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Find the associated note field
                 const index = this.id.split('_').pop();
                 const noteInput = document.getElementById(`screening_note_${index}`);
-                
+
                 if (noteInput) {
                     // Reset placeholder
                     noteInput.placeholder = 'Add note...';
@@ -109,29 +109,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
-        
+
         // Trigger the change event to initialize custom status fields
         if (select.value === 'custom') {
             select.dispatchEvent(new Event('change'));
         }
     });
-    
+
     // Load saved notes
     noteInputs.forEach(function(input) {
         const inputId = input.id;
         const storageKey = getStorageKey(inputId, 'note');
         const savedNote = localStorage.getItem(storageKey);
-        
+
         if (savedNote) {
             input.value = savedNote;
         }
-        
+
         // Add event listener to save state on change
         input.addEventListener('input', function() {
             localStorage.setItem(storageKey, this.value);
         });
     });
-    
+
     // Reset checkboxes button
     const resetButton = document.getElementById('reset-checkboxes');
     if (resetButton) {
@@ -141,13 +141,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 checkbox.checked = false;
                 localStorage.removeItem(getStorageKey(checkbox.id));
             });
-            
+
             // Clear status selections
             statusSelects.forEach(function(select) {
                 select.value = '';
                 localStorage.removeItem(getStorageKey(select.id, 'status'));
             });
-            
+
             // Clear notes
             noteInputs.forEach(function(input) {
                 input.value = '';
@@ -157,19 +157,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
     // Handle save prep sheet button
     const saveButton = document.getElementById('save-prep-sheet');
     if (saveButton) {
         saveButton.addEventListener('click', function() {
             const patientId = document.body.getAttribute('data-patient-id') || 
                              window.location.pathname.split('/')[2];
-            
+
             // Create a form to submit
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = `/patients/${patientId}/save_prep_sheet`;
-            
+
             // Add hidden input for CSRF token
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             if (csrfToken) {
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 csrfInput.value = csrfToken;
                 form.appendChild(csrfInput);
             }
-            
+
             // Add to document and submit
             document.body.appendChild(form);
             form.submit();
@@ -200,3 +200,38 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     document.head.appendChild(style);
 });
+
+// Quick preset for last appointment date
+    $('#cutoff-last-appointment').on('click', function() {
+        // Try multiple ways to get patient ID
+        let patientId = window.patientId || 
+                       $('body').data('patient-id') || 
+                       $('#patient-id').val() ||
+                       $('[data-patient-id]').data('patient-id') ||
+                       window.location.pathname.match(/\/patients\/(\d+)/)?.[1];
+
+        console.log('Patient ID found:', patientId);
+
+        if (!patientId || patientId === 'undefined') {
+            console.error('Patient ID not found or undefined');
+            showNotification('Patient ID not found', 'error');
+            return;
+        }
+
+        // Get last appointment date from API
+        $.get(`/api/patients/${patientId}/last_appointment`)
+            .done(function(response) {
+                console.log('Last appointment response:', response);
+                if (response.success && response.last_appointment_date) {
+                    // Set all cutoff dates to the last appointment date
+                    $('.cutoff-date-input').val(response.last_appointment_date);
+                    showNotification(`Set cutoff to last appointment: ${response.formatted_date}`, 'success');
+                } else {
+                    showNotification('No previous appointments found', 'warning');
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Error loading appointment data:', xhr.responseJSON || error);
+                showNotification('Error loading appointment data', 'error');
+            });
+    });

@@ -732,6 +732,39 @@ def api_appointments():
         return jsonify({"error": "Internal server error"}), 500
 
 
+@app.route("/api/patients/<int:patient_id>/last_appointment", methods=["GET"])
+@csrf.exempt
+def get_last_appointment(patient_id):
+    """Get the last appointment date for a patient"""
+    try:
+        # Get the most recent appointment for this patient
+        last_appointment = (
+            Appointment.query.filter_by(patient_id=patient_id)
+            .order_by(Appointment.appointment_date.desc())
+            .first()
+        )
+        
+        if last_appointment:
+            return jsonify({
+                "success": True,
+                "last_appointment_date": last_appointment.appointment_date.strftime("%Y-%m-%d"),
+                "appointment_id": last_appointment.id,
+                "formatted_date": last_appointment.appointment_date.strftime("%B %d, %Y")
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "No appointments found for this patient"
+            })
+            
+    except Exception as e:
+        logger.error(f"Error getting last appointment for patient {patient_id}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
 @app.route("/api/cache/stats", methods=["GET"])
 @csrf.exempt
 @jwt_required
