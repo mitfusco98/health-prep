@@ -918,8 +918,11 @@
     // Set it as a data attribute on the body
     document.body.setAttribute('data-patient-id', '{{ patient.id }}');
     
-    // Also set a global variable for immediate access
+    // Also set a global variable for immediate access (as string for safety)
     window.PATIENT_ID = '{{ patient.id }}';
+    
+    // Debug logging
+    console.log('Template set patient ID:', '{{ patient.id }}');
 </script>
 
 <script>

@@ -208,17 +208,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const lastAppointmentButton = document.getElementById('cutoff-last-appointment');
     if (lastAppointmentButton) {
         lastAppointmentButton.addEventListener('click', function() {
-            // Try multiple ways to get patient ID
-            let patientId = window.patientId || 
-                           document.body.getAttribute('data-patient-id') || 
-                           document.querySelector('[data-patient-id]')?.getAttribute('data-patient-id') ||
-                           window.location.pathname.match(/\/patients\/(\d+)/)?.[1];
+            // Get patient ID from the global variables set in the template
+            let patientId = window.PATIENT_ID || window.patientId;
+            
+            // If not found, try extracting from URL
+            if (!patientId) {
+                const urlMatch = window.location.pathname.match(/\/patients\/(\d+)/);
+                if (urlMatch) {
+                    patientId = urlMatch[1];
+                }
+            }
+            
+            // If still not found, try data attributes
+            if (!patientId) {
+                patientId = document.body.getAttribute('data-patient-id');
+            }
 
             console.log('Patient ID found:', patientId);
+            console.log('Window.PATIENT_ID:', window.PATIENT_ID);
+            console.log('Window.patientId:', window.patientId);
 
-            if (!patientId || patientId === 'undefined') {
+            if (!patientId || patientId === 'undefined' || patientId === 'null') {
                 console.error('Patient ID not found or undefined');
-                alert('Patient ID not found');
+                alert('Patient ID not found. Please refresh the page and try again.');
                 return;
             }
 
