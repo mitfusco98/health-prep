@@ -8,9 +8,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Common functions
     function getStorageKey(elementId, type = 'checkbox') {
-        // Extract patient ID from URL or data attribute
-        const patientId = document.body.getAttribute('data-patient-id') || 
-                         window.location.pathname.split('/')[2];
+        // Extract patient ID using multiple methods for reliability
+        const patientId = window.PATIENT_ID || 
+                         window.patientId || 
+                         document.body.getAttribute('data-patient-id') || 
+                         window.location.pathname.match(/\/patients\/(\d+)/)?.[1];
         return `patient_${patientId}_${elementId}_${type}`;
     }
 
@@ -201,37 +203,45 @@ document.addEventListener('DOMContentLoaded', function() {
     document.head.appendChild(style);
 });
 
-// Quick preset for last appointment date
-    $('#cutoff-last-appointment').on('click', function() {
-        // Try multiple ways to get patient ID
-        let patientId = window.patientId || 
-                       $('body').data('patient-id') || 
-                       $('#patient-id').val() ||
-                       $('[data-patient-id]').data('patient-id') ||
-                       window.location.pathname.match(/\/patients\/(\d+)/)?.[1];
+// Quick preset for last appointment date - moved to document ready
+document.addEventListener('DOMContentLoaded', function() {
+    const lastAppointmentButton = document.getElementById('cutoff-last-appointment');
+    if (lastAppointmentButton) {
+        lastAppointmentButton.addEventListener('click', function() {
+            // Try multiple ways to get patient ID
+            let patientId = window.patientId || 
+                           document.body.getAttribute('data-patient-id') || 
+                           document.querySelector('[data-patient-id]')?.getAttribute('data-patient-id') ||
+                           window.location.pathname.match(/\/patients\/(\d+)/)?.[1];
 
-        console.log('Patient ID found:', patientId);
+            console.log('Patient ID found:', patientId);
 
-        if (!patientId || patientId === 'undefined') {
-            console.error('Patient ID not found or undefined');
-            showNotification('Patient ID not found', 'error');
-            return;
-        }
+            if (!patientId || patientId === 'undefined') {
+                console.error('Patient ID not found or undefined');
+                alert('Patient ID not found');
+                return;
+            }
 
-        // Get last appointment date from API
-        $.get(`/api/patients/${patientId}/last_appointment`)
-            .done(function(response) {
-                console.log('Last appointment response:', response);
-                if (response.success && response.last_appointment_date) {
-                    // Set all cutoff dates to the last appointment date
-                    $('.cutoff-date-input').val(response.last_appointment_date);
-                    showNotification(`Set cutoff to last appointment: ${response.formatted_date}`, 'success');
-                } else {
-                    showNotification('No previous appointments found', 'warning');
-                }
-            })
-            .fail(function(xhr, status, error) {
-                console.error('Error loading appointment data:', xhr.responseJSON || error);
-                showNotification('Error loading appointment data', 'error');
-            });
-    });
+            // Get last appointment date from API
+            fetch(`/api/patients/${patientId}/last_appointment`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Last appointment response:', data);
+                    if (data.success && data.last_appointment_date) {
+                        // Set all cutoff dates to the last appointment date
+                        const cutoffInputs = document.querySelectorAll('.cutoff-date-input');
+                        cutoffInputs.forEach(input => {
+                            input.value = data.last_appointment_date;
+                        });
+                        alert(`Set cutoff to last appointment: ${data.formatted_date}`);
+                    } else {
+                        alert('No previous appointments found');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading appointment data:', error);
+                    alert('Error loading appointment data');
+                });
+        });
+    }
+});
