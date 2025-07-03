@@ -54,10 +54,10 @@ class MedicalDataParser:
         lab_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
-                MedicalDocument.document_type.in_(['lab_result', 'laboratory']),
-                MedicalDocument.upload_date >= cutoff_date
+                MedicalDocument.document_type.in_(['lab_result', 'laboratory', 'Lab Report']),
+                MedicalDocument.created_at >= cutoff_date
             )
-        ).order_by(MedicalDocument.upload_date.desc()).all()
+        ).order_by(MedicalDocument.created_at.desc()).all()
         
         return {
             'data': labs,
@@ -83,10 +83,10 @@ class MedicalDataParser:
         imaging_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
-                MedicalDocument.document_type.in_(['imaging', 'radiology', 'xray', 'mri', 'ct_scan']),
-                MedicalDocument.upload_date >= cutoff_date
+                MedicalDocument.document_type.in_(['imaging', 'radiology', 'xray', 'mri', 'ct_scan', 'Radiology Report']),
+                MedicalDocument.created_at >= cutoff_date
             )
-        ).order_by(MedicalDocument.upload_date.desc()).all()
+        ).order_by(MedicalDocument.created_at.desc()).all()
         
         return {
             'data': imaging,
@@ -112,10 +112,10 @@ class MedicalDataParser:
         consult_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
-                MedicalDocument.document_type.in_(['consult', 'consultation', 'specialist_report']),
-                MedicalDocument.upload_date >= cutoff_date
+                MedicalDocument.document_type.in_(['consult', 'consultation', 'specialist_report', 'Consultation']),
+                MedicalDocument.created_at >= cutoff_date
             )
-        ).order_by(MedicalDocument.upload_date.desc()).all()
+        ).order_by(MedicalDocument.created_at.desc()).all()
         
         return {
             'data': consults,
@@ -141,10 +141,10 @@ class MedicalDataParser:
         hospital_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
-                MedicalDocument.document_type.in_(['hospital_summary', 'discharge_summary', 'admission_note']),
-                MedicalDocument.upload_date >= cutoff_date
+                MedicalDocument.document_type.in_(['hospital_summary', 'discharge_summary', 'admission_note', 'Discharge Summary']),
+                MedicalDocument.created_at >= cutoff_date
             )
-        ).order_by(MedicalDocument.upload_date.desc()).all()
+        ).order_by(MedicalDocument.created_at.desc()).all()
         
         return {
             'data': hospital_visits,
@@ -176,8 +176,8 @@ class MedicalDataParser:
             doc_info = doc.filename
             
             # Add date if available
-            if doc.upload_date:
-                doc_info += f" ({doc.upload_date.strftime('%Y-%m-%d')})"
+            if doc.created_at:
+                doc_info += f" ({doc.created_at.strftime('%Y-%m-%d')})"
             
             # Add document type if available and different from filename
             if doc.document_type and doc.document_type.lower() not in doc.filename.lower():
