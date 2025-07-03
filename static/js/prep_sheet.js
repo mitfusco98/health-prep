@@ -210,53 +210,25 @@ document.addEventListener('DOMContentLoaded', function() {
         lastAppointmentButton.addEventListener('click', function() {
             console.log('Last appointment button clicked');
             
-            // Try multiple methods to get patient ID with detailed logging
-            let patientId = null;
+            // Enhanced patient ID extraction with validation
+            let patientId = extractPatientId();
             
-            // Method 1: Global variables
-            if (window.PATIENT_ID && window.PATIENT_ID !== 'undefined' && window.PATIENT_ID !== 'null') {
-                patientId = window.PATIENT_ID;
-                console.log('Found patient ID via window.PATIENT_ID:', patientId);
-            } else if (window.patientId && window.patientId !== 'undefined' && window.patientId !== 'null') {
-                patientId = window.patientId;
-                console.log('Found patient ID via window.patientId:', patientId);
-            }
-            
-            // Method 2: URL extraction
             if (!patientId) {
-                const urlMatch = window.location.pathname.match(/\/patients\/(\d+)/);
-                if (urlMatch && urlMatch[1]) {
-                    patientId = urlMatch[1];
-                    console.log('Found patient ID via URL:', patientId);
-                }
-            }
-            
-            // Method 3: Data attributes
-            if (!patientId) {
-                const dataPatientId = document.body.getAttribute('data-patient-id');
-                if (dataPatientId && dataPatientId !== 'undefined' && dataPatientId !== 'null') {
-                    patientId = dataPatientId;
-                    console.log('Found patient ID via data attribute:', patientId);
-                }
-            }
-
-            // Debug all available information
-            console.log('Debug info:');
-            console.log('- window.PATIENT_ID:', window.PATIENT_ID);
-            console.log('- window.patientId:', window.patientId);
-            console.log('- URL pathname:', window.location.pathname);
-            console.log('- Data attribute:', document.body.getAttribute('data-patient-id'));
-            console.log('- Final patientId:', patientId);
-
-            if (!patientId || patientId === 'undefined' || patientId === 'null' || patientId.toString().trim() === '') {
-                console.error('Patient ID not found or invalid');
+                console.error('Patient ID extraction failed');
                 alert('Patient ID not found. Please refresh the page and try again.');
                 return;
             }
 
+            console.log('Using patient ID:', patientId);
+
             // Get last appointment date from API
             fetch(`/api/patients/${patientId}/last_appointment`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     console.log('Last appointment response:', data);
                     if (data.success && data.last_appointment_date) {
@@ -265,15 +237,83 @@ document.addEventListener('DOMContentLoaded', function() {
                         cutoffInputs.forEach(input => {
                             input.value = data.last_appointment_date;
                         });
-                        alert(`Set cutoff to last appointment: ${data.formatted_date}`);
+                        
+                        // Also update any screening-specific cutoff inputs
+                        const screeningCutoffs = document.querySelectorAll('.screening-cutoff');
+                        screeningCutoffs.forEach(input => {
+                            input.value = data.last_appointment_date;
+                        });
+                        
+                        alert(`Set cutoff to last appointment: ${data.formatted_date} for ${data.patient_name || 'patient'}`);
                     } else {
-                        alert('No previous appointments found');
+                        alert(data.message || 'No previous appointments found for this patient');
                     }
                 })
                 .catch(error => {
                     console.error('Error loading appointment data:', error);
-                    alert('Error loading appointment data');
+                    alert(`Error loading appointment data: ${error.message}`);
                 });
         });
+    }
+    
+    // Helper function to extract patient ID with robust fallback methods
+    function extractPatientId() {
+        let patientId = null;
+        
+        // Method 1: Global variables (template-set)
+        if (window.PATIENT_ID && isValidPatientId(window.PATIENT_ID)) {
+            patientId = window.PATIENT_ID;
+            console.log('Found patient ID via window.PATIENT_ID:', patientId);
+        } else if (window.patientId && isValidPatientId(window.patientId)) {
+            patientId = window.patientId;
+            console.log('Found patient ID via window.patientId:', patientId);
+        }
+        
+        // Method 2: URL extraction (most reliable)
+        if (!patientId) {
+            const urlMatch = window.location.pathname.match(/\/patients\/(\d+)/);
+            if (urlMatch && urlMatch[1]) {
+                patientId = urlMatch[1];
+                console.log('Found patient ID via URL:', patientId);
+            }
+        }
+        
+        // Method 3: Data attributes
+        if (!patientId) {
+            const dataPatientId = document.body.getAttribute('data-patient-id');
+            if (dataPatientId && isValidPatientId(dataPatientId)) {
+                patientId = dataPatientId;
+                console.log('Found patient ID via data attribute:', patientId);
+            }
+        }
+        
+        // Method 4: Check for hidden form fields
+        if (!patientId) {
+            const hiddenPatientInput = document.querySelector('input[name="patient_id"], input[data-patient-id]');
+            if (hiddenPatientInput && isValidPatientId(hiddenPatientInput.value)) {
+                patientId = hiddenPatientInput.value;
+                console.log('Found patient ID via form input:', patientId);
+            }
+        }
+
+        // Debug logging
+        console.log('Patient ID extraction debug:');
+        console.log('- window.PATIENT_ID:', window.PATIENT_ID);
+        console.log('- window.patientId:', window.patientId);
+        console.log('- URL pathname:', window.location.pathname);
+        console.log('- Data attribute:', document.body.getAttribute('data-patient-id'));
+        console.log('- Final extracted patientId:', patientId);
+
+        return patientId;
+    }
+    
+    // Helper function to validate patient ID
+    function isValidPatientId(id) {
+        return id && 
+               id !== 'undefined' && 
+               id !== 'null' && 
+               id.toString().trim() !== '' &&
+               !isNaN(parseInt(id)) &&
+               parseInt(id) > 0;
     }
 });

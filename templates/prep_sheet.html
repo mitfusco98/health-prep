@@ -484,6 +484,17 @@
             </button>
         </div>
         <div class="mb-4">
+            <!-- Quick date presets for screening cutoffs -->
+            <div class="mb-3">
+                <small class="text-muted d-block mb-2">Quick date presets:</small>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary" onclick="setScreeningCutoffMonths(3)">3 months</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="setScreeningCutoffMonths(6)">6 months</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="setScreeningCutoffMonths(12)">12 months</button>
+                    <button type="button" class="btn btn-outline-info" id="cutoff-last-appointment">To Last Appointment</button>
+                </div>
+            </div>
+            
             {% set layout_style = checklist_settings.layout_style if checklist_settings is defined else 'list' %}
             {% set status_options = checklist_settings.status_options_list if checklist_settings is defined else ['due', 'due_soon', 'sent_incomplete', 'completed'] %}
             {% set show_notes = checklist_settings.show_notes if checklist_settings is defined else true %}
@@ -925,6 +936,23 @@
     console.log('Template set patient ID:', '{{ patient.id }}');
     console.log('window.patientId:', window.patientId);
     console.log('window.PATIENT_ID:', window.PATIENT_ID);
+    
+    // Helper function for setting screening cutoff months
+    function setScreeningCutoffMonths(months) {
+        const cutoffDate = new Date();
+        cutoffDate.setMonth(cutoffDate.getMonth() - months);
+        const dateString = cutoffDate.toISOString().split('T')[0];
+        
+        // Set any cutoff date inputs that exist
+        const cutoffInputs = document.querySelectorAll('.cutoff-date-input, .screening-cutoff');
+        cutoffInputs.forEach(input => {
+            input.value = dateString;
+        });
+        
+        if (cutoffInputs.length > 0) {
+            alert(`Set cutoff to ${months} months ago (${cutoffDate.toLocaleDateString()})`);
+        }
+    }
 </script>
 
 <script>
