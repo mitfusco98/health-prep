@@ -990,6 +990,20 @@ class ChecklistSettings(db.Model):
         return []
 
     @property
+    def custom_status_list(self):
+        """Return custom status options as a list"""
+        if not self.custom_status_options:
+            return []
+        return self.custom_status_options.split(",")
+
+    @property
+    def default_items_list(self):
+        """Return default items as a list"""
+        if not self.default_items:
+            return []
+        return [item.strip() for item in self.default_items.split("\n") if item.strip()]
+
+    @property
     def screening_cutoffs_dict(self):
         """Convert screening_cutoffs JSON string to dictionary"""
         if self.screening_cutoffs:

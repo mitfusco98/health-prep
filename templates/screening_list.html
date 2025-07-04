@@ -1097,6 +1097,43 @@ function updateScreeningSelections() {
 document.addEventListener('DOMContentLoaded', function() {
     updateStatusSelections();
     updateScreeningSelections();
+    
+    // Ensure button states are correctly reflected in the hidden input
+    // This fixes any discrepancy between server-rendered state and JS state
+    const screeningSelectionInput = document.getElementById('screening-selections');
+    if (screeningSelectionInput) {
+        const currentValue = screeningSelectionInput.value;
+        console.log('Initial screening selections from server:', currentValue);
+        
+        // If there's a mismatch, trust the server state and update buttons accordingly
+        if (currentValue) {
+            const serverSelections = currentValue.split(',').map(s => s.trim()).filter(s => s);
+            const buttonSelections = Array.from(document.querySelectorAll('#screening-buttons .btn-primary')).map(btn => btn.dataset.value);
+            
+            console.log('Server selections:', serverSelections);
+            console.log('Button selections:', buttonSelections);
+            
+            // Sync button states with server data
+            document.querySelectorAll('#screening-buttons .screening-btn').forEach(button => {
+                const value = button.dataset.value;
+                const shouldBeSelected = serverSelections.includes(value);
+                const isSelected = button.classList.contains('btn-primary');
+                
+                if (shouldBeSelected && !isSelected) {
+                    button.classList.remove('btn-outline-primary');
+                    button.classList.add('btn-primary');
+                    console.log('Activated button for:', value);
+                } else if (!shouldBeSelected && isSelected) {
+                    button.classList.remove('btn-primary');
+                    button.classList.add('btn-outline-primary');
+                    console.log('Deactivated button for:', value);
+                }
+            });
+            
+            // Update display after syncing
+            updateScreeningSelections();
+        }
+    }
 
     // Custom status options handler
     const addCustomStatusBtn = document.getElementById('add_custom_status');
