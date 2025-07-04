@@ -15,7 +15,6 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 from models import Patient, MedicalDocument, db
-from organized.utils.validation_utils import validate_document_data
 from organized.middleware.admin_logging import AdminLogger
 from datetime import datetime
 import os
