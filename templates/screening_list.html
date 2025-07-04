@@ -732,25 +732,25 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="col-md-3">
                             <div class="text-center">
                                 <h6 class="text-primary">Laboratories</h6>
-                                <span class="badge bg-info">{{ 'To Last Appointment Date' if settings and settings.labs_cutoff_months == 0 else (f'{settings.labs_cutoff_months} months' if settings else 'To Last Appointment Date') }}</span>
+                                <span class="badge bg-info">{{ 'To Last Appointment Date' if settings and settings.labs_cutoff_months == 0 else (settings.labs_cutoff_months ~ ' months' if settings else 'To Last Appointment Date') }}</span>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="text-center">
                                 <h6 class="text-success">Imaging</h6>
-                                <span class="badge bg-info">{{ 'To Last Appointment Date' if settings and settings.imaging_cutoff_months == 0 else (f'{settings.imaging_cutoff_months} months' if settings else 'To Last Appointment Date') }}</span>
+                                <span class="badge bg-info">{{ 'To Last Appointment Date' if settings and settings.imaging_cutoff_months == 0 else (settings.imaging_cutoff_months ~ ' months' if settings else 'To Last Appointment Date') }}</span>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="text-center">
                                 <h6 class="text-warning">Consults</h6>
-                                <span class="badge bg-info">{{  'To Last Appointment Date' if settings and settings.consults_cutoff_months == 0 else (f'{settings.consults_cutoff_months} months' if settings else 'To Last Appointment Date') }}</span>
+                                <span class="badge bg-info">{{ 'To Last Appointment Date' if settings and settings.consults_cutoff_months == 0 else (settings.consults_cutoff_months ~ ' months' if settings else 'To Last Appointment Date') }}</span>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="text-center">
                                 <h6 class="text-danger">Hospital Visits</h6>
-                                <span class="badge bg-info">{{ 'To Last Appointment Date' if settings and settings.hospital_cutoff_months == 0 else (f'{settings.hospital_cutoff_months} months' if settings else 'To Last Appointment Date') }}</span>
+                                <span class="badge bg-info">{{ 'To Last Appointment Date' if settings and settings.hospital_cutoff_months == 0 else (settings.hospital_cutoff_months ~ ' months' if settings else 'To Last Appointment Date') }}</span>
                             </div>
                         </div>
                     </div>
@@ -768,7 +768,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <br>
                                     <small class="text-muted">
                                         {% if settings %}
-                                            {{ 'To Last Appointment Date' if settings.get_screening_cutoff(screening.name) == 0 else f'{settings.get_screening_cutoff(screening.name)} months cutoff' }}
+                                            {{ 'To Last Appointment Date' if settings.get_screening_cutoff(screening.name) == 0 else settings.get_screening_cutoff(screening.name) ~ ' months cutoff' }}
                                         {% else %}
                                             To Last Appointment Date
                                         {% endif %}
