@@ -705,7 +705,6 @@ class ScreeningType(db.Model):
                     'days': 'day',
                     'weeks': 'week', 
                     'months': 'month',
-```python
                     'years': 'year'
                 }
                 return f"Every {unit_singular.get(self.frequency_unit, self.frequency_unit)}"
