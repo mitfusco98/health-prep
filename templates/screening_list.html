@@ -718,10 +718,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             <!-- Data Cutoff Settings -->
             <div class="card mb-4">
-                <div class="card-header```text
- d-flex justify-content-between align-items-center">
-```python
-# Fix display of individual screening type cutoff badges to show correct values
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Data Cutoff Settings</h5>
                     <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#cutoffModal">
                         <i class="fas fa-cog me-1"></i>Configure Cutoffs
@@ -761,21 +758,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     <hr class="my-4">
                     <h6 class="mb-3">Active Screening Types Cutoffs</h6>
                     <p class="text-muted small mb-3">These cutoffs apply to all active screening types in default checklist items</p>
+                    
                     <div class="row">
                         {% for screening in active_screening_types %}
                             {% if screening.name in (settings.default_items_list if settings else []) %}
                             <div class="col-md-4 col-lg-3 mb-2">
                                 <div class="text-center">
-                                    <span class="badge bg-info">{{ screening.name }}</span>
-                                    <br>
-                                    <small class="text-muted">
-                                        {% if settings %}
-                                            {% set cutoff_value = settings.get_screening_cutoff(screening.name, 12) %}
-                                            {{ 'To Last Appointment Date' if cutoff_value == 0 else cutoff_value ~ ' months cutoff' }}
-                                        {% else %}
-                                            To Last Appointment Date
-                                        {% endif %}
-                                    </small>
+                                    <h6 class="text-info">{{ screening.name }}</h6>
+                                    {% set cutoff_value = settings.screening_cutoffs_dict.get(screening.name, 0) if settings and settings.screening_cutoffs_dict else 0 %}
+                                    <span class="badge bg-info">{{ cutoff_value ~ ' months' if cutoff_value > 0 else 'To Last Appointment Date' }}</span>
                                 </div>
                             </div>
                             {% endif %}
@@ -1537,6 +1528,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
     </div>
+
 </div>
 
 <!-- Keyword Management JavaScript -->

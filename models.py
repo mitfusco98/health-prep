@@ -298,31 +298,31 @@ class MedicalDocument(db.Model):
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
-    
+
     # Relationship with Patient is already defined in the Patient model
-    
+
     def extract_fhir_metadata(self):
         """Extract FHIR-compatible metadata from document using existing doc_metadata field"""
         if not self.doc_metadata:
             return {}
-        
+
         try:
             metadata = json.loads(self.doc_metadata)
             fhir_data = {}
-            
+
             # Extract FHIR codes if available
             if 'fhir_primary_code' in metadata:
                 fhir_data = metadata['fhir_primary_code']
-            
+
             # Map document type to FHIR if no existing FHIR data
             if not fhir_data and self.document_type:
                 fhir_data = self._map_document_type_to_fhir()
-            
+
             return fhir_data
-            
+
         except (json.JSONDecodeError, KeyError):
             return self._map_document_type_to_fhir()
-    
+
     def _map_document_type_to_fhir(self):
         """Map document type to FHIR coding for Epic compatibility"""
         type_mappings = {
@@ -391,7 +391,7 @@ class MedicalDocument(db.Model):
                 }]
             }
         }
-        
+
         return type_mappings.get(self.document_type, {
             'code': {
                 'coding': [{
@@ -416,7 +416,7 @@ class MedicalDocument(db.Model):
 
 class PrepSheet(db.Model):
     """Preparation sheet documents with dual storage for internal and FHIR keys"""
-    
+
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"), nullable=False)
     appointment_date = db.Column(db.Date, nullable=False)
@@ -428,13 +428,13 @@ class PrepSheet(db.Model):
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
-    
+
     # === DUAL STORAGE: Internal + FHIR Keys ===
     # Internal keys (for backward compatibility)
     tag = db.Column(db.String(100))  # Internal prep sheet tag
     section = db.Column(db.String(100))  # Prep sheet section classification
     matched_screening = db.Column(db.String(100))  # Associated screening types
-    
+
     # FHIR-style keys (for Epic/FHIR exports)
     fhir_code_system = db.Column(db.String(255))  # e.g., "http://loinc.org"
     fhir_code_code = db.Column(db.String(50))  # e.g., "75492-9" (code.coding.code)
@@ -443,14 +443,14 @@ class PrepSheet(db.Model):
     fhir_category_code = db.Column(db.String(50))  # e.g., "survey" (category)
     fhir_category_display = db.Column(db.String(255))  # e.g., "Survey"
     fhir_effective_datetime = db.Column(db.DateTime)  # effectiveDateTime for FHIR
-    
+
     # Relationship
     patient = db.relationship("Patient", backref=db.backref("prep_sheets", lazy=True))
-    
+
     def set_dual_storage_keys(self, internal_data=None, fhir_data=None):
         """
         Set both internal and FHIR keys for dual storage compatibility
-        
+
         Args:
             internal_data: Dict with keys like {'tag': 'prep', 'section': 'preventive', 'matched_screening': 'annual'}
             fhir_data: Dict with FHIR coding structure
@@ -460,19 +460,19 @@ class PrepSheet(db.Model):
             self.tag = internal_data.get('tag')
             self.section = internal_data.get('section')
             self.matched_screening = internal_data.get('matched_screening')
-        
+
         # Set FHIR keys
         if fhir_data:
             if 'code' in fhir_data and fhir_data['code']:
                 self.fhir_code_system = fhir_data['code'].get('system')
                 self.fhir_code_code = fhir_data['code'].get('code')
                 self.fhir_code_display = fhir_data['code'].get('display')
-            
+
             if 'category' in fhir_data and fhir_data['category']:
                 self.fhir_category_system = fhir_data['category'].get('system')
                 self.fhir_category_code = fhir_data['category'].get('code')
                 self.fhir_category_display = fhir_data['category'].get('display')
-            
+
             if 'effectiveDateTime' in fhir_data:
                 self.fhir_effective_datetime = fhir_data['effectiveDateTime']
 
@@ -483,7 +483,7 @@ class PrepSheet(db.Model):
             'section': self.section,
             'matched_screening': self.matched_screening
         }
-    
+
     def get_fhir_keys(self):
         """Get FHIR keys as structured dictionary"""
         return {
@@ -626,19 +626,19 @@ class ScreeningType(db.Model):
         db.Integer
     )  # Maximum age for this screening, null if no maximum
     is_active = db.Column(db.Boolean, default=True)
-    
+
     # === FHIR TRIGGER CONDITIONS ===
     trigger_conditions = db.Column(db.Text)  # JSON array of condition codes that trigger this screening
-    
+
     # === DOCUMENT SECTION MAPPINGS ===
     document_section_mappings = db.Column(db.Text)  # JSON mapping of document sections to FHIR categories
-    
+
     # === KEYWORD FIELDS FOR DYNAMIC PARSING ===
     content_keywords = db.Column(db.Text)  # JSON array of keywords for content parsing
     document_keywords = db.Column(db.Text)  # JSON array of keywords for document type parsing
     filename_keywords = db.Column(db.Text)  # JSON array of keywords for filename parsing
     status = db.Column(db.String(20), default='active')  # Status field (active, inactive, draft)
-    
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -649,7 +649,7 @@ class ScreeningType(db.Model):
     def set_trigger_conditions(self, conditions_list):
         """
         Set trigger conditions as JSON array
-        
+
         Args:
             conditions_list: List of condition codes like [
                 {
@@ -669,32 +669,32 @@ class ScreeningType(db.Model):
             self.trigger_conditions = json.dumps(conditions_list)
         else:
             self.trigger_conditions = None
-    
+
     def get_trigger_conditions(self):
         """Get trigger conditions as list of dictionaries"""
         if not self.trigger_conditions:
             return []
-        
+
         try:
             import json
             return json.loads(self.trigger_conditions)
         except (json.JSONDecodeError, TypeError):
             return []
-    
+
     def matches_condition_code(self, condition_code, code_system=None):
         """
         Check if a condition code matches any of the trigger conditions
-        
+
         Args:
             condition_code: The code to check (e.g., "73211009", "E11.9")
             code_system: Optional system URL to match against
-            
+
         Returns:
             bool: True if condition matches any trigger condition
         """
         trigger_conditions = self.get_trigger_conditions()
 
-    
+
     @property
     def formatted_frequency(self):
         """Return a formatted frequency string from structured fields, blank if not set"""
@@ -705,6 +705,7 @@ class ScreeningType(db.Model):
                     'days': 'day',
                     'weeks': 'week', 
                     'months': 'month',
+```python
                     'years': 'year'
                 }
                 return f"Every {unit_singular.get(self.frequency_unit, self.frequency_unit)}"
@@ -712,27 +713,27 @@ class ScreeningType(db.Model):
                 return f"Every {self.frequency_number} {self.frequency_unit}"
         else:
             return ""
-    
+
     @property
     def frequency_in_days(self):
         """Convert structured frequency to approximate days for calculations"""
         if not self.frequency_number or not self.frequency_unit:
             return None
-            
+
         multipliers = {
             'days': 1,
             'weeks': 7,
             'months': 30,  # Approximate
             'years': 365   # Approximate
         }
-        
+
         multiplier = multipliers.get(self.frequency_unit)
         if multiplier:
             return self.frequency_number * multiplier
         return None
 
 
-        
+
         for trigger in trigger_conditions:
             # Direct code match
             if trigger.get('code') == condition_code:
@@ -742,13 +743,13 @@ class ScreeningType(db.Model):
                         return True
                 else:
                     return True
-        
+
         return False
-    
+
     def set_content_keywords(self, keywords_list):
         """
         Set unified keywords as JSON array (used for both content and filename matching)
-        
+
         Args:
             keywords_list: List of keywords for content and filename parsing like ["mammogram", "breast", "screening"]
         """
@@ -756,21 +757,21 @@ class ScreeningType(db.Model):
             self.content_keywords = json.dumps(keywords_list)
         else:
             self.content_keywords = None
-    
+
     def get_content_keywords(self):
         """Get unified keywords as list (used for both content and filename matching)"""
         if not self.content_keywords:
             return []
-        
+
         try:
             return json.loads(self.content_keywords)
         except (json.JSONDecodeError, TypeError):
             return []
-    
+
     def set_document_keywords(self, keywords_list):
         """
         Set document section keywords as JSON array
-        
+
         Args:
             keywords_list: List of keywords for document type parsing like ["radiology", "lab", "pathology"]
         """
@@ -778,21 +779,21 @@ class ScreeningType(db.Model):
             self.document_keywords = json.dumps(keywords_list)
         else:
             self.document_keywords = None
-    
+
     def get_document_keywords(self):
         """Get document section keywords as list"""
         if not self.document_keywords:
             return []
-        
+
         try:
             return json.loads(self.document_keywords)
         except (json.JSONDecodeError, TypeError):
             return []
-    
+
     def set_filename_keywords(self, keywords_list):
         """
         Legacy method - now redirects to set_content_keywords for unified approach
-        
+
         Args:
             keywords_list: List of keywords for filename parsing like ["mammo", "xray", "ct"]
         """
@@ -801,34 +802,34 @@ class ScreeningType(db.Model):
         if keywords_list:
             all_keywords = list(set(existing_keywords + keywords_list))
             self.set_content_keywords(all_keywords)
-    
+
     def get_filename_keywords(self):
         """Legacy method - now returns content keywords for unified approach"""
         return self.get_content_keywords()
-    
+
     def get_all_keywords(self):
         """Get all keywords combined for comprehensive parsing"""
         all_keywords = []
         all_keywords.extend(self.get_content_keywords())  # This now includes both content and filename keywords
         all_keywords.extend(self.get_document_keywords())
         return list(set(all_keywords))  # Remove duplicates
-    
+
     def matches_keywords(self, text, keyword_type='all'):
         """
         Check if text matches any keywords of specified type
-        
+
         Args:
             text: Text to search in
             keyword_type: 'content', 'document', 'filename', or 'all'
-            
+
         Returns:
             bool: True if any keywords match
         """
         if not text:
             return False
-        
+
         text_lower = text.lower()
-        
+
         if keyword_type == 'content' or keyword_type == 'filename':
             # Both content and filename now use the same unified keywords
             keywords = self.get_content_keywords()
@@ -836,13 +837,13 @@ class ScreeningType(db.Model):
             keywords = self.get_document_keywords()
         else:  # 'all'
             keywords = self.get_all_keywords()
-        
+
         return any(keyword.lower() in text_lower for keyword in keywords)
-    
+
     def set_document_section_mappings(self, mappings_dict):
         """
         Set document section to FHIR category mappings
-        
+
         Args:
             mappings_dict: Dictionary mapping document sections to FHIR categories like {
                 "labs": {
@@ -873,63 +874,63 @@ class ScreeningType(db.Model):
             self.document_section_mappings = json.dumps(mappings_dict)
         else:
             self.document_section_mappings = None
-    
+
     def get_document_section_mappings(self):
         """Get document section mappings as dictionary"""
         if not self.document_section_mappings:
             return {}
-        
+
         try:
             import json
             return json.loads(self.document_section_mappings)
         except (json.JSONDecodeError, TypeError):
             return {}
-    
+
     def get_fhir_category_for_section(self, section_name):
         """
         Get FHIR category for a document section
-        
+
         Args:
             section_name: Name of the document section (e.g., "labs", "imaging")
-            
+
         Returns:
             dict: FHIR category structure or None if not mapped
         """
         mappings = self.get_document_section_mappings()
         section_mapping = mappings.get(section_name.lower())
-        
+
         if section_mapping and 'fhir_category' in section_mapping:
             return section_mapping['fhir_category']
-        
+
         return None
-    
+
     def matches_document_section(self, document_section, document_type=None):
         """
         Check if a document section matches this screening type's criteria
-        
+
         Args:
             document_section: The document section to check
             document_type: Optional document type for additional context
-            
+
         Returns:
             bool: True if document section matches screening criteria
         """
         mappings = self.get_document_section_mappings()
-        
+
         if not mappings:
             return False
-        
+
         # Direct section match
         if document_section.lower() in mappings:
             return True
-        
+
         # Check for document type mapping
         if document_type:
             for section, config in mappings.items():
                 if 'document_types' in config:
                     if document_type.lower() in [dt.lower() for dt in config['document_types']]:
                         return True
-        
+
         return False
 
     def __repr__(self):
@@ -980,7 +981,7 @@ class ChecklistSettings(db.Model):
     default_items = db.Column(
         db.Text, nullable=True
     )  # Newline-separated list of default items
-    
+
     # Time-based filtering settings
     labs_cutoff_months = db.Column(db.Integer, default=6)  # Exclude labs older than X months
     imaging_cutoff_months = db.Column(db.Integer, default=12)  # Exclude imaging older than X months  
@@ -988,7 +989,7 @@ class ChecklistSettings(db.Model):
     hospital_cutoff_months = db.Column(db.Integer, default=24)  # Exclude hospital visits older than X months
     # Screening-specific cutoffs (JSON format: {"screening_name": months})
     screening_cutoffs = db.Column(db.Text, nullable=True)  # JSON string of screening-specific cutoffs
-    
+
     # General cutoff months for prep sheet items (overrides specific cutoffs if set)
     cutoff_months = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -998,86 +999,58 @@ class ChecklistSettings(db.Model):
 
     @property
     def status_options_list(self):
-        """Return status options as a list"""
-        if not self.status_options:
-            return []
-        return self.status_options.split(",")
+        """Convert status_options string to list"""
+        if self.status_options:
+            return [option.strip() for option in self.status_options.split(",")]
+        return []
 
-    @property
-    def custom_status_list(self):
-        """Return custom status options as a list"""
-        if not self.custom_status_options:
-            return []
-        return self.custom_status_options.split(",")
-
-    @property
-    def all_status_options(self):
-        """Return all status options (default + custom) as a list"""
-        all_options = self.status_options_list
-        all_options.extend(self.custom_status_list)
-        return all_options
-
-    @property
-    def content_sources_list(self):
-        """Return content sources as a list"""
-        if not self.content_sources:
-            return []
-        return self.content_sources.split(",")
-
-    @property
-    def default_items_list(self):
-        """Return default items as a list"""
-        if not self.default_items:
-            return []
-        return [item.strip() for item in self.default_items.split("\n") if item.strip()]
-    
     @property
     def screening_cutoffs_dict(self):
-        """Return screening-specific cutoffs as a dictionary"""
-        if not self.screening_cutoffs:
-            return {}
-        try:
-            import json
-            return json.loads(self.screening_cutoffs)
-        except (json.JSONDecodeError, TypeError):
-            return {}
-    
+        """Convert screening_cutoffs JSON string to dictionary"""
+        if self.screening_cutoffs:
+            try:
+                import json
+                return json.loads(self.screening_cutoffs)
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        return {}
+
     def get_screening_cutoff(self, screening_name, default=12):
         """Get cutoff months for a specific screening type"""
         cutoffs = self.screening_cutoffs_dict
         return cutoffs.get(screening_name, default)
-    
+
     def set_screening_cutoff(self, screening_name, months):
         """Set cutoff months for a specific screening type"""
         cutoffs = self.screening_cutoffs_dict
         cutoffs[screening_name] = int(months)
         import json
         self.screening_cutoffs = json.dumps(cutoffs)
-    
+
     def get_cutoff_date(self, cutoff_months, base_date=None):
         """Convert months to a cutoff date from base_date (or today)"""
         from datetime import datetime, timedelta
         import calendar
-        
+
         if base_date is None:
             base_date = datetime.now().date()
         elif isinstance(base_date, str):
             base_date = datetime.strptime(base_date, '%Y-%m-%d').date()
         elif isinstance(base_date, datetime):
             base_date = base_date.date()
-            
+
         # Go back the specified number of months
         year = base_date.year
         month = base_date.month - cutoff_months
-        
+
         while month <= 0:
             month += 12
             year -= 1
-            
+
         # Handle day overflow (e.g., Jan 31 -> Feb 28)
         max_day = calendar.monthrange(year, month)[1]
         day = min(base_date.day, max_day)
-        
+
         return datetime(year, month, day).date()
 
     def __repr__(self):
