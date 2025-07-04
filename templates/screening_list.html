@@ -720,6 +720,8 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="card mb-4">
                 <div class="card-header```text
  d-flex justify-content-between align-items-center">
+```python
+# Fix display of individual screening type cutoff badges to show correct values
                     <h5 class="mb-0">Data Cutoff Settings</h5>
                     <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#cutoffModal">
                         <i class="fas fa-cog me-1"></i>Configure Cutoffs
@@ -764,11 +766,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             {% if screening.name in (settings.default_items_list if settings else []) %}
                             <div class="col-md-4 col-lg-3 mb-2">
                                 <div class="text-center">
-                                    <span class="badge bg-primary">{{ screening.name }}</span>
+                                    <span class="badge bg-info">{{ screening.name }}</span>
                                     <br>
                                     <small class="text-muted">
                                         {% if settings %}
-                                            {{ 'To Last Appointment Date' if settings.get_screening_cutoff(screening.name) == 0 else settings.get_screening_cutoff(screening.name) ~ ' months cutoff' }}
+                                            {% set cutoff_value = settings.get_screening_cutoff(screening.name, 12) %}
+                                            {{ 'To Last Appointment Date' if cutoff_value == 0 else cutoff_value ~ ' months cutoff' }}
                                         {% else %}
                                             To Last Appointment Date
                                         {% endif %}
@@ -964,6 +967,7 @@ function setToLastAppointmentDate() {
     document.getElementById('labs_cutoff_months').value = 0;
     document.getElementById('imaging_cutoff_months').value = 0;
     document.getElementById('consults_cutoff_months').value = 0;
+    document.getElementById('imaging_cutoff_months').value = 0;
     document.getElementById('hospital_cutoff_months').value = 0;
 
     // Clear all screening-specific cutoffs
