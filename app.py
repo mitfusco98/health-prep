@@ -1414,6 +1414,18 @@ def clear_query_cache():
     clear_cache()
     return jsonify({'success': True, 'message': 'Cache cleared'})
 
+# Add default route redirect
+@app.route('/')
+def index():
+    """Redirect to home page"""
+    return redirect(url_for('home'))
+
+# Add home route if not defined elsewhere
+@app.route('/home')
+def home():
+    """Home page"""
+    return render_template('index.html')
+
 # Import all route modules to register them with the app
 import demo_routes
 import api_routes
@@ -1423,3 +1435,7 @@ import performance_routes
 import ehr_routes
 import checklist_routes
 import checklist_simple_routes
+
+    # Register screening blueprint
+    from organized.routes.screening_routes import screening_bp
+    app.register_blueprint(screening_bp)
