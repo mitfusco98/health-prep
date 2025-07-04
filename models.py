@@ -732,20 +732,6 @@ class ScreeningType(db.Model):
             return self.frequency_number * multiplier
         return None
 
-
-
-        for trigger in trigger_conditions:
-            # Direct code match
-            if trigger.get('code') == condition_code:
-                # If system is provided, also check system match
-                if code_system and trigger.get('system'):
-                    if code_system == trigger.get('system'):
-                        return True
-                else:
-                    return True
-
-        return False
-
     def set_content_keywords(self, keywords_list):
         """
         Set unified keywords as JSON array (used for both content and filename matching)
