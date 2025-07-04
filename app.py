@@ -1416,15 +1416,11 @@ def clear_query_cache():
 
 # Add default route redirect
 @app.route('/')
-def index():
+def root_redirect():
     """Redirect to home page"""
-    return redirect(url_for('home'))
+    return redirect(url_for('index'))
 
-# Add home route if not defined elsewhere
-@app.route('/home')
-def home():
-    """Home page"""
-    return render_template('index.html')
+# The main home route is handled by demo_routes.py with the 'index' endpoint
 
 # Import all route modules to register them with the app
 import demo_routes
