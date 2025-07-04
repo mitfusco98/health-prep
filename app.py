@@ -1436,6 +1436,6 @@ import ehr_routes
 import checklist_routes
 import checklist_simple_routes
 
-    # Register screening blueprint
-    from organized.routes.screening_routes import screening_bp
-    app.register_blueprint(screening_bp)
+# Register screening blueprint
+from organized.routes.screening_routes import screening_bp
+app.register_blueprint(screening_bp)
