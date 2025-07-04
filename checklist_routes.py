@@ -181,19 +181,19 @@ def save_cutoff_settings():
     """Update data cutoff settings for medical data parsing"""
     settings = get_or_create_settings()
     
-    # Get cutoff values from form
+    # Get cutoff values from form (default to 0 for "last appointment" logic)
     try:
-        settings.labs_cutoff_months = int(request.form.get("labs_cutoff_months", 6))
-        settings.imaging_cutoff_months = int(request.form.get("imaging_cutoff_months", 12))
-        settings.consults_cutoff_months = int(request.form.get("consults_cutoff_months", 12))
-        settings.hospital_cutoff_months = int(request.form.get("hospital_cutoff_months", 24))
+        settings.labs_cutoff_months = int(request.form.get("labs_cutoff_months", 0))
+        settings.imaging_cutoff_months = int(request.form.get("imaging_cutoff_months", 0))
+        settings.consults_cutoff_months = int(request.form.get("consults_cutoff_months", 0))
+        settings.hospital_cutoff_months = int(request.form.get("hospital_cutoff_months", 0))
         
-        # Handle screening-specific cutoffs
+        # Handle screening-specific cutoffs (default to 0 for "last appointment" logic)
         for key, value in request.form.items():
             if key.startswith("screening_") and key.endswith("_cutoff_months"):
                 # Extract screening name from field name
                 screening_name = key.replace("screening_", "").replace("_cutoff_months", "").replace("_", " ").title()
-                months = int(value)
+                months = int(value) if value else 0
                 settings.set_screening_cutoff(screening_name, months)
         
         db.session.commit()
