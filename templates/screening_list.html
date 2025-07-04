@@ -958,39 +958,22 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
     });
 }
 
-// Set all cutoffs to reach back to last appointment date
+// Set all cutoffs to use each patient's last appointment date
 function setToLastAppointmentDate() {
-    fetch('/api/recent-appointments')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.appointments.length > 0) {
-                const lastAppointmentDate = new Date(data.appointments[0].date);
-                const today = new Date();
-                const months = calculateExactMonthsDifference(lastAppointmentDate, today);
+    // Clear all cutoff values to trigger patient-specific last appointment fallback
+    document.getElementById('labs_cutoff_months').value = 0;
+    document.getElementById('imaging_cutoff_months').value = 0;
+    document.getElementById('consults_cutoff_months').value = 0;
+    document.getElementById('hospital_cutoff_months').value = 0;
 
-                // Set all medical data cutoffs to exact months from appointment to today
-                document.getElementById('labs_cutoff_months').value = months;
-                document.getElementById('imaging_cutoff_months').value = months;
-                document.getElementById('consults_cutoff_months').value = months;
-                document.getElementById('hospital_cutoff_months').value = months;
+    // Clear all screening-specific cutoffs
+    const screeningInputs = document.querySelectorAll('.screening-cutoff');
+    screeningInputs.forEach(input => {
+        input.value = 0;
+    });
 
-                // Set all screening-specific cutoffs
-                const screeningInputs = document.querySelectorAll('.screening-cutoff');
-                screeningInputs.forEach(input => {
-                    input.value = months;
-                });
-
-                // Show confirmation with the exact date
-                const formattedDate = lastAppointmentDate.toLocaleDateString();
-                alert(`Cutoffs set to include data from ${formattedDate} to today (${months} months)`);
-            } else {
-                alert('No recent appointments found to set cutoff date.');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading last appointment:', error);
-            alert('Error loading appointment data.');
-        });
+    // Show confirmation
+    alert('Cutoffs set to use each patient\'s last appointment date (excluding today\'s appointments)');
 }
 
 // Calculate exact months difference between two dates

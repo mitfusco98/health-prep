@@ -20,30 +20,32 @@ def get_cutoff_date_for_patient(patient_id, data_type=None):
     # Get checklist settings
     settings = ChecklistSettings.query.first()
     
-    # If general cutoff_months is set, use that
-    if settings and settings.cutoff_months:
+    # If general cutoff_months is set and greater than 0, use that
+    if settings and settings.cutoff_months and settings.cutoff_months > 0:
         cutoff_date = datetime.now() - timedelta(days=settings.cutoff_months * 30)
         return cutoff_date
     
     # If specific data type cutoff is set and no general cutoff, use specific cutoff
     if settings and data_type:
         cutoff_months = None
-        if data_type == 'labs' and settings.labs_cutoff_months:
+        if data_type == 'labs' and settings.labs_cutoff_months and settings.labs_cutoff_months > 0:
             cutoff_months = settings.labs_cutoff_months
-        elif data_type == 'imaging' and settings.imaging_cutoff_months:
+        elif data_type == 'imaging' and settings.imaging_cutoff_months and settings.imaging_cutoff_months > 0:
             cutoff_months = settings.imaging_cutoff_months
-        elif data_type == 'consults' and settings.consults_cutoff_months:
+        elif data_type == 'consults' and settings.consults_cutoff_months and settings.consults_cutoff_months > 0:
             cutoff_months = settings.consults_cutoff_months
-        elif data_type == 'hospital' and settings.hospital_cutoff_months:
+        elif data_type == 'hospital' and settings.hospital_cutoff_months and settings.hospital_cutoff_months > 0:
             cutoff_months = settings.hospital_cutoff_months
         
-        if cutoff_months:
+        if cutoff_months and cutoff_months > 0:
             cutoff_date = datetime.now() - timedelta(days=cutoff_months * 30)
             return cutoff_date
     
-    # Fallback: Use last appointment date for the specific patient
+    # Fallback: Use last appointment date for the specific patient (excluding today's appointments)
+    today = datetime.now().date()
     last_appointment = db.session.query(Appointment)\
         .filter(Appointment.patient_id == patient_id)\
+        .filter(Appointment.appointment_date < today)\
         .order_by(Appointment.appointment_date.desc())\
         .first()
     
@@ -51,7 +53,7 @@ def get_cutoff_date_for_patient(patient_id, data_type=None):
         # Convert date to datetime at start of day
         return datetime.combine(last_appointment.appointment_date, datetime.min.time())
     
-    # Final fallback: Use 6 months ago if no appointments found
+    # Final fallback: Use 6 months ago if no past appointments found
     return datetime.now() - timedelta(days=180)
 
 def filter_medical_data_by_cutoff(data_list, patient_id, data_type, date_field='date'):
@@ -119,10 +121,13 @@ def get_cutoff_info_for_patient(patient_id):
             'hospital': settings.hospital_cutoff_months
         }
     
-    # Check if we're using appointment fallback
-    if not (settings and settings.cutoff_months):
+    # Check if we're using appointment fallback (when cutoff_months is None, 0, or not set)
+    if not (settings and settings.cutoff_months and settings.cutoff_months > 0):
+        # Exclude today's appointments when finding the last appointment
+        today = datetime.now().date()
         last_appointment = db.session.query(Appointment)\
             .filter(Appointment.patient_id == patient_id)\
+            .filter(Appointment.appointment_date < today)\
             .order_by(Appointment.appointment_date.desc())\
             .first()
         

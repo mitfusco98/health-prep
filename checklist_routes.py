@@ -84,14 +84,14 @@ def update_checklist_cutoff_settings():
     consults_cutoff = request.form.get("consults_cutoff_months", type=int)
     hospital_cutoff = request.form.get("hospital_cutoff_months", type=int)
 
-    # Validate and update settings
-    if labs_cutoff is not None and labs_cutoff > 0:
+    # Validate and update settings (0 means use last appointment date)
+    if labs_cutoff is not None:
         settings.labs_cutoff_months = labs_cutoff
-    if imaging_cutoff is not None and imaging_cutoff > 0:
+    if imaging_cutoff is not None:
         settings.imaging_cutoff_months = imaging_cutoff
-    if consults_cutoff is not None and consults_cutoff > 0:
+    if consults_cutoff is not None:
         settings.consults_cutoff_months = consults_cutoff
-    if hospital_cutoff is not None and hospital_cutoff > 0:
+    if hospital_cutoff is not None:
         settings.hospital_cutoff_months = hospital_cutoff
 
     # Save settings
@@ -283,14 +283,14 @@ def update_individual_cutoffs():
     consults_cutoff = request.form.get("consults_cutoff_months", type=int)
     hospital_cutoff = request.form.get("hospital_cutoff_months", type=int)
 
-    # Update individual cutoff settings
-    if labs_cutoff is not None and labs_cutoff > 0:
+    # Update individual cutoff settings (0 means use last appointment date)
+    if labs_cutoff is not None:
         settings.labs_cutoff_months = labs_cutoff
-    if imaging_cutoff is not None and imaging_cutoff > 0:
+    if imaging_cutoff is not None:
         settings.imaging_cutoff_months = imaging_cutoff
-    if consults_cutoff is not None and consults_cutoff > 0:
+    if consults_cutoff is not None:
         settings.consults_cutoff_months = consults_cutoff
-    if hospital_cutoff is not None and hospital_cutoff > 0:
+    if hospital_cutoff is not None:
         settings.hospital_cutoff_months = hospital_cutoff
 
     # Save settings
