@@ -948,7 +948,7 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
     document.getElementById('consults_cutoff_months').value = consults;
     document.getElementById('hospital_cutoff_months').value = hospital;
 
-    // Only update screening cutoffs that haven't been manually modified by user
+    // Update all screening cutoffs that haven't been manually modified by user
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     screeningInputs.forEach(input => {
         // Check if the input has been manually changed (not just from server defaults)
@@ -966,7 +966,7 @@ function setToLastAppointmentDate() {
     document.getElementById('consults_cutoff_months').value = 0;
     document.getElementById('hospital_cutoff_months').value = 0;
 
-    // Only clear screening-specific cutoffs that haven't been manually modified
+    // Clear all screening-specific cutoffs that haven't been manually modified
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     screeningInputs.forEach(input => {
         if (!input.dataset.userModified) {
@@ -983,14 +983,9 @@ function initializeScreeningCutoffsOnFirstLoad() {
     if (!modalOpenedOnce) {
         const screeningInputs = document.querySelectorAll('.screening-cutoff');
         screeningInputs.forEach(input => {
-            // Only set to 0 if the field is empty or if the current value is from server and > 0
-            const currentValue = parseInt(input.value) || 0;
-            if (input.value === '' || (currentValue > 0 && !input.dataset.userModified)) {
-                // Check if this is a problematic screening that should default to 0
-                const inputName = input.name;
-                if (inputName && (inputName.includes('bone_density') || inputName.includes('hba1c') || inputName.includes('a1c'))) {
-                    input.value = 0;
-                }
+            // Only initialize if the field is empty (not pre-populated from server)
+            if (input.value === '' || input.value === 'None') {
+                input.value = 0;
             }
         });
         modalOpenedOnce = true;
@@ -1040,17 +1035,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Track user modifications to screening cutoff inputs
+    // Track user modifications to screening cutoff inputs (only after modal initialization)
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     screeningInputs.forEach(input => {
-        // Mark as user-modified when user changes the value
+        // Mark as user-modified when user changes the value (but only after modal opens)
         input.addEventListener('input', function() {
-            this.dataset.userModified = 'true';
+            if (modalOpenedOnce) {
+                this.dataset.userModified = 'true';
+            }
         });
         
-        // Also track when user manually types in the field
+        // Also track when user manually types in the field (but only after modal opens)
         input.addEventListener('keyup', function() {
-            this.dataset.userModified = 'true';
+            if (modalOpenedOnce) {
+                this.dataset.userModified = 'true';
+            }
+        });
+
+        // Mark as user-modified when focus leaves the field with a different value
+        input.addEventListener('blur', function() {
+            if (modalOpenedOnce && this.dataset.originalValue && this.value !== this.dataset.originalValue) {
+                this.dataset.userModified = 'true';
+            }
+        });
+
+        // Store original value when field gets focus
+        input.addEventListener('focus', function() {
+            if (modalOpenedOnce && !this.dataset.originalValue) {
+                this.dataset.originalValue = this.value;
+            }
         });
     });
 });
