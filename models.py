@@ -704,8 +704,7 @@ class ScreeningType(db.Model):
                 unit_singular = {
                     'days': 'day',
                     'weeks': 'week', 
-                    'months': 'month',
-                    'years': 'year'
+                    'months': 'month',                    'years': 'year'
                 }
                 return f"Every {unit_singular.get(self.frequency_unit, self.frequency_unit)}"
             else:
@@ -991,9 +990,15 @@ class ChecklistSettings(db.Model):
 
     @property
     def default_items_list(self):
-        """Convert default_items string to list"""
+        """Return default_items string to list"""
         if self.default_items:
             return [item.strip() for item in self.default_items.split("\n") if item.strip()]
+
+    @property
+    def content_sources_list(self):
+        """Return content sources as a list"""
+        if self.content_sources:
+            return [source.strip() for source in self.content_sources.split(",")]
         return []
 
     @property
