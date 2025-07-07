@@ -516,28 +516,28 @@ def patient_detail(patient_id):
 
     # Organize documents by type
     lab_documents = [
-        doc for doc in documents if doc.document_type == DocumentType.LAB_REPORT.value
+        doc for doc in documents if doc.document_type == "LABORATORIES"
     ]
     imaging_documents = [
         doc
         for doc in documents
-        if doc.document_type == DocumentType.RADIOLOGY_REPORT.value
+        if doc.document_type == "IMAGING"
     ]
     consult_documents = [
-        doc for doc in documents if doc.document_type == DocumentType.CONSULTATION.value
+        doc for doc in documents if doc.document_type == "CONSULTS"
     ]
     hospital_documents = [
         doc
         for doc in documents
-        if doc.document_type == DocumentType.DISCHARGE_SUMMARY.value
+        if doc.document_type == "HOSPITAL_RECORDS"
     ]
     
     # Other documents (not categorized as lab, imaging, consult, or hospital)
     categorized_types = {
-        DocumentType.LAB_REPORT.value,
-        DocumentType.RADIOLOGY_REPORT.value,
-        DocumentType.CONSULTATION.value,
-        DocumentType.DISCHARGE_SUMMARY.value
+        "LABORATORIES",
+        "IMAGING",
+        "CONSULTS",
+        "HOSPITAL_RECORDS"
     }
     other_documents = [
         doc for doc in documents 
@@ -758,10 +758,10 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     
     # Categorize documents for "other" section (documents not in main categories)
     categorized_types = {
-        DocumentType.LAB_REPORT.value,
-        DocumentType.RADIOLOGY_REPORT.value,
-        DocumentType.CONSULTATION.value,
-        DocumentType.DISCHARGE_SUMMARY.value
+        "LABORATORIES",
+        "IMAGING",
+        "CONSULTS",
+        "HOSPITAL_RECORDS"
     }
     other_documents = [
         doc for doc in documents 
@@ -2428,10 +2428,10 @@ def add_document(patient_id):
     if subsection:
         # Map old type parameter to new subsection format
         type_mapping = {
-            "lab": "LAB_REPORT",
-            "imaging": "RADIOLOGY_REPORT", 
-            "consult": "CONSULTATION",
-            "hospital": "DISCHARGE_SUMMARY",
+            "lab": "LABORATORIES",
+            "imaging": "IMAGING", 
+            "consult": "CONSULTS",
+            "hospital": "HOSPITAL_RECORDS",
             "other": "OTHER"
         }
         redirect_params["subsection"] = type_mapping.get(subsection, "OTHER")
