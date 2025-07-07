@@ -220,24 +220,33 @@ def save_cutoff_settings():
         settings.hospital_cutoff_months = int(request.form.get("hospital_cutoff_months", 0))
 
         # Handle screening-specific cutoffs with corrected field name pattern
+        screening_cutoffs_processed = 0
         for key, value in request.form.items():
             if key.startswith("screening_cutoff_"):
                 # Extract screening name from field name (screening_cutoff_ScreeningName)
                 screening_name = key.replace("screening_cutoff_", "")
-                months = int(value) if value else 0
-                settings.set_screening_cutoff(screening_name, months)
-                print(f"Setting cutoff for '{screening_name}': {months} months")
+                try:
+                    months = int(value) if value and value.strip() else 0
+                    settings.set_screening_cutoff(screening_name, months)
+                    screening_cutoffs_processed += 1
+                    print(f"Successfully set cutoff for '{screening_name}': {months} months")
+                except (ValueError, TypeError) as e:
+                    print(f"Error processing cutoff for '{screening_name}': {e}")
                 
+        print(f"DEBUG: Processed {screening_cutoffs_processed} screening cutoffs")
+        
         # Debug: Print all form data to help identify issues
         print("DEBUG: All form data received:")
         for key, value in request.form.items():
-            print(f"  {key}: {value}")
+            print(f"  {key}: {repr(value)}")
             
         # Debug: Print current screening cutoffs after processing
         print("DEBUG: Current screening cutoffs after processing:")
         if hasattr(settings, 'screening_cutoffs_dict'):
             for screening, cutoff in settings.screening_cutoffs_dict.items():
                 print(f"  {screening}: {cutoff} months")
+        else:
+            print("  No screening_cutoffs_dict attribute found")
 
         db.session.commit()
         flash("Data cutoff settings updated successfully!", "success")

@@ -945,9 +945,9 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     let hasUserInput = false;
 
-    // Check if any screening fields have non-zero values (indicating user input)
+    // Check if any screening fields have been modified by user or have non-zero values
     screeningInputs.forEach(input => {
-        if (input.dataset.userModified === 'true') {
+        if (input.dataset.userModified === 'true' || (input.value && input.value !== '0')) {
             hasUserInput = true;
         }
     });
@@ -963,9 +963,11 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
     document.getElementById('consults_cutoff_months').value = consults;
     document.getElementById('hospital_cutoff_months').value = hospital;
 
-    // Apply the same preset value to all screening-specific cutoffs
+    // Apply the same preset value to all screening-specific cutoffs, but clear user modification flags
     screeningInputs.forEach(input => {
         input.value = labs; // Use the same value for all screening cutoffs
+        input.dataset.userModified = 'false'; // Reset user modification flag
+        input.dataset.originalValue = labs; // Update original value
     });
 }
 
@@ -975,8 +977,8 @@ function setToLastAppointmentDate() {
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     let hasUserInput = false;
 
-     screeningInputs.forEach(input => {
-        if (input.dataset.userModified === 'true') {
+    screeningInputs.forEach(input => {
+        if (input.dataset.userModified === 'true' || (input.value && input.value !== '0')) {
             hasUserInput = true;
         }
     });
@@ -993,9 +995,11 @@ function setToLastAppointmentDate() {
     document.getElementById('consults_cutoff_months').value = 0;
     document.getElementById('hospital_cutoff_months').value = 0;
 
-    // Clear all screening-specific cutoffs
+    // Clear all screening-specific cutoffs and reset tracking
     screeningInputs.forEach(input => {
         input.value = 0;
+        input.dataset.userModified = 'false'; // Reset user modification flag
+        input.dataset.originalValue = '0'; // Update original value
     });
 
     // Show confirmation
@@ -1235,6 +1239,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
 
     screeningInputs.forEach(input => {
+        // Store original value to detect changes
+        input.dataset.originalValue = input.value;
+        
         // Track when user manually changes the input
         input.addEventListener('input', function() {
             this.dataset.userModified = 'true';
@@ -1245,6 +1252,14 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('change', function() {
             this.dataset.userModified = 'true';
             console.log(`User changed cutoff for ${this.dataset.screeningName}: ${this.value}`);
+        });
+
+        // Track on focus out to ensure we catch all changes
+        input.addEventListener('blur', function() {
+            if (this.value !== this.dataset.originalValue) {
+                this.dataset.userModified = 'true';
+                console.log(`User changed cutoff for ${this.dataset.screeningName} from ${this.dataset.originalValue} to ${this.value}`);
+            }
         });
     });
 });
