@@ -704,7 +704,7 @@ class ScreeningType(db.Model):
                 unit_singular = {
                     'days': 'day',
                     'weeks': 'week', 
-                    'months': 'month',
+                    'months': ''month',
                     'years': 'year'
                 }
                 return f"Every {unit_singular.get(self.frequency_unit, self.frequency_unit)}"
@@ -1000,10 +1000,10 @@ class ChecklistSettings(db.Model):
                 return {}
         return {}
 
-    def get_screening_cutoff(self, screening_name, default=12):
-        """Get cutoff months for a specific screening type"""
+    def get_screening_cutoff(self, screening_name):
+        """Get cutoff for a specific screening type"""
         cutoffs = self.screening_cutoffs_dict
-        return cutoffs.get(screening_name, default)
+        return cutoffs.get(screening_name, 0)  # Default to 0 months (last appointment date) if not set
 
     def set_screening_cutoff(self, screening_name, months):
         """Set cutoff months for a specific screening type"""
