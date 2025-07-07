@@ -718,8 +718,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             <!-- Data Cutoff Settings -->
             <div class="card mb-4">
-                <div class="card-header d-flex```text
- justify-content-between align-items-center">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Data Cutoff Settings</h5>
                     <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#cutoffModal">
                         <i class="fas fa-cog me-1"></i>Configure Cutoffs
@@ -759,7 +758,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <hr class="my-4">
                     <h6 class="mb-3">Active Screening Types Cutoffs</h6>
                     <p class="text-muted small mb-3">These cutoffs apply to all active screening types in default checklist items</p>
-
+                    
                     <div class="row">
                         {% for screening in active_screening_types %}
                             {% if screening.name in (settings.default_items_list if settings else []) %}
@@ -959,7 +958,6 @@ function setToLastAppointmentDate() {
     document.getElementById('labs_cutoff_months').value = 0;
     document.getElementById('imaging_cutoff_months').value = 0;
     document.getElementById('consults_cutoff_months').value = 0;
-    document.getElementById('consults_cutoff_months').value = 0;
     document.getElementById('imaging_cutoff_months').value = 0;
     document.getElementById('hospital_cutoff_months').value = 0;
 
@@ -1011,22 +1009,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const cutoffModal = document.getElementById('cutoffModal');
     if (cutoffModal) {
         cutoffModal.addEventListener('show.bs.modal', function() {
-			let modalOpenedOnce = false;
-
-		    // Store the initial cutoff values when modal is first opened
-		    if (!modalOpenedOnce) {
-		        const inputs = cutoffModal.querySelectorAll('input[type="number"]');
-		        inputs.forEach(input => {
-		            // Only set to 0 if completely empty or None - preserve existing saved values
-		            if (input.value === '' || input.value === 'None' || input.value === null) {
-		                input.value = 0;
-		            }
-		            // Store the initial value for comparison (this is the server-provided value)
-		            input.dataset.initialValue = input.value;
-		            input.dataset.userModified = 'false';
-		        });
-		        modalOpenedOnce = true;
-		    }
+            loadRecentAppointments();
         });
     }
 });
@@ -1457,69 +1440,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-</script>
-
-<script>
-// Add event listener for the cutoff modal to properly initialize input fields
-document.addEventListener('DOMContentLoaded', function() {
-    const cutoffModal = document.getElementById('cutoffModal');
-    if (cutoffModal) {
-        cutoffModal.addEventListener('show.bs.modal', function() {
-            // Initialize user modification tracking on the input fields of the modal
-			let modalOpenedOnce = false;
-
-		    // Store the initial cutoff values when modal is first opened
-		    if (!modalOpenedOnce) {
-		        const inputs = cutoffModal.querySelectorAll('input[type="number"]');
-		        inputs.forEach(input => {
-		            // Only set to 0 if completely empty or None - preserve existing saved values
-		            if (input.value === '' || input.value === 'None' || input.value === null) {
-		                input.value = 0;
-		            }
-		            // Store the initial value for comparison (this is the server-provided value)
-		            input.dataset.initialValue = input.value;
-		            input.dataset.userModified = 'false';
-					// Track user modifications more accurately
-			        input.addEventListener('input', function() {
-			            if (modalOpenedOnce) {
-			                // Mark as user modified if value differs from initial server value
-			                if (this.value !== this.dataset.initialValue) {
-			                    this.dataset.userModified = 'true';
-			                    console.log(`Marked ${this.name || this.id} as user modified: ${this.value} (was ${this.dataset.initialValue})`);
-			                }
-			            }
-			        });
-
-			        // Track manual typing
-			        input.addEventListener('keydown', function() {
-			            if (modalOpenedOnce) {
-			                // Any keydown in the field indicates user interaction
-			                this.dataset.userInteracted = 'true';
-			            }
-			        });
-
-			        // Confirm modification on blur if user actually typed
-			        input.addEventListener('blur', function() {
-			            if (modalOpenedOnce && this.dataset.userInteracted === 'true') {
-			                if (this.value !== this.dataset.initialValue) {
-			                    this.dataset.userModified = 'true';
-			                    console.log(`Confirmed user modification for ${this.name || this.id}: ${this.value}`);
-			                }
-			            }
-			        });
-
-			        // Reset interaction tracking on focus
-			        input.addEventListener('focus', function() {
-			            if (modalOpenedOnce) {
-			                this.dataset.userInteracted = 'false';
-			            }
-			        });
-		        });
-		        modalOpenedOnce = true;
-		    }
-        });
-    }
-});
 </script>
 {% endif %}
 {% endblock %}
