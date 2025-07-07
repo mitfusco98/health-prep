@@ -227,6 +227,17 @@ def save_cutoff_settings():
                 months = int(value) if value else 0
                 settings.set_screening_cutoff(screening_name, months)
                 print(f"Setting cutoff for '{screening_name}': {months} months")
+                
+        # Debug: Print all form data to help identify issues
+        print("DEBUG: All form data received:")
+        for key, value in request.form.items():
+            print(f"  {key}: {value}")
+            
+        # Debug: Print current screening cutoffs after processing
+        print("DEBUG: Current screening cutoffs after processing:")
+        if hasattr(settings, 'screening_cutoffs_dict'):
+            for screening, cutoff in settings.screening_cutoffs_dict.items():
+                print(f"  {screening}: {cutoff} months")
 
         db.session.commit()
         flash("Data cutoff settings updated successfully!", "success")
