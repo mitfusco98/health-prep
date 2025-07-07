@@ -685,7 +685,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="mb-3">
                                 <label class="form-label">Available Screening Types</label>
                                 <div id="screening-buttons" class="d-flex flex-wrap gap-2 mb-3">
-                                    {% set current_default_list = settings.default_items_list if settings else [] %}
+                                    {% set current_default_list = settings.default_items_list if settings and settings.default_items_list else [] %}
 
                                     {% for screening in active_screening_types %}
                                     <button type="button" class="btn screening-btn {% if screening.name in current_default_list %}btn-primary{% else %}btn-outline-primary{% endif %}" 
@@ -761,7 +761,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <div class="row">
                         {% for screening in active_screening_types %}
-                            {% if screening.name in (settings.default_items_list if settings else []) %}
+                            {% if screening.name in (settings.default_items_list if settings and settings.default_items_list else []) %}
                             <div class="col-md-4 col-lg-3 mb-2">
                                 <div class="text-center">
                                     <h6 class="text-info">{{ screening.name }}</h6>
@@ -890,7 +890,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="text-muted small mb-3">Individual cutoff settings for each active screening type in default checklist items</p>
                     <div class="row">
                         {% for screening in active_screening_types %}
-                            {% if screening.name in (settings.default_items_list if settings else []) %}
+                            {% if screening.name in (settings.default_items_list if settings and settings.default_items_list else []) %}
                             <div class="col-md-6 mb-3">
                                 <label for="screening_{{ loop.index0 }}_cutoff_months" class="form-label">
                                     <i class="fas fa-check-circle text-info me-2"></i>{{ screening.name }}
@@ -1096,6 +1096,19 @@ function updateScreeningSelections() {
 document.addEventListener('DOMContentLoaded', function() {
     updateStatusSelections();
     updateScreeningSelections();
+    
+    // Ensure buttons are properly initialized based on current selections
+    const currentSelections = document.getElementById('screening-selections').value;
+    if (currentSelections) {
+        const selectedItems = currentSelections.split(',');
+        document.querySelectorAll('#screening-buttons .screening-btn').forEach(btn => {
+            const value = btn.dataset.value;
+            if (selectedItems.includes(value)) {
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-primary');
+            }
+        });
+    }
 
     // Custom status options handler
     const addCustomStatusBtn = document.getElementById('add_custom_status');

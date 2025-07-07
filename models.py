@@ -990,6 +990,20 @@ class ChecklistSettings(db.Model):
         return []
 
     @property
+    def default_items_list(self):
+        """Convert default_items string to list"""
+        if self.default_items:
+            return [item.strip() for item in self.default_items.split("\n") if item.strip()]
+        return []
+
+    @property
+    def custom_status_list(self):
+        """Convert custom_status_options string to list"""
+        if self.custom_status_options:
+            return [option.strip() for option in self.custom_status_options.split(",") if option.strip()]
+        return []
+
+    @property
     def screening_cutoffs_dict(self):
         """Convert screening_cutoffs JSON string to dictionary"""
         if self.screening_cutoffs:
