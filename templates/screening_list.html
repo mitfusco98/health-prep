@@ -758,7 +758,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <hr class="my-4">
                     <h6 class="mb-3">Active Screening Types Cutoffs</h6>
                     <p class="text-muted small mb-3">These cutoffs apply to all active screening types in default checklist items</p>
-
+                    
                     <div class="row">
                         {% for screening in active_screening_types %}
                             {% if screening.name in (settings.default_items_list if settings else []) %}
@@ -896,11 +896,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <i class="fas fa-check-circle text-info me-2"></i>{{ screening.name }}
                                 </label>
                                 <div class="input-group">
-                                    <input type="number" 
-                                       class="form-control screening-cutoff" 
-                                       id="screening_{{ loop.index0 }}_cutoff_months" 
-                                       name="screening_{{ screening.name|replace(' ', '_')|lower }}_cutoff_months" 
-                                       value="{{ settings.get_screening_cutoff(screening.name, 0) if settings else 0 }}" required>
+                                    <input type="number" class="form-control screening-cutoff" 
+                                           id="screening_{{ loop.index0 }}_cutoff_months" 
+                                           name="screening_{{ screening.name|replace(' ', '_')|lower }}_cutoff_months" 
+                                           min="0" max="120" 
+                                           value="{{ settings.get_screening_cutoff(screening.name) if settings else 12 }}" required>
                                     <span class="input-group-text">months</span>
                                 </div>
                                 <div class="form-text">Cutoff for {{ screening.name }} documents</div>
@@ -913,14 +913,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-4">
                         <h6>Quick Preset Options</h6>
                         <div class="d-flex flex-wrap gap-2 mb-3">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(3, 3, 3, 3)">
-                                Conservative (3m/3m/3m/3m)
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(3, 6, 6, 12)">
+                                Conservative (3m/6m/6m/12m)
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(6, 6, 6, 6)">
-                                Standard (6m/6m/6m/6m)
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(6, 12, 12, 24)">
+                                Standard (6m/12m/12m/24m)
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(12, 12, 12, 12)">
-                                Extended (12m/12m/12m/12m)
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(12, 24, 24, 36)">
+                                Extended (12m/24m/24m/36m)
                             </button>
                             <button type="button" class="btn btn-outline-info btn-sm" onclick="setToLastAppointmentDate()">
                                 To Last Appointment Date
@@ -938,9 +938,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <script>
-// Track initial modal state to distinguish between first load and user interactions
-let modalOpenedOnce = false;
-
 // Preset cutoff configuration function
 function setPresetCutoffs(labs, imaging, consults, hospital) {
     document.getElementById('labs_cutoff_months').value = labs;
@@ -948,13 +945,10 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
     document.getElementById('consults_cutoff_months').value = consults;
     document.getElementById('hospital_cutoff_months').value = hospital;
 
-    // Update all screening cutoffs that haven't been manually modified by user
+    // Also apply to all screening-specific cutoffs
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     screeningInputs.forEach(input => {
-        // Check if the input has been manually changed (not just from server defaults)
-        if (!input.dataset.userModified) {
-            input.value = labs; // Use the same value for all since they're now uniform
-        }
+        input.value = Math.max(labs, imaging, consults, hospital); // Use the highest value
     });
 }
 
@@ -964,32 +958,17 @@ function setToLastAppointmentDate() {
     document.getElementById('labs_cutoff_months').value = 0;
     document.getElementById('imaging_cutoff_months').value = 0;
     document.getElementById('consults_cutoff_months').value = 0;
+    document.getElementById('imaging_cutoff_months').value = 0;
     document.getElementById('hospital_cutoff_months').value = 0;
 
-    // Clear all screening-specific cutoffs that haven't been manually modified
+    // Clear all screening-specific cutoffs
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     screeningInputs.forEach(input => {
-        if (!input.dataset.userModified) {
-            input.value = 0;
-        }
+        input.value = 0;
     });
 
     // Show confirmation
     alert('Cutoffs set to use each patient\'s last appointment date (excluding today\'s appointments)');
-}
-
-// Initialize screening cutoffs to 0 only on first modal open (if no existing values)
-function initializeScreeningCutoffsOnFirstLoad() {
-    if (!modalOpenedOnce) {
-        const screeningInputs = document.querySelectorAll('.screening-cutoff');
-        screeningInputs.forEach(input => {
-            // Only initialize if the field is empty (not pre-populated from server)
-            if (input.value === '' || input.value === 'None') {
-                input.value = 0;
-            }
-        });
-        modalOpenedOnce = true;
-    }
 }
 
 // Calculate exact months difference between two dates
@@ -1025,47 +1004,14 @@ function setAppointmentBasedCutoffs(appointmentDate) {
     document.getElementById('hospital_cutoff_months').value = months;
 }
 
-// Load recent appointments when modal is shown and handle initialization
+// Load recent appointments when modal is shown
 document.addEventListener('DOMContentLoaded', function() {
     const cutoffModal = document.getElementById('cutoffModal');
     if (cutoffModal) {
         cutoffModal.addEventListener('show.bs.modal', function() {
             loadRecentAppointments();
-            initializeScreeningCutoffsOnFirstLoad();
         });
     }
-
-    // Track user modifications to screening cutoff inputs (only after modal initialization)
-    const screeningInputs = document.querySelectorAll('.screening-cutoff');
-    screeningInputs.forEach(input => {
-        // Mark as user-modified when user changes the value (but only after modal opens)
-        input.addEventListener('input', function() {
-            if (modalOpenedOnce) {
-                this.dataset.userModified = 'true';
-            }
-        });
-        
-        // Also track when user manually types in the field (but only after modal opens)
-        input.addEventListener('keyup', function() {
-            if (modalOpenedOnce) {
-                this.dataset.userModified = 'true';
-            }
-        });
-
-        // Mark as user-modified when focus leaves the field with a different value
-        input.addEventListener('blur', function() {
-            if (modalOpenedOnce && this.dataset.originalValue && this.value !== this.dataset.originalValue) {
-                this.dataset.userModified = 'true';
-            }
-        });
-
-        // Store original value when field gets focus
-        input.addEventListener('focus', function() {
-            if (modalOpenedOnce && !this.dataset.originalValue) {
-                this.dataset.originalValue = this.value;
-            }
-        });
-    });
 });
 
 // Load recent appointments for appointment-based cutoffs
@@ -1151,43 +1097,6 @@ function updateScreeningSelections() {
 document.addEventListener('DOMContentLoaded', function() {
     updateStatusSelections();
     updateScreeningSelections();
-
-    // Ensure button states are correctly reflected in the hidden input
-    // This fixes any discrepancy between server-rendered state and JS state
-    const screeningSelectionInput = document.getElementById('screening-selections');
-    if (screeningSelectionInput) {
-        const currentValue = screeningSelectionInput.value;
-        console.log('Initial screening selections from server:', currentValue);
-
-        // If there's a mismatch, trust the server state and update buttons accordingly
-        if (currentValue) {
-            const serverSelections = currentValue.split(',').map(s => s.trim()).filter(s => s);
-            const buttonSelections = Array.from(document.querySelectorAll('#screening-buttons .btn-primary')).map(btn => btn.dataset.value);
-
-            console.log('Server selections:', serverSelections);
-            console.log('Button selections:', buttonSelections);
-
-            // Sync button states with server data
-            document.querySelectorAll('#screening-buttons .screening-btn').forEach(button => {
-                const value = button.dataset.value;
-                const shouldBeSelected = serverSelections.includes(value);
-                const isSelected = button.classList.contains('btn-primary');
-
-                if (shouldBeSelected && !isSelected) {
-                    button.classList.remove('btn-outline-primary');
-                    button.classList.add('btn-primary');
-                    console.log('Activated button for:', value);
-                } else if (!shouldBeSelected && isSelected) {
-                    button.classList.remove('btn-primary');
-                    button.classList.add('btn-outline-primary');
-                    console.log('Deactivated button for:', value);
-                }
-            });
-
-            // Update display after syncing
-            updateScreeningSelections();
-        }
-    }
 
     // Custom status options handler
     const addCustomStatusBtn = document.getElementById('add_custom_status');
