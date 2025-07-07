@@ -226,12 +226,18 @@ def save_cutoff_settings():
                 # Extract screening name from field name (screening_cutoff_ScreeningName)
                 screening_name = key.replace("screening_cutoff_", "")
                 try:
-                    months = int(value) if value and value.strip() else 0
+                    # Preserve user input - convert to int but don't default to 0 unless explicitly empty
+                    if value and value.strip():
+                        months = int(value)
+                    else:
+                        months = 0  # Only use 0 if field is actually empty
+                    
                     settings.set_screening_cutoff(screening_name, months)
                     screening_cutoffs_processed += 1
-                    print(f"Successfully set cutoff for '{screening_name}': {months} months")
+                    print(f"DEBUG: Successfully set cutoff for '{screening_name}': {months} months (original value: '{value}')")
                 except (ValueError, TypeError) as e:
-                    print(f"Error processing cutoff for '{screening_name}': {e}")
+                    print(f"ERROR: Error processing cutoff for '{screening_name}' with value '{value}': {e}")
+                    # Don't override with 0 if there's an error - keep existing value
                 
         print(f"DEBUG: Processed {screening_cutoffs_processed} screening cutoffs")
         
@@ -242,11 +248,20 @@ def save_cutoff_settings():
             
         # Debug: Print current screening cutoffs after processing
         print("DEBUG: Current screening cutoffs after processing:")
-        if hasattr(settings, 'screening_cutoffs_dict'):
+        if hasattr(settings, 'screening_cutoffs_dict') and settings.screening_cutoffs_dict:
             for screening, cutoff in settings.screening_cutoffs_dict.items():
                 print(f"  {screening}: {cutoff} months")
         else:
-            print("  No screening_cutoffs_dict attribute found")
+            print("  No screening_cutoffs_dict found or empty")
+            
+        # Debug: Print the raw screening_cutoffs value
+        print(f"DEBUG: Raw screening_cutoffs value: {repr(settings.screening_cutoffs)}")
+        
+        # Specific debug for problematic screening types
+        bone_density_cutoff = settings.get_screening_cutoff("Bone Density Screening")
+        hba1c_cutoff = settings.get_screening_cutoff("HbA1c Testing")
+        print(f"DEBUG: Bone Density Screening cutoff: {bone_density_cutoff}")
+        print(f"DEBUG: HbA1c Testing cutoff: {hba1c_cutoff}")
 
         db.session.commit()
         flash("Data cutoff settings updated successfully!", "success")
