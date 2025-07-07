@@ -120,6 +120,7 @@ A comprehensive healthcare preparation application built with Flask that manages
 - **Performance**: Indexed queries and caching layers
 
 ## Changelog
+- July 7, 2025: Replaced "screenings" medical data subsection with "other" subsection for miscellaneous documents. Updated both frontend patient detail template and prep sheet template to display uncategorized documents (those not classified as lab, imaging, consult, or hospital documents). Backend now categorizes documents and provides other_documents data to both patient detail and prep sheet views.
 - July 1, 2025: Enhanced document screening functionality with multi-criteria matching system. Added confidence scoring, match source tracking, and integrated document matching into prep sheet template. Created 18 sample medical documents (8 matching, 10 non-matching) to test screening logic. Documents now display in status/notes boxes with confidence badges and visual styling.
 - June 26, 2025: Streamlined keyword and screening management system to eliminate redundant API calls and "old system" references. Created efficient screening matcher that uses only current 'manage screening types' system with keyword caching.
 - June 26, 2025: Fixed Flask application startup issues by replacing complex middleware system with minimal working healthcare app. Resolved route import errors and template build failures.

@@ -348,18 +348,18 @@
                         </div>
                     </div>
 
-                    <!-- Screenings -->
+                    <!-- Other Documents -->
                     <div class="col-md-4 mb-3">
                         <div class="card h-100">
                             <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-clipboard-check me-1"></i> Screenings</h5>
-                                <p class="card-text small text-muted">Preventive screenings and recommendations</p>
+                                <h5 class="card-title"><i class="fas fa-file-medical me-1"></i> Other</h5>
+                                <p class="card-text small text-muted">Miscellaneous medical documents</p>
                             </div>
                             <div class="card-footer d-flex justify-content-between bg-transparent">
-                                <a href="#" class="btn btn-sm btn-primary disabled">
+                                <a href="{{ url_for('add_document', patient_id=patient.id) }}" class="btn btn-sm btn-primary">
                                     <i class="fas fa-plus me-1"></i> Add
                                 </a>
-                                <a href="#" class="btn btn-sm btn-outline-secondary section-link" data-section="screenings">
+                                <a href="#" class="btn btn-sm btn-outline-secondary section-link" data-section="other">
                                     <i class="fas fa-history me-1"></i> History
                                 </a>
                             </div>
@@ -820,57 +820,40 @@
         </div>
     </div>
 
-    <!-- Screenings History Section -->
-    <div id="screenings-history" class="history-section" style="display: none;">
+    <!-- Other Documents History Section -->
+    <div id="other-history" class="history-section" style="display: none;">
         <div class="card">
             <div class="card-header bg-secondary bg-opacity-25 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Screenings History</h5>
+                <h5 class="mb-0">Other Documents History</h5>
                 <button type="button" class="btn-close" aria-label="Close"></button>
             </div>
             <div class="card-body">
-                {% if screenings %}
+                {% if other_documents|length > 0 %}
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
                         <thead>
                             <tr>
-                                <th>Screening</th>
-                                <th>Last Completed</th>
-                                <th>Due Date</th>
-                                <th>Frequency</th>
-                                <th>Priority</th>
+                                <th>File Name</th>
+                                <th>Date</th>
+                                <th>Origin</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for screening in screenings %}
+                            {% for doc in other_documents %}
                             <tr>
-                                <td>{{ screening.screening_type }}</td>
-                                <td>{{ screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else 'Never' }}</td>
+                                <td>{{ doc.document_name if doc.document_name else doc.filename }}</td>
+                                <td>{{ doc.document_date.strftime('%Y-%m-%d') if doc.document_date else 'N/A' }}</td>
+                                <td>{{ doc.source_system }}</td>
                                 <td>
-                                    {% if screening.due_date %}
-                                        {% if screening.due_date < now() %}
-                                        <span class="text-danger">{{ screening.due_date.strftime('%Y-%m-%d') }} (Overdue)</span>
-                                        {% else %}
-                                        {{ screening.due_date.strftime('%Y-%m-%d') }}
-                                        {% endif %}
-                                    {% else %}
-                                        Not specified
-                                    {% endif %}
-                                </td>
-                                <td>{{ screening.frequency }}</td>
-                                <td>
-                                    {% if screening.priority == 'High' %}
-                                    <span class="badge bg-danger">High</span>
-                                    {% elif screening.priority == 'Medium' %}
-                                    <span class="badge bg-warning">Medium</span>
-                                    {% else %}
-                                    <span class="badge bg-info">Low</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{{ url_for('delete_screening', patient_id=patient.id, screening_id=screening.id) }}" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-trash me-1"></i> Delete
-                                    </a>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('view_document', document_id=doc.id, return_to='medical_data') }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye me-1"></i> View
+                                        </a>
+                                        <a href="{{ url_for('delete_document', patient_id=patient.id, document_id=doc.id) }}" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash me-1"></i> Delete
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -878,7 +861,7 @@
                     </table>
                 </div>
                 {% else %}
-                <div class="alert alert-info">No screening recommendations for this patient.</div>
+                <div class="alert alert-info">No other documents available for this patient.</div>
                 {% endif %}
             </div>
         </div>

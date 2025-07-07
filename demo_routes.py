@@ -531,6 +531,18 @@ def patient_detail(patient_id):
         for doc in documents
         if doc.document_type == DocumentType.DISCHARGE_SUMMARY.value
     ]
+    
+    # Other documents (not categorized as lab, imaging, consult, or hospital)
+    categorized_types = {
+        DocumentType.LAB_REPORT.value,
+        DocumentType.RADIOLOGY_REPORT.value,
+        DocumentType.CONSULTATION.value,
+        DocumentType.DISCHARGE_SUMMARY.value
+    }
+    other_documents = [
+        doc for doc in documents 
+        if doc.document_type not in categorized_types or doc.document_type is None
+    ]
 
     # Helper function for templates to access current date
     def now():
@@ -560,6 +572,7 @@ def patient_detail(patient_id):
             imaging_documents=imaging_documents,
             consult_documents=consult_documents,
             hospital_documents=hospital_documents,
+            other_documents=other_documents,
             past_appointments=past_appointments,
             upcoming_appointments=upcoming_appointments,
             now=now,
@@ -735,6 +748,25 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         .order_by(Immunization.administration_date.desc())
         .all()
     )
+    
+    # Get all patient documents for categorization
+    documents = (
+        MedicalDocument.query.filter_by(patient_id=patient_id)
+        .order_by(MedicalDocument.document_date.desc())
+        .all()
+    )
+    
+    # Categorize documents for "other" section (documents not in main categories)
+    categorized_types = {
+        DocumentType.LAB_REPORT.value,
+        DocumentType.RADIOLOGY_REPORT.value,
+        DocumentType.CONSULTATION.value,
+        DocumentType.DISCHARGE_SUMMARY.value
+    }
+    other_documents = [
+        doc for doc in documents 
+        if doc.document_type not in categorized_types or doc.document_type is None
+    ]
 
     # Get past 3 appointments for the patient
     past_appointments = (
@@ -962,6 +994,8 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             screening_document_matches=screening_document_matches,
             # Enhanced medical data with documents and cutoff filtering
             filtered_medical_data=filtered_medical_data,
+            # Other documents for miscellaneous section
+            other_documents=other_documents,
         )
     )
 

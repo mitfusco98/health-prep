@@ -478,7 +478,7 @@
         
         <!-- Screening Checklist -->
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0">Screening Checklist</h6>
+            <h6 class="mb-0">Other Documents</h6>
             <button class="btn btn-sm btn-outline-secondary" id="reset-checkboxes">
                 Reset Checkboxes
             </button>
@@ -495,44 +495,32 @@
                     <thead class="table-light">
                         <tr>
                             <th style="width: 5%"></th>
-                            <th style="width: 45%">Screening</th>
+                            <th style="width: 45%">Document</th>
                             <th style="width: 50%">Status/Notes</th>
                         </tr>
                     </thead>
                     <tbody>
-                    {% for item in recommended_screenings %}
+                    {% for doc in other_documents %}
                         <tr>
                             <td class="text-center">
                                 <input class="form-check-input" type="checkbox" id="screening_{{ loop.index }}">
                             </td>
                             <td>
                                 <label class="form-check-label" for="screening_{{ loop.index }}">
-                                    {{ item }}
+                                    {{ doc.document_name if doc.document_name else doc.filename }}
                                 </label>
+                                <br>
+                                <small class="text-muted">
+                                    {{ doc.document_date.strftime('%Y-%m-%d') if doc.document_date else 'No date' }} | 
+                                    {{ doc.source_system if doc.source_system else 'Unknown source' }}
+                                </small>
                             </td>
                             <td>
                                 <div class="screening-field-container">
-                                    {% set match_data = screening_document_matches.get(item) %}
-                                    {% if match_data %}
-                                        <input type="text" class="form-control form-control-sm screening-consolidated-field has-content" 
-                                               id="screening_status_note_{{ loop.index }}" 
-                                               list="statusOptions_{{ loop.index }}"
-                                               value="{{ match_data.status_notes }}"
-                                               placeholder="Type or select status/notes..."
-                                               title="Document Match: {{ match_data.document_name }} ({{ match_data.confidence_percent }}% confidence)">
-                                        <small class="text-muted">
-                                            <i class="fas fa-file-medical"></i> 
-                                            {{ match_data.document_name }} 
-                                            <span class="badge bg-{{ 'success' if match_data.confidence >= 0.8 else 'warning' if match_data.confidence >= 0.6 else 'secondary' }}">
-                                                {{ match_data.confidence_percent }}%
-                                            </span>
-                                        </small>
-                                    {% else %}
-                                        <input type="text" class="form-control form-control-sm screening-consolidated-field" 
-                                               id="screening_status_note_{{ loop.index }}" 
-                                               list="statusOptions_{{ loop.index }}"
-                                               placeholder="Type or select status/notes...">
-                                    {% endif %}
+                                    <input type="text" class="form-control form-control-sm screening-consolidated-field" 
+                                           id="screening_status_note_{{ loop.index }}" 
+                                           list="statusOptions_{{ loop.index }}"
+                                           placeholder="Type or select status/notes...">
                                     
                                     <datalist id="statusOptions_{{ loop.index }}">
                                         {% for status in status_options %}
@@ -555,43 +543,31 @@
             <!-- List Layout -->
             <div class="screening-container">
                 <div class="screening-header">
-                    <div class="screening-cell">Screening</div>
+                    <div class="screening-cell">Document</div>
                     <div class="screening-status-note-cell">Status/Notes</div>
                 </div>
                     
-                {% for item in recommended_screenings %}
+                {% for doc in other_documents %}
                 <div class="screening-row">
                     <div class="screening-cell">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="screening_{{ loop.index }}">
                             <label class="form-check-label" for="screening_{{ loop.index }}">
-                                {{ item }}
+                                {{ doc.document_name if doc.document_name else doc.filename }}
                             </label>
+                            <br>
+                            <small class="text-muted">
+                                {{ doc.document_date.strftime('%Y-%m-%d') if doc.document_date else 'No date' }} | 
+                                {{ doc.source_system if doc.source_system else 'Unknown source' }}
+                            </small>
                         </div>
                     </div>
                     <div class="screening-status-note-cell">
                         <div class="screening-field-container">
-                            {% set match_data = screening_document_matches.get(item) %}
-                            {% if match_data %}
-                                <input type="text" class="form-control form-control-sm screening-consolidated-field has-content" 
-                                       id="screening_status_note_{{ loop.index }}" 
-                                       list="statusOptions_{{ loop.index }}"
-                                       value="{{ match_data.status_notes }}"
-                                       placeholder="Type or select status/notes..."
-                                       title="Document Match: {{ match_data.document_name }} ({{ match_data.confidence_percent }}% confidence)">
-                                <small class="text-muted">
-                                    <i class="fas fa-file-medical"></i> 
-                                    {{ match_data.document_name }} 
-                                    <span class="badge bg-{{ 'success' if match_data.confidence >= 0.8 else 'warning' if match_data.confidence >= 0.6 else 'secondary' }}">
-                                        {{ match_data.confidence_percent }}%
-                                    </span>
-                                </small>
-                            {% else %}
-                                <input type="text" class="form-control form-control-sm screening-consolidated-field" 
-                                       id="screening_status_note_{{ loop.index }}" 
-                                       list="statusOptions_{{ loop.index }}"
-                                       placeholder="Type or select status/notes...">
-                            {% endif %}
+                            <input type="text" class="form-control form-control-sm screening-consolidated-field" 
+                                   id="screening_status_note_{{ loop.index }}" 
+                                   list="statusOptions_{{ loop.index }}"
+                                   placeholder="Type or select status/notes...">
                             
                             <datalist id="statusOptions_{{ loop.index }}">
                                 {% for status in status_options %}
