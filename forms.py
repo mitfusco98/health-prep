@@ -422,6 +422,12 @@ class DocumentUploadForm(FlaskForm):
             ),  # 10MB limit
         ],
     )
+    patient_id = SelectField(
+        "Patient Name",
+        validators=[DataRequired()],
+        coerce=int,
+        description="Select the patient this document belongs to",
+    )
     document_name = StringField(
         "File Name",
         validators=[DataRequired()],
@@ -458,6 +464,11 @@ class DocumentUploadForm(FlaskForm):
         description="Any additional notes about this document",
     )
     submit = SubmitField("Upload Document")
+
+    def __init__(self, *args, **kwargs):
+        super(DocumentUploadForm, self).__init__(*args, **kwargs)
+        # Populate patient choices - will be set in the route
+        self.patient_id.choices = []
 
 
 class AppointmentForm(FlaskForm):

@@ -2292,16 +2292,31 @@ def patient_documents(patient_id):
     )
 
 
-@app.route("/patients/<int:patient_id>/document/add", methods=["GET", "POST"])
-def add_document(patient_id):
-    """Add a document for a patient"""
-    patient = Patient.query.get_or_404(patient_id)
+@app.route("/patients/document/add", methods=["GET", "POST"])
+def add_document_unified():
+    """Unified document upload for all patients and subsections"""
     form = DocumentUploadForm()
-
-    # Get the document type from query parameter
-    doc_type = request.args.get("type")
+    
+    # Populate patient choices
+    patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
+    form.patient_id.choices = [(p.id, f"{p.full_name} (MRN: {p.mrn})") for p in patients]
+    
+    # Smart defaults from query parameters
+    default_patient_id = request.args.get("patient_id", type=int)
+    default_subsection = request.args.get("subsection")
+    
+    # Set defaults if provided
+    if request.method == "GET":
+        if default_patient_id:
+            form.patient_id.data = default_patient_id
+        if default_subsection:
+            form.document_type.data = default_subsection
 
     if form.validate_on_submit():
+        # Get the selected patient
+        patient_id = form.patient_id.data
+        patient = Patient.query.get_or_404(patient_id)
+        
         # Initialize variables with default values
         content = None
         binary_content = None
@@ -2335,7 +2350,11 @@ def add_document(patient_id):
                     content = file_content.decode("utf-8", errors="replace")
                     binary_content = None
                     # Process document to classify it
-                    document_metadata = process_document_upload(content, filename)
+                    try:
+                        from medical_document_parser import process_document_upload
+                        document_metadata = process_document_upload(content, filename)
+                    except ImportError:
+                        document_metadata = {"filename": filename, "content_preview": content[:200]}
                 except:
                     # If decoding fails, treat as binary
                     binary_content = file_content
@@ -2348,75 +2367,76 @@ def add_document(patient_id):
             # No file uploaded - create a reference-only document entry
             document_metadata = {
                 "is_reference_only": True,
-                "notes": "Document reference only - no file attached",
+                "manual_entry": True,
             }
 
-        # Use the document type from query parameter if available
-        document_type = DocumentType.UNKNOWN.value
-        if doc_type == "lab":
-            document_type = DocumentType.LAB_REPORT.value
-        elif doc_type == "imaging":
-            document_type = DocumentType.RADIOLOGY_REPORT.value
-        elif doc_type == "consult":
-            document_type = DocumentType.CONSULTATION.value
-        elif doc_type == "hospital":
-            document_type = DocumentType.DISCHARGE_SUMMARY.value
-        else:
-            # Fall back to the form selection when no type is specified by the route
-            document_type = form.document_type.data
+        try:
+            # Create the medical document record
+            document = MedicalDocument(
+                patient_id=patient_id,
+                filename=filename,
+                document_name=form.document_name.data,
+                document_type=form.document_type.data,
+                content=content,
+                binary_content=binary_content,
+                is_binary=is_binary,
+                mime_type=mime_type,
+                source_system=form.source_system.data,
+                document_date=form.document_date.data,
+                notes=form.notes.data,
+                doc_metadata=json.dumps(document_metadata) if document_metadata else None,
+            )
 
-        # Create new document
-        document = MedicalDocument(
-            patient_id=patient_id,
-            filename=filename,
-            document_name=form.document_name.data,
-            document_type=document_type,
-            content=content,
-            binary_content=binary_content,
-            is_binary=is_binary,
-            mime_type=mime_type,
-            source_system=form.source_system.data,
-            document_date=form.document_date.data or datetime.now(),
-            doc_metadata=json.dumps(document_metadata),
-        )
+            db.session.add(document)
+            db.session.commit()
 
-        db.session.add(document)
-        db.session.commit()
+            # Success message and redirect
+            subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
+            flash(f"{subsection_name} document '{form.document_name.data}' uploaded successfully for {patient.full_name}!", "success")
+            
+            # Redirect to patient detail page
+            return redirect(url_for("patient_detail", patient_id=patient_id))
 
-        flash("Document uploaded successfully.", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error uploading document: {str(e)}", "error")
+            app.logger.error(f"Document upload error: {str(e)}")
 
-        # Always redirect back to patient detail page with medical-data anchor
-        return redirect(
-            url_for("patient_detail", patient_id=patient_id) + "#medical-data"
-        )
-
-    # Set document type mapping for the template
-    doc_type_map = {
-        "lab": "LAB_REPORT",
-        "imaging": "RADIOLOGY_REPORT",
-        "consult": "CONSULTATION",
-        "hospital": "DISCHARGE_SUMMARY",
-    }
-    doc_type_value = doc_type_map.get(doc_type, "")
-
-    # Update title based on document type
-    title = "Upload Document"
-    if doc_type == "lab":
-        title = "Upload Lab Report"
-    elif doc_type == "imaging":
-        title = "Upload Imaging Study"
-    elif doc_type == "consult":
-        title = "Upload Consultation Report"
-    elif doc_type == "hospital":
-        title = "Upload Hospital Summary"
-
+    # Set title and determine if we have defaults
+    title = "Upload Medical Document"
+    if default_patient_id:
+        patient = Patient.query.get(default_patient_id)
+        if patient:
+            title = f"Upload Document for {patient.full_name}"
+    
     return render_template(
         "document_upload.html",
         form=form,
-        patient=patient,
-        doc_type=doc_type_value,
         title=title,
+        unified_upload=True,
     )
+
+
+@app.route("/patients/<int:patient_id>/document/add", methods=["GET", "POST"])
+def add_document(patient_id):
+    """Add a document for a specific patient (redirects to unified upload)"""
+    # Get query parameters to preserve
+    subsection = request.args.get("type")
+    
+    # Build redirect URL with smart defaults
+    redirect_params = {"patient_id": patient_id}
+    if subsection:
+        # Map old type parameter to new subsection format
+        type_mapping = {
+            "lab": "LAB_REPORT",
+            "imaging": "RADIOLOGY_REPORT", 
+            "consult": "CONSULTATION",
+            "hospital": "DISCHARGE_SUMMARY",
+            "other": "OTHER"
+        }
+        redirect_params["subsection"] = type_mapping.get(subsection, "OTHER")
+    
+    return redirect(url_for("add_document_unified", **redirect_params))
 
 
 @app.route("/documents/<int:document_id>")
