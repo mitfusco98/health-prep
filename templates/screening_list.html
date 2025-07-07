@@ -892,15 +892,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         {% for screening in active_screening_types %}
                             {% if screening.name in (settings.default_items_list if settings and settings.default_items_list else []) %}
                             <div class="col-md-6 mb-3">
-                                <label for="screening_cutoff_{{ screening.name|replace(' ', '_')|replace('-', '_')|lower }}" class="form-label">
+                                <label for="screening_cutoff_{{ loop.index }}" class="form-label">
                                     <i class="fas fa-check-circle text-info me-2"></i>{{ screening.name }}
                                 </label>
                                 <div class="input-group">
                                     <input type="number" class="form-control screening-cutoff" 
-                                           id="screening_cutoff_{{ screening.name|replace(' ', '_')|replace('-', '_')|lower }}" 
+                                           id="screening_cutoff_{{ loop.index }}" 
                                            name="screening_cutoff_{{ screening.name }}"
                                            data-screening-name="{{ screening.name }}"
                                            data-original-value="{{ settings.get_screening_cutoff(screening.name) if settings else 0 }}"
+                                           data-user-modified="false"
+                                           data-preset-modified="false"
                                            min="0" max="120" 
                                            value="{{ settings.get_screening_cutoff(screening.name) if settings else 0 }}" required>
                                     <span class="input-group-text">months</span>
@@ -942,11 +944,10 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 // Preset cutoff configuration function
 function setPresetCutoffs(labs, imaging, consults, hospital) {
-    // Only update if user confirms they want to override existing values
+    // Check if any screening fields have been modified by user
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     let hasUserInput = false;
 
-    // Check if any screening fields have been modified by user
     screeningInputs.forEach(input => {
         if (input.dataset.userModified === 'true') {
             hasUserInput = true;
@@ -959,12 +960,13 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
         }
     }
 
+    // Set main cutoff values
     document.getElementById('labs_cutoff_months').value = labs;
     document.getElementById('imaging_cutoff_months').value = imaging;
     document.getElementById('consults_cutoff_months').value = consults;
     document.getElementById('hospital_cutoff_months').value = hospital;
 
-    // Apply the same preset value to all screening-specific cutoffs only if user confirms
+    // Apply the same preset value to all screening-specific cutoffs
     screeningInputs.forEach(input => {
         // Only apply preset if user hasn't manually modified this field
         if (input.dataset.userModified !== 'true') {
@@ -982,7 +984,7 @@ function setToLastAppointmentDate() {
     let hasUserInput = false;
 
     screeningInputs.forEach(input => {
-        if (input.dataset.userModified === 'true' || (input.value && input.value !== input.dataset.originalValue)) {
+        if (input.dataset.userModified === 'true') {
             hasUserInput = true;
         }
     });
@@ -999,12 +1001,12 @@ function setToLastAppointmentDate() {
     document.getElementById('consults_cutoff_months').value = 0;
     document.getElementById('hospital_cutoff_months').value = 0;
 
-    // Clear all screening-specific cutoffs but don't override user modifications
+    // Clear all screening-specific cutoffs
     screeningInputs.forEach(input => {
         // Only set to 0 if user hasn't manually modified this field
         if (input.dataset.userModified !== 'true') {
             input.value = 0;
-            input.dataset.presetModified = 'true'; // Mark as preset modified (different from user modified)
+            input.dataset.presetModified = 'true'; // Mark as preset modified
             input.dataset.originalValue = '0'; // Update original value
         }
     });
@@ -1243,11 +1245,26 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
     // Add user input tracking for screening cutoff fields
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing user input tracking for screening cutoff fields...');
+    
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
+    console.log(`Found ${screeningInputs.length} screening cutoff inputs`);
 
     screeningInputs.forEach(input => {
         // Store original value to detect changes
-        input.dataset.originalValue = input.value;
+        if (!input.dataset.originalValue) {
+            input.dataset.originalValue = input.value;
+        }
+        
+        // Initialize user modification tracking
+        if (!input.dataset.userModified) {
+            input.dataset.userModified = 'false';
+        }
+        if (!input.dataset.presetModified) {
+            input.dataset.presetModified = 'false';
+        }
+        
+        console.log(`Initialized tracking for ${input.dataset.screeningName}: original=${input.dataset.originalValue}, current=${input.value}`);
         
         // Track when user manually changes the input
         input.addEventListener('input', function() {

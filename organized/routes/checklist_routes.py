@@ -219,29 +219,47 @@ def save_cutoff_settings():
         settings.consults_cutoff_months = int(request.form.get("consults_cutoff_months", 0))
         settings.hospital_cutoff_months = int(request.form.get("hospital_cutoff_months", 0))
 
-        # Handle screening-specific cutoffs with corrected field name pattern
+        # Handle screening-specific cutoffs with improved processing
         screening_cutoffs_processed = 0
+        
+        # Get all active screening types to validate against
+        from models import ScreeningType
+        active_screening_names = [st.name for st in ScreeningType.query.filter_by(is_active=True).all()]
+        print(f"DEBUG: Active screening types: {active_screening_names}")
+        
         for key, value in request.form.items():
             if key.startswith("screening_cutoff_"):
                 # Extract screening name from field name (screening_cutoff_ScreeningName)
                 screening_name = key.replace("screening_cutoff_", "")
+                
+                # Validate that this is a known active screening type
+                if screening_name not in active_screening_names:
+                    print(f"WARNING: Unknown screening type '{screening_name}' in form data")
+                    continue
+                    
                 try:
-                    # Convert empty string to None, then to 0. Preserve all numeric values including 0
+                    # Convert empty string to 0. Preserve all numeric values including 0
                     if value == '' or value is None:
                         months = 0
                     else:
                         months = int(value)
                     
+                    # Validate the range
+                    if months < 0 or months > 120:
+                        print(f"WARNING: Invalid cutoff value {months} for '{screening_name}', skipping")
+                        continue
+                    
                     # Set the cutoff value exactly as provided by user
+                    old_value = settings.get_screening_cutoff(screening_name)
                     settings.set_screening_cutoff(screening_name, months)
                     screening_cutoffs_processed += 1
-                    print(f"DEBUG: Successfully set cutoff for '{screening_name}': {months} months (form value: '{value}')")
+                    print(f"DEBUG: Successfully updated cutoff for '{screening_name}': {old_value} -> {months} months (form value: '{value}')")
                 except (ValueError, TypeError) as e:
                     print(f"ERROR: Error processing cutoff for '{screening_name}' with value '{value}': {e}")
                     # Skip this field if there's an error, don't modify existing value
                     continue
                 
-        print(f"DEBUG: Processed {screening_cutoffs_processed} screening cutoffs")
+        print(f"DEBUG: Processed {screening_cutoffs_processed} screening cutoffs out of {len(active_screening_names)} active screening types")
         
         # Debug: Print all form data to help identify issues
         print("DEBUG: All form data received:")
@@ -276,10 +294,29 @@ def save_cutoff_settings():
         print(f"  Bone Density final value: {settings.get_screening_cutoff('Bone Density Screening')}")
         print(f"  HbA1c final value: {settings.get_screening_cutoff('HbA1c Testing')}")
 
+        # Verify settings before commit
+        print("DEBUG: Verifying settings before commit:")
+        for screening_name in active_screening_names:
+            current_cutoff = settings.get_screening_cutoff(screening_name)
+            print(f"  {screening_name}: {current_cutoff} months")
+        
         db.session.commit()
+        
+        # Verify settings after commit
+        print("DEBUG: Verifying settings after commit:")
+        settings_after = get_or_create_settings()
+        for screening_name in active_screening_names:
+            current_cutoff = settings_after.get_screening_cutoff(screening_name)
+            print(f"  {screening_name}: {current_cutoff} months")
+        
         flash("Data cutoff settings updated successfully!", "success")
 
     except (ValueError, TypeError) as e:
+        print(f"ERROR: Exception in save_cutoff_settings: {e}")
         flash("Invalid cutoff values provided. Please enter valid numbers.", "error")
+    except Exception as e:
+        print(f"ERROR: Unexpected exception in save_cutoff_settings: {e}")
+        db.session.rollback()
+        flash(f"Error updating cutoff settings: {str(e)}", "error")
 
     return redirect(url_for("screening_list", tab="checklist"))
