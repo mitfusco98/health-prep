@@ -946,9 +946,9 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     let hasUserInput = false;
 
-    // Check if any screening fields have been modified by user or have non-zero values
+    // Check if any screening fields have been modified by user
     screeningInputs.forEach(input => {
-        if (input.dataset.userModified === 'true' || (input.value && input.value !== input.dataset.originalValue)) {
+        if (input.dataset.userModified === 'true') {
             hasUserInput = true;
         }
     });
@@ -967,7 +967,7 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
     // Apply the same preset value to all screening-specific cutoffs only if user confirms
     screeningInputs.forEach(input => {
         input.value = labs; // Use the same value for all screening cutoffs
-        input.dataset.userModified = 'true'; // Mark as modified since it's a preset change
+        input.dataset.presetModified = 'true'; // Mark as preset modified
         input.dataset.originalValue = labs; // Update original value
     });
 }
@@ -996,10 +996,11 @@ function setToLastAppointmentDate() {
     document.getElementById('consults_cutoff_months').value = 0;
     document.getElementById('hospital_cutoff_months').value = 0;
 
-    // Clear all screening-specific cutoffs and reset tracking
+    // Clear all screening-specific cutoffs but don't override user modifications
     screeningInputs.forEach(input => {
+        // Only set to 0 if this is part of the preset action
         input.value = 0;
-        input.dataset.userModified = 'true'; // Mark as modified since it's a preset change
+        input.dataset.presetModified = 'true'; // Mark as preset modified (different from user modified)
         input.dataset.originalValue = '0'; // Update original value
     });
 
@@ -1245,21 +1246,34 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Track when user manually changes the input
         input.addEventListener('input', function() {
-            this.dataset.userModified = 'true';
-            console.log(`User modified cutoff for ${this.dataset.screeningName}: ${this.value}`);
+            // Only mark as user modified if it's not a preset change
+            if (!this.dataset.presetModified) {
+                this.dataset.userModified = 'true';
+                console.log(`User modified cutoff for ${this.dataset.screeningName}: ${this.value}`);
+            }
         });
 
         // Also track on change event
         input.addEventListener('change', function() {
-            this.dataset.userModified = 'true';
-            console.log(`User changed cutoff for ${this.dataset.screeningName}: ${this.value}`);
+            // Only mark as user modified if it's not a preset change
+            if (!this.dataset.presetModified) {
+                this.dataset.userModified = 'true';
+                console.log(`User changed cutoff for ${this.dataset.screeningName}: ${this.value}`);
+            }
+            // Clear preset flag after change event
+            this.dataset.presetModified = 'false';
         });
 
-        // Track on focus out to ensure we catch all changes
-        input.addEventListener('blur', function() {
-            if (this.value !== this.dataset.originalValue) {
+        // Track on focus and typing to catch direct user interaction
+        input.addEventListener('focus', function() {
+            this.dataset.userFocused = 'true';
+        });
+
+        input.addEventListener('keydown', function() {
+            // If user is typing, it's definitely user input
+            if (this.dataset.userFocused === 'true') {
                 this.dataset.userModified = 'true';
-                console.log(`User changed cutoff for ${this.dataset.screeningName} from ${this.dataset.originalValue} to ${this.value}`);
+                console.log(`User typing in cutoff for ${this.dataset.screeningName}`);
             }
         });
     });

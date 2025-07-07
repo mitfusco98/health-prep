@@ -226,18 +226,17 @@ def save_cutoff_settings():
                 # Extract screening name from field name (screening_cutoff_ScreeningName)
                 screening_name = key.replace("screening_cutoff_", "")
                 try:
-                    # Preserve user input - convert to int but don't default to 0 unless explicitly empty
-                    if value and value.strip():
-                        months = int(value)
-                    else:
-                        months = 0  # Only use 0 if field is actually empty
+                    # Always preserve the exact user input value, including 0
+                    months = int(value) if value is not None else 0
                     
+                    # Set the cutoff value exactly as provided by user
                     settings.set_screening_cutoff(screening_name, months)
                     screening_cutoffs_processed += 1
-                    print(f"DEBUG: Successfully set cutoff for '{screening_name}': {months} months (original value: '{value}')")
+                    print(f"DEBUG: Successfully set cutoff for '{screening_name}': {months} months (form value: '{value}')")
                 except (ValueError, TypeError) as e:
                     print(f"ERROR: Error processing cutoff for '{screening_name}' with value '{value}': {e}")
-                    # Don't override with 0 if there's an error - keep existing value
+                    # Skip this field if there's an error, don't modify existing value
+                    continue
                 
         print(f"DEBUG: Processed {screening_cutoffs_processed} screening cutoffs")
         
@@ -245,6 +244,12 @@ def save_cutoff_settings():
         print("DEBUG: All form data received:")
         for key, value in request.form.items():
             print(f"  {key}: {repr(value)}")
+            
+        # Debug: Check if problematic fields are in form data
+        bone_density_field = request.form.get("screening_cutoff_Bone Density Screening")
+        hba1c_field = request.form.get("screening_cutoff_HbA1c Testing")
+        print(f"DEBUG: Bone Density form field: {repr(bone_density_field)}")
+        print(f"DEBUG: HbA1c form field: {repr(hba1c_field)}")
             
         # Debug: Print current screening cutoffs after processing
         print("DEBUG: Current screening cutoffs after processing:")
@@ -262,6 +267,11 @@ def save_cutoff_settings():
         hba1c_cutoff = settings.get_screening_cutoff("HbA1c Testing")
         print(f"DEBUG: Bone Density Screening cutoff: {bone_density_cutoff}")
         print(f"DEBUG: HbA1c Testing cutoff: {hba1c_cutoff}")
+        
+        # Debug: Check if these values are being overridden somewhere
+        print("DEBUG: Final verification before commit:")
+        print(f"  Bone Density final value: {settings.get_screening_cutoff('Bone Density Screening')}")
+        print(f"  HbA1c final value: {settings.get_screening_cutoff('HbA1c Testing')}")
 
         db.session.commit()
         flash("Data cutoff settings updated successfully!", "success")
