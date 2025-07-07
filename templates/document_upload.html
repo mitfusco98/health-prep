@@ -22,8 +22,8 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-7">
+<div class="row justify-content-center">
+    <div class="col-md-8">
         <div class="card border-0 mb-4">
             <div class="card-header bg-secondary bg-opacity-25">
                 <h5 class="mb-0">Upload Document for {{ patient.full_name }}</h5>
@@ -119,57 +119,6 @@
                         {{ form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-5">
-        <div class="card border-0 mb-4">
-            <div class="card-header bg-secondary bg-opacity-25">
-                <h5 class="mb-0">Supported Document Types</h5>
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    <div class="list-group-item list-group-item-action {% if doc_type == 'CLINICAL_NOTE' %}active{% endif %}">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">Clinical Notes</h6>
-                            <small>.txt, .docx, .html</small>
-                        </div>
-                        <p class="mb-1">Notes from clinical encounters</p>
-                    </div>
-                    <div class="list-group-item list-group-item-action {% if doc_type == 'DISCHARGE_SUMMARY' %}active{% endif %}">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">Discharge Summaries</h6>
-                            <small>.txt, .pdf, .docx</small>
-                        </div>
-                        <p class="mb-1">Hospital discharge documentation</p>
-                    </div>
-                    <div class="list-group-item list-group-item-action {% if doc_type == 'LAB_REPORT' %}active{% endif %}">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">Lab Reports</h6>
-                            <small>.txt, .pdf, .html</small>
-                        </div>
-                        <p class="mb-1">Laboratory test results</p>
-                    </div>
-                    <div class="list-group-item list-group-item-action {% if doc_type == 'RADIOLOGY_REPORT' %}active{% endif %}">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">Radiology Reports</h6>
-                            <small>.txt, .pdf, .docx</small>
-                        </div>
-                        <p class="mb-1">Imaging study findings</p>
-                    </div>
-                    <div class="list-group-item list-group-item-action {% if doc_type == 'CONSULTATION' %}active{% endif %}">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">Consultation Reports</h6>
-                            <small>.txt, .pdf, .docx</small>
-                        </div>
-                        <p class="mb-1">Specialist consultation documentation</p>
-                    </div>
-                </div>
-                
-                <div class="alert alert-info mt-3">
-                    <strong>Note:</strong> Documents will be automatically classified based on content and filename patterns.
-                </div>
             </div>
         </div>
     </div>
