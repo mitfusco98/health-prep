@@ -2,6 +2,7 @@ from flask import render_template, request, redirect, url_for, flash
 from app import app, db
 from models import ChecklistSettings, ScreeningType
 from app import login_required
+import json
 
 
 @app.route('/screening-checklist-rebuilt')
@@ -106,3 +107,4 @@ def save_default_items_simple():
         print(f"Error saving default items: {e}")
 
     return redirect(url_for('screening_list', tab='checklist'))
+

@@ -189,12 +189,35 @@ def save_cutoff_settings():
         settings.hospital_cutoff_months = int(request.form.get("hospital_cutoff_months", 0))
         
         # Handle screening-specific cutoffs (default to 0 for "last appointment" logic)
-        for key, value in request.form.items():
-            if key.startswith("screening_") and key.endswith("_cutoff_months"):
-                # Extract screening name from field name
-                screening_name = key.replace("screening_", "").replace("_cutoff_months", "").replace("_", " ").title()
-                months = int(value) if value else 0
-                settings.set_screening_cutoff(screening_name, months)
+        # Get all active screening types to match against
+        from models import ScreeningType
+        active_screening_types = ScreeningType.query.filter_by(
+            is_active=True, 
+            status='active'
+        ).all()
+        
+        for screening in active_screening_types:
+            # Convert screening name to field name format (spaces to underscores, lowercase)
+            field_name = f"screening_cutoff_{screening.name.replace(' ', '_').lower()}"
+            
+            # Get the cutoff value from form
+            cutoff_value = request.form.get(field_name)
+            
+            if cutoff_value is not None:
+                try:
+                    cutoff_months = int(cutoff_value)
+                    settings.set_screening_cutoff(screening.name, cutoff_months)
+                    print(f"Saved cutoff for '{screening.name}': {cutoff_months} months (field: {field_name})")
+                except (ValueError, TypeError):
+                    print(f"Invalid cutoff value for '{screening.name}': {cutoff_value}")
+                    # Set default to 0 if invalid
+                    settings.set_screening_cutoff(screening.name, 0)
+            else:
+                print(f"No cutoff value found for '{screening.name}' (field: {field_name})")
+                # Keep existing value or set to 0 if none exists
+                existing_cutoff = settings.get_screening_cutoff(screening.name, 0)
+                if existing_cutoff == 12:  # Default value, set to 0
+                    settings.set_screening_cutoff(screening.name, 0)
         
         db.session.commit()
         flash("Data cutoff settings updated successfully!", "success")

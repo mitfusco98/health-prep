@@ -898,7 +898,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="input-group">
                                     <input type="number" class="form-control screening-cutoff" 
                                            id="screening_cutoff_{{ loop.index }}" 
-                                           name="screening_cutoff_{{ screening.name }}"
+                                           name="screening_cutoff_{{ screening.name|replace(' ', '_')|lower }}"
                                            data-screening-name="{{ screening.name }}"
                                            data-original-value="{{ settings.get_screening_cutoff(screening.name) if settings else 0 }}"
                                            data-user-modified="false"
