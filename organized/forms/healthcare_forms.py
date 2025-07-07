@@ -347,7 +347,7 @@ class ScreeningTypeForm(FlaskForm):
         validators=[Optional()],
         description="Detailed description of this screening test",
     )
-    
+
     frequency_number = IntegerField(
         "Frequency Number",
         validators=[Optional(), NumberRange(min=1, max=999)],

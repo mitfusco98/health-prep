@@ -62,7 +62,7 @@
                                             </h6>
                                             <small>{{ doc.document_date|default(now(), true)|datetime }}</small>
                                         </div>
-                                        
+
                                         <p class="mb-1 text-muted">
                                             <span class="badge bg-secondary me-1">{{ doc_type }}</span>
                                             <span>Source: {{ doc.source }}</span>
@@ -73,14 +73,14 @@
                                             | Hospital: {{ doc.hospital }}
                                             {% endif %}
                                         </p>
-                                        
+
                                         {% if doc.diagnoses and doc.diagnoses|length > 0 %}
                                         <div class="small mb-2">
                                             <strong>Diagnoses:</strong> 
                                             {{ doc.diagnoses|join(', ') }}
                                         </div>
                                         {% endif %}
-                                        
+
                                         {% if doc.results and doc.results|length > 0 %}
                                         <div class="small mb-2">
                                             <strong>Results:</strong> 
@@ -91,35 +91,41 @@
                                             </ul>
                                         </div>
                                         {% endif %}
-                                        
+
                                         <div class="mt-2">
                                             <a href="{{ url_for('view_document', document_id=doc.id) }}" class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-eye me-1"></i>View Document
                                             </a>
-                                            
+
                                             {% if doc_type == 'Lab Report' %}
                                             <a href="#" class="btn btn-sm btn-outline-success">
                                                 <i class="fas fa-plus me-1"></i>Add to Lab Results
                                             </a>
                                             {% endif %}
-                                            
+
                                             {% if doc_type == 'Hospital Discharge' %}
                                             <a href="#" class="btn btn-sm btn-outline-success">
                                                 <i class="fas fa-plus me-1"></i>Add to Hospital Summaries
                                             </a>
                                             {% endif %}
-                                            
+
                                             {% if doc_type == 'Imaging Study' %}
                                             <a href="#" class="btn btn-sm btn-outline-success">
                                                 <i class="fas fa-plus me-1"></i>Add to Imaging Studies
                                             </a>
                                             {% endif %}
-                                            
+
                                             {% if doc_type == 'Consult/Referral Report' %}
                                             <a href="#" class="btn btn-sm btn-outline-success">
                                                 <i class="fas fa-plus me-1"></i>Add to Consult Reports
                                             </a>
                                             {% endif %}
+
+                            {% if doc_type == 'Other' %}
+                            <a href="#" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-file me-1"></i>Miscellaneous Document
+                            </a>
+                            {% endif %}
                                         </div>
                                     </div>
                                     {% endfor %}
@@ -168,7 +174,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
         <div class="card border-0">
             <div class="card-header bg-secondary bg-opacity-25">
@@ -196,12 +202,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (docTypeCanvas) {
         const docTypes = [];
         const docCounts = [];
-        
+
         {% for doc_type, docs in documents.items() %}
         docTypes.push('{{ doc_type }}');
         docCounts.push({{ docs|length }});
         {% endfor %}
-        
+
         new Chart(docTypeCanvas, {
             type: 'doughnut',
             data: {

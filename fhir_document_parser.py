@@ -14,7 +14,7 @@ from fhir_document_metadata import FHIRCodingSystem
 
 class FHIRDocumentParser:
     """Enhanced document parser that extracts tags in FHIR code.coding format"""
-    
+
     def __init__(self):
         # Lab test patterns with LOINC codes
         self.lab_test_patterns = {
@@ -70,7 +70,7 @@ class FHIRDocumentParser:
                 'display': 'Hepatic function panel - Serum or Plasma'
             }
         }
-        
+
         # Imaging study patterns with LOINC codes
         self.imaging_patterns = {
             r'chest\s+x-?ray|chest\s+radiograph': {
@@ -104,7 +104,7 @@ class FHIRDocumentParser:
                 'display': 'Echocardiography study'
             }
         }
-        
+
         # Clinical document patterns with LOINC codes
         self.document_patterns = {
             r'discharge\s+summary': {
@@ -138,7 +138,7 @@ class FHIRDocumentParser:
                 'display': 'History and physical note'
             }
         }
-        
+
         # Medical specialty patterns with SNOMED CT codes
         self.specialty_patterns = {
             r'cardiology|cardiac|heart': {
@@ -177,7 +177,7 @@ class FHIRDocumentParser:
                 'display': 'Dermatology'
             }
         }
-        
+
         # Body system patterns
         self.body_system_patterns = {
             r'cardiovascular|cardiac|heart|circulatory': {
@@ -206,15 +206,15 @@ class FHIRDocumentParser:
                 'display': 'Musculoskeletal system'
             }
         }
-    
+
     def parse_document(self, content: str, filename: str = None) -> Dict[str, Any]:
         """
         Parse document and extract tags in FHIR code.coding format.
-        
+
         Args:
             content: Document content text
             filename: Optional filename
-            
+
         Returns:
             Dictionary with extracted FHIR codes and metadata
         """
@@ -225,48 +225,48 @@ class FHIRDocumentParser:
             'metadata': {},
             'error': None
         }
-        
+
         try:
             content_lower = content.lower()
-            
+
             # Extract lab test codes
             lab_codes = self._extract_lab_test_codes(content_lower, filename)
             result['extracted_codes'].extend(lab_codes)
-            
+
             # Extract imaging codes
             imaging_codes = self._extract_imaging_codes(content_lower, filename)
             result['extracted_codes'].extend(imaging_codes)
-            
+
             # Extract document type codes
             document_codes = self._extract_document_type_codes(content_lower, filename)
             result['extracted_codes'].extend(document_codes)
-            
+
             # Extract specialty codes
             specialty_codes = self._extract_specialty_codes(content_lower, filename)
             result['extracted_codes'].extend(specialty_codes)
-            
+
             # Extract body system codes
             body_system_codes = self._extract_body_system_codes(content_lower, filename)
             result['extracted_codes'].extend(body_system_codes)
-            
+
             # Classify document for primary code
             primary_code = self._classify_document_primary_code(content_lower, filename)
             if primary_code:
                 result['document_classification'] = primary_code
-            
+
             # Extract additional metadata
             result['metadata'] = self._extract_additional_metadata(content, filename)
-            
+
         except Exception as e:
             result['success'] = False
             result['error'] = str(e)
-        
+
         return result
-    
+
     def _extract_lab_test_codes(self, content_lower: str, filename: str = None) -> List[Dict[str, Any]]:
         """Extract lab test codes from content and filename"""
         codes = []
-        
+
         # Check filename first
         if filename:
             filename_lower = filename.lower()
@@ -279,7 +279,7 @@ class FHIRDocumentParser:
                         'source': 'filename',
                         'matched_text': filename
                     })
-        
+
         # Check content
         for pattern, coding_info in self.lab_test_patterns.items():
             matches = re.finditer(pattern, content_lower)
@@ -291,13 +291,13 @@ class FHIRDocumentParser:
                     'source': 'content',
                     'matched_text': match.group(0)
                 })
-        
+
         return codes
-    
+
     def _extract_imaging_codes(self, content_lower: str, filename: str = None) -> List[Dict[str, Any]]:
         """Extract imaging study codes from content and filename"""
         codes = []
-        
+
         # Check filename first
         if filename:
             filename_lower = filename.lower()
@@ -310,7 +310,7 @@ class FHIRDocumentParser:
                         'source': 'filename',
                         'matched_text': filename
                     })
-        
+
         # Check content
         for pattern, coding_info in self.imaging_patterns.items():
             matches = re.finditer(pattern, content_lower)
@@ -322,13 +322,13 @@ class FHIRDocumentParser:
                     'source': 'content',
                     'matched_text': match.group(0)
                 })
-        
+
         return codes
-    
+
     def _extract_document_type_codes(self, content_lower: str, filename: str = None) -> List[Dict[str, Any]]:
         """Extract document type codes from content and filename"""
         codes = []
-        
+
         # Check filename first
         if filename:
             filename_lower = filename.lower()
@@ -341,7 +341,7 @@ class FHIRDocumentParser:
                         'source': 'filename',
                         'matched_text': filename
                     })
-        
+
         # Check content
         for pattern, coding_info in self.document_patterns.items():
             matches = re.finditer(pattern, content_lower)
@@ -353,13 +353,13 @@ class FHIRDocumentParser:
                     'source': 'content',
                     'matched_text': match.group(0)
                 })
-        
+
         return codes
-    
+
     def _extract_specialty_codes(self, content_lower: str, filename: str = None) -> List[Dict[str, Any]]:
         """Extract medical specialty codes from content and filename"""
         codes = []
-        
+
         # Check filename first
         if filename:
             filename_lower = filename.lower()
@@ -372,7 +372,7 @@ class FHIRDocumentParser:
                         'source': 'filename',
                         'matched_text': filename
                     })
-        
+
         # Check content
         for pattern, coding_info in self.specialty_patterns.items():
             matches = re.finditer(pattern, content_lower)
@@ -384,13 +384,13 @@ class FHIRDocumentParser:
                     'source': 'content',
                     'matched_text': match.group(0)
                 })
-        
+
         return codes
-    
+
     def _extract_body_system_codes(self, content_lower: str, filename: str = None) -> List[Dict[str, Any]]:
         """Extract body system codes from content and filename"""
         codes = []
-        
+
         # Check content for body system references
         for pattern, coding_info in self.body_system_patterns.items():
             matches = re.finditer(pattern, content_lower)
@@ -402,19 +402,19 @@ class FHIRDocumentParser:
                     'source': 'content',
                     'matched_text': match.group(0)
                 })
-        
+
         return codes
-    
+
     def _classify_document_primary_code(self, content_lower: str, filename: str = None) -> Optional[Dict[str, Any]]:
         """Determine the primary document classification code"""
-        
+
         # Priority order for document classification
         classification_priority = [
             (self.lab_test_patterns, 'Laboratory report'),
             (self.imaging_patterns, 'Imaging study'),
             (self.document_patterns, 'Clinical document')
         ]
-        
+
         # Check filename first for highest priority match
         if filename:
             filename_lower = filename.lower()
@@ -429,7 +429,7 @@ class FHIRDocumentParser:
                             'confidence': 'high',
                             'source': 'filename'
                         }
-        
+
         # Check content for classification
         for pattern_dict, category in classification_priority:
             for pattern, coding_info in pattern_dict.items():
@@ -442,7 +442,7 @@ class FHIRDocumentParser:
                         'confidence': 'medium',
                         'source': 'content'
                     }
-        
+
         # Default classification
         return {
             'code': {
@@ -456,40 +456,40 @@ class FHIRDocumentParser:
             'confidence': 'low',
             'source': 'default'
         }
-    
+
     def _extract_additional_metadata(self, content: str, filename: str = None) -> Dict[str, Any]:
         """Extract additional metadata from document"""
         metadata = {}
         content_lower = content.lower()
-        
+
         # Extract dates
         date_patterns = [
             r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
             r'(\d{4}-\d{2}-\d{2})',
             r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}'
         ]
-        
+
         dates_found = []
         for pattern in date_patterns:
             matches = re.findall(pattern, content, re.IGNORECASE)
             dates_found.extend(matches)
-        
+
         if dates_found:
             metadata['extracted_dates'] = dates_found[:5]  # Limit to first 5 dates
-        
+
         # Extract provider names (simple pattern)
         provider_pattern = r'dr\.?\s+([a-z]+(?:\s+[a-z]+)*)|physician:\s*([a-z]+(?:\s+[a-z]+)*)'
         provider_matches = re.findall(provider_pattern, content_lower)
         if provider_matches:
             providers = [match[0] or match[1] for match in provider_matches if match[0] or match[1]]
             metadata['extracted_providers'] = providers[:3]  # Limit to first 3
-        
+
         # Extract patient identifiers
         mrn_pattern = r'mrn[:\s]+([a-z0-9-]+)'
         mrn_matches = re.findall(mrn_pattern, content_lower)
         if mrn_matches:
             metadata['extracted_mrn'] = mrn_matches[0]
-        
+
         # Extract vital signs values
         vitals_patterns = {
             'blood_pressure': r'bp[:\s]*(\d{2,3}[/\\]\d{2,3})',
@@ -498,28 +498,28 @@ class FHIRDocumentParser:
             'weight': r'weight[:\s]*(\d{2,3}\.?\d?)\s*(?:lbs?|kg)',
             'height': r'height[:\s]*(\d[\'\"]?\s*\d{1,2}[\"\']?|\d{2,3}\s*cm)'
         }
-        
+
         for vital_name, pattern in vitals_patterns.items():
             matches = re.findall(pattern, content_lower)
             if matches:
                 metadata[f'extracted_{vital_name}'] = matches[0]
-        
+
         # Count words and sentences for document complexity
         word_count = len(content.split())
         sentence_count = len(re.findall(r'[.!?]+', content))
-        
+
         metadata['document_stats'] = {
             'word_count': word_count,
             'sentence_count': sentence_count,
             'estimated_complexity': 'high' if word_count > 1000 else 'medium' if word_count > 300 else 'low'
         }
-        
+
         return metadata
-    
+
     def get_primary_code_only(self, content: str, filename: str = None) -> Dict[str, Any]:
         """
         Extract only the primary document code in FHIR format.
-        
+
         Returns:
             Dictionary with single code in format:
             { 'code': { 'coding': [{ 'system': '...', 'code': '...', 'display': '...' }] } }
@@ -559,11 +559,11 @@ _fhir_parser = FHIRDocumentParser()
 def parse_document_with_fhir_codes(content: str, filename: str = None) -> Dict[str, Any]:
     """
     Parse document and return extracted tags in FHIR code.coding format.
-    
+
     Args:
         content: Document content
         filename: Optional filename
-        
+
     Returns:
         Dictionary with FHIR-formatted codes and metadata
     """
@@ -573,7 +573,7 @@ def parse_document_with_fhir_codes(content: str, filename: str = None) -> Dict[s
 def get_primary_document_code(content: str, filename: str = None) -> Dict[str, Any]:
     """
     Get primary document code in FHIR format.
-    
+
     Returns:
         { 'code': { 'coding': [{ 'system': '...', 'code': '...', 'display': '...' }] } }
     """
@@ -596,19 +596,19 @@ def extract_imaging_codes_from_text(content: str) -> List[Dict[str, Any]]:
 def classify_document_with_fhir_codes(content: str, filename: str = None) -> Tuple[DocumentType, Dict[str, Any]]:
     """
     Enhanced version of classify_document that returns FHIR codes in metadata.
-    
+
     Returns:
         Tuple of (DocumentType, metadata_with_fhir_codes)
     """
     try:
         # Parse with FHIR codes
         fhir_result = parse_document_with_fhir_codes(content, filename)
-        
+
         # Determine DocumentType from primary classification
         doc_type = DocumentType.UNKNOWN
         if fhir_result.get('document_classification'):
             primary_code = fhir_result['document_classification']['code']['coding'][0]
-            
+
             # Map LOINC codes back to DocumentType
             code_to_type = {
                 '11502-2': DocumentType.LAB_REPORT,
@@ -628,17 +628,17 @@ def classify_document_with_fhir_codes(content: str, filename: str = None) -> Tup
                 '3016-3': DocumentType.LAB_REPORT,
                 '24356-8': DocumentType.LAB_REPORT
             }
-            
+
             doc_type = code_to_type.get(primary_code['code'], DocumentType.UNKNOWN)
-        
+
         # Build metadata with FHIR codes
         metadata = fhir_result.get('metadata', {})
         metadata['fhir_codes'] = fhir_result.get('extracted_codes', [])
         if fhir_result.get('document_classification'):
             metadata['primary_fhir_code'] = fhir_result['document_classification']['code']
-        
+
         return doc_type, metadata
-        
+
     except Exception:
         # Fallback to basic classification
         return DocumentType.UNKNOWN, {}

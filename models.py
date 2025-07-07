@@ -16,6 +16,7 @@ class DocumentType(enum.Enum):
     CONSULTATION = "Consultation"
     OPERATIVE_REPORT = "Operative Report"
     PATHOLOGY_REPORT = "Pathology Report"
+    OTHER = "Other"
     UNKNOWN = "Unknown"
 
 
