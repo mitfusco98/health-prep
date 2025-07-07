@@ -92,8 +92,8 @@
                                             bg-warning
                                         {% elif document.document_type == 'DISCHARGE_SUMMARY' %}
                                             bg-danger
-                                        {% elif document.document_type == 'CLINICAL_NOTE' %}
-                                            bg-primary
+                                        {% elif document.document_type == 'OTHER' %}
+                                            bg-secondary
                                         {% elif document.document_type == 'prep_sheet' %}
                                             bg-info
                                         {% else %}
@@ -102,8 +102,19 @@
                                     ">
                                         {% if document.document_type == 'prep_sheet' %}
                                             Quality Checklist
+                                        {% elif document.document_type == 'LAB_REPORT' %}
+                                            Laboratories
+                                        {% elif document.document_type == 'RADIOLOGY_REPORT' %}
+                                            Imaging
+                                        {% elif document.document_type == 'CONSULTATION' %}
+                                            Consults
+                                        {% elif document.document_type == 'DISCHARGE_SUMMARY' %}
+                                            Hospital Records
+
+                                        {% elif document.document_type == 'OTHER' %}
+                                            Other
                                         {% else %}
-                                            {{ document.document_type.replace('_', ' ') }}
+                                            Other
                                         {% endif %}
                                     </span>
                                 </td>

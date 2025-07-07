@@ -441,17 +441,16 @@ class DocumentUploadForm(FlaskForm):
         description="Date when this document was created",
     )
     document_type = SelectField(
-        "Document Type",
+        "Medical Data Subsection",
         validators=[DataRequired()],
         choices=[
-            ("LAB_REPORT", "Lab Report"),
-            ("RADIOLOGY_REPORT", "Imaging Report"),
-            ("CONSULTATION", "Consult"),
-            ("DISCHARGE_SUMMARY", "Hospital Record"),
-            ("CLINICAL_NOTE", "Clinical Note"),
+            ("LAB_REPORT", "Laboratories"),
+            ("RADIOLOGY_REPORT", "Imaging"),
+            ("CONSULTATION", "Consults"),
+            ("DISCHARGE_SUMMARY", "Hospital Records"),
             ("OTHER", "Other"),
         ],
-        description="The type of document being uploaded",
+        description="Select the medical data subsection this document belongs to",
     )
     notes = TextAreaField(
         "Notes",
