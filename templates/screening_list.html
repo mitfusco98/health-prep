@@ -685,7 +685,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="mb-3">
                                 <label class="form-label">Available Screening Types</label>
                                 <div id="screening-buttons" class="d-flex flex-wrap gap-2 mb-3">
-                                    {% set current_default_list = settings.default_items_list if settings and settings.default_items_list else [] %}
+                                    {% set current_default_list = settings.default_items_list if settings else [] %}
 
                                     {% for screening in active_screening_types %}
                                     <button type="button" class="btn screening-btn {% if screening.name in current_default_list %}btn-primary{% else %}btn-outline-primary{% endif %}" 
@@ -758,10 +758,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <hr class="my-4">
                     <h6 class="mb-3">Active Screening Types Cutoffs</h6>
                     <p class="text-muted small mb-3">These cutoffs apply to all active screening types in default checklist items</p>
-
+                    
                     <div class="row">
                         {% for screening in active_screening_types %}
-                            {% if screening.name in (settings.default_items_list if settings and settings.default_items_list else []) %}
+                            {% if screening.name in (settings.default_items_list if settings else []) %}
                             <div class="col-md-4 col-lg-3 mb-2">
                                 <div class="text-center">
                                     <h6 class="text-info">{{ screening.name }}</h6>
@@ -890,21 +890,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="text-muted small mb-3">Individual cutoff settings for each active screening type in default checklist items</p>
                     <div class="row">
                         {% for screening in active_screening_types %}
-                            {% if screening.name in (settings.default_items_list if settings and settings.default_items_list else []) %}
+                            {% if screening.name in (settings.default_items_list if settings else []) %}
                             <div class="col-md-6 mb-3">
-                                <label for="screening_cutoff_{{ loop.index }}" class="form-label">
+                                <label for="screening_{{ loop.index0 }}_cutoff_months" class="form-label">
                                     <i class="fas fa-check-circle text-info me-2"></i>{{ screening.name }}
                                 </label>
                                 <div class="input-group">
                                     <input type="number" class="form-control screening-cutoff" 
-                                           id="screening_cutoff_{{ loop.index }}" 
-                                           name="screening_cutoff_{{ screening.name }}"
-                                           data-screening-name="{{ screening.name }}"
-                                           data-original-value="{{ settings.get_screening_cutoff(screening.name) if settings else 0 }}"
-                                           data-user-modified="false"
-                                           data-preset-modified="false"
+                                           id="screening_{{ loop.index0 }}_cutoff_months" 
+                                           name="screening_{{ screening.name|replace(' ', '_')|lower }}_cutoff_months" 
                                            min="0" max="120" 
-                                           value="{{ settings.get_screening_cutoff(screening.name) if settings else 0 }}" required>
+                                           value="{{ settings.get_screening_cutoff(screening.name) if settings else 12 }}" required>
                                     <span class="input-group-text">months</span>
                                 </div>
                                 <div class="form-text">Cutoff for {{ screening.name }} documents</div>
@@ -917,14 +913,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-4">
                         <h6>Quick Preset Options</h6>
                         <div class="d-flex flex-wrap gap-2 mb-3">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(3, 3, 3, 3)">
-                                Conservative (3m/3m/3m/3m)
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(3, 6, 6, 12)">
+                                Conservative (3m/6m/6m/12m)
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(6, 6, 6, 6)">
-                                Standard (6m/6m/6m/6m)
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(6, 12, 12, 24)">
+                                Standard (6m/12m/12m/24m)
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(12, 12, 12, 12)">
-                                Extended (12m/12m/12m/12m)
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPresetCutoffs(12, 24, 24, 36)">
+                                Extended (12m/24m/24m/36m)
                             </button>
                             <button type="button" class="btn btn-outline-info btn-sm" onclick="setToLastAppointmentDate()">
                                 To Last Appointment Date
@@ -944,71 +940,31 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 // Preset cutoff configuration function
 function setPresetCutoffs(labs, imaging, consults, hospital) {
-    // Check if any screening fields have been modified by user
-    const screeningInputs = document.querySelectorAll('.screening-cutoff');
-    let hasUserInput = false;
-
-    screeningInputs.forEach(input => {
-        if (input.dataset.userModified === 'true') {
-            hasUserInput = true;
-        }
-    });
-
-    if (hasUserInput) {
-        if (!confirm('This will override your existing screening cutoff settings. Continue?')) {
-            return;
-        }
-    }
-
-    // Set main cutoff values
     document.getElementById('labs_cutoff_months').value = labs;
     document.getElementById('imaging_cutoff_months').value = imaging;
     document.getElementById('consults_cutoff_months').value = consults;
     document.getElementById('hospital_cutoff_months').value = hospital;
 
-    // Apply the same preset value to all screening-specific cutoffs
+    // Also apply to all screening-specific cutoffs
+    const screeningInputs = document.querySelectorAll('.screening-cutoff');
     screeningInputs.forEach(input => {
-        // Only apply preset if user hasn't manually modified this field
-        if (input.dataset.userModified !== 'true') {
-            input.value = labs; // Use the same value for all screening cutoffs
-            input.dataset.presetModified = 'true'; // Mark as preset modified
-            input.dataset.originalValue = labs; // Update original value
-        }
+        input.value = Math.max(labs, imaging, consults, hospital); // Use the highest value
     });
 }
 
 // Set all cutoffs to use each patient's last appointment date
 function setToLastAppointmentDate() {
-    // Check if user has input values and confirm override
-    const screeningInputs = document.querySelectorAll('.screening-cutoff');
-    let hasUserInput = false;
-
-    screeningInputs.forEach(input => {
-        if (input.dataset.userModified === 'true') {
-            hasUserInput = true;
-        }
-    });
-
-    if (hasUserInput) {
-        if (!confirm('This will reset all cutoffs to use last appointment date. Continue?')) {
-            return;
-        }
-    }
-
     // Clear all cutoff values to trigger patient-specific last appointment fallback
     document.getElementById('labs_cutoff_months').value = 0;
     document.getElementById('imaging_cutoff_months').value = 0;
     document.getElementById('consults_cutoff_months').value = 0;
+    document.getElementById('imaging_cutoff_months').value = 0;
     document.getElementById('hospital_cutoff_months').value = 0;
 
     // Clear all screening-specific cutoffs
+    const screeningInputs = document.querySelectorAll('.screening-cutoff');
     screeningInputs.forEach(input => {
-        // Only set to 0 if user hasn't manually modified this field
-        if (input.dataset.userModified !== 'true') {
-            input.value = 0;
-            input.dataset.presetModified = 'true'; // Mark as preset modified
-            input.dataset.originalValue = '0'; // Update original value
-        }
+        input.value = 0;
     });
 
     // Show confirmation
@@ -1142,19 +1098,6 @@ document.addEventListener('DOMContentLoaded', function() {
     updateStatusSelections();
     updateScreeningSelections();
 
-    // Ensure buttons are properly initialized based on current selections
-    const currentSelections = document.getElementById('screening-selections').value;
-    if (currentSelections) {
-        const selectedItems = currentSelections.split(',');
-        document.querySelectorAll('#screening-buttons .screening-btn').forEach(btn => {
-            const value = btn.dataset.value;
-            if (selectedItems.includes(value)) {
-                btn.classList.remove('btn-outline-primary');
-                btn.classList.add('btn-primary');
-            }
-        });
-    }
-
     // Custom status options handler
     const addCustomStatusBtn = document.getElementById('add_custom_status');
     const customStatusInput = document.getElementById('custom_status_input');
@@ -1243,69 +1186,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Conditional JavaScript based on active tab -->
 {% if active_tab == 'checklist' %}
 <script>
-    // Add user input tracking for screening cutoff fields
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing user input tracking for screening cutoff fields...');
-    
-    const screeningInputs = document.querySelectorAll('.screening-cutoff');
-    console.log(`Found ${screeningInputs.length} screening cutoff inputs`);
-
-    screeningInputs.forEach(input => {
-        // Store original value to detect changes
-        if (!input.dataset.originalValue) {
-            input.dataset.originalValue = input.value;
-        }
-        
-        // Initialize user modification tracking
-        if (!input.dataset.userModified) {
-            input.dataset.userModified = 'false';
-        }
-        if (!input.dataset.presetModified) {
-            input.dataset.presetModified = 'false';
-        }
-        
-        console.log(`Initialized tracking for ${input.dataset.screeningName}: original=${input.dataset.originalValue}, current=${input.value}`);
-        
-        // Track when user manually changes the input
-        input.addEventListener('input', function() {
-            // Mark as user modified for any direct input
-            this.dataset.userModified = 'true';
-            // Clear any preset modification flag
-            this.dataset.presetModified = 'false';
-            console.log(`User input detected for ${this.dataset.screeningName}: ${this.value}`);
-        });
-
-        // Also track on change event
-        input.addEventListener('change', function() {
-            // Mark as user modified for any change unless it's clearly a preset
-            if (this.dataset.presetModified !== 'true') {
-                this.dataset.userModified = 'true';
-                console.log(`User changed cutoff for ${this.dataset.screeningName}: ${this.value}`);
-            }
-            // Clear preset flag after processing
-            this.dataset.presetModified = 'false';
-        });
-
-        // Track on focus to detect user interaction
-        input.addEventListener('focus', function() {
-            this.dataset.userFocused = 'true';
-        });
-
-        // Track actual typing/keystrokes
-        input.addEventListener('keypress', function() {
-            // Any keystroke indicates user modification
-            this.dataset.userModified = 'true';
-            this.dataset.presetModified = 'false';
-            console.log(`User keystroke detected for ${this.dataset.screeningName}`);
-        });
-
-        // Track blur to clear focus flag
-        input.addEventListener('blur', function() {
-            this.dataset.userFocused = 'false';
-        });
-    });
-});
-
     // Custom status options handler
     document.addEventListener('DOMContentLoaded', function() {
         // Update selections whenever checkboxes change
@@ -1601,8 +1481,6 @@ document.addEventListener('DOMContentLoaded', function() {
         z-index: 1040;
         width: 100vw;
         height: 100vh;
-        background-color: #000;
-```python
         background-color: #000;
     }
 

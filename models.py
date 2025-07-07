@@ -990,20 +990,6 @@ class ChecklistSettings(db.Model):
         return []
 
     @property
-    def default_items_list(self):
-        """Convert default_items string to list"""
-        if self.default_items:
-            return [item.strip() for item in self.default_items.split("\n") if item.strip()]
-        return []
-
-    @property
-    def custom_status_list(self):
-        """Convert custom_status_options string to list"""
-        if self.custom_status_options:
-            return [option.strip() for option in self.custom_status_options.split(",") if option.strip()]
-        return []
-
-    @property
     def screening_cutoffs_dict(self):
         """Convert screening_cutoffs JSON string to dictionary"""
         if self.screening_cutoffs:
@@ -1014,10 +1000,10 @@ class ChecklistSettings(db.Model):
                 return {}
         return {}
 
-    def get_screening_cutoff(self, screening_name):
-        """Get cutoff for a specific screening type"""
+    def get_screening_cutoff(self, screening_name, default=12):
+        """Get cutoff months for a specific screening type"""
         cutoffs = self.screening_cutoffs_dict
-        return cutoffs.get(screening_name, 0)  # Default to 0 months (last appointment date) if not set
+        return cutoffs.get(screening_name, default)
 
     def set_screening_cutoff(self, screening_name, months):
         """Set cutoff months for a specific screening type"""
