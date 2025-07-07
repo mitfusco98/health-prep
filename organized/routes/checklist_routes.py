@@ -46,7 +46,7 @@ def save_status_options_simple():
 
     # Get status options from form
     status_options = request.form.getlist("status_options")
-    
+
     # Update settings
     settings.custom_status_options = (
         ",".join(status_options) if status_options else ""
@@ -70,7 +70,7 @@ def update_checklist_generation():
 
     # Get manual default items from textarea
     manual_default_items = request.form.get("default_items", "")
-    
+
     # Update settings
     settings.default_items = manual_default_items
 
@@ -204,3 +204,119 @@ def debug_form():
             <a href="/debug-form" class="btn btn-secondary">Try Again</a>
         </div>
         '''
+
+
+@app.route("/save-cutoff-settings", methods=["POST"])
+@safe_db_operation
+def save_cutoff_settings():
+    """Update data cutoff settings for medical data parsing"""
+    settings = get_or_create_settings()
+
+    # Get cutoff values from form (default to 0 for "last appointment" logic)
+    try:
+        settings.labs_cutoff_months = int(request.form.get("labs_cutoff_months", 0))
+        settings.imaging_cutoff_months = int(request.form.get("imaging_cutoff_months", 0))
+        settings.consults_cutoff_months = int(request.form.get("consults_cutoff_months", 0))
+        settings.hospital_cutoff_months = int(request.form.get("hospital_cutoff_months", 0))
+
+        # Handle screening-specific cutoffs with improved processing
+        screening_cutoffs_processed = 0
+        
+        # Get all active screening types to validate against
+        from models import ScreeningType
+        active_screening_names = [st.name for st in ScreeningType.query.filter_by(is_active=True).all()]
+        print(f"DEBUG: Active screening types: {active_screening_names}")
+        
+        for key, value in request.form.items():
+            if key.startswith("screening_cutoff_"):
+                # Extract screening name from field name (screening_cutoff_ScreeningName)
+                screening_name = key.replace("screening_cutoff_", "")
+                
+                # Validate that this is a known active screening type
+                if screening_name not in active_screening_names:
+                    print(f"WARNING: Unknown screening type '{screening_name}' in form data")
+                    continue
+                    
+                try:
+                    # Convert empty string to 0. Preserve all numeric values including 0
+                    if value == '' or value is None:
+                        months = 0
+                    else:
+                        months = int(value)
+                    
+                    # Validate the range
+                    if months < 0 or months > 120:
+                        print(f"WARNING: Invalid cutoff value {months} for '{screening_name}', skipping")
+                        continue
+                    
+                    # Set the cutoff value exactly as provided by user
+                    old_value = settings.get_screening_cutoff(screening_name)
+                    settings.set_screening_cutoff(screening_name, months)
+                    screening_cutoffs_processed += 1
+                    print(f"DEBUG: Successfully updated cutoff for '{screening_name}': {old_value} -> {months} months (form value: '{value}')")
+                except (ValueError, TypeError) as e:
+                    print(f"ERROR: Error processing cutoff for '{screening_name}' with value '{value}': {e}")
+                    # Skip this field if there's an error, don't modify existing value
+                    continue
+                
+        print(f"DEBUG: Processed {screening_cutoffs_processed} screening cutoffs out of {len(active_screening_names)} active screening types")
+        
+        # Debug: Print all form data to help identify issues
+        print("DEBUG: All form data received:")
+        for key, value in request.form.items():
+            print(f"  {key}: {repr(value)}")
+            
+        # Debug: Check if problematic fields are in form data
+        bone_density_field = request.form.get("screening_cutoff_Bone Density Screening")
+        hba1c_field = request.form.get("screening_cutoff_HbA1c Testing")
+        print(f"DEBUG: Bone Density form field: {repr(bone_density_field)}")
+        print(f"DEBUG: HbA1c form field: {repr(hba1c_field)}")
+            
+        # Debug: Print current screening cutoffs after processing
+        print("DEBUG: Current screening cutoffs after processing:")
+        if hasattr(settings, 'screening_cutoffs_dict') and settings.screening_cutoffs_dict:
+            for screening, cutoff in settings.screening_cutoffs_dict.items():
+                print(f"  {screening}: {cutoff} months")
+        else:
+            print("  No screening_cutoffs_dict found or empty")
+            
+        # Debug: Print the raw screening_cutoffs value
+        print(f"DEBUG: Raw screening_cutoffs value: {repr(settings.screening_cutoffs)}")
+        
+        # Specific debug for problematic screening types
+        bone_density_cutoff = settings.get_screening_cutoff("Bone Density Screening")
+        hba1c_cutoff = settings.get_screening_cutoff("HbA1c Testing")
+        print(f"DEBUG: Bone Density Screening cutoff: {bone_density_cutoff}")
+        print(f"DEBUG: HbA1c Testing cutoff: {hba1c_cutoff}")
+        
+        # Debug: Check if these values are being overridden somewhere
+        print("DEBUG: Final verification before commit:")
+        print(f"  Bone Density final value: {settings.get_screening_cutoff('Bone Density Screening')}")
+        print(f"  HbA1c final value: {settings.get_screening_cutoff('HbA1c Testing')}")
+
+        # Verify settings before commit
+        print("DEBUG: Verifying settings before commit:")
+        for screening_name in active_screening_names:
+            current_cutoff = settings.get_screening_cutoff(screening_name)
+            print(f"  {screening_name}: {current_cutoff} months")
+        
+        db.session.commit()
+        
+        # Verify settings after commit
+        print("DEBUG: Verifying settings after commit:")
+        settings_after = get_or_create_settings()
+        for screening_name in active_screening_names:
+            current_cutoff = settings_after.get_screening_cutoff(screening_name)
+            print(f"  {screening_name}: {current_cutoff} months")
+        
+        flash("Data cutoff settings updated successfully!", "success")
+
+    except (ValueError, TypeError) as e:
+        print(f"ERROR: Exception in save_cutoff_settings: {e}")
+        flash("Invalid cutoff values provided. Please enter valid numbers.", "error")
+    except Exception as e:
+        print(f"ERROR: Unexpected exception in save_cutoff_settings: {e}")
+        db.session.rollback()
+        flash(f"Error updating cutoff settings: {str(e)}", "error")
+
+    return redirect(url_for("screening_list", tab="checklist"))
