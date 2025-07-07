@@ -758,7 +758,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <hr class="my-4">
                     <h6 class="mb-3">Active Screening Types Cutoffs</h6>
                     <p class="text-muted small mb-3">These cutoffs apply to all active screening types in default checklist items</p>
-                    
+
                     <div class="row">
                         {% for screening in active_screening_types %}
                             {% if screening.name in (settings.default_items_list if settings else []) %}
@@ -896,11 +896,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <i class="fas fa-check-circle text-info me-2"></i>{{ screening.name }}
                                 </label>
                                 <div class="input-group">
-                                    <input type="number" class="form-control screening-cutoff" 
-                                           id="screening_{{ loop.index0 }}_cutoff_months" 
-                                           name="screening_{{ screening.name|replace(' ', '_')|lower }}_cutoff_months" 
-                                           min="0" max="120" 
-                                           value="{{ settings.get_screening_cutoff(screening.name) if settings else 12 }}" required>
+                                    <input type="number" 
+                                       class="form-control screening-cutoff" 
+                                       id="screening_{{ loop.index0 }}_cutoff_months" 
+                                       name="screening_{{ screening.name|replace(' ', '_')|lower }}_cutoff_months" 
+                                       value="{{ settings.get_screening_cutoff(screening.name, 0) if settings else 0 }}" required>
                                     <span class="input-group-text">months</span>
                                 </div>
                                 <div class="form-text">Cutoff for {{ screening.name }} documents</div>
@@ -1097,28 +1097,28 @@ function updateScreeningSelections() {
 document.addEventListener('DOMContentLoaded', function() {
     updateStatusSelections();
     updateScreeningSelections();
-    
+
     // Ensure button states are correctly reflected in the hidden input
     // This fixes any discrepancy between server-rendered state and JS state
     const screeningSelectionInput = document.getElementById('screening-selections');
     if (screeningSelectionInput) {
         const currentValue = screeningSelectionInput.value;
         console.log('Initial screening selections from server:', currentValue);
-        
+
         // If there's a mismatch, trust the server state and update buttons accordingly
         if (currentValue) {
             const serverSelections = currentValue.split(',').map(s => s.trim()).filter(s => s);
             const buttonSelections = Array.from(document.querySelectorAll('#screening-buttons .btn-primary')).map(btn => btn.dataset.value);
-            
+
             console.log('Server selections:', serverSelections);
             console.log('Button selections:', buttonSelections);
-            
+
             // Sync button states with server data
             document.querySelectorAll('#screening-buttons .screening-btn').forEach(button => {
                 const value = button.dataset.value;
                 const shouldBeSelected = serverSelections.includes(value);
                 const isSelected = button.classList.contains('btn-primary');
-                
+
                 if (shouldBeSelected && !isSelected) {
                     button.classList.remove('btn-outline-primary');
                     button.classList.add('btn-primary');
@@ -1129,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('Deactivated button for:', value);
                 }
             });
-            
+
             // Update display after syncing
             updateScreeningSelections();
         }

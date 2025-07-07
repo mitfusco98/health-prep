@@ -1014,7 +1014,7 @@ class ChecklistSettings(db.Model):
                 return {}
         return {}
 
-    def get_screening_cutoff(self, screening_name, default=12):
+    def get_screening_cutoff(self, screening_name, default=0):
         """Get cutoff months for a specific screening type"""
         cutoffs = self.screening_cutoffs_dict
         return cutoffs.get(screening_name, default)
