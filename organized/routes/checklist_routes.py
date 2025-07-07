@@ -46,7 +46,7 @@ def save_status_options_simple():
 
     # Get status options from form
     status_options = request.form.getlist("status_options")
-    
+
     # Update settings
     settings.custom_status_options = (
         ",".join(status_options) if status_options else ""
@@ -70,7 +70,7 @@ def update_checklist_generation():
 
     # Get manual default items from textarea
     manual_default_items = request.form.get("default_items", "")
-    
+
     # Update settings
     settings.default_items = manual_default_items
 
@@ -204,3 +204,34 @@ def debug_form():
             <a href="/debug-form" class="btn btn-secondary">Try Again</a>
         </div>
         '''
+
+
+@app.route("/save-cutoff-settings", methods=["POST"])
+@safe_db_operation
+def save_cutoff_settings():
+    """Update data cutoff settings for medical data parsing"""
+    settings = get_or_create_settings()
+
+    # Get cutoff values from form (default to 0 for "last appointment" logic)
+    try:
+        settings.labs_cutoff_months = int(request.form.get("labs_cutoff_months", 0))
+        settings.imaging_cutoff_months = int(request.form.get("imaging_cutoff_months", 0))
+        settings.consults_cutoff_months = int(request.form.get("consults_cutoff_months", 0))
+        settings.hospital_cutoff_months = int(request.form.get("hospital_cutoff_months", 0))
+
+        # Handle screening-specific cutoffs with corrected field name pattern
+        for key, value in request.form.items():
+            if key.startswith("screening_cutoff_"):
+                # Extract screening name from field name (screening_cutoff_ScreeningName)
+                screening_name = key.replace("screening_cutoff_", "")
+                months = int(value) if value else 0
+                settings.set_screening_cutoff(screening_name, months)
+                print(f"Setting cutoff for '{screening_name}': {months} months")
+
+        db.session.commit()
+        flash("Data cutoff settings updated successfully!", "success")
+
+    except (ValueError, TypeError) as e:
+        flash("Invalid cutoff values provided. Please enter valid numbers.", "error")
+
+    return redirect(url_for("screening_list", tab="checklist"))

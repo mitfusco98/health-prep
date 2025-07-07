@@ -898,7 +898,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="input-group">
                                     <input type="number" class="form-control screening-cutoff" 
                                            id="screening_{{ loop.index0 }}_cutoff_months" 
-                                           name="screening_{{ screening.name|replace(' ', '_')|lower }}_cutoff_months" 
+                                           name="screening_cutoff_{{ screening.name }}" 
                                            min="0" max="120" 
                                            value="{{ settings.get_screening_cutoff(screening.name) if settings else 0 }}" required>
                                     <span class="input-group-text">months</span>
@@ -940,13 +940,29 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 // Preset cutoff configuration function
 function setPresetCutoffs(labs, imaging, consults, hospital) {
+    // Only update if user confirms they want to override existing values
+    const screeningInputs = document.querySelectorAll('.screening-cutoff');
+    let hasUserInput = false;
+    
+    // Check if any screening fields have non-zero values (indicating user input)
+    screeningInputs.forEach(input => {
+        if (input.value && parseInt(input.value) > 0) {
+            hasUserInput = true;
+        }
+    });
+    
+    if (hasUserInput) {
+        if (!confirm('This will override your existing screening cutoff settings. Continue?')) {
+            return;
+        }
+    }
+    
     document.getElementById('labs_cutoff_months').value = labs;
     document.getElementById('imaging_cutoff_months').value = imaging;
     document.getElementById('consults_cutoff_months').value = consults;
     document.getElementById('hospital_cutoff_months').value = hospital;
 
     // Apply the same preset value to all screening-specific cutoffs
-    const screeningInputs = document.querySelectorAll('.screening-cutoff');
     screeningInputs.forEach(input => {
         input.value = labs; // Use the same value for all screening cutoffs
     });
@@ -954,6 +970,22 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
 
 // Set all cutoffs to use each patient's last appointment date
 function setToLastAppointmentDate() {
+    // Check if user has input values and confirm override
+    const screeningInputs = document.querySelectorAll('.screening-cutoff');
+    let hasUserInput = false;
+    
+    screeningInputs.forEach(input => {
+        if (input.value && parseInt(input.value) > 0) {
+            hasUserInput = true;
+        }
+    });
+    
+    if (hasUserInput) {
+        if (!confirm('This will reset all cutoffs to use last appointment date. Continue?')) {
+            return;
+        }
+    }
+    
     // Clear all cutoff values to trigger patient-specific last appointment fallback
     document.getElementById('labs_cutoff_months').value = 0;
     document.getElementById('imaging_cutoff_months').value = 0;
@@ -961,7 +993,6 @@ function setToLastAppointmentDate() {
     document.getElementById('hospital_cutoff_months').value = 0;
 
     // Clear all screening-specific cutoffs
-    const screeningInputs = document.querySelectorAll('.screening-cutoff');
     screeningInputs.forEach(input => {
         input.value = 0;
     });
