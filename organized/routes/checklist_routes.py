@@ -226,8 +226,11 @@ def save_cutoff_settings():
                 # Extract screening name from field name (screening_cutoff_ScreeningName)
                 screening_name = key.replace("screening_cutoff_", "")
                 try:
-                    # Always preserve the exact user input value, including 0
-                    months = int(value) if value is not None else 0
+                    # Convert empty string to None, then to 0. Preserve all numeric values including 0
+                    if value == '' or value is None:
+                        months = 0
+                    else:
+                        months = int(value)
                     
                     # Set the cutoff value exactly as provided by user
                     settings.set_screening_cutoff(screening_name, months)

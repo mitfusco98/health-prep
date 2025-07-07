@@ -966,9 +966,12 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
 
     // Apply the same preset value to all screening-specific cutoffs only if user confirms
     screeningInputs.forEach(input => {
-        input.value = labs; // Use the same value for all screening cutoffs
-        input.dataset.presetModified = 'true'; // Mark as preset modified
-        input.dataset.originalValue = labs; // Update original value
+        // Only apply preset if user hasn't manually modified this field
+        if (input.dataset.userModified !== 'true') {
+            input.value = labs; // Use the same value for all screening cutoffs
+            input.dataset.presetModified = 'true'; // Mark as preset modified
+            input.dataset.originalValue = labs; // Update original value
+        }
     });
 }
 
@@ -998,10 +1001,12 @@ function setToLastAppointmentDate() {
 
     // Clear all screening-specific cutoffs but don't override user modifications
     screeningInputs.forEach(input => {
-        // Only set to 0 if this is part of the preset action
-        input.value = 0;
-        input.dataset.presetModified = 'true'; // Mark as preset modified (different from user modified)
-        input.dataset.originalValue = '0'; // Update original value
+        // Only set to 0 if user hasn't manually modified this field
+        if (input.dataset.userModified !== 'true') {
+            input.value = 0;
+            input.dataset.presetModified = 'true'; // Mark as preset modified (different from user modified)
+            input.dataset.originalValue = '0'; // Update original value
+        }
     });
 
     // Show confirmation
@@ -1246,35 +1251,40 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Track when user manually changes the input
         input.addEventListener('input', function() {
-            // Only mark as user modified if it's not a preset change
-            if (!this.dataset.presetModified) {
-                this.dataset.userModified = 'true';
-                console.log(`User modified cutoff for ${this.dataset.screeningName}: ${this.value}`);
-            }
+            // Mark as user modified for any direct input
+            this.dataset.userModified = 'true';
+            // Clear any preset modification flag
+            this.dataset.presetModified = 'false';
+            console.log(`User input detected for ${this.dataset.screeningName}: ${this.value}`);
         });
 
         // Also track on change event
         input.addEventListener('change', function() {
-            // Only mark as user modified if it's not a preset change
-            if (!this.dataset.presetModified) {
+            // Mark as user modified for any change unless it's clearly a preset
+            if (this.dataset.presetModified !== 'true') {
                 this.dataset.userModified = 'true';
                 console.log(`User changed cutoff for ${this.dataset.screeningName}: ${this.value}`);
             }
-            // Clear preset flag after change event
+            // Clear preset flag after processing
             this.dataset.presetModified = 'false';
         });
 
-        // Track on focus and typing to catch direct user interaction
+        // Track on focus to detect user interaction
         input.addEventListener('focus', function() {
             this.dataset.userFocused = 'true';
         });
 
-        input.addEventListener('keydown', function() {
-            // If user is typing, it's definitely user input
-            if (this.dataset.userFocused === 'true') {
-                this.dataset.userModified = 'true';
-                console.log(`User typing in cutoff for ${this.dataset.screeningName}`);
-            }
+        // Track actual typing/keystrokes
+        input.addEventListener('keypress', function() {
+            // Any keystroke indicates user modification
+            this.dataset.userModified = 'true';
+            this.dataset.presetModified = 'false';
+            console.log(`User keystroke detected for ${this.dataset.screeningName}`);
+        });
+
+        // Track blur to clear focus flag
+        input.addEventListener('blur', function() {
+            this.dataset.userFocused = 'false';
         });
     });
 });
