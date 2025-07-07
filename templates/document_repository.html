@@ -27,6 +27,10 @@
                         <i class="fas fa-folder-open me-2"></i>All Medical Documents
                     </h5>
                     <div class="d-flex align-items-center">
+                        <button type="button" class="btn btn-outline-danger me-2" id="bulk-delete-btn" 
+                                onclick="bulkDeleteDocuments()" disabled>
+                            <i class="fas fa-trash me-1"></i> Delete Selected
+                        </button>
                         <form class="me-2" method="get" action="{{ url_for('document_repository') }}">
                             <div class="d-flex">
                                 <div class="input-group me-2">
@@ -58,6 +62,9 @@
                     <table class="table table-hover table-striped mb-0">
                         <thead>
                             <tr>
+                                <th>
+                                    <input type="checkbox" id="select-all-docs" class="form-check-input" title="Select All">
+                                </th>
                                 <th>Document Name</th>
                                 <th>Type</th>
                                 <th>Patient</th>
@@ -69,6 +76,11 @@
                         <tbody>
                             {% for document in all_documents %}
                             <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input document-checkbox" 
+                                           value="{{ document.id }}" name="document_ids" 
+                                           data-document-name="{{ document.document_name }}">
+                                </td>
                                 <td>{{ document.document_name }}</td>
                                 <td>
                                     <span class="badge 
@@ -107,6 +119,11 @@
                                         <a href="{{ url_for('view_document', document_id=document.id) }}" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-file-alt me-1"></i> View
                                         </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                onclick="deleteDocument({{ document.id }}, '{{ document.document_name }}')"
+                                                title="Delete Document">
+                                            <i class="fas fa-trash me-1"></i> Delete
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -141,6 +158,108 @@
                 this.closest('form').submit();
             });
         }
+
+        // Handle select all checkbox
+        const selectAllCheckbox = document.getElementById('select-all-docs');
+        const documentCheckboxes = document.querySelectorAll('.document-checkbox');
+        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                documentCheckboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                updateBulkDeleteButton();
+            });
+        }
+
+        // Handle individual checkboxes
+        documentCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateBulkDeleteButton();
+                
+                // Update select all checkbox state
+                const checkedCount = document.querySelectorAll('.document-checkbox:checked').length;
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < documentCheckboxes.length;
+                    selectAllCheckbox.checked = checkedCount === documentCheckboxes.length;
+                }
+            });
+        });
+
+        function updateBulkDeleteButton() {
+            const checkedCount = document.querySelectorAll('.document-checkbox:checked').length;
+            if (bulkDeleteBtn) {
+                bulkDeleteBtn.disabled = checkedCount === 0;
+                bulkDeleteBtn.innerHTML = checkedCount > 0 
+                    ? `<i class="fas fa-trash me-1"></i> Delete Selected (${checkedCount})`
+                    : '<i class="fas fa-trash me-1"></i> Delete Selected';
+            }
+        }
     });
+
+    function deleteDocument(documentId, documentName) {
+        if (confirm(`Are you sure you want to delete "${documentName}"?`)) {
+            fetch(`/documents/${documentId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Reload the page to show updated list
+                    window.location.reload();
+                } else {
+                    alert('Error deleting document. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting document. Please try again.');
+            });
+        }
+    }
+
+    function bulkDeleteDocuments() {
+        const checkedBoxes = document.querySelectorAll('.document-checkbox:checked');
+        const documentIds = Array.from(checkedBoxes).map(cb => cb.value);
+        const documentNames = Array.from(checkedBoxes).map(cb => cb.dataset.documentName);
+        
+        if (documentIds.length === 0) {
+            alert('Please select documents to delete.');
+            return;
+        }
+
+        const confirmMessage = documentIds.length === 1 
+            ? `Are you sure you want to delete "${documentNames[0]}"?`
+            : `Are you sure you want to delete ${documentIds.length} selected documents?`;
+
+        if (confirm(confirmMessage)) {
+            fetch('/documents/bulk-delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || ''
+                },
+                body: JSON.stringify({
+                    document_ids: documentIds
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Reload the page to show updated list
+                    window.location.reload();
+                } else {
+                    alert('Error deleting documents. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error deleting documents. Please try again.');
+            });
+        }
+    }
 </script>
 {% endblock %}

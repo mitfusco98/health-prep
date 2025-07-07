@@ -2493,6 +2493,58 @@ def document_repository():
     return response
 
 
+@app.route("/documents/<int:document_id>/delete", methods=["POST"])
+def delete_document_from_repository(document_id):
+    """Delete a single document from repository"""
+    try:
+        document = MedicalDocument.query.get_or_404(document_id)
+        document_name = document.document_name
+        
+        db.session.delete(document)
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": f"Document '{document_name}' deleted successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/documents/bulk-delete", methods=["POST"])
+def bulk_delete_documents():
+    """Delete multiple documents"""
+    try:
+        data = request.get_json()
+        document_ids = data.get('document_ids', [])
+        
+        if not document_ids:
+            return jsonify({"success": False, "error": "No documents selected"}), 400
+            
+        # Get documents to delete
+        documents = MedicalDocument.query.filter(MedicalDocument.id.in_(document_ids)).all()
+        
+        if not documents:
+            return jsonify({"success": False, "error": "No documents found"}), 404
+            
+        deleted_count = len(documents)
+        document_names = [doc.document_name for doc in documents]
+        
+        # Delete all documents
+        for document in documents:
+            db.session.delete(document)
+            
+        db.session.commit()
+        
+        return jsonify({
+            "success": True, 
+            "message": f"Successfully deleted {deleted_count} document(s)",
+            "deleted_documents": document_names
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/import-from-url", methods=["POST"])
 def import_from_url():
     """Import document content from a URL"""
