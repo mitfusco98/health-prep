@@ -169,14 +169,16 @@ def index(date_str=None):
     )
 
     # Get recent documents
-    # Get recent documents with retry logic for connection issues
+    # Get recent documents and total document count with retry logic for connection issues
     recent_documents = []
+    total_documents = 0
     try:
         recent_documents = (
             MedicalDocument.query.order_by(MedicalDocument.created_at.desc())
             .limit(10)
             .all()
         )
+        total_documents = MedicalDocument.query.count()
     except (OperationalError, DisconnectionError) as e:
         if "SSL connection has been closed" in str(e):
             print("Database connection lost, attempting to reconnect...")
@@ -187,9 +189,11 @@ def index(date_str=None):
                     .limit(10)
                     .all()
                 )
+                total_documents = MedicalDocument.query.count()
             except Exception as retry_error:
                 print(f"Database retry failed: {retry_error}")
                 recent_documents = []
+                total_documents = 0
         else:
             raise
 
@@ -258,6 +262,7 @@ def index(date_str=None):
         upcoming_visits=appointments,  # Use the appointments for the selected date for the counter
         recent_lab_results=recent_lab_results,
         recent_documents=recent_documents,
+        total_documents=total_documents,
         todays_appointments=appointments,
         selected_date=selected_date,
         prev_date=prev_date,
