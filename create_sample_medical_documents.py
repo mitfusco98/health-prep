@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Create Sample Medical Documents for Testing Screening Logic
-Adds realistic medical documents for existing patients to test document-to-screening matching
+Generates properly categorized, sex-specific medical documents to test document-to-screening matching
+and demonstrate prep sheet functionality
 """
 
 import sys
@@ -17,222 +18,318 @@ from app import app, db
 from models import Patient, MedicalDocument, ScreeningType
 
 def create_sample_documents():
-    """Create sample medical documents for testing screening logic"""
+    """Create sample medical documents with proper categorization and sex-specific logic"""
     
     with app.app_context():
         # Get existing patients
-        patients = Patient.query.limit(5).all()
+        patients = Patient.query.all()
         if not patients:
             print("No patients found. Please add patients first.")
             return
         
-        # Sample documents that SHOULD match screening types
-        matching_documents = [
+        # Laboratory documents (LAB_REPORT)
+        lab_documents = [
             {
-                'filename': 'colonoscopy_report_2024.pdf',
-                'content': 'COLONOSCOPY REPORT\n\nPatient underwent colonoscopy examination. No polyps found. Recommended follow-up in 10 years. Procedure completed successfully with gastroenterology team.',
-                'document_type': 'Report',
-                'section': 'Gastroenterology',
-                'category': 'Procedure Report'
+                'filename': 'lipid_panel_results.pdf',
+                'content': 'LIPID PANEL RESULTS\n\nDate: {date}\nTotal cholesterol: 185 mg/dL\nLDL cholesterol: 110 mg/dL\nHDL cholesterol: 55 mg/dL\nTriglycerides: 120 mg/dL\n\nResults within normal limits. Continue current management.',
+                'document_type': 'LAB_REPORT',
+                'document_name': 'Lipid Panel Results',
+                'keywords': ['lipid', 'cholesterol', 'triglycerides']
             },
             {
-                'filename': 'mammogram_screening_results.pdf', 
-                'content': 'MAMMOGRAM SCREENING RESULTS\n\nBilateral mammogram performed. No suspicious lesions identified. BI-RADS category 1. Recommend routine annual mammogram screening.',
-                'document_type': 'Imaging',
-                'section': 'Radiology',
-                'category': 'Screening'
+                'filename': 'a1c_glucose_results.pdf',
+                'content': 'HEMOGLOBIN A1C AND GLUCOSE RESULTS\n\nDate: {date}\nHemoglobin A1c: 5.8%\nFasting glucose: 95 mg/dL\nRandom glucose: 110 mg/dL\n\nGlucose control excellent. Continue current diet and exercise.',
+                'document_type': 'LAB_REPORT',
+                'document_name': 'A1C and Glucose Results',
+                'keywords': ['a1c', 'hemoglobin', 'glucose', 'diabetes']
             },
             {
-                'filename': 'pap_smear_cytology.pdf',
-                'content': 'PAP SMEAR CYTOLOGY REPORT\n\nCervical cytology specimen examined. Results: Normal cervical cells. No malignant cells identified. Recommend routine screening in 3 years.',
-                'document_type': 'Lab Result',
-                'section': 'Pathology',
-                'category': 'Screening'
+                'filename': 'complete_blood_count.pdf',
+                'content': 'COMPLETE BLOOD COUNT (CBC)\n\nDate: {date}\nHemoglobin: 14.2 g/dL\nHematocrit: 42.1%\nWhite Blood Cell count: 7,200/μL\nPlatelet count: 285,000/μL\n\nAll values within normal range.',
+                'document_type': 'LAB_REPORT',
+                'document_name': 'Complete Blood Count',
+                'keywords': ['cbc', 'blood count', 'hemoglobin']
             },
             {
-                'filename': 'lipid_panel_lab_results.pdf',
-                'content': 'LIPID PANEL RESULTS\n\nTotal cholesterol: 185 mg/dL\nLDL: 110 mg/dL\nHDL: 55 mg/dL\nTriglycerides: 120 mg/dL\n\nResults within normal limits.',
-                'document_type': 'Lab Result',
-                'section': 'Laboratory',
-                'category': 'Blood Work'
-            },
-            {
-                'filename': 'eye_exam_optometry.pdf',
-                'content': 'COMPREHENSIVE EYE EXAMINATION\n\nOptometry evaluation completed. Visual acuity 20/20 both eyes. No retinopathy observed. Recommend annual eye exam.',
-                'document_type': 'Report',
-                'section': 'Optometry',
-                'category': 'Examination'
-            },
-            {
-                'filename': 'a1c_glucose_test.pdf',
-                'content': 'HEMOGLOBIN A1C TEST RESULTS\n\nHbA1c: 5.8%\nFasting glucose: 95 mg/dL\n\nResults indicate good glucose control. Continue current management.',
-                'document_type': 'Lab Result',
-                'section': 'Laboratory',
-                'category': 'Blood Work'
-            },
-            {
-                'filename': 'dexa_scan_bone_density.pdf',
-                'content': 'BONE DENSITY SCAN (DEXA)\n\nLumbar spine T-score: -1.2\nFemoral neck T-score: -0.8\n\nBone density within normal range for age. Recommend repeat in 2 years.',
-                'document_type': 'Imaging',
-                'section': 'Radiology',
-                'category': 'Diagnostic'
-            },
-            {
-                'filename': 'vaccination_record_2024.pdf',
-                'content': 'VACCINATION RECORD\n\nInfluenza vaccine administered 10/15/2024\nCOVID-19 booster given 09/20/2024\nTdap up to date (last: 2019)\n\nAll routine vaccinations current.',
-                'document_type': 'Record',
-                'section': 'Immunizations',
-                'category': 'Preventive Care'
+                'filename': 'thyroid_function_tests.pdf',
+                'content': 'THYROID FUNCTION PANEL\n\nDate: {date}\nTSH: 2.1 mIU/L\nFree T4: 1.2 ng/dL\nFree T3: 3.1 pg/mL\n\nThyroid function normal.',
+                'document_type': 'LAB_REPORT',
+                'document_name': 'Thyroid Function Tests',
+                'keywords': ['thyroid', 'tsh', 't4', 't3']
             }
         ]
         
-        # Sample documents that should NOT match screening types
-        non_matching_documents = [
+        # Imaging documents (RADIOLOGY_REPORT)
+        imaging_documents = [
             {
-                'filename': 'emergency_room_visit.pdf',
-                'content': 'EMERGENCY DEPARTMENT VISIT\n\nChief complaint: Acute abdominal pain. Diagnosis: Appendicitis. Patient admitted for emergency appendectomy.',
-                'document_type': 'Report',
-                'section': 'Emergency Medicine',
-                'category': 'Emergency Care'
+                'filename': 'mammogram_screening.pdf',
+                'content': 'MAMMOGRAM SCREENING RESULTS\n\nDate: {date}\nBilateral mammogram performed for routine screening.\nFindings: No suspicious lesions identified.\nBI-RADS Category: 1 (Negative)\nRecommendation: Continue annual mammogram screening.',
+                'document_type': 'RADIOLOGY_REPORT',
+                'document_name': 'Mammogram Screening',
+                'sex_specific': 'female',
+                'keywords': ['mammogram', 'breast', 'screening', 'bi-rads']
             },
             {
-                'filename': 'physical_therapy_notes.pdf',
-                'content': 'PHYSICAL THERAPY EVALUATION\n\nPatient presents with lower back pain. Range of motion limited. Recommended therapy protocol for 6 weeks.',
-                'document_type': 'Note',
-                'section': 'Rehabilitation',
-                'category': 'Therapy'
+                'filename': 'dexa_bone_density.pdf',
+                'content': 'BONE DENSITY SCAN (DEXA)\n\nDate: {date}\nLumbar spine T-score: -1.2\nFemoral neck T-score: -0.8\nHip T-score: -1.0\n\nBone density within normal range for age. Recommend repeat in 2 years.',
+                'document_type': 'RADIOLOGY_REPORT',
+                'document_name': 'DEXA Bone Density Scan',
+                'keywords': ['dexa', 'bone density', 'osteoporosis', 't-score']
             },
             {
-                'filename': 'dermatology_consultation.pdf',
-                'content': 'DERMATOLOGY CONSULTATION\n\nSkin lesion examination. Benign seborrheic keratosis identified. No treatment required. Follow-up as needed.',
-                'document_type': 'Consultation',
-                'section': 'Dermatology',
-                'category': 'Specialty Care'
+                'filename': 'chest_xray_screening.pdf',
+                'content': 'CHEST X-RAY REPORT\n\nDate: {date}\nIndication: Routine screening\nFindings: Clear lung fields bilaterally. Normal heart size and shape. No acute findings.\nImpression: Normal chest X-ray.',
+                'document_type': 'RADIOLOGY_REPORT',
+                'document_name': 'Chest X-Ray Screening',
+                'keywords': ['chest x-ray', 'lung', 'screening']
             },
             {
-                'filename': 'medication_list_current.pdf',
-                'content': 'CURRENT MEDICATION LIST\n\n1. Lisinopril 10mg daily\n2. Metformin 500mg twice daily\n3. Atorvastatin 20mg nightly\n\nNo drug interactions noted.',
-                'document_type': 'List',
-                'section': 'Pharmacy',
-                'category': 'Medications'
-            },
-            {
-                'filename': 'orthopedic_xray_knee.pdf',
-                'content': 'KNEE X-RAY REPORT\n\nAP and lateral views of the right knee. Mild degenerative changes consistent with osteoarthritis. No fracture identified.',
-                'document_type': 'Imaging',
-                'section': 'Radiology',
-                'category': 'Diagnostic'
+                'filename': 'ct_colonography.pdf',
+                'content': 'CT COLONOGRAPHY (VIRTUAL COLONOSCOPY)\n\nDate: {date}\nIndication: Colorectal cancer screening\nFindings: No polyps or masses identified. Normal colonic anatomy.\nRecommendation: Routine screening in 5 years.',
+                'document_type': 'RADIOLOGY_REPORT',
+                'document_name': 'CT Colonography',
+                'keywords': ['colonography', 'virtual colonoscopy', 'colon', 'screening']
             }
         ]
         
-        # Combine all documents
-        all_documents = matching_documents + non_matching_documents
+        # Consultation documents (CONSULTATION)
+        consultation_documents = [
+            {
+                'filename': 'cardiology_consultation.pdf',
+                'content': 'CARDIOLOGY CONSULTATION\n\nDate: {date}\nReason: Routine cardiac risk assessment\nHistory: Patient with family history of heart disease\nExamination: Normal heart sounds, regular rhythm\nRecommendation: Continue current medications, annual follow-up',
+                'document_type': 'CONSULTATION',
+                'document_name': 'Cardiology Consultation',
+                'keywords': ['cardiology', 'heart', 'cardiac']
+            },
+            {
+                'filename': 'dermatology_skin_check.pdf',
+                'content': 'DERMATOLOGY CONSULTATION\n\nDate: {date}\nReason: Annual skin cancer screening\nExamination: Full body skin examination performed\nFindings: No suspicious lesions identified\nRecommendation: Annual skin checks, sun protection',
+                'document_type': 'CONSULTATION',
+                'document_name': 'Dermatology Skin Check',
+                'keywords': ['dermatology', 'skin', 'cancer screening']
+            },
+            {
+                'filename': 'ophthalmology_eye_exam.pdf',
+                'content': 'OPHTHALMOLOGY EXAMINATION\n\nDate: {date}\nReason: Routine eye examination\nVisual Acuity: 20/20 both eyes\nIntraocular Pressure: Normal\nFundoscopy: No retinopathy observed\nRecommendation: Annual eye examinations',
+                'document_type': 'CONSULTATION',
+                'document_name': 'Ophthalmology Eye Exam',
+                'keywords': ['ophthalmology', 'eye exam', 'vision', 'retinal']
+            },
+            {
+                'filename': 'gastroenterology_consultation.pdf',
+                'content': 'GASTROENTEROLOGY CONSULTATION\n\nDate: {date}\nReason: Colorectal cancer screening discussion\nHistory: Average risk patient, age appropriate for screening\nRecommendation: Colonoscopy scheduling, dietary counseling\nFollow-up: Post-procedure in 2 weeks',
+                'document_type': 'CONSULTATION',
+                'document_name': 'Gastroenterology Consultation',
+                'keywords': ['gastroenterology', 'colonoscopy', 'colon']
+            }
+        ]
         
-        print(f"Creating {len(all_documents)} sample documents for {len(patients)} patients...")
+        # Hospital documents (DISCHARGE_SUMMARY)
+        hospital_documents = [
+            {
+                'filename': 'preventive_care_admission.pdf',
+                'content': 'DISCHARGE SUMMARY - PREVENTIVE CARE UNIT\n\nAdmission Date: {date}\nDischarge Date: {date}\nReason: Comprehensive preventive health assessment\nProcedures: Complete physical exam, routine screenings\nDischarge Instructions: Continue current medications, follow-up appointments scheduled',
+                'document_type': 'DISCHARGE_SUMMARY',
+                'document_name': 'Preventive Care Admission Summary',
+                'keywords': ['preventive', 'comprehensive', 'physical']
+            },
+            {
+                'filename': 'outpatient_procedure_summary.pdf',
+                'content': 'OUTPATIENT PROCEDURE SUMMARY\n\nDate: {date}\nProcedure: Routine screening procedures\nAnesthesia: Local/Conscious sedation\nComplications: None\nDisposition: Discharged home in stable condition\nFollow-up: Scheduled as appropriate',
+                'document_type': 'DISCHARGE_SUMMARY',
+                'document_name': 'Outpatient Procedure Summary',
+                'keywords': ['outpatient', 'procedure', 'screening']
+            }
+        ]
+        
+        # Female-specific documents
+        female_specific_documents = [
+            {
+                'filename': 'pap_smear_results.pdf',
+                'content': 'PAP SMEAR CYTOLOGY REPORT\n\nDate: {date}\nSpecimen: Cervical cytology\nResults: Normal cervical cells (NILM)\nHPV Testing: Negative\nRecommendation: Routine screening in 3 years per guidelines',
+                'document_type': 'LAB_REPORT',
+                'document_name': 'Pap Smear Results',
+                'sex_specific': 'female',
+                'keywords': ['pap smear', 'cervical', 'cytology', 'hpv']
+            },
+            {
+                'filename': 'gynecology_consultation.pdf',
+                'content': 'GYNECOLOGY CONSULTATION\n\nDate: {date}\nReason: Annual gynecological examination\nExamination: Normal pelvic examination\nBreast examination: Normal\nRecommendations: Continue routine screening, contraception counseling as needed',
+                'document_type': 'CONSULTATION',
+                'document_name': 'Gynecology Consultation',
+                'sex_specific': 'female',
+                'keywords': ['gynecology', 'pelvic', 'breast']
+            }
+        ]
+        
+        # Male-specific documents
+        male_specific_documents = [
+            {
+                'filename': 'prostate_screening.pdf',
+                'content': 'PROSTATE SCREENING RESULTS\n\nDate: {date}\nPSA Level: 1.2 ng/mL\nDigital Rectal Exam: Normal\nProstate size: Normal\nRecommendation: Continue annual screening, repeat PSA in 1 year',
+                'document_type': 'LAB_REPORT',
+                'document_name': 'Prostate Screening',
+                'sex_specific': 'male',
+                'keywords': ['prostate', 'psa', 'screening']
+            },
+            {
+                'filename': 'urology_consultation.pdf',
+                'content': 'UROLOGY CONSULTATION\n\nDate: {date}\nReason: Prostate health screening\nExamination: Normal genitourinary examination\nProstate: No abnormalities detected\nRecommendations: Annual screening, lifestyle modifications',
+                'document_type': 'CONSULTATION',
+                'document_name': 'Urology Consultation',
+                'sex_specific': 'male',
+                'keywords': ['urology', 'prostate', 'genitourinary']
+            }
+        ]
+        
+        # Other/miscellaneous documents
+        other_documents = [
+            {
+                'filename': 'vaccination_record.pdf',
+                'content': 'VACCINATION RECORD UPDATE\n\nDate: {date}\nInfluenza vaccine: Administered\nCOVID-19 status: Up to date\nTdap: Current (expires 2029)\nAll routine adult vaccinations current per CDC guidelines',
+                'document_type': 'OTHER',
+                'document_name': 'Vaccination Record',
+                'keywords': ['vaccination', 'immunization', 'vaccine']
+            },
+            {
+                'filename': 'nutrition_counseling.pdf',
+                'content': 'NUTRITION COUNSELING SESSION\n\nDate: {date}\nDietary Assessment: Mediterranean diet pattern\nBMI: 24.5 (Normal)\nRecommendations: Continue current diet, increase fiber intake\nFollow-up: 6 months',
+                'document_type': 'OTHER',
+                'document_name': 'Nutrition Counseling',
+                'keywords': ['nutrition', 'diet', 'counseling']
+            }
+        ]
+        
+        print("Creating sex-specific, properly categorized medical documents...")
+        print(f"Found {len(patients)} patients to process")
         
         documents_created = 0
         
-        for i, patient in enumerate(patients):
-            # Assign 3-4 documents per patient, mixing matching and non-matching
-            num_docs = random.randint(3, 4)
-            selected_docs = random.sample(all_documents, num_docs)
+        for patient in patients:
+            print(f"\nProcessing patient: {patient.full_name} (Sex: {patient.sex})")
             
-            for doc_data in selected_docs:
-                # Create document with realistic dates (last 2 years)
-                days_ago = random.randint(30, 730)
-                upload_date = datetime.now() - timedelta(days=days_ago)
+            # Base documents for all patients
+            patient_documents = []
+            patient_documents.extend(random.sample(lab_documents, 2))  # 2 lab documents
+            patient_documents.extend(random.sample(imaging_documents, 1))  # 1 imaging document  
+            patient_documents.extend(random.sample(consultation_documents, 2))  # 2 consultations
+            patient_documents.extend(random.sample(hospital_documents, 1))  # 1 hospital document
+            patient_documents.extend(random.sample(other_documents, 1))  # 1 other document
+            
+            # Add sex-specific documents
+            if patient.sex and patient.sex.lower() == 'female':
+                patient_documents.extend(female_specific_documents)  # Add all female-specific
+                # Add mammogram (already in imaging_documents but marked female-specific)
+                print(f"  -> Added female-specific documents (pap smear, gynecology, mammogram)")
+            elif patient.sex and patient.sex.lower() == 'male':
+                patient_documents.extend(male_specific_documents)  # Add all male-specific
+                print(f"  -> Added male-specific documents (prostate screening, urology)")
+            
+            # Filter out sex-specific documents for wrong gender
+            filtered_documents = []
+            for doc in patient_documents:
+                if 'sex_specific' in doc:
+                    if patient.sex and patient.sex.lower() == doc['sex_specific']:
+                        filtered_documents.append(doc)
+                    else:
+                        print(f"  -> Skipped {doc['document_name']} (wrong gender)")
+                else:
+                    filtered_documents.append(doc)
+            
+            # Create documents for this patient
+            for doc_data in filtered_documents:
+                # Create document with realistic dates (last 18 months)
+                days_ago = random.randint(30, 540)
+                document_date = datetime.now() - timedelta(days=days_ago)
                 
                 # Create metadata dictionary
                 metadata = {
-                    'section': doc_data['section'],
-                    'category': doc_data['category'],
-                    'file_size': random.randint(50000, 500000),
+                    'medical_data_subsection': doc_data['document_type'],
+                    'keywords': doc_data.get('keywords', []),
+                    'sex_specific': doc_data.get('sex_specific'),
+                    'file_size': random.randint(50000, 200000),
                     'content_type': 'application/pdf',
                     'fhir_document_reference_id': f"doc-{patient.id}-{documents_created + 1}",
-                    'status': 'completed'
+                    'status': 'completed',
+                    'created_for_demo': True,
+                    'notes': f"Generated for screening logic testing - {doc_data['document_type']}"
                 }
+                
+                # Format content with actual date
+                formatted_content = doc_data['content'].format(
+                    date=document_date.strftime('%B %d, %Y')
+                )
                 
                 new_document = MedicalDocument(
                     patient_id=patient.id,
                     filename=f"{patient.last_name}_{doc_data['filename']}",
-                    document_name=doc_data['filename'].replace('.pdf', '').replace('_', ' ').title(),
-                    document_type=doc_data['document_type'],
-                    content=doc_data['content'],
-                    document_date=upload_date,
-                    provider="Sample Provider",
-                    doc_metadata=json.dumps(metadata),
-                    is_processed=True,
-                    mime_type='application/pdf'
+                    document_name=doc_data['document_name'],
+                    document_type=doc_data['document_type'],  # Now using correct values
+                    content=formatted_content,
+                    document_date=document_date,
+                    source_system="HealthPrep Demo System",
+                    provider="Demo Provider",
+                    doc_metadata=json.dumps(metadata)
                 )
                 
                 try:
                     db.session.add(new_document)
                     documents_created += 1
-                    print(f"  Created: {new_document.filename} for {patient.full_name}")
+                    print(f"  -> Created: {doc_data['document_name']} ({doc_data['document_type']})")
                 except Exception as e:
-                    print(f"  Error creating document {doc_data['filename']}: {e}")
+                    print(f"  -> Error creating {doc_data['document_name']}: {e}")
+                    db.session.rollback()
+                    continue
         
         # Commit all documents
         try:
             db.session.commit()
             print(f"\n✓ Successfully created {documents_created} medical documents")
-            
-            # Show summary of what was created
-            print("\nDocument Summary:")
-            print("MATCHING documents (should trigger screenings):")
-            for doc in matching_documents:
-                print(f"  - {doc['filename']}: Tests {doc['section']} screening")
-            
-            print("\nNON-MATCHING documents (should not trigger screenings):")
-            for doc in non_matching_documents:
-                print(f"  - {doc['filename']}: {doc['section']} - not screening related")
-                
-            print(f"\nTotal patients with documents: {len(patients)}")
-            print("You can now test the prep sheet screening logic!")
+            print(f"✓ Documents properly categorized by medical data subsection:")
+            print(f"  - LAB_REPORT: Laboratory results and tests")
+            print(f"  - RADIOLOGY_REPORT: Imaging studies and scans")  
+            print(f"  - CONSULTATION: Specialist consultations")
+            print(f"  - DISCHARGE_SUMMARY: Hospital and procedure summaries")
+            print(f"  - OTHER: Miscellaneous medical documents")
+            print(f"✓ Sex-specific logic applied (no inappropriate documents)")
+            print(f"✓ Documents designed to test screening logic and prep sheet generation")
             
         except Exception as e:
             db.session.rollback()
-            print(f"Error committing documents: {e}")
+            print(f"\n✗ Error committing documents: {e}")
 
 def show_document_summary():
-    """Show summary of existing documents for testing"""
+    """Show summary of created documents by type and patient"""
     with app.app_context():
-        documents = MedicalDocument.query.join(Patient).all()
+        patients = Patient.query.all()
         
-        if not documents:
-            print("No documents found in the database.")
-            return
-            
-        print(f"\nExisting Medical Documents ({len(documents)} total):")
-        print("-" * 80)
+        print("\n" + "="*60)
+        print("DOCUMENT SUMMARY BY PATIENT AND TYPE")
+        print("="*60)
         
-        for doc in documents:
-            # Check if content might match screening keywords
-            content_lower = (doc.content or '').lower()
-            filename_lower = doc.filename.lower()
-            
-            potential_matches = []
-            screening_keywords = [
-                ('Colonoscopy', ['colonoscopy', 'colo', 'gastroentero']),
-                ('Mammogram', ['mammogram', 'mammo', 'breast']),
-                ('Pap Smear', ['pap', 'cervical']),
-                ('Lipid Panel', ['hdl', 'ldl', 'lipid', 'cholesterol']),
-                ('Eye Exam', ['eye exam', 'optometry', 'vision']),
-                ('A1c', ['a1c', 'glucose', 'sugar']),
-                ('Bone Density', ['dexa', 'dxa', 'bone density']),
-                ('Vaccination', ['vaccination', 'vaccine', 'immunization'])
-            ]
-            
-            for screening_name, keywords in screening_keywords:
-                if any(keyword in content_lower or keyword in filename_lower for keyword in keywords):
-                    potential_matches.append(screening_name)
-            
-            match_str = f" → Matches: {', '.join(potential_matches)}" if potential_matches else " → No matches"
-            
-            print(f"{doc.patient.full_name}: {doc.filename}{match_str}")
+        for patient in patients:
+            documents = MedicalDocument.query.filter_by(patient_id=patient.id).all()
+            if documents:
+                print(f"\n{patient.full_name} ({patient.sex}):")
+                
+                # Count by type
+                type_counts = {}
+                for doc in documents:
+                    doc_type = doc.document_type or 'UNKNOWN'
+                    type_counts[doc_type] = type_counts.get(doc_type, 0) + 1
+                
+                for doc_type, count in type_counts.items():
+                    subsection_name = {
+                        'LAB_REPORT': 'Laboratories',
+                        'RADIOLOGY_REPORT': 'Imaging', 
+                        'CONSULTATION': 'Consults',
+                        'DISCHARGE_SUMMARY': 'Hospital Records',
+                        'OTHER': 'Other'
+                    }.get(doc_type, doc_type)
+                    print(f"  - {subsection_name}: {count} documents")
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1 and sys.argv[1] == 'summary':
-        show_document_summary()
-    else:
-        create_sample_documents()
+if __name__ == "__main__":
+    print("Creating sample medical documents for screening logic testing...")
+    create_sample_documents()
+    show_document_summary()
+    print("\nDocuments are now ready for testing prep sheet generation and screening logic!")
