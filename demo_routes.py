@@ -516,28 +516,28 @@ def patient_detail(patient_id):
 
     # Organize documents by type
     lab_documents = [
-        doc for doc in documents if doc.document_type == "LABORATORIES"
+        doc for doc in documents if doc.document_type == "LAB_REPORT"
     ]
     imaging_documents = [
         doc
         for doc in documents
-        if doc.document_type == "IMAGING"
+        if doc.document_type == "RADIOLOGY_REPORT"
     ]
     consult_documents = [
-        doc for doc in documents if doc.document_type == "CONSULTS"
+        doc for doc in documents if doc.document_type == "CONSULTATION"
     ]
     hospital_documents = [
         doc
         for doc in documents
-        if doc.document_type == "HOSPITAL_RECORDS"
+        if doc.document_type == "DISCHARGE_SUMMARY"
     ]
     
     # Other documents (not categorized as lab, imaging, consult, or hospital)
     categorized_types = {
-        "LABORATORIES",
-        "IMAGING",
-        "CONSULTS",
-        "HOSPITAL_RECORDS"
+        "LAB_REPORT",
+        "RADIOLOGY_REPORT", 
+        "CONSULTATION",
+        "DISCHARGE_SUMMARY"
     }
     other_documents = [
         doc for doc in documents 
@@ -758,10 +758,10 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     
     # Categorize documents for "other" section (documents not in main categories)
     categorized_types = {
-        "LABORATORIES",
-        "IMAGING",
-        "CONSULTS",
-        "HOSPITAL_RECORDS"
+        "LAB_REPORT",
+        "RADIOLOGY_REPORT",
+        "CONSULTATION", 
+        "DISCHARGE_SUMMARY"
     }
     other_documents = [
         doc for doc in documents 
