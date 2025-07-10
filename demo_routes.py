@@ -3175,15 +3175,23 @@ def screening_list():
         if screening_type_filter:
             query = query.filter(Screening.screening_type == screening_type_filter)
 
-        # Apply search filter if provided
+        # Apply search filter if provided (exact patient name match for dropdown)
         if search_query:
-            query = query.filter(
-                db.or_(
-                    Patient.first_name.ilike(f"%{search_query}%"),
-                    Patient.last_name.ilike(f"%{search_query}%"),
-                    Screening.screening_type.ilike(f"%{search_query}%"),
+            # Check if it's a patient name (contains space) or screening type
+            if ' ' in search_query:
+                # Exact patient name match for dropdown selection
+                query = query.filter(
+                    db.func.concat(Patient.first_name, ' ', Patient.last_name) == search_query
                 )
-            )
+            else:
+                # Fallback to partial matching for screening types
+                query = query.filter(
+                    db.or_(
+                        Patient.first_name.ilike(f"%{search_query}%"),
+                        Patient.last_name.ilike(f"%{search_query}%"),
+                        Screening.screening_type.ilike(f"%{search_query}%"),
+                    )
+                )
 
         # Order by status (Due first) and patient name
         screenings = query.order_by(

@@ -119,11 +119,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </h5>
             </div>
             <div class="col-auto d-flex">
-                <form class="d-flex me-2" method="get">
-                    <input type="hidden" name="tab" value="screenings">
-                    <input class="form-control me-2" type="search" placeholder="Search patients..." name="search" value="{{ search_query }}">
-                    <button class="btn btn-outline-secondary" type="submit">Search</button>
-                </form>
                 <a href="{{ url_for('screening_list', tab='screenings', regenerate='true') }}" class="btn btn-success me-2" onclick="return confirm('Regenerate all automated screenings? This may take a moment.')">
                     <i class="fas fa-sync-alt me-1"></i>Regenerate
                 </a>
@@ -141,7 +136,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             <div class="col-md-3">
                 <label class="form-label">Filter by Patient Name</label>
-                <input type="text" name="search" class="form-control" placeholder="Patient name..." value="{{ search_query }}">
+                <select name="search" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Patients</option>
+                    {% for patient in patients %}
+                    <option value="{{ patient.full_name }}" {% if patient.full_name == search_query %}selected{% endif %}>
+                        {{ patient.full_name }}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
             
             <div class="col-md-3">
