@@ -652,7 +652,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div id="custom_status_list" class="d-flex flex-wrap gap-2 mb-2">
                                 {% if settings and settings.custom_status_list %}
                                     {% for status in settings.custom_status_list %}
-                                        <div class="custom-status-item badge bg-light text-dark p-2 d-flex align-items-center">
+                                        <div class="custom-status-item badge bg-light text-dark p-2 d-flex align-items-center" data-status="{{ status }}">
                                             {{ status }}
                                             <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="{{ status }}"></button>
                                             <input type="hidden" name="custom_status_options" value="{{ status }}">
@@ -1176,7 +1176,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Add close button functionality to existing status items
-    document.querySelectorAll('.btn-close').forEach(button => {
+    document.querySelectorAll('#custom_status_list .btn-close').forEach(button => {
         button.addEventListener('click', function() {
             const status = this.getAttribute('data-status');
             if (status) {
@@ -1191,8 +1191,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!status) return;
 
         // Check if status already exists
-        const existingStatuses = Array.from(customStatusList.querySelectorAll('.custom-status-item'))
-            .map(item => item.querySelector('input').value);
+        const existingStatuses = Array.from(customStatusList.querySelectorAll('.custom-status-item input[name="custom_status_options"]'))
+            .map(input => input.value);
 
         if (existingStatuses.includes(status)) {
             alert('This status option already exists');
@@ -1202,6 +1202,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create a new status item
         const statusItem = document.createElement('div');
         statusItem.className = 'custom-status-item badge bg-light text-dark p-2 d-flex align-items-center';
+        statusItem.setAttribute('data-status', status);
         statusItem.innerHTML = `
             ${status}
             <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="${status}"></button>
@@ -1241,30 +1242,30 @@ function updateCustomStatusBeforeSubmit() {
     const customStatusItems = document.querySelectorAll('#custom_status_list .custom-status-item input[name="custom_status_options"]');
     console.log(`Found ${customStatusItems.length} custom status options in DOM`);
     
-    // Remove any stray hidden inputs not part of custom-status-item containers
-    const form = document.getElementById('status-form');
-    const strayInputs = form.querySelectorAll('input[name="custom_status_options"]:not(.custom-status-item input)');
-    strayInputs.forEach(input => {
-        if (!input.closest('.custom-status-item')) {
-            console.log('Removing stray input:', input.value);
-            input.remove();
-        }
+    // List all items found in DOM
+    customStatusItems.forEach((input, index) => {
+        console.log(`DOM Custom status ${index + 1}: "${input.value}" (parent: ${input.closest('.custom-status-item').dataset.status})`);
     });
     
-    // Ensure all custom status items are properly formatted and have hidden inputs
-    customStatusItems.forEach((input, index) => {
-        console.log(`Custom status ${index + 1}: "${input.value}"`);
-        // Make sure the input is properly configured
-        input.setAttribute('name', 'custom_status_options');
+    // Check if any items are missing or duplicated
+    const form = document.getElementById('status-form');
+    const allCustomInputs = form.querySelectorAll('input[name="custom_status_options"]');
+    console.log(`Total custom_status_options inputs in form: ${allCustomInputs.length}`);
+    
+    allCustomInputs.forEach((input, index) => {
+        const isInCustomStatusItem = input.closest('.custom-status-item') !== null;
+        console.log(`Form input ${index + 1}: "${input.value}" (in custom-status-item: ${isInCustomStatusItem})`);
     });
     
     // Final check - get all form data to see what's actually being submitted
     const formData = new FormData(form);
     const customStatusValues = formData.getAll('custom_status_options');
-    console.log(`Form will submit ${customStatusValues.length} custom status options:`, customStatusValues);
+    console.log(`FormData will submit ${customStatusValues.length} custom status options:`, customStatusValues);
     
     if (customStatusValues.length === 0) {
         console.log('WARNING: No custom status options found in form data!');
+    } else if (customStatusValues.length !== customStatusItems.length) {
+        console.log(`WARNING: Mismatch between DOM items (${customStatusItems.length}) and FormData items (${customStatusValues.length})!`);
     }
     
     console.log('=== END FORM SUBMISSION DEBUG ===');
