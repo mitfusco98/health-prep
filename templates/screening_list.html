@@ -650,13 +650,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="form-text mb-2">Add your own status options to appear in autocomplete</div>
                             <div id="custom_status_list" class="d-flex flex-wrap gap-2 mb-2">
-                                {% if settings and settings.custom_status_list %}
-                                    {% for status in settings.custom_status_list %}
+                                {% if settings and settings.custom_status_options %}
+                                    {% set custom_statuses = settings.custom_status_options.split(',') if settings.custom_status_options else [] %}
+                                    {% for status in custom_statuses %}
+                                        {% if status.strip() %}
                                         <div class="custom-status-item badge bg-light text-dark p-2 d-flex align-items-center">
-                                            {{ status }}
-                                            <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="{{ status }}"></button>
-                                            <input type="hidden" name="custom_status_options" value="{{ status }}">
+                                            {{ status.strip() }}
+                                            <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="{{ status.strip() }}"></button>
+                                            <input type="hidden" name="custom_status_options" value="{{ status.strip() }}">
                                         </div>
+                                        {% endif %}
                                     {% endfor %}
                                 {% endif %}
                             </div>
