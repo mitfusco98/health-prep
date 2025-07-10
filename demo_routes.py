@@ -3132,6 +3132,9 @@ def screening_list():
 
         screening_types = screening_types_query.all()
 
+    # Define today at the start to ensure it's always available
+    today = datetime.now().date()
+
     # For the screenings tab, generate automated screenings
     screenings = []
     if tab == "screenings":
@@ -3167,10 +3170,6 @@ def screening_list():
                     Screening.screening_type.ilike(f"%{search_query}%"),
                 )
             )
-
-        # Don't apply any date filter to make sure all screenings appear
-        # This shows ALL screenings regardless of due date
-        today = datetime.now().date()
 
         # Order by status (Due first) and due date (earliest first)
         screenings = query.order_by(
