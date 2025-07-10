@@ -66,7 +66,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// No additional JavaScript needed for the simplified interface
+// Enhanced refresh functionality
+function refreshScreenings(event) {
+    const button = event.target.closest('a');
+    const originalText = button.innerHTML;
+    
+    // Show loading state
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
+    button.style.pointerEvents = 'none';
+    
+    // Allow the navigation to proceed
+    setTimeout(() => {
+        // Reset button state after a delay (in case of back navigation)
+        button.innerHTML = originalText;
+        button.style.pointerEvents = 'auto';
+    }, 5000);
+    
+    return true; // Allow default link behavior
+}
+
+// Attach refresh handlers to all refresh buttons
+document.addEventListener('DOMContentLoaded', function() {
+    const refreshButtons = document.querySelectorAll('a[href*="regenerate=true"]');
+    refreshButtons.forEach(button => {
+        button.addEventListener('click', refreshScreenings);
+    });
+});
 </script>
 {% endblock %}
 
@@ -119,8 +144,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </h5>
             </div>
             <div class="col-auto d-flex">
-                <a href="{{ url_for('screening_list', tab='screenings', regenerate='true') }}" class="btn btn-success me-2" onclick="return confirm('Regenerate all automated screenings? This may take a moment.')">
-                    <i class="fas fa-sync-alt me-1"></i>Regenerate
+                <a href="{{ url_for('screening_list', tab='screenings', regenerate='true') }}" class="btn btn-success me-2" onclick="return confirm('Refresh all automated screenings based on current parsing logic? This may take a moment.')">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
                 </a>
                 <a href="{{ url_for('add_screening_form') }}" class="btn btn-primary">
                     Add Screening
@@ -450,6 +475,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </form>
 
+                <a href="{{ url_for('screening_list', tab='types', regenerate='true') }}" class="btn btn-success me-2" onclick="return confirm('Refresh all automated screenings based on current parsing logic? This may take a moment.')">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </a>
 
                 <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
                     Add Type
@@ -670,7 +698,12 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <h4 class="mb-4">Prep Sheet Checklist Settings</h4>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="mb-0">Prep Sheet Checklist Settings</h4>
+                <a href="{{ url_for('screening_list', tab='checklist', regenerate='true') }}" class="btn btn-success" onclick="return confirm('Refresh all automated screenings based on current parsing logic? This may take a moment.')">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh Screenings
+                </a>
+            </div>
 
             <!-- Status Options Configuration -->
             <div class="card mb-4">

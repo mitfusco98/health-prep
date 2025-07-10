@@ -3135,32 +3135,39 @@ def screening_list():
 
         screening_types = screening_types_query.all()
 
-    # For the screenings tab, only regenerate if explicitly requested
+    # Check if this is a refresh request (can be triggered from any tab)
+    refresh_requested = request.args.get('regenerate') == 'true'
+    
+    if refresh_requested:
+        try:
+            # Import and use the automated screening engine
+            from automated_screening_engine import ScreeningStatusEngine
+            
+            # Initialize the engine and generate screenings for all patients
+            engine = ScreeningStatusEngine()
+            all_patient_screenings = engine.generate_all_patient_screenings()
+            
+            # Clear existing screenings and update with automated ones
+            from automated_screening_routes import _update_patient_screenings
+            for patient_id, screening_data in all_patient_screenings.items():
+                _update_patient_screenings(patient_id, screening_data)
+            
+            print(f"Refreshed automated screenings for {len(all_patient_screenings)} patients")
+            flash(f"Successfully refreshed screenings for {len(all_patient_screenings)} patients based on current parsing logic", "success")
+            
+            # Redirect back to remove the regenerate parameter from URL while preserving search
+            redirect_params = {'tab': tab}
+            if search_query:
+                redirect_params['search'] = search_query
+            return redirect(url_for('screening_list', **redirect_params))
+            
+        except Exception as e:
+            print(f"Error refreshing automated screenings: {e}")
+            flash(f"Error refreshing automated screenings: {e}", "danger")
+    
+    # For the screenings tab, load existing screenings from database
     screenings = []
     if tab == "screenings":
-        # Check if this is a regeneration request
-        regenerate = request.args.get('regenerate') == 'true'
-        
-        if regenerate:
-            try:
-                # Import and use the automated screening engine
-                from automated_screening_engine import ScreeningStatusEngine
-                
-                # Initialize the engine and generate screenings for all patients
-                engine = ScreeningStatusEngine()
-                all_patient_screenings = engine.generate_all_patient_screenings()
-                
-                # Clear existing screenings and update with automated ones
-                from automated_screening_routes import _update_patient_screenings
-                for patient_id, screening_data in all_patient_screenings.items():
-                    _update_patient_screenings(patient_id, screening_data)
-                
-                print(f"Generated automated screenings for {len(all_patient_screenings)} patients")
-                flash(f"Successfully regenerated screenings for {len(all_patient_screenings)} patients", "success")
-                
-            except Exception as e:
-                print(f"Error generating automated screenings: {e}")
-                flash(f"Error generating automated screenings: {e}", "danger")
         
         # Query existing screenings from database
         query = Screening.query.join(Patient)
