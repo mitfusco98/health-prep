@@ -1246,7 +1246,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add user input tracking for screening cutoff fields
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Initializing user input tracking for screening cutoff fields...');
-    
+
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     console.log(`Found ${screeningInputs.length} screening cutoff inputs`);
 
@@ -1255,7 +1255,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!input.dataset.originalValue) {
             input.dataset.originalValue = input.value;
         }
-        
+
         // Initialize user modification tracking
         if (!input.dataset.userModified) {
             input.dataset.userModified = 'false';
@@ -1263,9 +1263,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!input.dataset.presetModified) {
             input.dataset.presetModified = 'false';
         }
-        
+
         console.log(`Initialized tracking for ${input.dataset.screeningName}: original=${input.dataset.originalValue}, current=${input.value}`);
-        
+
         // Track when user manually changes the input
         input.addEventListener('input', function() {
             // Mark as user modified for any direct input
@@ -1534,7 +1534,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const id = button.getAttribute('data-id');
             const name = button.getAttribute('data-name');
             const frequency = button.getAttribute('data-frequency');
-            const gender = button.getAttribute('data-gender');
+            const gender = button.getAttribute(`data-gender`);
             const minAge = button.getAttribute('data-min-age');
             const maxAge = button.getAttribute('data-max-age');
             const active = button.getAttribute('data-active') === '1';
