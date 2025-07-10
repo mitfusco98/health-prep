@@ -3150,15 +3150,16 @@ def screening_list():
     # This shows ALL screenings regardless of due date
     today = datetime.now().date()
 
-    # Order by priority (High first) and due date (earliest first)
+    # Order by status (Due first) and due date (earliest first)
     screenings = query.order_by(
         db.case(
-            (Screening.priority == "High", 0),
-            (Screening.priority == "Medium", 1),
-            else_=2,
+            (Screening.status == "Due", 0),
+            (Screening.status == "Due Soon", 1),
+            (Screening.status == "Incomplete", 2),
+            else_=3,
         ),
         # Handle NULL due_dates by using nullslast()
-        db.nullslast(Screening.due_date),
+        db.nullslast(Screening.due_date)te),
     ).all()
 
     # Generate timestamp for cache busting
@@ -4884,7 +4885,7 @@ def add_screening_recommendation():
     screening_type = request.form.get("screening_type")
     due_date_str = request.form.get("due_date")
     last_completed_str = request.form.get("last_completed")
-    priority = request.form.get("priority", "Medium")
+    status = request.form.get("status", "Incomplete")
     notes = request.form.get("notes", "")
 
     # Validate required fields
@@ -4908,7 +4909,7 @@ def add_screening_recommendation():
         screening_type=screening_type,
         due_date=due_date,
         last_completed=last_completed,
-        priority=priority,
+        status=status,
         notes=notes,
     )
 
