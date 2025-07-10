@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="card-body">
                     <p class="text-muted mb-3">These status options will appear as autocomplete suggestions when filling out screening checklists in prep sheets.</p>
 
-                    <form id="status-form" method="POST" action="{{ url_for('save_status_options_simple') }}" onsubmit="return updateCustomStatusBeforeSubmit()">
+                    <form id="status-form" method="POST" action="{{ url_for('save_status_options_simple') }}" onsubmit="console.log('Form submitting!'); return updateCustomStatusBeforeSubmit()">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <div class="mb-3">
