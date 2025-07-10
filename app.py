@@ -1435,3 +1435,7 @@ import checklist_simple_routes
 # Register screening blueprint
 from organized.routes.screening_routes import screening_bp
 app.register_blueprint(screening_bp)
+
+# Register automated screening routes
+from automated_screening_routes import register_automated_screening_routes
+register_automated_screening_routes(app)

@@ -98,6 +98,11 @@ document.addEventListener('DOMContentLoaded', function() {
         </a>
     </li>
     <li class="nav-item">
+        <a class="nav-link" href="{{ url_for('automated_screening.automated_screenings_view') }}">
+            <i class="fas fa-robot me-2"></i>Automated Screenings
+        </a>
+    </li>
+    <li class="nav-item">
         <a class="nav-link {% if active_tab == 'checklist' %}active{% endif %}" href="{{ url_for('screening_list', tab='checklist', search=search_query) }}">
             Prep Sheet Settings
         </a>

@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Automated Screenings{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-stethoscope text-primary me-2"></i>
+                    Automated Screenings
+                </h2>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-success" onclick="refreshAllScreenings()">
+                        <i class="fas fa-sync-alt me-1"></i>
+                        Refresh All
+                    </button>
+                    <a href="{{ url_for('screening_list') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-cog me-1"></i>
+                        Manage Types
+                    </a>
+                </div>
+            </div>
+
+            <!-- Status Summary Cards -->
+            <div class="row mb-4">
+                {% set status_colors = {
+                    'Due': 'danger',
+                    'Due Soon': 'warning', 
+                    'Incomplete': 'secondary',
+                    'Complete': 'success'
+                } %}
+                {% for status in ['Due', 'Due Soon', 'Incomplete', 'Complete'] %}
+                <div class="col-md-3 mb-3">
+                    <div class="card border-{{ status_colors[status] }}">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-{{ status_colors[status] }}">{{ status }}</h5>
+                            <h3 class="mb-0">{{ status_counts.get(status, 0) }}</h3>
+                            <small class="text-muted">screenings</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Filters -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Filter by Status</label>
+                            <select name="status" id="status" class="form-select">
+                                <option value="">All Statuses</option>
+                                <option value="Due" {{ 'selected' if status_filter == 'Due' }}>Due</option>
+                                <option value="Due Soon" {{ 'selected' if status_filter == 'Due Soon' }}>Due Soon</option>
+                                <option value="Incomplete" {{ 'selected' if status_filter == 'Incomplete' }}>Incomplete</option>
+                                <option value="Complete" {{ 'selected' if status_filter == 'Complete' }}>Complete</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="search" class="form-label">Search Patients</label>
+                            <input type="text" name="search" id="search" class="form-control" 
+                                   placeholder="Patient name or MRN" value="{{ patient_search }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Filter</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Screenings Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        Screening Results 
+                        <span class="badge bg-secondary ms-2">{{ screenings|length }} total</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if screenings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Screening Type</th>
+                                    <th>Status</th>
+                                    <th>Due Date</th>
+                                    <th>Last Completed</th>
+                                    <th>Frequency</th>
+                                    <th>Notes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for screening in screenings %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>{{ screening.patient.full_name }}</strong><br>
+                                            <small class="text-muted">MRN: {{ screening.patient.mrn }}</small>
+                                        </div>
+                                    </td>
+                                    <td>{{ screening.screening_type }}</td>
+                                    <td>
+                                        {% set status_class = {
+                                            'Due': 'danger',
+                                            'Due Soon': 'warning',
+                                            'Incomplete': 'secondary', 
+                                            'Complete': 'success'
+                                        } %}
+                                        <span class="badge bg-{{ status_class.get(screening.status, 'secondary') }}">
+                                            {{ screening.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {{ screening.due_date.strftime('%Y-%m-%d') if screening.due_date else '-' }}
+                                    </td>
+                                    <td>
+                                        {{ screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else '-' }}
+                                    </td>
+                                    <td>{{ screening.frequency or '-' }}</td>
+                                    <td>
+                                        <small>{{ screening.notes or '-' }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('patient_detail', patient_id=screening.patient_id) }}" 
+                                               class="btn btn-outline-primary" title="View Patient">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-success" 
+                                                    onclick="refreshPatientScreenings({{ screening.patient_id }})"
+                                                    title="Refresh Patient Screenings">
+                                                <i class="fas fa-sync-alt"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No screenings found</h5>
+                        <p class="text-muted">
+                            {% if status_filter or patient_search %}
+                                Try adjusting your filters or <a href="{{ url_for('automated_screening.automated_screenings_view') }}">view all screenings</a>.
+                            {% else %}
+                                Generate automated screenings by clicking "Refresh All" above.
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshAllScreenings() {
+    if (confirm('This will regenerate all automated screenings based on current parsing rules. Continue?')) {
+        const btn = event.target.closest('button');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
+        btn.disabled = true;
+        
+        fetch('/admin/screenings/regenerate-all', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while refreshing screenings');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+}
+
+function refreshPatientScreenings(patientId) {
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+    
+    fetch(`/screenings/refresh-patient/${patientId}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token() }}'
+        }
+    })
+    .then(() => {
+        location.reload();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error refreshing patient screenings');
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+    });
+}
+</script>
+{% endblock %}

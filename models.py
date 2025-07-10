@@ -250,7 +250,7 @@ class HospitalSummary(db.Model):
 
 
 class Screening(db.Model):
-    """Individual screening assignments for specific patients"""
+    """Individual screening assignments for specific patients with automated status determination"""
 
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"), nullable=False)
@@ -260,7 +260,7 @@ class Screening(db.Model):
     due_date = db.Column(db.Date)
     last_completed = db.Column(db.Date)
     frequency = db.Column(db.String(50))  # e.g., 'Annual', 'Every 5 years'
-    priority = db.Column(db.String(20))  # e.g., 'High', 'Medium', 'Low'
+    status = db.Column(db.String(20), default='Incomplete')  # 'Due', 'Due Soon', 'Incomplete', 'Complete'
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
@@ -271,7 +271,7 @@ class Screening(db.Model):
     patient = db.relationship("Patient", backref=db.backref("screenings", lazy=True))
 
     def __repr__(self):
-        return f"<Screening {self.screening_type} for Patient {self.patient_id}>"
+        return f"<Screening {self.screening_type} for Patient {self.patient_id} - {self.status}>"
 
 
 class MedicalDocument(db.Model):

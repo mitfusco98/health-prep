@@ -46,7 +46,7 @@ A comprehensive healthcare preparation application built with Flask that manages
 
 ### Business Logic Services
 - **Document Processing**: Automated tagging and FHIR metadata extraction
-- **Screening Evaluation**: Rule-based screening recommendations
+- **Automated Screening Engine**: Intelligent screening status determination based on document parsing rules and patient eligibility
 - **FHIR Integration**: Standards-compliant healthcare data mapping
 - **Prep Sheet Generation**: Automated preparation sheet creation
 
@@ -120,6 +120,7 @@ A comprehensive healthcare preparation application built with Flask that manages
 - **Performance**: Indexed queries and caching layers
 
 ## Changelog
+- July 10, 2025: **MAJOR ARCHITECTURAL CHANGE - Automated Screening System**: Replaced manual screening management with intelligent automated screening generation based on parsing rules. Migrated 'priority' column to 'status' column with values 'Due', 'Due Soon', 'Incomplete', 'Complete'. Created automated screening engine that analyzes patient documents against screening type parsing rules to determine status. System now automatically generates screenings based on age, gender, medical conditions, and document matching. Added automated screening routes and management interface.
 - July 7, 2025: Replaced "screenings" medical data subsection with "other" subsection for miscellaneous documents. Updated both frontend patient detail template and prep sheet template to display uncategorized documents (those not classified as lab, imaging, consult, or hospital documents). Backend now categorizes documents and provides other_documents data to both patient detail and prep sheet views.
 - July 1, 2025: Enhanced document screening functionality with multi-criteria matching system. Added confidence scoring, match source tracking, and integrated document matching into prep sheet template. Created 18 sample medical documents (8 matching, 10 non-matching) to test screening logic. Documents now display in status/notes boxes with confidence badges and visual styling.
 - June 26, 2025: Streamlined keyword and screening management system to eliminate redundant API calls and "old system" references. Created efficient screening matcher that uses only current 'manage screening types' system with keyword caching.
