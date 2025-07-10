@@ -3132,35 +3132,60 @@ def screening_list():
 
         screening_types = screening_types_query.all()
 
-    # Otherwise, proceed with regular screening list
-    # Base query for patient screenings
-    query = Screening.query.join(Patient)
+    # For the screenings tab, generate automated screenings
+    screenings = []
+    if tab == "screenings":
+        try:
+            # Import and use the automated screening engine
+            from automated_screening_engine import ScreeningStatusEngine
+            
+            # Initialize the engine and generate screenings for all patients
+            engine = ScreeningStatusEngine()
+            all_patient_screenings = engine.generate_all_patient_screenings()
+            
+            # Clear existing screenings and update with automated ones
+            from automated_screening_routes import _update_patient_screenings
+            for patient_id, screening_data in all_patient_screenings.items():
+                _update_patient_screenings(patient_id, screening_data)
+            
+            print(f"Generated automated screenings for {len(all_patient_screenings)} patients")
+            
+        except Exception as e:
+            print(f"Error generating automated screenings: {e}")
+            # Fall back to existing manual screenings if automation fails
+            pass
+        
+        # Now query the updated database for screenings
+        query = Screening.query.join(Patient)
 
-    # Apply search filter if provided
-    if search_query:
-        query = query.filter(
-            db.or_(
-                Patient.first_name.ilike(f"%{search_query}%"),
-                Patient.last_name.ilike(f"%{search_query}%"),
-                Screening.screening_type.ilike(f"%{search_query}%"),
+        # Apply search filter if provided
+        if search_query:
+            query = query.filter(
+                db.or_(
+                    Patient.first_name.ilike(f"%{search_query}%"),
+                    Patient.last_name.ilike(f"%{search_query}%"),
+                    Screening.screening_type.ilike(f"%{search_query}%"),
+                )
             )
-        )
 
-    # Don't apply any date filter to make sure all screenings appear
-    # This shows ALL screenings regardless of due date
-    today = datetime.now().date()
+        # Don't apply any date filter to make sure all screenings appear
+        # This shows ALL screenings regardless of due date
+        today = datetime.now().date()
 
-    # Order by status (Due first) and due date (earliest first)
-    screenings = query.order_by(
-        db.case(
-            (Screening.status == "Due", 0),
-            (Screening.status == "Due Soon", 1),
-            (Screening.status == "Incomplete", 2),
-            else_=3,
-        ),
-        # Handle NULL due_dates by using nullslast()
-        db.nullslast(Screening.due_date),
-    ).all()
+        # Order by status (Due first) and due date (earliest first)
+        screenings = query.order_by(
+            db.case(
+                (Screening.status == "Due", 0),
+                (Screening.status == "Due Soon", 1),
+                (Screening.status == "Incomplete", 2),
+                else_=3,
+            ),
+            # Handle NULL due_dates by using nullslast()
+            db.nullslast(Screening.due_date),
+        ).all()
+    else:
+        # For other tabs, don't process screenings
+        screenings = []
 
     # Generate timestamp for cache busting
     cache_timestamp = int(time_module.time())
@@ -3172,6 +3197,16 @@ def screening_list():
 
     # Get all patients for the Add Recommendation modal
     patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
+
+    # Get status summary for automated screenings dashboard
+    status_counts = {}
+    if tab == "screenings" and screenings:
+        from sqlalchemy import func
+        summary = db.session.query(
+            Screening.status,
+            func.count(Screening.id).label('count')
+        ).group_by(Screening.status).all()
+        status_counts = {status: count for status, count in summary}
 
     try:
         return render_template(
@@ -3189,6 +3224,7 @@ def screening_list():
             patients=patients,
             settings=settings,
             active_screening_types=active_screening_types,
+            status_counts=status_counts,
         )
     except Exception as e:
         print(f"Error rendering screening_list.html: {str(e)}")
