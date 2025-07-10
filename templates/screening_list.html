@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="card-body">
                     <p class="text-muted mb-3">These status options will appear as autocomplete suggestions when filling out screening checklists in prep sheets.</p>
 
-                    <form id="status-form" method="POST" action="{{ url_for('save_status_options_simple') }}" onsubmit="updateCustomStatusBeforeSubmit()">
+                    <form id="status-form" method="POST" action="{{ url_for('save_status_options_simple') }}" onsubmit="return updateCustomStatusBeforeSubmit()">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <div class="mb-3">
@@ -1241,14 +1241,31 @@ function updateCustomStatusBeforeSubmit() {
     const customStatusItems = document.querySelectorAll('#custom_status_list .custom-status-item input[name="custom_status_options"]');
     console.log(`Found ${customStatusItems.length} custom status options in DOM`);
     
-    customStatusItems.forEach((input, index) => {
-        console.log(`Custom status ${index + 1}: "${input.value}"`);
+    // Remove any stray hidden inputs not part of custom-status-item containers
+    const form = document.getElementById('status-form');
+    const strayInputs = form.querySelectorAll('input[name="custom_status_options"]:not(.custom-status-item input)');
+    strayInputs.forEach(input => {
+        if (!input.closest('.custom-status-item')) {
+            console.log('Removing stray input:', input.value);
+            input.remove();
+        }
     });
     
-    // Get all form data to see what's actually being submitted
-    const formData = new FormData(document.getElementById('status-form'));
+    // Ensure all custom status items are properly formatted and have hidden inputs
+    customStatusItems.forEach((input, index) => {
+        console.log(`Custom status ${index + 1}: "${input.value}"`);
+        // Make sure the input is properly configured
+        input.setAttribute('name', 'custom_status_options');
+    });
+    
+    // Final check - get all form data to see what's actually being submitted
+    const formData = new FormData(form);
     const customStatusValues = formData.getAll('custom_status_options');
     console.log(`Form will submit ${customStatusValues.length} custom status options:`, customStatusValues);
+    
+    if (customStatusValues.length === 0) {
+        console.log('WARNING: No custom status options found in form data!');
+    }
     
     console.log('=== END FORM SUBMISSION DEBUG ===');
     

@@ -61,11 +61,24 @@ def save_status_options_simple():
         # Update settings
         settings.status_options = status_selections
         
-        # Update custom status options
+        # Update custom status options - remove duplicates and empty strings
         if custom_status_options:
-            settings.custom_status_options = ','.join(custom_status_options)
+            # Filter out empty strings and remove duplicates while preserving order
+            clean_options = []
+            for option in custom_status_options:
+                option = option.strip()
+                if option and option not in clean_options:
+                    clean_options.append(option)
+            
+            if clean_options:
+                settings.custom_status_options = ','.join(clean_options)
+                print(f"Saving {len(clean_options)} unique custom status options: {clean_options}")
+            else:
+                settings.custom_status_options = None
+                print("No valid custom status options to save")
         else:
             settings.custom_status_options = None
+            print("No custom status options received, setting to None")
 
         # Commit to database
         db.session.commit()
