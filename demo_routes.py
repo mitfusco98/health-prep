@@ -3159,7 +3159,7 @@ def screening_list():
             else_=3,
         ),
         # Handle NULL due_dates by using nullslast()
-        db.nullslast(Screening.due_date)te),
+        db.nullslast(Screening.due_date),
     ).all()
 
     # Generate timestamp for cache busting
