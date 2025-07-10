@@ -154,25 +154,40 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
         patient_id: Patient ID
         screenings_data: List of screening dictionaries from engine
     """
-    # Remove existing automated screenings for this patient
-    existing_screenings = Screening.query.filter_by(patient_id=patient_id).all()
-    for screening in existing_screenings:
-        db.session.delete(screening)
-    
-    # Add new automated screenings
-    for screening_data in screenings_data:
-        screening = Screening(
-            patient_id=patient_id,
-            screening_type=screening_data['screening_type'],
-            status=screening_data['status'],
-            due_date=screening_data['due_date'],
-            last_completed=screening_data['last_completed'],
-            frequency=screening_data['frequency'],
-            notes=screening_data['notes']
-        )
-        db.session.add(screening)
-    
-    db.session.commit()
+    try:
+        for screening_data in screenings_data:
+            # Find existing screening or create new one
+            existing = Screening.query.filter_by(
+                patient_id=patient_id,
+                screening_type=screening_data['screening_type']
+            ).first()
+            
+            if existing:
+                # Update existing screening
+                existing.status = screening_data['status']
+                existing.last_completed = screening_data['last_completed']
+                existing.frequency = screening_data['frequency']
+                existing.notes = screening_data['notes']
+                existing.updated_at = datetime.now()
+            else:
+                # Create new screening
+                new_screening = Screening(
+                    patient_id=patient_id,
+                    screening_type=screening_data['screening_type'],
+                    status=screening_data['status'],
+                    last_completed=screening_data['last_completed'],
+                    frequency=screening_data['frequency'],
+                    notes=screening_data['notes'],
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+                db.session.add(new_screening)
+        
+        db.session.commit()
+        
+    except Exception as e:
+        db.session.rollback()
+        raise e
 
 def _get_status_summary():
     """Get summary counts for each status"""

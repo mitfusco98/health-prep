@@ -3213,11 +3213,9 @@ def screening_list():
 
     # Get filter options for screenings tab
     distinct_statuses = []
-    distinct_screening_types = []
     if tab == "screenings":
-        # Get distinct statuses and screening types for filter dropdowns
+        # Get distinct statuses for filter dropdown
         distinct_statuses = [row[0] for row in db.session.query(Screening.status).distinct().all() if row[0]]
-        distinct_screening_types = [row[0] for row in db.session.query(Screening.screening_type).distinct().all() if row[0]]
 
     try:
         return render_template(
@@ -3236,7 +3234,6 @@ def screening_list():
             settings=settings,
             active_screening_types=active_screening_types,
             distinct_statuses=distinct_statuses,
-            distinct_screening_types=distinct_screening_types,
             status_filter=request.args.get('status', ''),
             screening_type_filter=request.args.get('screening_type', ''),
         )

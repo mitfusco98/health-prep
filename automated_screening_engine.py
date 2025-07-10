@@ -142,16 +142,25 @@ class ScreeningStatusEngine:
         # Calculate due date based on frequency and last completed
         due_date = self._calculate_due_date(screening_type, existing_screening)
         
+        # Update last_completed based on most recent matching document
+        last_completed = existing_screening.last_completed if existing_screening else None
+        if matching_documents:
+            most_recent_doc = max(matching_documents, key=lambda d: d.created_at or datetime.min)
+            doc_date = most_recent_doc.created_at.date() if most_recent_doc.created_at else None
+            if doc_date and (not last_completed or doc_date > last_completed):
+                last_completed = doc_date
+
         return {
             'patient_id': patient.id,
             'screening_type': screening_type.name,
             'screening_type_id': screening_type.id,
             'status': status,
             'due_date': due_date,
-            'last_completed': existing_screening.last_completed if existing_screening else None,
+            'last_completed': last_completed,
             'frequency': self._format_frequency(screening_type),
             'matching_documents': len(matching_documents),
-            'notes': self._generate_status_notes(status, matching_documents, due_date)
+            'notes': self._generate_status_notes(status, matching_documents, due_date),
+            'matched_doc_ids': [doc.id for doc in matching_documents]
         }
     
     def _find_matching_documents(self, patient: Patient, screening_type: ScreeningType) -> List[MedicalDocument]:
@@ -306,9 +315,10 @@ class ScreeningStatusEngine:
         return screening_type.default_frequency or "As needed"
     
     def _generate_status_notes(self, status: str, matching_documents: List[MedicalDocument], due_date: Optional[date]) -> str:
-        """Generate informative notes about the status"""
+        """Generate informative notes about the status with document links"""
         notes = []
         
+        # Add status-specific notes
         if status == self.STATUS_COMPLETE:
             notes.append(f"✓ Found {len(matching_documents)} matching document(s)")
         elif status == self.STATUS_DUE:
@@ -322,6 +332,11 @@ class ScreeningStatusEngine:
             notes.append(f"Found {len(matching_documents)} matching document(s)")
         elif status == self.STATUS_INCOMPLETE:
             notes.append("❌ No matching documents found")
+        
+        # Add document IDs for linking in the UI
+        if matching_documents:
+            for doc in matching_documents:
+                notes.append(f"Document ID: {doc.id}")
             
         return " | ".join(notes)
 
