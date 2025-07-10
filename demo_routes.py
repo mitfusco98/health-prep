@@ -3135,31 +3135,45 @@ def screening_list():
 
         screening_types = screening_types_query.all()
 
-    # For the screenings tab, generate automated screenings
+    # For the screenings tab, only regenerate if explicitly requested
     screenings = []
     if tab == "screenings":
-        try:
-            # Import and use the automated screening engine
-            from automated_screening_engine import ScreeningStatusEngine
-            
-            # Initialize the engine and generate screenings for all patients
-            engine = ScreeningStatusEngine()
-            all_patient_screenings = engine.generate_all_patient_screenings()
-            
-            # Clear existing screenings and update with automated ones
-            from automated_screening_routes import _update_patient_screenings
-            for patient_id, screening_data in all_patient_screenings.items():
-                _update_patient_screenings(patient_id, screening_data)
-            
-            print(f"Generated automated screenings for {len(all_patient_screenings)} patients")
-            
-        except Exception as e:
-            print(f"Error generating automated screenings: {e}")
-            # Fall back to existing manual screenings if automation fails
-            pass
+        # Check if this is a regeneration request
+        regenerate = request.args.get('regenerate') == 'true'
         
-        # Now query the updated database for screenings
+        if regenerate:
+            try:
+                # Import and use the automated screening engine
+                from automated_screening_engine import ScreeningStatusEngine
+                
+                # Initialize the engine and generate screenings for all patients
+                engine = ScreeningStatusEngine()
+                all_patient_screenings = engine.generate_all_patient_screenings()
+                
+                # Clear existing screenings and update with automated ones
+                from automated_screening_routes import _update_patient_screenings
+                for patient_id, screening_data in all_patient_screenings.items():
+                    _update_patient_screenings(patient_id, screening_data)
+                
+                print(f"Generated automated screenings for {len(all_patient_screenings)} patients")
+                flash(f"Successfully regenerated screenings for {len(all_patient_screenings)} patients", "success")
+                
+            except Exception as e:
+                print(f"Error generating automated screenings: {e}")
+                flash(f"Error generating automated screenings: {e}", "danger")
+        
+        # Query existing screenings from database
         query = Screening.query.join(Patient)
+
+        # Apply filters
+        status_filter = request.args.get('status')
+        screening_type_filter = request.args.get('screening_type')
+        
+        if status_filter:
+            query = query.filter(Screening.status == status_filter)
+            
+        if screening_type_filter:
+            query = query.filter(Screening.screening_type == screening_type_filter)
 
         # Apply search filter if provided
         if search_query:
@@ -3171,7 +3185,7 @@ def screening_list():
                 )
             )
 
-        # Order by status (Due first) and due date (earliest first)
+        # Order by status (Due first) and patient name
         screenings = query.order_by(
             db.case(
                 (Screening.status == "Due", 0),
@@ -3179,8 +3193,8 @@ def screening_list():
                 (Screening.status == "Incomplete", 2),
                 else_=3,
             ),
-            # Handle NULL due_dates by using nullslast()
-            db.nullslast(Screening.due_date),
+            Patient.last_name,
+            Patient.first_name
         ).all()
     else:
         # For other tabs, don't process screenings
@@ -3197,15 +3211,13 @@ def screening_list():
     # Get all patients for the Add Recommendation modal
     patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
 
-    # Get status summary for automated screenings dashboard
-    status_counts = {}
-    if tab == "screenings" and screenings:
-        from sqlalchemy import func
-        summary = db.session.query(
-            Screening.status,
-            func.count(Screening.id).label('count')
-        ).group_by(Screening.status).all()
-        status_counts = {status: count for status, count in summary}
+    # Get filter options for screenings tab
+    distinct_statuses = []
+    distinct_screening_types = []
+    if tab == "screenings":
+        # Get distinct statuses and screening types for filter dropdowns
+        distinct_statuses = [row[0] for row in db.session.query(Screening.status).distinct().all() if row[0]]
+        distinct_screening_types = [row[0] for row in db.session.query(Screening.screening_type).distinct().all() if row[0]]
 
     try:
         return render_template(
@@ -3223,7 +3235,10 @@ def screening_list():
             patients=patients,
             settings=settings,
             active_screening_types=active_screening_types,
-            status_counts=status_counts,
+            distinct_statuses=distinct_statuses,
+            distinct_screening_types=distinct_screening_types,
+            status_filter=request.args.get('status', ''),
+            screening_type_filter=request.args.get('screening_type', ''),
         )
     except Exception as e:
         print(f"Error rendering screening_list.html: {str(e)}")

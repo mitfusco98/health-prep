@@ -66,48 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Automated screening functions
-function refreshAllScreenings() {
-    if (confirm('This will regenerate all automated screenings based on current parsing rules. Continue?')) {
-        const btn = event.target.closest('button');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
-        btn.disabled = true;
-        
-        // Use existing infrastructure to refresh the page
-        setTimeout(() => {
-            window.location.reload();
-        }, 2000);
-    }
-}
-
-function refreshPatientScreenings(patientId) {
-    const btn = event.target.closest('button');
-    const originalHTML = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    btn.disabled = true;
-    
-    // Show loading message
-    const row = btn.closest('tr');
-    if (row) {
-        const patientCell = row.querySelector('td:first-child');
-        if (patientCell) {
-            const originalText = patientCell.innerHTML;
-            patientCell.innerHTML = '<span class="text-info"><i class="fas fa-spinner fa-spin me-1"></i>Refreshing...</span>';
-            
-            setTimeout(() => {
-                patientCell.innerHTML = originalText;
-                btn.innerHTML = originalHTML;
-                btn.disabled = false;
-            }, 2000);
-        }
-    }
-    
-    // Refresh the page after a delay
-    setTimeout(() => {
-        window.location.reload();
-    }, 2000);
-}
+// No additional JavaScript needed for the simplified interface
 </script>
 {% endblock %}
 
@@ -150,39 +109,14 @@ function refreshPatientScreenings(patientId) {
 
 <!-- Tab Content -->
 {% if active_tab == 'screenings' %}
-<!-- Automated Screenings Tab Content -->
-
-<!-- Status Summary Cards -->
-{% if status_counts %}
-<div class="row mb-4">
-    {% set status_colors = {
-        'Due': 'danger',
-        'Due Soon': 'warning', 
-        'Incomplete': 'secondary',
-        'Complete': 'success'
-    } %}
-    {% for status in ['Due', 'Due Soon', 'Incomplete', 'Complete'] %}
-    <div class="col-md-3 mb-3">
-        <div class="card border-{{ status_colors[status] }}">
-            <div class="card-body text-center">
-                <h5 class="card-title text-{{ status_colors[status] }}">{{ status }}</h5>
-                <h3 class="mb-0">{{ status_counts.get(status, 0) }}</h3>
-                <small class="text-muted">screenings</small>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-
+<!-- Screening List Tab Content -->
 <div class="card border-0">
     <div class="card-header bg-secondary bg-opacity-25">
         <div class="row align-items-center">
             <div class="col">
                 <h5 class="mb-0">
-                    <i class="fas fa-robot me-2"></i>Automated Screening Results
+                    <i class="fas fa-clipboard-check me-2"></i>Screening List
                 </h5>
-                <small class="text-muted">Intelligent screening generation based on parsing rules</small>
             </div>
             <div class="col-auto d-flex">
                 <form class="d-flex me-2" method="get">
@@ -190,14 +124,50 @@ function refreshPatientScreenings(patientId) {
                     <input class="form-control me-2" type="search" placeholder="Search patient or screening" name="search" value="{{ search_query }}">
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </form>
-                <button type="button" class="btn btn-success me-2" onclick="refreshAllScreenings()">
-                    <i class="fas fa-sync-alt me-1"></i>Refresh All
-                </button>
+                <a href="{{ url_for('screening_list', tab='screenings', regenerate='true') }}" class="btn btn-success me-2" onclick="return confirm('Regenerate all automated screenings? This may take a moment.')">
+                    <i class="fas fa-sync-alt me-1"></i>Regenerate
+                </a>
                 <a href="{{ url_for('add_screening_form') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i>Add Manual
+                    Add Screening
                 </a>
             </div>
         </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="card-body border-bottom">
+        <form method="get" class="row g-3">
+            <input type="hidden" name="tab" value="screenings">
+            <input type="hidden" name="search" value="{{ search_query }}">
+            
+            <div class="col-md-3">
+                <label class="form-label">Filter by Status</label>
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    {% for status in distinct_statuses %}
+                    <option value="{{ status }}" {% if status == status_filter %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">Filter by Screening Type</label>
+                <select name="screening_type" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Types</option>
+                    {% for type in distinct_screening_types %}
+                    <option value="{{ type }}" {% if type == screening_type_filter %}selected{% endif %}>{{ type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3 d-flex align-items-end">
+                {% if status_filter or screening_type_filter %}
+                <a href="{{ url_for('screening_list', tab='screenings', search=search_query) }}" class="btn btn-outline-secondary">
+                    Clear Filters
+                </a>
+                {% endif %}
+            </div>
+        </form>
     </div>
     <div class="card-body p-0">
         {% if screenings %}
@@ -208,11 +178,10 @@ function refreshPatientScreenings(patientId) {
                         <th>Patient</th>
                         <th>Screening Type</th>
                         <th>Status</th>
-                        <th>Due Date</th>
                         <th>Last Completed</th>
                         <th>Frequency</th>
-                        <th>Notes</th>
-                        <th width="150">Actions</th>
+                        <th>Matched Documents</th>
+                        <th width="120">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -236,41 +205,42 @@ function refreshPatientScreenings(patientId) {
                             </span>
                         </td>
                         <td>
-                            {% if screening.due_date %}
-                                {{ screening.due_date.strftime('%m/%d/%Y') }}
-                            {% else %}
-                                <span class="text-muted">Not set</span>
-                            {% endif %}
-                        </td>
-                        <td>
                             {% if screening.last_completed %}
                                 {{ screening.last_completed.strftime('%m/%d/%Y') }}
                             {% else %}
-                                <span class="text-muted">Unknown</span>
+                                <span class="text-muted">No records</span>
                             {% endif %}
                         </td>
                         <td>{{ screening.frequency or '-' }}</td>
                         <td>
-                            <small>{{ screening.notes or '-' }}</small>
+                            {% if screening.notes %}
+                                {% set note_parts = screening.notes.split('|') %}
+                                {% for part in note_parts %}
+                                    {% if 'Document ID:' in part %}
+                                        {% set doc_id = part.replace('Document ID:', '').strip() %}
+                                        <a href="{{ url_for('view_document', document_id=doc_id) }}" class="badge bg-info text-decoration-none me-1" target="_blank">
+                                            Document {{ doc_id }}
+                                        </a>
+                                    {% else %}
+                                        <small class="text-muted">{{ part.strip() }}</small>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ url_for('patient_detail', patient_id=screening.patient_id) }}" 
-                                   class="btn btn-outline-primary" title="View Patient">
+                                   class="btn btn-outline-primary btn-sm" title="View Patient">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <button type="button" class="btn btn-outline-success" 
-                                        onclick="refreshPatientScreenings({{ screening.patient_id }})"
-                                        title="Refresh Patient Screenings">
-                                    <i class="fas fa-sync-alt"></i>
-                                </button>
-                                <button type="button" class="btn btn-outline-primary edit-screening-btn" 
+                                <button type="button" class="btn btn-outline-primary btn-sm edit-screening-btn" 
                                    data-bs-toggle="modal" data-bs-target="#editScreeningModal"
                                    data-id="{{ screening.id }}"
                                    data-patient-id="{{ screening.patient.id }}"
                                    data-patient-name="{{ screening.patient.full_name }}"
                                    data-screening-type="{{ screening.screening_type }}"
-                                   data-due-date="{{ screening.due_date.strftime('%Y-%m-%d') if screening.due_date else '' }}"
                                    data-last-completed="{{ screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else '' }}"
                                    data-frequency="{{ screening.frequency or '' }}"
                                    data-status="{{ screening.status or '' }}"
@@ -290,10 +260,10 @@ function refreshPatientScreenings(patientId) {
             <i class="fas fa-search fa-3x text-muted mb-3"></i>
             <h5 class="text-muted">No screenings found</h5>
             <p class="text-muted">
-                {% if search_query %}
-                    No screenings found matching "{{ search_query }}". <a href="{{ url_for('screening_list', tab='screenings') }}">Clear search</a> to view all.
+                {% if search_query or status_filter or screening_type_filter %}
+                    No screenings found with current filters. <a href="{{ url_for('screening_list', tab='screenings') }}">Clear all filters</a> to view all.
                 {% else %}
-                    Click "Refresh All" above to generate automated screenings for eligible patients.
+                    Click "Regenerate" above to generate automated screenings for eligible patients.
                 {% endif %}
             </p>
         </div>
