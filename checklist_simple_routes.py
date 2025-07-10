@@ -33,6 +33,14 @@ def screening_checklist_rebuilt():
 def save_status_options_simple():
     """Save status options with simple, reliable processing"""
     try:
+        # Debug: Print all form data
+        print(f"=== FORM DEBUG ===")
+        print(f"Form keys: {list(request.form.keys())}")
+        for key in request.form.keys():
+            values = request.form.getlist(key)
+            print(f"  {key}: {values}")
+        print(f"=== END DEBUG ===")
+        
         # Get current settings
         settings = ChecklistSettings.query.first()
         if not settings:
