@@ -955,7 +955,7 @@ class ChecklistSettings(db.Model):
     layout_style = db.Column(db.String(20), default="list")  # 'list' or 'table'
     show_notes = db.Column(db.Boolean, default=True)
     status_options = db.Column(
-        db.Text, default="due,due_soon,sent_incomplete,completed"
+        db.Text, default="due,due_soon,incomplete,completed"
     )  # Comma-separated list
     custom_status_options = db.Column(
         db.Text, nullable=True

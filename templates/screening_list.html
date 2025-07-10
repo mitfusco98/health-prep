@@ -630,8 +630,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <button type="button" class="btn status-btn {% if 'due_soon' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
                                         data-value="due_soon" onclick="toggleStatus(this)">Due Soon</button>
 
-                                <button type="button" class="btn status-btn {% if 'sent_incomplete' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
-                                        data-value="sent_incomplete" onclick="toggleStatus(this)">Sent & Incomplete</button>
+                                <button type="button" class="btn status-btn {% if 'incomplete' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
+                                        data-value="incomplete" onclick="toggleStatus(this)">Incomplete</button>
 
                                 <button type="button" class="btn status-btn {% if 'completed' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
                                         data-value="completed" onclick="toggleStatus(this)">Completed</button>

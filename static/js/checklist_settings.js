@@ -228,8 +228,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'due_soon':
                         displayText = 'Due Soon';
                         break;
-                    case 'sent_incomplete':
-                        displayText = 'Sent & Incomplete';
+                    case 'incomplete':
+                        displayText = 'Incomplete';
                         break;
                     case 'completed':
                         displayText = 'Completed';

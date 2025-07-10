@@ -485,7 +485,7 @@
         </div>
         <div class="mb-4">
             {% set layout_style = checklist_settings.layout_style if checklist_settings is defined else 'list' %}
-            {% set status_options = checklist_settings.status_options_list if checklist_settings is defined else ['due', 'due_soon', 'sent_incomplete', 'completed'] %}
+            {% set status_options = checklist_settings.status_options_list if checklist_settings is defined else ['due', 'due_soon', 'incomplete', 'completed'] %}
             {% set show_notes = checklist_settings.show_notes if checklist_settings is defined else true %}
             
             {% if layout_style == 'table' %}
