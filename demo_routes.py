@@ -3042,6 +3042,9 @@ def screening_list():
     def now():
         return datetime.now()
 
+    # Define today at the start to ensure it's always available
+    today = datetime.now().date()
+
     # Get the tab parameter (screenings or types)
     tab = request.args.get("tab", "screenings")
 
@@ -3131,9 +3134,6 @@ def screening_list():
             )
 
         screening_types = screening_types_query.all()
-
-    # Define today at the start to ensure it's always available
-    today = datetime.now().date()
 
     # For the screenings tab, generate automated screenings
     screenings = []
