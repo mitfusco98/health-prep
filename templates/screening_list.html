@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             
             <div class="col-md-3">
-                <label class="form-label">Filter by Screening Type</label>
+                <label class="form-label" style="white-space: nowrap;">Filter by Screening Type</label>
                 <select name="screening_type" class="form-select" onchange="this.form.submit()">
                     <option value="">All Types</option>
                     {% for type in distinct_screening_types %}
