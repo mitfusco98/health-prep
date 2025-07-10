@@ -48,7 +48,6 @@ def update_checklist_settings():
     # Get form data
     layout_style = request.form.get("layout_style", "list")
     status_options = request.form.getlist("status_options")
-    custom_status_options = request.form.getlist("custom_status_options")
     show_notes = "show_notes" in request.form
 
     # Update settings - DEBUG THE WORKING STATUS OPTIONS
@@ -57,9 +56,7 @@ def update_checklist_settings():
     settings.status_options = (
         ",".join(status_options) if status_options else "due,due_soon"
     )
-    settings.custom_status_options = (
-        ",".join(custom_status_options) if custom_status_options else ""
-    )
+    settings.custom_status_options = ""  # Custom status options no longer supported
     settings.show_notes = show_notes
 
     # Save settings
@@ -147,32 +144,7 @@ def update_checklist_generation():
     return redirect(url_for('screening_list', tab='checklist'))
 
 
-@app.route("/checklist-settings/remove-custom-status", methods=["POST"])
-@safe_db_operation
-def remove_custom_status():
-    """Remove a specific custom status option from the prep sheet quality checklist settings"""
-    # Get the current settings
-    settings = get_or_create_settings()
 
-    # Get the status to remove
-    status_to_remove = request.form.get("status")
-
-    if not status_to_remove:
-        return jsonify({"success": False, "error": "No status specified"}), 400
-
-    # Get current custom statuses
-    custom_statuses = settings.custom_status_list
-
-    # Remove the specified status if it exists
-    if status_to_remove in custom_statuses:
-        custom_statuses.remove(status_to_remove)
-        settings.custom_status_options = (
-            ",".join(custom_statuses) if custom_statuses else ""
-        )
-        db.session.commit()
-        return jsonify({"success": True})
-
-    return jsonify({"success": False, "error": "Status not found"}), 404
 
 
 @app.route("/save-cutoff-settings", methods=["POST"])

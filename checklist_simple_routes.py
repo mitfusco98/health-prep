@@ -40,7 +40,7 @@ def save_status_options_simple():
             values = request.form.getlist(key)
             print(f"  {key}: {values}")
         print(f"=== END DEBUG ===")
-        
+
         # Get current settings
         settings = ChecklistSettings.query.first()
         if not settings:
@@ -51,42 +51,18 @@ def save_status_options_simple():
         status_selections = request.form.get('status_selections', '')
         print(f"Received status selections: '{status_selections}'")
 
-        # Get custom status options
-        custom_status_options = request.form.getlist('custom_status_options')
-        print(f"Received custom status options: {custom_status_options}")
-        print(f"Length of custom status options: {len(custom_status_options)}")
-        for i, option in enumerate(custom_status_options):
-            print(f"  Option {i+1}: '{option}'")
+        # Custom status options are no longer supported
+        settings.custom_status_options = ''
 
         # Update settings
         settings.status_options = status_selections
-        
-        # Update custom status options - remove duplicates and empty strings
-        if custom_status_options:
-            # Filter out empty strings and remove duplicates while preserving order
-            clean_options = []
-            for option in custom_status_options:
-                option = option.strip()
-                if option and option not in clean_options:
-                    clean_options.append(option)
-            
-            if clean_options:
-                settings.custom_status_options = ','.join(clean_options)
-                print(f"Saving {len(clean_options)} unique custom status options: {clean_options}")
-            else:
-                settings.custom_status_options = None
-                print("No valid custom status options to save")
-        else:
-            settings.custom_status_options = None
-            print("No custom status options received, setting to None")
 
         # Commit to database
         db.session.commit()
 
-        total_options = len(status_selections.split(',') if status_selections else []) + len(custom_status_options)
-        flash(f'Successfully saved {total_options} status options ({len(custom_status_options)} custom)', 'success')
+        total_options = len(status_selections.split(',') if status_selections else [])
+        flash(f'Successfully saved {len(status_selections.split(",") if status_selections else [])} status options', 'success')
         print(f"Successfully saved status options: {status_selections}")
-        print(f"Successfully saved custom status options: {custom_status_options}")
 
     except Exception as e:
         db.session.rollback()
@@ -131,4 +107,3 @@ def save_default_items_simple():
         print(f"Error saving default items: {e}")
 
     return redirect(url_for('screening_list', tab='checklist'))
-

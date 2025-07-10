@@ -642,25 +642,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <small class="text-muted">Selected: <span id="status-list-display">{{ ', '.join(current_status_list) }}</span></small>
                         </div>
 
-                        <div class="mt-3">
-                            <label class="form-label">Custom Status Options</label>
-                            <div class="input-group mb-2">
-                                <input type="text" class="form-control" id="custom_status_input" placeholder="Add custom status option...">
-                                <button class="btn btn-outline-primary" type="button" id="add_custom_status">Add</button>
-                            </div>
-                            <div class="form-text mb-2">Add your own status options to appear in autocomplete</div>
-                            <div id="custom_status_list" class="d-flex flex-wrap gap-2 mb-2">
-                                {% if settings and settings.custom_status_list %}
-                                    {% for status in settings.custom_status_list %}
-                                        <div class="custom-status-item badge bg-light text-dark p-2 d-flex align-items-center" data-status="{{ status }}">
-                                            {{ status }}
-                                            <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="{{ status }}"></button>
-                                            <input type="hidden" name="custom_status_options" value="{{ status }}">
-                                        </div>
-                                    {% endfor %}
-                                {% endif %}
-                            </div>
-                        </div>
+                        
 
                         <!-- Hidden input that will contain the final selections -->
                         <input type="hidden" id="status-selections" name="status_selections" value="{{ ','.join(current_status_list) }}">
@@ -1228,7 +1210,7 @@ document.addEventListener('DOMContentLoaded', function() {
             element.remove();
         }
     }
-    
+
     // Make functions available globally for form submission
     window.addCustomStatus = addCustomStatus;
     window.removeCustomStatus = removeCustomStatus;
@@ -1237,39 +1219,39 @@ document.addEventListener('DOMContentLoaded', function() {
 // Function to update custom status options before form submission
 function updateCustomStatusBeforeSubmit() {
     console.log('=== FORM SUBMISSION DEBUG ===');
-    
+
     // Get all current custom status items
     const customStatusItems = document.querySelectorAll('#custom_status_list .custom-status-item input[name="custom_status_options"]');
     console.log(`Found ${customStatusItems.length} custom status options in DOM`);
-    
+
     // List all items found in DOM
     customStatusItems.forEach((input, index) => {
         console.log(`DOM Custom status ${index + 1}: "${input.value}" (parent: ${input.closest('.custom-status-item').dataset.status})`);
     });
-    
+
     // Check if any items are missing or duplicated
     const form = document.getElementById('status-form');
     const allCustomInputs = form.querySelectorAll('input[name="custom_status_options"]');
     console.log(`Total custom_status_options inputs in form: ${allCustomInputs.length}`);
-    
+
     allCustomInputs.forEach((input, index) => {
         const isInCustomStatusItem = input.closest('.custom-status-item') !== null;
         console.log(`Form input ${index + 1}: "${input.value}" (in custom-status-item: ${isInCustomStatusItem})`);
     });
-    
+
     // Final check - get all form data to see what's actually being submitted
     const formData = new FormData(form);
     const customStatusValues = formData.getAll('custom_status_options');
     console.log(`FormData will submit ${customStatusValues.length} custom status options:`, customStatusValues);
-    
+
     if (customStatusValues.length === 0) {
         console.log('WARNING: No custom status options found in form data!');
     } else if (customStatusValues.length !== customStatusItems.length) {
         console.log(`WARNING: Mismatch between DOM items (${customStatusItems.length}) and FormData items (${customStatusValues.length})!`);
     }
-    
+
     console.log('=== END FORM SUBMISSION DEBUG ===');
-    
+
     return true; // Allow form submission to continue
 }
 </script>
@@ -1290,7 +1272,7 @@ function updateCustomStatusBeforeSubmit() {
     // Add user input tracking for screening cutoff fields
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Initializing user input tracking for screening cutoff fields...');
-    
+
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     console.log(`Found ${screeningInputs.length} screening cutoff inputs`);
 
@@ -1299,7 +1281,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!input.dataset.originalValue) {
             input.dataset.originalValue = input.value;
         }
-        
+
         // Initialize user modification tracking
         if (!input.dataset.userModified) {
             input.dataset.userModified = 'false';
@@ -1307,9 +1289,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!input.dataset.presetModified) {
             input.dataset.presetModified = 'false';
         }
-        
+
         console.log(`Initialized tracking for ${input.dataset.screeningName}: original=${input.dataset.originalValue}, current=${input.value}`);
-        
+
         // Track when user manually changes the input
         input.addEventListener('input', function() {
             // Mark as user modified for any direct input
@@ -1343,7 +1325,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log(`User keystroke detected for ${this.dataset.screeningName}`);
         });
 
-        // Track blur to clear focus flag
+        // Track on blur to clear focus flag
         input.addEventListener('blur', function() {
             this.dataset.userFocused = 'false';
         });
@@ -1646,7 +1628,6 @@ document.addEventListener('DOMContentLoaded', function() {
         width: 100vw;
         height: 100vh;
         background-color: #000;
-```python
         background-color: #000;
     }
 
