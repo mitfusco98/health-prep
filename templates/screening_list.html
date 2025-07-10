@@ -650,16 +650,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="form-text mb-2">Add your own status options to appear in autocomplete</div>
                             <div id="custom_status_list" class="d-flex flex-wrap gap-2 mb-2">
-                                {% if settings and settings.custom_status_options %}
-                                    {% set custom_statuses = settings.custom_status_options.split(',') if settings.custom_status_options else [] %}
-                                    {% for status in custom_statuses %}
-                                        {% if status.strip() %}
+                                {% if settings and settings.custom_status_list %}
+                                    {% for status in settings.custom_status_list %}
                                         <div class="custom-status-item badge bg-light text-dark p-2 d-flex align-items-center">
-                                            {{ status.strip() }}
-                                            <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="{{ status.strip() }}"></button>
-                                            <input type="hidden" name="custom_status_options" value="{{ status.strip() }}">
+                                            {{ status }}
+                                            <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="{{ status }}"></button>
+                                            <input type="hidden" name="custom_status_options" value="{{ status }}">
                                         </div>
-                                        {% endif %}
                                     {% endfor %}
                                 {% endif %}
                             </div>
@@ -1249,7 +1246,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add user input tracking for screening cutoff fields
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Initializing user input tracking for screening cutoff fields...');
-
+    
     const screeningInputs = document.querySelectorAll('.screening-cutoff');
     console.log(`Found ${screeningInputs.length} screening cutoff inputs`);
 
@@ -1258,7 +1255,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!input.dataset.originalValue) {
             input.dataset.originalValue = input.value;
         }
-
+        
         // Initialize user modification tracking
         if (!input.dataset.userModified) {
             input.dataset.userModified = 'false';
@@ -1266,9 +1263,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!input.dataset.presetModified) {
             input.dataset.presetModified = 'false';
         }
-
+        
         console.log(`Initialized tracking for ${input.dataset.screeningName}: original=${input.dataset.originalValue}, current=${input.value}`);
-
+        
         // Track when user manually changes the input
         input.addEventListener('input', function() {
             // Mark as user modified for any direct input
@@ -1537,7 +1534,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const id = button.getAttribute('data-id');
             const name = button.getAttribute('data-name');
             const frequency = button.getAttribute('data-frequency');
-            const gender = button.getAttribute(`data-gender`);
+            const gender = button.getAttribute('data-gender');
             const minAge = button.getAttribute('data-min-age');
             const maxAge = button.getAttribute('data-max-age');
             const active = button.getAttribute('data-active') === '1';

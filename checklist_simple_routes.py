@@ -47,27 +47,22 @@ def save_status_options_simple():
         custom_status_options = request.form.getlist('custom_status_options')
         print(f"Received custom status options: {custom_status_options}")
 
-        # Update settings - handle both regular and custom status options
-        settings.status_options = status_selections if status_selections else ""
+        # Update settings
+        settings.status_options = status_selections
         
-        # Update custom status options - filter out empty values
-        filtered_custom_options = [opt for opt in custom_status_options if opt.strip()]
-        if filtered_custom_options:
-            settings.custom_status_options = ','.join(filtered_custom_options)
+        # Update custom status options
+        if custom_status_options:
+            settings.custom_status_options = ','.join(custom_status_options)
         else:
-            settings.custom_status_options = ""
+            settings.custom_status_options = None
 
         # Commit to database
         db.session.commit()
 
-        total_regular = len(status_selections.split(',')) if status_selections else 0
-        total_custom = len(filtered_custom_options)
-        total_options = total_regular + total_custom
-        
-        flash(f'Successfully saved {total_options} status options ({total_custom} custom)', 'success')
+        total_options = len(status_selections.split(',') if status_selections else []) + len(custom_status_options)
+        flash(f'Successfully saved {total_options} status options ({len(custom_status_options)} custom)', 'success')
         print(f"Successfully saved status options: {status_selections}")
-        print(f"Successfully saved custom status options: {filtered_custom_options}")
-        print(f"Final custom_status_options in DB: {settings.custom_status_options}")
+        print(f"Successfully saved custom status options: {custom_status_options}")
 
     except Exception as e:
         db.session.rollback()

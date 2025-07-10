@@ -526,8 +526,8 @@
                                         {% for status in status_options %}
                                             <option value="{{ status|replace('_', ' ')|title }}">
                                         {% endfor %}
-                                        {% if checklist_settings and checklist_settings.custom_status_list %}
-                                            {% for custom_status in checklist_settings.custom_status_list %}
+                                        {% if settings.custom_status_list %}
+                                            {% for custom_status in settings.custom_status_list %}
                                             <option value="{{ custom_status }}">
                                             {% endfor %}
                                         {% endif %}
@@ -573,8 +573,8 @@
                                 {% for status in status_options %}
                                     <option value="{{ status|replace('_', ' ')|title }}">
                                 {% endfor %}
-                                {% if checklist_settings and checklist_settings.custom_status_list %}
-                                    {% for custom_status in checklist_settings.custom_status_list %}
+                                {% if settings.custom_status_list %}
+                                    {% for custom_status in settings.custom_status_list %}
                                     <option value="{{ custom_status }}">
                                     {% endfor %}
                                 {% endif %}
