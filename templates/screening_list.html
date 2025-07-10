@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="card-body">
                     <p class="text-muted mb-3">These status options will appear as autocomplete suggestions when filling out screening checklists in prep sheets.</p>
 
-                    <form id="status-form" method="POST" action="{{ url_for('save_status_options_simple') }}">
+                    <form id="status-form" method="POST" action="{{ url_for('save_status_options_simple') }}" onsubmit="updateCustomStatusBeforeSubmit()">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <div class="mb-3">
@@ -1227,7 +1227,35 @@ document.addEventListener('DOMContentLoaded', function() {
             element.remove();
         }
     }
+    
+    // Make functions available globally for form submission
+    window.addCustomStatus = addCustomStatus;
+    window.removeCustomStatus = removeCustomStatus;
 });
+
+// Function to update custom status options before form submission
+function updateCustomStatusBeforeSubmit() {
+    console.log('Updating custom status options before form submission...');
+    
+    // Remove any existing hidden inputs to avoid duplicates
+    const existingInputs = document.querySelectorAll('form#status-form input[name="custom_status_options"]');
+    existingInputs.forEach(input => {
+        // Only remove if it's not part of a custom-status-item (those are the ones we want to keep)
+        if (!input.closest('.custom-status-item')) {
+            input.remove();
+        }
+    });
+    
+    // Get all current custom status items
+    const customStatusItems = document.querySelectorAll('#custom_status_list .custom-status-item input[name="custom_status_options"]');
+    console.log(`Found ${customStatusItems.length} custom status options to submit`);
+    
+    customStatusItems.forEach((input, index) => {
+        console.log(`Custom status ${index + 1}: ${input.value}`);
+    });
+    
+    return true; // Allow form submission to continue
+}
 </script>
 
 
