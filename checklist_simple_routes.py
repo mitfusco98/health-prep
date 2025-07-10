@@ -54,6 +54,9 @@ def save_status_options_simple():
         # Get custom status options
         custom_status_options = request.form.getlist('custom_status_options')
         print(f"Received custom status options: {custom_status_options}")
+        print(f"Length of custom status options: {len(custom_status_options)}")
+        for i, option in enumerate(custom_status_options):
+            print(f"  Option {i+1}: '{option}'")
 
         # Update settings
         settings.status_options = status_selections
