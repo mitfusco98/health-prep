@@ -77,6 +77,41 @@
         color: #6c757d;
         margin-right: 0.2rem;
     }
+    
+    /* Datalist autocomplete styling */
+    .screening-consolidated-field {
+        background-color: #ffffff;
+        color: #333333;
+        border: 1px solid #ced4da;
+    }
+    
+    .screening-consolidated-field:focus {
+        background-color: #ffffff;
+        color: #333333;
+        border-color: rgba(var(--bs-primary-rgb), 0.5);
+        box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+    }
+    
+    /* Browser-specific datalist styling */
+    datalist {
+        background-color: #ffffff;
+        color: #333333;
+        border: 1px solid #ced4da;
+    }
+    
+    /* WebKit browsers (Chrome, Safari, Edge) */
+    .screening-consolidated-field::-webkit-calendar-picker-indicator {
+        background-color: #ffffff;
+        color: #333333;
+    }
+    
+    /* Firefox */
+    @-moz-document url-prefix() {
+        .screening-consolidated-field {
+            background-color: #ffffff !important;
+            color: #333333 !important;
+        }
+    }
 </style>
 {% endblock %}
 
