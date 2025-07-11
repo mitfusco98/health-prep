@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                         <td>{{ screening.frequency or '-' }}</td>
                         <td>
-                            {% if screening.documents %}
+                            {% if screening.matched_documents %}
                                 {% for document in screening.matched_documents %}
                                     <a href="{{ url_for('view_document', document_id=document.id) }}" class="badge bg-info text-decoration-none me-1" target="_blank">
                                         {{ document.document_name or document.filename or 'Document ' + document.id|string }}
