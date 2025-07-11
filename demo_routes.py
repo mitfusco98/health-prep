@@ -929,34 +929,82 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         past_appointments,
     )
 
-    # Generate enhanced screening recommendations with document matching
-    from document_screening_matcher import generate_prep_sheet_screening_recommendations
-    
+    # Get enhanced screening recommendations with document relationships using new system
     try:
-        document_screening_data = generate_prep_sheet_screening_recommendations(
-            patient_id=patient_id,
-            enable_ai_fuzzy=True,
-            include_confidence_scores=True
-        )
+        # Get existing screenings with document relationships
+        patient_screenings = Screening.query.filter_by(patient_id=patient_id).all()
         
         # Create mapping of screening names to document match data for template
         screening_document_matches = {}
-        for rec in document_screening_data.get('screening_recommendations', []):
-            screening_name = rec['screening_name']
-            if rec.get('best_match'):
-                screening_document_matches[screening_name] = {
-                    'status_notes': rec['status_notes'],
-                    'confidence': rec['match_confidence'],
-                    'confidence_percent': int(rec['match_confidence'] * 100),
-                    'document_name': rec['best_match']['document_name'],
-                    'match_source': rec['best_match']['match_source'],
-                    'recommendation_status': rec['recommendation_status']
-                }
+        document_screening_data = {
+            'screening_recommendations': [],
+            'summary': {
+                'total_matches': 0,
+                'unique_screenings': len(patient_screenings),
+                'high_confidence_count': 0,
+                'medium_confidence_count': 0,
+                'low_confidence_count': 0
+            }
+        }
+        
+        for screening in patient_screenings:
+            matched_docs = screening.matched_documents
+            if matched_docs:
+                # For each screening, create entry with document data
+                document_screening_data['screening_recommendations'].append({
+                    'screening_name': screening.screening_type,
+                    'status': screening.status,
+                    'last_completed': screening.last_completed,
+                    'frequency': screening.frequency,
+                    'notes': screening.notes,
+                    'matched_documents': matched_docs,
+                    'document_count': len(matched_docs)
+                })
+                
+                # Create template mapping for backward compatibility
+                if matched_docs:
+                    best_doc = matched_docs[0]  # Use first document as "best match"
+                    confidence = 0.85  # Default high confidence for automated matches
+                    
+                    screening_document_matches[screening.screening_type] = {
+                        'status_notes': f"Status: {screening.status}",
+                        'confidence': confidence,
+                        'confidence_percent': int(confidence * 100),
+                        'document_name': best_doc.filename,
+                        'document_id': best_doc.id,
+                        'match_source': 'automated_screening_engine',
+                        'recommendation_status': screening.status,
+                        'matched_documents': matched_docs,
+                        'all_documents': [
+                            {
+                                'id': doc.id,
+                                'filename': doc.filename,
+                                'document_name': doc.document_name,
+                                'confidence': 0.85  # Default confidence
+                            } for doc in matched_docs
+                        ]
+                    }
+                    
+                    # Update summary counts
+                    document_screening_data['summary']['total_matches'] += len(matched_docs)
+                    if confidence >= 0.8:
+                        document_screening_data['summary']['high_confidence_count'] += 1
+                    elif confidence >= 0.6:
+                        document_screening_data['summary']['medium_confidence_count'] += 1
+                    else:
+                        document_screening_data['summary']['low_confidence_count'] += 1
+        
+        print(f"Found {len(patient_screenings)} screenings with {document_screening_data['summary']['total_matches']} total document matches")
         
     except Exception as e:
         # Fallback - don't break prep sheet if document matching fails
         print(f"Document matching error: {str(e)}")
-        document_screening_data = None
+        import traceback
+        traceback.print_exc()
+        document_screening_data = {
+            'screening_recommendations': [],
+            'summary': {'total_matches': 0, 'unique_screenings': 0}
+        }
         screening_document_matches = {}
 
     # Generate timestamp for cache busting
