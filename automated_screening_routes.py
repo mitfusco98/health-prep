@@ -163,8 +163,16 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
             ).first()
             
             if existing:
-                # Update existing screening
-                existing.status = screening_data['status']
+                # CRITICAL VALIDATION: Complete status requires matched documents
+                proposed_status = screening_data['status']
+                has_valid_documents = 'matched_documents' in screening_data and screening_data['matched_documents']
+                
+                if proposed_status == 'Complete' and not has_valid_documents:
+                    print(f"  ⚠️  Correcting invalid Complete status to Incomplete for {screening_data['screening_type']} - no matched documents")
+                    existing.status = 'Incomplete'
+                else:
+                    existing.status = proposed_status
+                    
                 existing.last_completed = screening_data['last_completed']
                 existing.frequency = screening_data['frequency']
                 existing.notes = screening_data['notes']
@@ -176,11 +184,21 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 
                 current_screening = existing
             else:
+                # CRITICAL VALIDATION: Complete status requires matched documents for new screenings too
+                proposed_status = screening_data['status']
+                has_valid_documents = 'matched_documents' in screening_data and screening_data['matched_documents']
+                
+                if proposed_status == 'Complete' and not has_valid_documents:
+                    print(f"  ⚠️  Correcting invalid Complete status to Incomplete for new {screening_data['screening_type']} - no matched documents")
+                    validated_status = 'Incomplete'
+                else:
+                    validated_status = proposed_status
+                
                 # Create new screening
                 new_screening = Screening(
                     patient_id=patient_id,
                     screening_type=screening_data['screening_type'],
-                    status=screening_data['status'],
+                    status=validated_status,
                     last_completed=screening_data['last_completed'],
                     frequency=screening_data['frequency'],
                     notes=screening_data['notes'],
@@ -193,18 +211,25 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 current_screening = new_screening
             
             # Add document relationships using the new many-to-many table with validation
+            linked_document_count = 0
             if 'matched_documents' in screening_data and screening_data['matched_documents']:
                 for document in screening_data['matched_documents']:
                     try:
                         # Validate document exists before linking
                         if _validate_document_exists(document):
                             current_screening.add_document(document, confidence_score=1.0, match_source='automated')
+                            linked_document_count += 1
                             print(f"  → Linked document {document.filename} to screening {current_screening.screening_type}")
                         else:
                             print(f"  → Skipping deleted/invalid document {document.id}")
                     except Exception as doc_error:
                         print(f"  → Error linking document {document.id}: {doc_error}")
                         # Continue with other documents even if one fails
+            
+            # FINAL VALIDATION: If marked Complete but no documents were actually linked, correct the status
+            if current_screening.status == 'Complete' and linked_document_count == 0:
+                print(f"  ⚠️  FINAL CORRECTION: Complete status to Incomplete for {current_screening.screening_type} - no documents successfully linked")
+                current_screening.status = 'Incomplete'
         
         db.session.commit()
         

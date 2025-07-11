@@ -233,6 +233,8 @@ class ScreeningStatusEngine:
         """
         Calculate the screening status based on documents and timing
         
+        CRITICAL RULE: A screening can ONLY be marked 'Complete' if it has matching documents
+        
         Args:
             screening_type: ScreeningType object
             matching_documents: List of matching documents
@@ -242,14 +244,32 @@ class ScreeningStatusEngine:
         Returns:
             Status string: 'Due', 'Due Soon', 'Incomplete', or 'Complete'
         """
-        # If no documents match parsing rules, it's incomplete
+        # CRITICAL: If no documents match parsing rules, it can never be complete
         if not matching_documents:
             return self.STATUS_INCOMPLETE
         
-        # Get the most recent matching document
-        most_recent_doc = max(matching_documents, key=lambda d: d.created_at or datetime.min)
+        # Validate that matching documents actually exist and are accessible
+        valid_matching_documents = []
+        for doc in matching_documents:
+            try:
+                # Verify document still exists in database
+                from models import MedicalDocument
+                existing_doc = MedicalDocument.query.get(doc.id)
+                if existing_doc:
+                    valid_matching_documents.append(doc)
+            except Exception as e:
+                print(f"Document validation error for doc {doc.id}: {e}")
+                continue
         
-        # If we have a matching document, check timing based on frequency
+        # If no valid documents remain after validation, it's incomplete
+        if not valid_matching_documents:
+            print(f"Warning: No valid documents found for screening {screening_type.name} - marking as incomplete")
+            return self.STATUS_INCOMPLETE
+        
+        # Get the most recent valid matching document
+        most_recent_doc = max(valid_matching_documents, key=lambda d: d.created_at or datetime.min)
+        
+        # If we have a valid matching document, check timing based on frequency
         if existing_screening and existing_screening.last_completed:
             last_completed = existing_screening.last_completed
         else:
@@ -260,18 +280,25 @@ class ScreeningStatusEngine:
         next_due_date = self._calculate_next_due_date(screening_type, last_completed)
         
         if not next_due_date:
-            # If we can't calculate due date, consider it complete if we have matching docs
-            return self.STATUS_COMPLETE
+            # ONLY mark complete if we have valid matching documents
+            if valid_matching_documents:
+                return self.STATUS_COMPLETE
+            else:
+                return self.STATUS_INCOMPLETE
         
         today = date.today()
         
-        # Check status based on due date
+        # Check status based on due date - but only mark Complete if we have valid documents
         if today > next_due_date:
             return self.STATUS_DUE
         elif today > (next_due_date - timedelta(days=self.DUE_SOON_THRESHOLD_DAYS)):
             return self.STATUS_DUE_SOON
         else:
-            return self.STATUS_COMPLETE
+            # FINAL CHECK: Only mark Complete if we have valid matching documents
+            if valid_matching_documents:
+                return self.STATUS_COMPLETE
+            else:
+                return self.STATUS_INCOMPLETE
     
     def _calculate_due_date(self, screening_type: ScreeningType, existing_screening: Optional[Screening]) -> Optional[date]:
         """Calculate when screening is due"""
