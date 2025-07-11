@@ -21,8 +21,14 @@ def get_screening_keywords(screening_id):
                 'message': 'Screening type not found'
             }), 404
 
-        # Get keywords directly from the model
-        keywords = screening_type.get_content_keywords() or []
+        # Get keywords from content_keywords field or return empty list
+        keywords = []
+        if hasattr(screening_type, 'content_keywords') and screening_type.content_keywords:
+            try:
+                import json
+                keywords = json.loads(screening_type.content_keywords) if isinstance(screening_type.content_keywords, str) else screening_type.content_keywords
+            except (json.JSONDecodeError, TypeError):
+                keywords = []
 
         return jsonify({
             'success': True,
@@ -32,6 +38,7 @@ def get_screening_keywords(screening_id):
         })
 
     except Exception as e:
+        db.session.rollback()  # Explicitly rollback on error
         return jsonify({
             'success': False,
             'message': str(e)
