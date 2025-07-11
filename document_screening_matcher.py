@@ -8,7 +8,7 @@ from datetime import datetime, date
 from typing import Dict, Any, Optional, List, Tuple
 import re
 import json
-from models import ScreeningType, Patient, MedicalDocument
+from models import ScreeningType, Patient, MedicalDocument, Screening
 from app import db
 
 
@@ -320,12 +320,214 @@ class DocumentScreeningMatcher:
                     'screening_type': screening_name,
                     'frequency': freq_text,
                     'matched_documents': len(matches),
-                    'last_match': max(matches, key=lambda x: x['document_id'])['notes'],
+                    'last_match': max(matches, key=lambda x: x['document_id'])['notes'] if matches else 'No matches',
                     'priority': 'high' if len(matches) > 1 else 'normal'
                 }
                 recommendations['recommendations'].append(recommendation)
         
         return recommendations
+    
+    def store_document_screening_relationship(
+        self,
+        patient: Patient,
+        screening_type: ScreeningType,
+        document: MedicalDocument,
+        match_result: Dict[str, Any],
+        confidence_score: float = 1.0
+    ) -> Optional[Screening]:
+        """
+        Store a document-screening relationship in the many-to-many table
+        
+        Args:
+            patient: Patient object
+            screening_type: ScreeningType object 
+            document: MedicalDocument object
+            match_result: Result from match_document_to_screening
+            confidence_score: Confidence score for the match (0.0 to 1.0)
+            
+        Returns:
+            Screening object or None if operation failed
+        """
+        try:
+            # Find existing screening or create new one
+            screening = Screening.query.filter_by(
+                patient_id=patient.id,
+                screening_type=screening_type.name
+            ).first()
+            
+            if not screening:
+                # Create new screening record
+                screening = Screening(
+                    patient_id=patient.id,
+                    screening_type=screening_type.name,
+                    status='Incomplete',  # Will be updated by automated engine
+                    frequency=screening_type.formatted_frequency or 'As needed',
+                    notes=self._generate_clean_notes(match_result),
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+                db.session.add(screening)
+                db.session.flush()  # Get the ID
+            
+            # Add document relationship using the new many-to-many table
+            screening.add_document(
+                document,
+                confidence_score=confidence_score,
+                match_source=match_result.get('match_method', 'automated')
+            )
+            
+            db.session.commit()
+            return screening
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error storing document-screening relationship: {e}")
+            return None
+    
+    def store_all_matching_documents(
+        self,
+        patient: Patient,
+        documents: List[MedicalDocument] = None
+    ) -> Dict[str, Any]:
+        """
+        Find all document matches for a patient and store relationships in the database
+        
+        Args:
+            patient: Patient object
+            documents: Optional list of documents (if None, fetches all patient documents)
+            
+        Returns:
+            Dict with storage results and statistics
+        """
+        if documents is None:
+            documents = MedicalDocument.query.filter_by(patient_id=patient.id).all()
+        
+        results = {
+            'patient_id': patient.id,
+            'total_documents': len(documents),
+            'relationships_created': 0,
+            'screenings_updated': 0,
+            'errors': []
+        }
+        
+        try:
+            for document in documents:
+                # Find matching screenings for this document
+                matches = self.find_matching_screenings(document, patient)
+                
+                for match in matches:
+                    if match['matched']:
+                        # Get the screening type
+                        screening_type = ScreeningType.query.get(match['screening_id'])
+                        if not screening_type:
+                            continue
+                        
+                        # Calculate confidence score
+                        confidence = self._calculate_match_confidence_from_result(match, document)
+                        
+                        # Store the relationship
+                        screening = self.store_document_screening_relationship(
+                            patient, screening_type, document, match, confidence
+                        )
+                        
+                        if screening:
+                            results['relationships_created'] += 1
+                            results['screenings_updated'] += 1
+                        else:
+                            results['errors'].append(f"Failed to store relationship for {screening_type.name}")
+            
+            return results
+            
+        except Exception as e:
+            results['errors'].append(f"General error: {str(e)}")
+            return results
+    
+    def _generate_clean_notes(self, match_result: Dict[str, Any]) -> str:
+        """
+        Generate clean notes without document IDs (those are now in relationships)
+        
+        Args:
+            match_result: Match result dictionary
+            
+        Returns:
+            Clean notes string
+        """
+        notes = match_result.get('notes', '')
+        
+        # Remove any document ID references from notes
+        notes = re.sub(r'\|\s*Document ID:\s*\d+', '', notes)
+        notes = re.sub(r'Document ID:\s*\d+\s*\|?', '', notes)
+        notes = notes.strip(' |')
+        
+        # Add match method information if not present
+        if match_result.get('match_method') and 'matched' not in notes.lower():
+            method_desc = self._format_match_source(match_result['match_method'])
+            notes = f"Matched via {method_desc}. {notes}" if notes else f"Matched via {method_desc}"
+        
+        return notes or "Document match found"
+    
+    def _calculate_match_confidence_from_result(self, match_result: Dict, document: MedicalDocument) -> float:
+        """Calculate confidence from match result and document"""
+        base_confidence = {
+            'content': 0.9,
+            'filename': 0.7, 
+            'keywords': 0.6
+        }
+        
+        confidence = base_confidence.get(match_result.get('match_method'), 0.5)
+        
+        # Adjust based on match quality indicators
+        notes = match_result.get('notes', '')
+        if 'keywords matched:' in notes:
+            keyword_count = notes.count(',') + 1
+            if keyword_count > 1:
+                confidence = min(confidence + (keyword_count * 0.05), 1.0)
+        
+        return round(confidence, 2)
+    
+    def remove_document_from_screenings(
+        self,
+        document: MedicalDocument,
+        patient: Patient = None
+    ) -> Dict[str, Any]:
+        """
+        Remove a document from all screening relationships
+        
+        Args:
+            document: MedicalDocument to remove
+            patient: Optional patient object for validation
+            
+        Returns:
+            Dict with removal results
+        """
+        results = {
+            'document_id': document.id,
+            'relationships_removed': 0,
+            'errors': []
+        }
+        
+        try:
+            # Get all screenings that reference this document
+            screenings_with_doc = Screening.query.join(Screening.documents).filter(
+                MedicalDocument.id == document.id
+            ).all()
+            
+            for screening in screenings_with_doc:
+                # Validate patient if provided
+                if patient and screening.patient_id != patient.id:
+                    continue
+                
+                # Remove document from screening
+                screening.remove_document(document)
+                results['relationships_removed'] += 1
+            
+            db.session.commit()
+            return results
+            
+        except Exception as e:
+            db.session.rollback()
+            results['errors'].append(f"Error removing document relationships: {str(e)}")
+            return results
 
 
 def generate_prep_sheet_screening_recommendations(
