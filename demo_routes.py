@@ -3209,10 +3209,18 @@ def screening_list():
                     if 'matched_documents' in screening:
                         total_documents_linked += len(screening['matched_documents'])
             
-            print(f"Refreshed {total_screenings_updated} automated screenings for {len(all_patient_screenings)} patients")
-            print(f"Linked {total_documents_linked} documents using many-to-many relationships")
+            print(f"Tab '{tab}': Refreshed {total_screenings_updated} automated screenings for {len(all_patient_screenings)} patients")
+            print(f"Tab '{tab}': Linked {total_documents_linked} documents using many-to-many relationships with latest parsing logic")
             
-            flash(f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships based on current parsing logic", "success")
+            # Create tab-specific success message
+            if tab == 'types':
+                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships using the latest parsing rules from screening types"
+            elif tab == 'checklist':
+                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships using current prep sheet settings"
+            else:
+                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships based on current parsing logic"
+            
+            flash(success_msg, "success")
             
             # Redirect back to remove the regenerate parameter from URL while preserving search
             redirect_params = {'tab': tab}
