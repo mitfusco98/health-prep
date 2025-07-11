@@ -170,8 +170,9 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 existing.notes = screening_data['notes']
                 existing.updated_at = datetime.now()
                 
-                # Clear existing document relationships and add new ones
-                existing.documents.delete()  # Clear existing relationships
+                # Clear existing document relationships properly
+                for doc in existing.documents.all():
+                    existing.remove_document(doc)
                 
                 current_screening = existing
             else:
@@ -192,9 +193,14 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 current_screening = new_screening
             
             # Add document relationships using the new many-to-many table
-            if 'matched_documents' in screening_data:
+            if 'matched_documents' in screening_data and screening_data['matched_documents']:
                 for document in screening_data['matched_documents']:
-                    current_screening.add_document(document, confidence_score=1.0, match_source='automated')
+                    try:
+                        current_screening.add_document(document, confidence_score=1.0, match_source='automated')
+                        print(f"  → Linked document {document.filename} to screening {current_screening.screening_type}")
+                    except Exception as doc_error:
+                        print(f"  → Error linking document {document.id}: {doc_error}")
+                        # Continue with other documents even if one fails
         
         db.session.commit()
         

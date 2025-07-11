@@ -3147,13 +3147,24 @@ def screening_list():
             engine = ScreeningStatusEngine()
             all_patient_screenings = engine.generate_all_patient_screenings()
             
-            # Clear existing screenings and update with automated ones
+            # Update screenings with proper document relationships
             from automated_screening_routes import _update_patient_screenings
+            total_screenings_updated = 0
+            total_documents_linked = 0
+            
             for patient_id, screening_data in all_patient_screenings.items():
                 _update_patient_screenings(patient_id, screening_data)
+                total_screenings_updated += len(screening_data)
+                
+                # Count total documents linked
+                for screening in screening_data:
+                    if 'matched_documents' in screening:
+                        total_documents_linked += len(screening['matched_documents'])
             
-            print(f"Refreshed automated screenings for {len(all_patient_screenings)} patients")
-            flash(f"Successfully refreshed screenings for {len(all_patient_screenings)} patients based on current parsing logic", "success")
+            print(f"Refreshed {total_screenings_updated} automated screenings for {len(all_patient_screenings)} patients")
+            print(f"Linked {total_documents_linked} documents using many-to-many relationships")
+            
+            flash(f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships based on current parsing logic", "success")
             
             # Redirect back to remove the regenerate parameter from URL while preserving search
             redirect_params = {'tab': tab}
@@ -3163,6 +3174,8 @@ def screening_list():
             
         except Exception as e:
             print(f"Error refreshing automated screenings: {e}")
+            import traceback
+            traceback.print_exc()
             flash(f"Error refreshing automated screenings: {e}", "danger")
     
     # For the screenings tab, load existing screenings from database

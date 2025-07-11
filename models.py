@@ -299,18 +299,27 @@ class Screening(db.Model):
             # Add document to the many-to-many relationship
             self.documents.append(document)
             
-            # Update the association table with metadata
-            from sqlalchemy import text
-            db.session.execute(
-                text("UPDATE screening_documents SET confidence_score = :score, match_source = :source "
-                     "WHERE screening_id = :screening_id AND document_id = :document_id"),
-                {
-                    'score': confidence_score,
-                    'source': match_source,
-                    'screening_id': self.id,
-                    'document_id': document.id
-                }
-            )
+            # The association table will be updated after the session commits
+            # We'll store metadata in a simple way for now
+            db.session.flush()  # Ensure the relationship is created
+            
+            # Update the association table with metadata if needed
+            try:
+                from sqlalchemy import text
+                db.session.execute(
+                    text("UPDATE screening_documents SET confidence_score = :score, match_source = :source "
+                         "WHERE screening_id = :screening_id AND document_id = :document_id"),
+                    {
+                        'score': confidence_score,
+                        'source': match_source,
+                        'screening_id': self.id,
+                        'document_id': document.id
+                    }
+                )
+            except Exception as e:
+                # If metadata update fails, still keep the relationship
+                print(f"Warning: Could not update document metadata: {e}")
+                pass
 
     def remove_document(self, document):
         """Remove a document from this screening"""
