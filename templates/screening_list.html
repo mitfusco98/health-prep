@@ -98,6 +98,33 @@ function refreshScreenings(event, tab) {
     return true; // Allow default link behavior
 }
 
+// Handle document access errors
+function handleDocumentError(element, documentId) {
+    console.warn('Document access error for document ID:', documentId);
+    element.classList.remove('bg-info');
+    element.classList.add('bg-warning');
+    element.title = 'Document may be unavailable';
+    element.innerHTML = 'Document Unavailable';
+    element.onclick = function(e) {
+        e.preventDefault();
+        alert('This document is no longer available. It may have been deleted.');
+        return false;
+    };
+}
+
+// Validate document links on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Check for any document validation errors from server
+    const documentLinks = document.querySelectorAll('a[href*="/documents/"]');
+    documentLinks.forEach(link => {
+        // Add error handling for document links
+        link.addEventListener('error', function(e) {
+            console.error('Document link error:', e);
+            handleDocumentError(this, this.href.split('/').pop());
+        });
+    });
+});
+
 // Attach refresh handlers to all refresh buttons
 document.addEventListener('DOMContentLoaded', function() {
     const refreshButtons = document.querySelectorAll('a[href*="regenerate=true"]');
@@ -257,10 +284,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                         <td>{{ screening.frequency or '-' }}</td>
                         <td>
-                            {% if screening.matched_documents %}
-                                {% for document in screening.matched_documents %}
-                                    <a href="{{ url_for('view_document', document_id=document.id) }}" class="badge bg-info text-decoration-none me-1" target="_blank">
-                                        {{ document.document_name or document.filename or 'Document ' + document.id|string }}
+                            {% set valid_documents = screening.get_valid_documents_with_access_check() %}
+                            {% if valid_documents %}
+                                {% for document in valid_documents %}
+                                    {% set document_name = document.document_name or document.filename or 'Document ' + document.id|string %}
+                                    <a href="{{ url_for('view_document', document_id=document.id, return_to=request.url) }}" 
+                                       class="badge bg-info text-decoration-none me-1" 
+                                       target="_blank"
+                                       title="View {{ document_name }}"
+                                       onerror="handleDocumentError(this, {{ document.id }})">
+                                        {{ document_name|truncate(30) }}
                                     </a>
                                 {% endfor %}
                             {% else %}

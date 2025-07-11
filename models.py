@@ -285,13 +285,93 @@ class Screening(db.Model):
 
     @property
     def matched_documents(self):
-        """Get list of matched documents for this screening"""
-        return self.documents.all()
+        """Get list of matched documents for this screening, filtering out deleted ones"""
+        try:
+            # Get all documents and filter out any that no longer exist
+            valid_documents = []
+            for doc in self.documents.all():
+                if doc and hasattr(doc, 'id') and doc.id:
+                    valid_documents.append(doc)
+                else:
+                    # Remove orphaned relationship
+                    self._cleanup_orphaned_document_relationship(doc)
+            return valid_documents
+        except Exception as e:
+            print(f"Error retrieving matched documents for screening {self.id}: {e}")
+            return []
 
     @property
     def document_count(self):
-        """Get count of matched documents"""
-        return self.documents.count()
+        """Get count of valid matched documents"""
+        return len(self.matched_documents)
+
+    def get_valid_documents_with_access_check(self, user=None):
+        """Get documents with access permission validation"""
+        valid_documents = []
+        for doc in self.matched_documents:
+            try:
+                # Check if document exists and is accessible
+                if self._validate_document_access(doc, user):
+                    valid_documents.append(doc)
+            except Exception as e:
+                print(f"Error validating document access for doc {doc.id}: {e}")
+                continue
+        return valid_documents
+
+    def _validate_document_access(self, document, user=None):
+        """Validate that a document exists and user has access"""
+        try:
+            # Check if document exists in database
+            from app import db
+            existing_doc = db.session.get(MedicalDocument, document.id)
+            if not existing_doc:
+                # Clean up orphaned relationship
+                self._cleanup_orphaned_document_relationship(document)
+                return False
+            
+            # For now, basic access check (can be enhanced with role-based permissions)
+            # TODO: Add role-based access control based on user permissions
+            return True
+            
+        except Exception as e:
+            print(f"Error validating document access: {e}")
+            return False
+
+    def _cleanup_orphaned_document_relationship(self, document):
+        """Remove orphaned document relationship"""
+        try:
+            if document in self.documents:
+                self.documents.remove(document)
+                db.session.flush()
+                print(f"Cleaned up orphaned document relationship: screening {self.id}, document {document.id}")
+        except Exception as e:
+            print(f"Error cleaning up orphaned relationship: {e}")
+
+    def validate_and_cleanup_document_relationships(self):
+        """Validate all document relationships and clean up orphaned ones"""
+        try:
+            orphaned_count = 0
+            for doc in list(self.documents.all()):  # Create a copy to avoid iteration issues
+                try:
+                    # Try to access the document's attributes
+                    _ = doc.id, doc.filename
+                    # Check if document still exists in database
+                    from app import db
+                    if not db.session.get(MedicalDocument, doc.id):
+                        self._cleanup_orphaned_document_relationship(doc)
+                        orphaned_count += 1
+                except Exception:
+                    self._cleanup_orphaned_document_relationship(doc)
+                    orphaned_count += 1
+            
+            if orphaned_count > 0:
+                db.session.commit()
+                print(f"Cleaned up {orphaned_count} orphaned document relationships for screening {self.id}")
+                
+            return orphaned_count
+        except Exception as e:
+            print(f"Error during document relationship validation: {e}")
+            return 0
 
     def add_document(self, document, confidence_score=1.0, match_source='automated'):
         """Add a document to this screening with metadata"""

@@ -941,10 +941,16 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if screening.matched_documents %}
-                                {% for document in screening.matched_documents %}
-                                    <a href="{{ url_for('view_document', document_id=document.id) }}" class="badge bg-info text-decoration-none me-1 mb-1" target="_blank" title="Confidence: 85%">
-                                        {{ document.document_name or document.filename or 'Document ' + document.id|string }}
+                            {% set valid_documents = screening.get_valid_documents_with_access_check() %}
+                            {% if valid_documents %}
+                                {% for document in valid_documents %}
+                                    {% set doc_name = document.document_name or document.filename or 'Document ' + document.id|string %}
+                                    <a href="{{ url_for('view_document', document_id=document.id, return_to=request.url) }}" 
+                                       class="badge bg-info text-decoration-none me-1 mb-1" 
+                                       target="_blank" 
+                                       title="View {{ doc_name }}"
+                                       onerror="handlePrepSheetDocumentError(this, {{ document.id }})">
+                                        {{ doc_name|truncate(25) }}
                                         <small class="ms-1">(85%)</small>
                                     </a>
                                 {% endfor %}
@@ -1175,6 +1181,29 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error:', error);
             alert('Error saving prep sheet. Please try again.');
+        });
+    });
+    
+    // Handle document access errors in prep sheet
+    function handlePrepSheetDocumentError(element, documentId) {
+        console.warn('Document access error for document ID:', documentId);
+        element.classList.remove('bg-info');
+        element.classList.add('bg-warning');
+        element.title = 'Document may be unavailable';
+        element.innerHTML = 'Document Unavailable <small class="ms-1">(Error)</small>';
+        element.onclick = function(e) {
+            e.preventDefault();
+            alert('This document is no longer available. It may have been deleted.');
+            return false;
+        };
+    }
+
+    // Validate document links on page load
+    const documentLinks = document.querySelectorAll('a[href*="/documents/"]');
+    documentLinks.forEach(link => {
+        link.addEventListener('error', function(e) {
+            console.error('Document link error:', e);
+            handlePrepSheetDocumentError(this, this.href.split('/').pop());
         });
     });
 });

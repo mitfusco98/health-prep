@@ -192,12 +192,16 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 
                 current_screening = new_screening
             
-            # Add document relationships using the new many-to-many table
+            # Add document relationships using the new many-to-many table with validation
             if 'matched_documents' in screening_data and screening_data['matched_documents']:
                 for document in screening_data['matched_documents']:
                     try:
-                        current_screening.add_document(document, confidence_score=1.0, match_source='automated')
-                        print(f"  → Linked document {document.filename} to screening {current_screening.screening_type}")
+                        # Validate document exists before linking
+                        if _validate_document_exists(document):
+                            current_screening.add_document(document, confidence_score=1.0, match_source='automated')
+                            print(f"  → Linked document {document.filename} to screening {current_screening.screening_type}")
+                        else:
+                            print(f"  → Skipping deleted/invalid document {document.id}")
                     except Exception as doc_error:
                         print(f"  → Error linking document {document.id}: {doc_error}")
                         # Continue with other documents even if one fails
@@ -218,6 +222,43 @@ def _get_status_summary():
     ).group_by(Screening.status).all()
     
     return {status: count for status, count in summary}
+
+def _validate_document_exists(document):
+    """Validate that a document exists in the database"""
+    try:
+        if not document or not hasattr(document, 'id'):
+            return False
+        
+        # Check if document still exists in database
+        from models import MedicalDocument
+        existing_doc = db.session.get(MedicalDocument, document.id)
+        return existing_doc is not None
+        
+    except Exception as e:
+        print(f"Error validating document existence: {e}")
+        return False
+
+def cleanup_orphaned_screening_documents():
+    """Clean up orphaned document relationships across all screenings"""
+    try:
+        from models import Screening
+        total_cleaned = 0
+        
+        all_screenings = Screening.query.all()
+        for screening in all_screenings:
+            cleaned_count = screening.validate_and_cleanup_document_relationships()
+            total_cleaned += cleaned_count
+            
+        if total_cleaned > 0:
+            db.session.commit()
+            print(f"Cleaned up {total_cleaned} orphaned document relationships across all screenings")
+            
+        return total_cleaned
+        
+    except Exception as e:
+        print(f"Error during orphaned document cleanup: {e}")
+        db.session.rollback()
+        return 0
 
 # Utility function to register the blueprint
 def register_automated_screening_routes(app):

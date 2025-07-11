@@ -2489,28 +2489,69 @@ def add_document(patient_id):
 
 @app.route("/documents/<int:document_id>")
 def view_document(document_id):
-    """View a document"""
-    document = MedicalDocument.query.get_or_404(document_id)
-    patient = Patient.query.get_or_404(document.patient_id)
-
-    # Get the return_to parameter (if provided)
-    return_to = request.args.get("return_to", None)
-
-    # Get metadata if available
-    metadata = {}
-    if document.doc_metadata:
+    """View a document with comprehensive error handling"""
+    try:
+        # Validate document ID
+        if not document_id or document_id <= 0:
+            flash("Invalid document ID provided", "error")
+            return redirect(url_for('document_repository'))
+        
+        # Check if document exists
+        document = MedicalDocument.query.get(document_id)
+        if not document:
+            flash(f"Document #{document_id} not found. It may have been deleted.", "error")
+            # Get return_to parameter to redirect back appropriately
+            return_to = request.args.get("return_to")
+            if return_to:
+                try:
+                    return redirect(return_to)
+                except:
+                    pass
+            return redirect(url_for('document_repository'))
+        
+        # Validate patient exists
+        patient = Patient.query.get(document.patient_id)
+        if not patient:
+            flash(f"Patient associated with document #{document_id} not found", "error")
+            return redirect(url_for('document_repository'))
+        
+        # Basic access control check
+        # TODO: Enhance with role-based permissions
         try:
-            metadata = json.loads(document.doc_metadata)
-        except:
-            metadata = {}
+            # For now, allow access to all logged-in users
+            # This can be enhanced with specific permission checks
+            pass
+        except Exception as access_error:
+            flash("You don't have permission to view this document", "error")
+            return redirect(url_for('document_repository'))
+        
+        # Get the return_to parameter (if provided)
+        return_to = request.args.get("return_to", None)
 
-    return render_template(
-        "document_view.html",
-        document=document,
-        patient=patient,
-        return_to=return_to,
-        metadata=metadata,
-    )
+        # Get metadata if available
+        metadata = {}
+        if document.doc_metadata:
+            try:
+                metadata = json.loads(document.doc_metadata)
+            except json.JSONDecodeError as e:
+                print(f"Error parsing document metadata for document {document_id}: {e}")
+                metadata = {}
+            except Exception as e:
+                print(f"Unexpected error parsing metadata: {e}")
+                metadata = {}
+
+        return render_template(
+            "document_view.html",
+            document=document,
+            patient=patient,
+            return_to=return_to,
+            metadata=metadata,
+        )
+        
+    except Exception as e:
+        print(f"Unexpected error in view_document for ID {document_id}: {e}")
+        flash("An error occurred while loading the document", "error")
+        return redirect(url_for('document_repository'))
 
 
 @app.route("/documents/<int:document_id>/image")
@@ -2994,6 +3035,83 @@ def admin_dashboard():
 
 
 # Error handlers
+@app.route("/admin/cleanup-orphaned-documents", methods=["POST"])
+def cleanup_orphaned_documents():
+    """Admin utility to clean up orphaned document relationships"""
+    # Check if user is logged in and is admin
+    if not session.get("user_id") or not session.get("is_admin"):
+        flash("Access denied. Admin privileges required.", "error")
+        return redirect(url_for("login"))
+        
+    try:
+        from automated_screening_routes import cleanup_orphaned_screening_documents
+        cleaned_count = cleanup_orphaned_screening_documents()
+        
+        if cleaned_count > 0:
+            flash(f"Successfully cleaned up {cleaned_count} orphaned document relationships", "success")
+        else:
+            flash("No orphaned document relationships found", "info")
+            
+    except Exception as e:
+        flash(f"Error during cleanup: {str(e)}", "error")
+        print(f"Admin cleanup error: {e}")
+    
+    return redirect(url_for('admin_dashboard'))
+
+@app.route("/admin/validate-document-relationships", methods=["GET"])
+def validate_document_relationships():
+    """Admin utility to validate document relationships across all screenings"""
+    # Check if user is logged in and is admin
+    if not session.get("user_id") or not session.get("is_admin"):
+        flash("Access denied. Admin privileges required.", "error")
+        return redirect(url_for("login"))
+        
+    try:
+        validation_results = []
+        total_screenings = 0
+        total_valid_documents = 0
+        total_invalid_relationships = 0
+        
+        all_screenings = Screening.query.all()
+        total_screenings = len(all_screenings)
+        
+        for screening in all_screenings:
+            # Get document count before validation
+            raw_doc_count = screening.documents.count()
+            
+            # Get valid documents after validation
+            valid_documents = screening.get_valid_documents_with_access_check()
+            valid_doc_count = len(valid_documents)
+            
+            total_valid_documents += valid_doc_count
+            invalid_count = raw_doc_count - valid_doc_count
+            total_invalid_relationships += invalid_count
+            
+            if invalid_count > 0 or valid_doc_count > 0:
+                validation_results.append({
+                    'screening_id': screening.id,
+                    'screening_type': screening.screening_type,
+                    'patient_name': f"{screening.patient.first_name} {screening.patient.last_name}",
+                    'raw_documents': raw_doc_count,
+                    'valid_documents': valid_doc_count,
+                    'invalid_relationships': invalid_count,
+                    'status': screening.status
+                })
+        
+        summary = {
+            'total_screenings': total_screenings,
+            'total_valid_documents': total_valid_documents,
+            'total_invalid_relationships': total_invalid_relationships,
+            'validation_results': validation_results
+        }
+        
+        return render_template('admin_document_validation.html', **summary)
+        
+    except Exception as e:
+        flash(f"Error during validation: {str(e)}", "error")
+        print(f"Document validation error: {e}")
+        return redirect(url_for('admin_dashboard'))
+
 @app.route("/admin/users/<int:user_id>/delete", methods=["GET", "POST"])
 @safe_db_operation
 def delete_user(user_id):
@@ -3188,6 +3306,10 @@ def screening_list():
     
     if refresh_requested:
         try:
+            # Clean up orphaned document relationships first
+            from automated_screening_routes import cleanup_orphaned_screening_documents
+            orphaned_cleaned = cleanup_orphaned_screening_documents()
+            
             # Import and use the automated screening engine
             from automated_screening_engine import ScreeningStatusEngine
             
@@ -3209,16 +3331,18 @@ def screening_list():
                     if 'matched_documents' in screening:
                         total_documents_linked += len(screening['matched_documents'])
             
+            print(f"Tab '{tab}': Cleaned up {orphaned_cleaned} orphaned document relationships")
             print(f"Tab '{tab}': Refreshed {total_screenings_updated} automated screenings for {len(all_patient_screenings)} patients")
             print(f"Tab '{tab}': Linked {total_documents_linked} documents using many-to-many relationships with latest parsing logic")
             
             # Create tab-specific success message
+            cleanup_msg = f" (cleaned up {orphaned_cleaned} invalid relationships)" if orphaned_cleaned > 0 else ""
             if tab == 'types':
-                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships using the latest parsing rules from screening types"
+                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships using the latest parsing rules from screening types{cleanup_msg}"
             elif tab == 'checklist':
-                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships using current prep sheet settings"
+                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships using current prep sheet settings{cleanup_msg}"
             else:
-                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships based on current parsing logic"
+                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships based on current parsing logic{cleanup_msg}"
             
             flash(success_msg, "success")
             
