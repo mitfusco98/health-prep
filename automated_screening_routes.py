@@ -148,7 +148,7 @@ def regenerate_all_screenings():
 
 def _update_patient_screenings(patient_id: int, screenings_data: list):
     """
-    Update database with generated screening data
+    Update database with generated screening data using proper many-to-many relationships
     
     Args:
         patient_id: Patient ID
@@ -169,6 +169,11 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 existing.frequency = screening_data['frequency']
                 existing.notes = screening_data['notes']
                 existing.updated_at = datetime.now()
+                
+                # Clear existing document relationships and add new ones
+                existing.documents.delete()  # Clear existing relationships
+                
+                current_screening = existing
             else:
                 # Create new screening
                 new_screening = Screening(
@@ -182,6 +187,14 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                     updated_at=datetime.now()
                 )
                 db.session.add(new_screening)
+                db.session.flush()  # Flush to get the ID
+                
+                current_screening = new_screening
+            
+            # Add document relationships using the new many-to-many table
+            if 'matched_documents' in screening_data:
+                for document in screening_data['matched_documents']:
+                    current_screening.add_document(document, confidence_score=1.0, match_source='automated')
         
         db.session.commit()
         

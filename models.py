@@ -5,6 +5,15 @@ from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# Association table for many-to-many relationship between Screening and MedicalDocument
+screening_documents = db.Table('screening_documents',
+    db.Column('screening_id', db.Integer, db.ForeignKey('screening.id'), primary_key=True),
+    db.Column('document_id', db.Integer, db.ForeignKey('medical_document.id'), primary_key=True),
+    db.Column('created_at', db.DateTime, default=datetime.utcnow),
+    db.Column('confidence_score', db.Float, default=1.0),  # Matching confidence from 0.0 to 1.0
+    db.Column('match_source', db.String(50), default='automated')  # 'automated', 'manual', 'ai_generated'
+)
+
 
 class DocumentType(enum.Enum):
     CLINICAL_NOTE = "Clinical Note"
@@ -261,14 +270,69 @@ class Screening(db.Model):
     last_completed = db.Column(db.Date)
     frequency = db.Column(db.String(50))  # e.g., 'Annual', 'Every 5 years'
     status = db.Column(db.String(20), default='Incomplete')  # 'Due', 'Due Soon', 'Incomplete', 'Complete'
-    notes = db.Column(db.Text)
+    notes = db.Column(db.Text)  # Keep for backward compatibility and general notes
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    # Relationship with Patient - simple, non-conflicting relationship
+    # Relationships
     patient = db.relationship("Patient", backref=db.backref("screenings", lazy=True))
+    documents = db.relationship("MedicalDocument", 
+                               secondary=screening_documents,
+                               backref=db.backref("screenings", lazy=True),
+                               lazy="dynamic")
+
+    @property
+    def matched_documents(self):
+        """Get list of matched documents for this screening"""
+        return self.documents.all()
+
+    @property
+    def document_count(self):
+        """Get count of matched documents"""
+        return self.documents.count()
+
+    def add_document(self, document, confidence_score=1.0, match_source='automated'):
+        """Add a document to this screening with metadata"""
+        if document not in self.documents:
+            # Add document to the many-to-many relationship
+            self.documents.append(document)
+            
+            # Update the association table with metadata
+            from sqlalchemy import text
+            db.session.execute(
+                text("UPDATE screening_documents SET confidence_score = :score, match_source = :source "
+                     "WHERE screening_id = :screening_id AND document_id = :document_id"),
+                {
+                    'score': confidence_score,
+                    'source': match_source,
+                    'screening_id': self.id,
+                    'document_id': document.id
+                }
+            )
+
+    def remove_document(self, document):
+        """Remove a document from this screening"""
+        if document in self.documents:
+            self.documents.remove(document)
+
+    def get_document_metadata(self, document):
+        """Get metadata for a specific document relationship"""
+        from sqlalchemy import text
+        result = db.session.execute(
+            text("SELECT confidence_score, match_source, created_at FROM screening_documents "
+                 "WHERE screening_id = :screening_id AND document_id = :document_id"),
+            {'screening_id': self.id, 'document_id': document.id}
+        ).fetchone()
+        
+        if result:
+            return {
+                'confidence_score': result[0],
+                'match_source': result[1],
+                'created_at': result[2]
+            }
+        return None
 
     def __repr__(self):
         return f"<Screening {self.screening_type} for Patient {self.patient_id} - {self.status}>"
@@ -301,6 +365,17 @@ class MedicalDocument(db.Model):
     )
 
     # Relationship with Patient is already defined in the Patient model
+    # Note: screenings relationship is defined in the Screening model via the association table
+
+    @property
+    def matched_screenings(self):
+        """Get list of screenings that reference this document"""
+        return self.screenings
+
+    @property 
+    def screening_count(self):
+        """Get count of screenings that reference this document"""
+        return len(self.screenings)
 
     def extract_fhir_metadata(self):
         """Extract FHIR-compatible metadata from document using existing doc_metadata field"""

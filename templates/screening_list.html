@@ -244,20 +244,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>
                         <td>{{ screening.frequency or '-' }}</td>
                         <td>
-                            {% if screening.notes %}
-                                {% set note_parts = screening.notes.split('|') %}
-                                {% for part in note_parts %}
-                                    {% if 'Document ID:' in part %}
-                                        {% set doc_id = part.replace('Document ID:', '').strip() %}
-                                        <a href="{{ url_for('view_document', document_id=doc_id) }}" class="badge bg-info text-decoration-none me-1" target="_blank">
-                                            Document {{ doc_id }}
-                                        </a>
-                                    {% else %}
-                                        <small class="text-muted">{{ part.strip() }}</small>
-                                    {% endif %}
+                            {% if screening.documents %}
+                                {% for document in screening.matched_documents %}
+                                    <a href="{{ url_for('view_document', document_id=document.id) }}" class="badge bg-info text-decoration-none me-1" target="_blank">
+                                        {{ document.document_name or document.filename or 'Document ' + document.id|string }}
+                                    </a>
                                 {% endfor %}
                             {% else %}
-                                <span class="text-muted">-</span>
+                                <span class="text-muted">No documents</span>
                             {% endif %}
                         </td>
                         <td>

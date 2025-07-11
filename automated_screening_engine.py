@@ -159,8 +159,8 @@ class ScreeningStatusEngine:
             'last_completed': last_completed,
             'frequency': self._format_frequency(screening_type),
             'matching_documents': len(matching_documents),
-            'notes': self._generate_status_notes(status, matching_documents, due_date),
-            'matched_doc_ids': [doc.id for doc in matching_documents]
+            'matched_documents': matching_documents,  # Pass the actual document objects
+            'notes': self._generate_status_notes(status, matching_documents, due_date)
         }
     
     def _find_matching_documents(self, patient: Patient, screening_type: ScreeningType) -> List[MedicalDocument]:
@@ -315,7 +315,7 @@ class ScreeningStatusEngine:
         return screening_type.default_frequency or "As needed"
     
     def _generate_status_notes(self, status: str, matching_documents: List[MedicalDocument], due_date: Optional[date]) -> str:
-        """Generate informative notes about the status with document links"""
+        """Generate informative notes about the status"""
         notes = []
         
         # Add status-specific notes
@@ -332,11 +332,6 @@ class ScreeningStatusEngine:
             notes.append(f"Found {len(matching_documents)} matching document(s)")
         elif status == self.STATUS_INCOMPLETE:
             notes.append("❌ No matching documents found")
-        
-        # Add document IDs for linking in the UI
-        if matching_documents:
-            for doc in matching_documents:
-                notes.append(f"Document ID: {doc.id}")
             
         return " | ".join(notes)
 
