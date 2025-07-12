@@ -142,13 +142,23 @@ class ScreeningStatusEngine:
         # Calculate due date based on frequency and last completed
         due_date = self._calculate_due_date(screening_type, existing_screening)
         
-        # Update last_completed based on most recent matching document
+        # Update last_completed based on most recent matching document's ACTUAL medical event date
         last_completed = existing_screening.last_completed if existing_screening else None
         if matching_documents:
-            most_recent_doc = max(matching_documents, key=lambda d: d.created_at or datetime.min)
-            doc_date = most_recent_doc.created_at.date() if most_recent_doc.created_at else None
-            if doc_date and (not last_completed or doc_date > last_completed):
-                last_completed = doc_date
+            # Use document_date (actual medical event date) instead of created_at (system upload date)
+            docs_with_dates = []
+            for doc in matching_documents:
+                if doc.document_date:
+                    docs_with_dates.append((doc, doc.document_date))
+                elif doc.created_at:
+                    # Fallback to created_at if document_date is not available
+                    docs_with_dates.append((doc, doc.created_at))
+            
+            if docs_with_dates:
+                most_recent_doc, most_recent_date = max(docs_with_dates, key=lambda x: x[1])
+                doc_date = most_recent_date.date() if hasattr(most_recent_date, 'date') else most_recent_date
+                if doc_date and (not last_completed or doc_date > last_completed):
+                    last_completed = doc_date
 
         return {
             'patient_id': patient.id,
@@ -319,15 +329,26 @@ class ScreeningStatusEngine:
             print(f"Warning: No valid documents found for screening {screening_type.name} - marking as incomplete")
             return self.STATUS_INCOMPLETE
         
-        # Get the most recent valid matching document
-        most_recent_doc = max(valid_matching_documents, key=lambda d: d.created_at or datetime.min)
+        # Get the most recent valid matching document based on ACTUAL medical event date
+        docs_with_dates = []
+        for doc in valid_matching_documents:
+            if doc.document_date:
+                docs_with_dates.append((doc, doc.document_date))
+            elif doc.created_at:
+                # Fallback to created_at if document_date is not available
+                docs_with_dates.append((doc, doc.created_at))
+        
+        if not docs_with_dates:
+            return self.STATUS_INCOMPLETE
+        
+        most_recent_doc, most_recent_date = max(docs_with_dates, key=lambda x: x[1])
         
         # If we have a valid matching document, check timing based on frequency
         if existing_screening and existing_screening.last_completed:
             last_completed = existing_screening.last_completed
         else:
-            # Use the document date as completion date
-            last_completed = most_recent_doc.created_at.date() if most_recent_doc.created_at else date.today()
+            # Use the document's ACTUAL medical event date as completion date
+            last_completed = most_recent_date.date() if hasattr(most_recent_date, 'date') else most_recent_date
         
         # Calculate when next screening is due
         next_due_date = self._calculate_next_due_date(screening_type, last_completed)
