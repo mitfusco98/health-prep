@@ -187,7 +187,7 @@ class ScreeningStatusEngine:
     
     def _document_matches_screening(self, document: MedicalDocument, screening_type: ScreeningType) -> bool:
         """
-        Check if a document matches the screening type's parsing rules
+        Check if a document matches the screening type's parsing rules using enhanced keyword matching
         
         Args:
             document: MedicalDocument object
@@ -195,6 +195,59 @@ class ScreeningStatusEngine:
             
         Returns:
             True if document matches screening criteria
+        """
+        # Import enhanced matcher
+        try:
+            from enhanced_keyword_matcher import EnhancedKeywordMatcher
+            matcher = EnhancedKeywordMatcher()
+        except ImportError:
+            # Fallback to simple matching if enhanced matcher not available
+            return self._simple_document_matching(document, screening_type)
+        
+        # Check content keywords with enhanced matching
+        content_match = False
+        if screening_type.content_keywords and document.content:
+            try:
+                content_keywords = json.loads(screening_type.content_keywords)
+                result = matcher.match_keywords_in_content(document.content, content_keywords)
+                content_match = result['is_match']
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        # Check document type keywords (keep simple matching for this)
+        doc_type_match = False
+        if screening_type.document_keywords and document.document_type:
+            try:
+                doc_keywords = json.loads(screening_type.document_keywords)
+                doc_type_match = any(keyword.lower() in document.document_type.lower() 
+                                   for keyword in doc_keywords)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        # Check filename keywords with enhanced matching
+        filename_match = False
+        if screening_type.filename_keywords and document.filename:
+            try:
+                filename_keywords = json.loads(screening_type.filename_keywords)
+                result = matcher.match_keywords_in_content(document.filename, filename_keywords)
+                filename_match = result['is_match']
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        # Document matches if content matches AND (document type matches OR no doc type filter)
+        # This ensures content relevance while allowing doc type filtering
+        has_doc_type_filter = bool(screening_type.document_keywords)
+        
+        if has_doc_type_filter:
+            # If doc type filter exists, require both content match AND doc type match
+            return (content_match or filename_match) and doc_type_match
+        else:
+            # If no doc type filter, content or filename match is sufficient
+            return content_match or filename_match
+    
+    def _simple_document_matching(self, document: MedicalDocument, screening_type: ScreeningType) -> bool:
+        """
+        Fallback simple matching method
         """
         # Check content keywords
         if screening_type.content_keywords:
