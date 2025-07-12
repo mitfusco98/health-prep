@@ -3360,10 +3360,37 @@ def screening_list():
     
     # For the screenings tab, load existing screenings from database
     screenings = []
+    cutoff_info = {}
+    total_screenings_before_cutoff = 0
+    screenings_hidden_by_cutoff = 0
+    
     if tab == "screenings":
+        # Import cutoff utilities
+        from cutoff_utils import get_cutoff_date_for_patient
+        
+        # Get cutoff settings info for display
+        settings = get_or_create_settings()
+        cutoff_info = {
+            'general_cutoff_months': settings.cutoff_months,
+            'labs_cutoff_months': settings.labs_cutoff_months,
+            'imaging_cutoff_months': settings.imaging_cutoff_months,
+            'consults_cutoff_months': settings.consults_cutoff_months,
+            'hospital_cutoff_months': settings.hospital_cutoff_months,
+            'screening_cutoffs': settings.screening_cutoffs,
+            'has_cutoffs': (settings.cutoff_months and settings.cutoff_months > 0) or 
+                          any([settings.labs_cutoff_months, settings.imaging_cutoff_months, 
+                               settings.consults_cutoff_months, settings.hospital_cutoff_months]),
+        }
+        
+        # Check if admin override is requested to show all screenings
+        show_all = request.args.get('show_all') == 'true'
+        admin_override = show_all and session.get('is_admin', False)
         
         # Query existing screenings from database
         query = Screening.query.join(Patient)
+        
+        # Count total screenings before applying cutoff filter
+        total_screenings_before_cutoff = query.count()
 
         # Apply filters
         status_filter = request.args.get('status')
@@ -3393,8 +3420,8 @@ def screening_list():
                     )
                 )
 
-        # Order by status (Due first) and patient name
-        screenings = query.order_by(
+        # Get all screenings before cutoff filtering for counting
+        all_screenings = query.order_by(
             db.case(
                 (Screening.status == "Due", 0),
                 (Screening.status == "Due Soon", 1),
@@ -3404,6 +3431,49 @@ def screening_list():
             Patient.last_name,
             Patient.first_name
         ).all()
+        
+        # Apply cutoff filtering unless admin override is active
+        if not admin_override and cutoff_info['has_cutoffs']:
+            screenings_after_cutoff = []
+            
+            for screening in all_screenings:
+                patient = screening.patient
+                
+                # Always show screenings without completion dates (they're pending)
+                if not screening.last_completed:
+                    screenings_after_cutoff.append(screening)
+                    continue
+                
+                # Get cutoff date for this specific screening and patient
+                try:
+                    cutoff_date = get_cutoff_date_for_patient(
+                        patient.id, 
+                        data_type=None, 
+                        screening_name=screening.screening_type
+                    )
+                    
+                    # Convert last_completed to datetime for comparison
+                    if hasattr(screening.last_completed, 'date'):
+                        screening_datetime = screening.last_completed
+                    else:
+                        from datetime import datetime
+                        screening_datetime = datetime.combine(screening.last_completed, datetime.min.time())
+                    
+                    # Include screening if it's within the cutoff window
+                    if screening_datetime >= cutoff_date:
+                        screenings_after_cutoff.append(screening)
+                    
+                except Exception as e:
+                    # If there's an error with cutoff calculation, include the screening
+                    print(f"Error calculating cutoff for screening {screening.id}: {e}")
+                    screenings_after_cutoff.append(screening)
+            
+            screenings = screenings_after_cutoff
+            screenings_hidden_by_cutoff = len(all_screenings) - len(screenings)
+        else:
+            # No cutoff filtering or admin override - show all screenings
+            screenings = all_screenings
+            screenings_hidden_by_cutoff = 0
     else:
         # For other tabs, don't process screenings
         screenings = []
@@ -3444,6 +3514,10 @@ def screening_list():
             distinct_statuses=distinct_statuses,
             status_filter=request.args.get('status', ''),
             screening_type_filter=request.args.get('screening_type', ''),
+            cutoff_info=cutoff_info,
+            total_screenings_before_cutoff=total_screenings_before_cutoff,
+            screenings_hidden_by_cutoff=screenings_hidden_by_cutoff,
+            admin_override=request.args.get('show_all') == 'true' and session.get('is_admin', False),
         )
     except Exception as e:
         print(f"Error rendering screening_list.html: {str(e)}")
