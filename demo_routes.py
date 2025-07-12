@@ -3209,7 +3209,8 @@ def screening_list():
         return datetime.now()
 
     # Define today at the start to ensure it's always available
-    today = datetime.now().date()
+    from datetime import datetime as dt
+    today = dt.now().date()
 
     # Get the tab parameter (screenings or types)
     tab = request.args.get("tab", "screenings")
