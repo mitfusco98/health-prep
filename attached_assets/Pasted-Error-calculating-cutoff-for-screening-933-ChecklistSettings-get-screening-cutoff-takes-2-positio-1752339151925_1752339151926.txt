@@ -1,0 +1,16 @@
+Error calculating cutoff for screening 933: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 931: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 932: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 926: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 924: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 961: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 963: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 962: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 919: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 956: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 936: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 946: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 944: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 943: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 947: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
+Error calculating cutoff for screening 952: ChecklistSettings.get_screening_cutoff() takes 2 positional arguments but 3 were given
