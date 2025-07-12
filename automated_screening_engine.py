@@ -143,7 +143,8 @@ class ScreeningStatusEngine:
         due_date = self._calculate_due_date(screening_type, existing_screening)
         
         # Update last_completed based on most recent matching document's ACTUAL medical event date
-        last_completed = existing_screening.last_completed if existing_screening else None
+        # CRITICAL RULE: Only set last_completed if there are matching documents
+        last_completed = None
         if matching_documents:
             # Use document_date (actual medical event date) instead of created_at (system upload date)
             docs_with_dates = []
@@ -157,8 +158,8 @@ class ScreeningStatusEngine:
             if docs_with_dates:
                 most_recent_doc, most_recent_date = max(docs_with_dates, key=lambda x: x[1])
                 doc_date = most_recent_date.date() if hasattr(most_recent_date, 'date') else most_recent_date
-                if doc_date and (not last_completed or doc_date > last_completed):
-                    last_completed = doc_date
+                last_completed = doc_date
+        # If no matching documents, last_completed remains None
 
         return {
             'patient_id': patient.id,
