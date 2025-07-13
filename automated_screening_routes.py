@@ -178,9 +178,25 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 existing.notes = screening_data['notes']
                 existing.updated_at = datetime.now()
                 
-                # Clear existing document relationships properly
-                for doc in existing.documents.all():
-                    existing.remove_document(doc)
+                # Clear existing document relationships properly with session management
+                try:
+                    # Use a no_autoflush context to prevent session conflicts
+                    with db.session.no_autoflush:
+                        existing_docs = list(existing.documents.all())
+                    for doc in existing_docs:
+                        existing.remove_document(doc)
+                except Exception as clear_error:
+                    print(f"  ⚠️  Error clearing existing documents: {clear_error}")
+                    # If clearing fails, try to clear the relationship table directly
+                    try:
+                        from sqlalchemy import text
+                        db.session.execute(
+                            text("DELETE FROM screening_documents WHERE screening_id = :screening_id"),
+                            {'screening_id': existing.id}
+                        )
+                        print(f"  → Cleared document relationships via direct SQL for screening {existing.id}")
+                    except Exception as sql_error:
+                        print(f"  ⚠️  Direct SQL clear also failed: {sql_error}")
                 
                 current_screening = existing
             else:
@@ -215,11 +231,14 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
             if 'matched_documents' in screening_data and screening_data['matched_documents']:
                 for document in screening_data['matched_documents']:
                     try:
-                        # Validate document exists before linking
-                        if _validate_document_exists(document):
-                            current_screening.add_document(document, confidence_score=1.0, match_source='automated')
+                        # Get a fresh document instance from the database to avoid session conflicts
+                        from models import MedicalDocument
+                        fresh_document = db.session.get(MedicalDocument, document.id)
+                        
+                        if fresh_document and _validate_document_exists(fresh_document):
+                            current_screening.add_document(fresh_document, confidence_score=1.0, match_source='automated')
                             linked_document_count += 1
-                            print(f"  → Linked document {document.filename} to screening {current_screening.screening_type}")
+                            print(f"  → Linked document {fresh_document.filename} to screening {current_screening.screening_type}")
                         else:
                             print(f"  → Skipping deleted/invalid document {document.id}")
                     except Exception as doc_error:
@@ -254,10 +273,9 @@ def _validate_document_exists(document):
         if not document or not hasattr(document, 'id'):
             return False
         
-        # Check if document still exists in database
-        from models import MedicalDocument
-        existing_doc = db.session.get(MedicalDocument, document.id)
-        return existing_doc is not None
+        # Simple check - if we have a document instance, it should be valid
+        # More thorough validation would require additional database queries
+        return document.id is not None and document.id > 0
         
     except Exception as e:
         print(f"Error validating document existence: {e}")

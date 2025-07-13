@@ -375,36 +375,55 @@ class Screening(db.Model):
 
     def add_document(self, document, confidence_score=1.0, match_source='automated'):
         """Add a document to this screening with metadata"""
-        if document not in self.documents:
-            # Add document to the many-to-many relationship
-            self.documents.append(document)
-            
-            # The association table will be updated after the session commits
-            # We'll store metadata in a simple way for now
-            db.session.flush()  # Ensure the relationship is created
-            
-            # Update the association table with metadata if needed
-            try:
-                from sqlalchemy import text
-                db.session.execute(
-                    text("UPDATE screening_documents SET confidence_score = :score, match_source = :source "
-                         "WHERE screening_id = :screening_id AND document_id = :document_id"),
-                    {
-                        'score': confidence_score,
-                        'source': match_source,
-                        'screening_id': self.id,
-                        'document_id': document.id
-                    }
-                )
-            except Exception as e:
-                # If metadata update fails, still keep the relationship
-                print(f"Warning: Could not update document metadata: {e}")
-                pass
+        try:
+            # Check if document is already linked to avoid duplicates
+            if document not in self.documents:
+                # Use no_autoflush to prevent session conflicts during relationship changes
+                with db.session.no_autoflush:
+                    # Add document to the many-to-many relationship
+                    self.documents.append(document)
+                
+                # Flush to create the relationship in the database
+                db.session.flush()
+                
+                # Update the association table with metadata if needed
+                try:
+                    from sqlalchemy import text
+                    db.session.execute(
+                        text("UPDATE screening_documents SET confidence_score = :score, match_source = :source "
+                             "WHERE screening_id = :screening_id AND document_id = :document_id"),
+                        {
+                            'score': confidence_score,
+                            'source': match_source,
+                            'screening_id': self.id,
+                            'document_id': document.id
+                        }
+                    )
+                except Exception as e:
+                    # If metadata update fails, still keep the relationship
+                    print(f"Warning: Could not update document metadata: {e}")
+                    pass
+        except Exception as e:
+            print(f"Error adding document {document.id} to screening {self.id}: {e}")
+            raise
 
     def remove_document(self, document):
         """Remove a document from this screening"""
-        if document in self.documents:
-            self.documents.remove(document)
+        try:
+            if document in self.documents:
+                with db.session.no_autoflush:
+                    self.documents.remove(document)
+        except Exception as e:
+            print(f"Error removing document {document.id} from screening {self.id}: {e}")
+            # Try direct SQL removal as fallback
+            try:
+                from sqlalchemy import text
+                db.session.execute(
+                    text("DELETE FROM screening_documents WHERE screening_id = :screening_id AND document_id = :document_id"),
+                    {'screening_id': self.id, 'document_id': document.id}
+                )
+            except Exception as sql_error:
+                print(f"Direct SQL removal also failed: {sql_error}")
 
     def get_document_metadata(self, document):
         """Get metadata for a specific document relationship"""

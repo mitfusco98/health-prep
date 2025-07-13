@@ -3204,13 +3204,15 @@ def page_not_found(e):
 def screening_list():
     """List all patients with due screenings and manage screening types"""
 
+    # Import datetime at the function level to avoid naming conflicts
+    from datetime import datetime as dt_module
+    
     # Define now() function to use in templates for date comparisons
     def now():
-        return datetime.now()
+        return dt_module.now()
 
     # Define today at the start to ensure it's always available
-    from datetime import datetime as dt
-    today = dt.now().date()
+    today = dt_module.now().date()
 
     # Get the tab parameter (screenings or types)
     tab = request.args.get("tab", "screenings")
