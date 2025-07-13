@@ -96,6 +96,18 @@ def update_checklist_cutoff_settings():
 
     flash("Data cutoff settings updated successfully!", "success")
 
+    # ✅ EDGE CASE HANDLER: Trigger auto-refresh when cutoff settings change
+    try:
+        from automated_edge_case_handler import trigger_global_auto_refresh
+        refresh_result = trigger_global_auto_refresh("checklist_cutoff_settings_updated")
+        if refresh_result.get("status") == "success":
+            import logging
+            logging.info(f"Auto-refreshed all screenings after checklist cutoff settings update")
+    except Exception as e:
+        import logging
+        logging.error(f"Auto-refresh failed after checklist cutoff settings update: {e}")
+        # Don't fail the settings update if auto-refresh fails
+
     # Redirect back to the screening list page with the checklist tab active
     return redirect(url_for("screening_list", tab="checklist"))
 
@@ -194,6 +206,18 @@ def save_cutoff_settings():
         db.session.commit()
         flash("Data cutoff settings updated successfully!", "success")
         
+        # ✅ EDGE CASE HANDLER: Trigger auto-refresh when screening-specific cutoff settings change
+        try:
+            from automated_edge_case_handler import trigger_global_auto_refresh
+            refresh_result = trigger_global_auto_refresh("screening_specific_cutoff_settings_updated")
+            if refresh_result.get("status") == "success":
+                import logging
+                logging.info(f"Auto-refreshed all screenings after screening-specific cutoff settings update")
+        except Exception as e:
+            import logging
+            logging.error(f"Auto-refresh failed after screening-specific cutoff settings update: {e}")
+            # Don't fail the settings update if auto-refresh fails
+        
     except (ValueError, TypeError) as e:
         flash("Invalid cutoff values provided. Please enter valid numbers.", "error")
         
@@ -261,6 +285,18 @@ def update_cutoff_settings():
     else:
         flash("Cutoff period reset to use last appointment date for each patient", "success")
 
+    # ✅ EDGE CASE HANDLER: Trigger auto-refresh when general cutoff settings change
+    try:
+        from automated_edge_case_handler import trigger_global_auto_refresh
+        refresh_result = trigger_global_auto_refresh("general_cutoff_settings_updated")
+        if refresh_result.get("status") == "success":
+            import logging
+            logging.info(f"Auto-refreshed all screenings after general cutoff settings update")
+    except Exception as e:
+        import logging
+        logging.error(f"Auto-refresh failed after general cutoff settings update: {e}")
+        # Don't fail the settings update if auto-refresh fails
+
     # Redirect back to checklist settings
     return redirect(url_for("checklist_settings"))
 
@@ -292,6 +328,18 @@ def update_individual_cutoffs():
     db.session.commit()
 
     flash("Individual data type cutoffs updated successfully!", "success")
+
+    # ✅ EDGE CASE HANDLER: Trigger auto-refresh when cutoff settings change
+    try:
+        from automated_edge_case_handler import trigger_global_auto_refresh
+        refresh_result = trigger_global_auto_refresh("cutoff_settings_updated")
+        if refresh_result.get("status") == "success":
+            import logging
+            logging.info(f"Auto-refreshed all screenings after cutoff settings update")
+    except Exception as e:
+        import logging
+        logging.error(f"Auto-refresh failed after cutoff settings update: {e}")
+        # Don't fail the settings update if auto-refresh fails
 
     # Redirect back to checklist settings
     return redirect(url_for("checklist_settings"))

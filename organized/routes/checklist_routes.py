@@ -310,6 +310,18 @@ def save_cutoff_settings():
             print(f"  {screening_name}: {current_cutoff} months")
         
         flash("Data cutoff settings updated successfully!", "success")
+        
+        # ✅ EDGE CASE HANDLER: Trigger auto-refresh when screening-specific cutoff settings change
+        try:
+            from automated_edge_case_handler import trigger_global_auto_refresh
+            refresh_result = trigger_global_auto_refresh("screening_specific_cutoff_settings_updated")
+            if refresh_result.get("status") == "success":
+                import logging
+                logging.info(f"Auto-refreshed all screenings after screening-specific cutoff settings update")
+        except Exception as e:
+            import logging
+            logging.error(f"Auto-refresh failed after screening-specific cutoff settings update: {e}")
+            # Don't fail the settings update if auto-refresh fails
 
     except (ValueError, TypeError) as e:
         print(f"ERROR: Exception in save_cutoff_settings: {e}")

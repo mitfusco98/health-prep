@@ -331,3 +331,13 @@ def handle_keyword_updates(screening_type_id: int, change_type: str = "keywords_
         change_type: Type of change
     """
     return auto_refresh_manager.handle_keyword_changes(screening_type_id, change_type)
+
+def handle_cutoff_settings_change(change_type: str = "cutoff_settings_updated"):
+    """
+    Convenience function to handle cutoff settings changes
+    
+    Args:
+        change_type: Type of cutoff change (general_cutoff, data_type_cutoffs, screening_specific_cutoffs)
+    """
+    logger.info(f"🕒 CUTOFF SETTINGS CHANGE: {change_type}")
+    return trigger_global_auto_refresh(change_type)
