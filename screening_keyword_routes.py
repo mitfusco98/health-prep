@@ -85,6 +85,18 @@ def save_screening_keywords(screening_id):
 
         db.session.commit()
 
+        # ✅ EDGE CASE HANDLER: Trigger auto-refresh when keywords are updated
+        try:
+            from automated_edge_case_handler import handle_keyword_updates
+            refresh_result = handle_keyword_updates(screening_id, "keywords_updated_via_api")
+            if refresh_result.get("status") == "success":
+                import logging
+                logging.info(f"Auto-refreshed screenings after keyword update for screening type {screening_id}")
+        except Exception as e:
+            import logging
+            logging.error(f"Auto-refresh failed after keyword update: {e}")
+            # Don't fail the keyword save if auto-refresh fails
+
         return jsonify({
             'success': True,
             'message': 'Keywords saved successfully',

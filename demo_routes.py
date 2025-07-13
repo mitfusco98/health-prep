@@ -1280,6 +1280,16 @@ def add_screening_type():
             f'Screening type "{screening_type.name}" has been added successfully.',
             "success",
         )
+        
+        # ✅ EDGE CASE HANDLER: Trigger auto-refresh when new screening type is added
+        try:
+            from automated_edge_case_handler import trigger_global_auto_refresh
+            refresh_result = trigger_global_auto_refresh(f"new_screening_type_added_{screening_type.name}")
+            if refresh_result.get("status") == "success":
+                logger.info(f"Auto-refreshed all screenings after adding new screening type {screening_type.name}")
+        except Exception as e:
+            logger.error(f"Auto-refresh failed after adding screening type: {e}")
+            # Don't fail the addition if auto-refresh fails
     else:
         for field, errors in form.errors.items():
             flash(f"{form[field].label.text}: {', '.join(errors)}", "danger")
@@ -1538,6 +1548,21 @@ def edit_screening_type(screening_type_id):
                 f'Screening type "{screening_type.name}" has been updated successfully.',
                 "success",
             )
+            
+            # ✅ EDGE CASE HANDLER: Trigger auto-refresh when screening type is updated
+            try:
+                from automated_edge_case_handler import handle_keyword_updates, handle_screening_type_change
+                # Handle keywords changed
+                refresh_result = handle_keyword_updates(screening_type.id, "screening_type_updated")
+                # Handle status change if is_active was modified
+                if hasattr(form, 'is_active') and form.is_active.data != screening_type.is_active:
+                    status_result = handle_screening_type_change(screening_type.id, form.is_active.data)
+                    logger.info(f"Auto-handled screening type status change for {screening_type.name}")
+                if refresh_result.get("status") == "success":
+                    logger.info(f"Auto-refreshed screenings after screening type update for {screening_type.name}")
+            except Exception as e:
+                logger.error(f"Auto-refresh failed after screening type update: {e}")
+                # Don't fail the update if auto-refresh fails
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Error updating screening type: {str(e)}")
@@ -1630,6 +1655,15 @@ def delete_screening_type(screening_type_id):
             f'Screening type "{screening_type.name}" has been marked as inactive because it is used by {patient_screenings} patient(s).',
             "warning",
         )
+        
+        # ✅ EDGE CASE HANDLER: Handle screening type deactivation
+        try:
+            from automated_edge_case_handler import handle_screening_type_change
+            status_result = handle_screening_type_change(screening_type_id, False)
+            logger.info(f"Auto-handled screening type deactivation for {screening_type.name}")
+        except Exception as e:
+            logger.error(f"Auto-refresh failed after screening type deactivation: {e}")
+            # Don't fail the deactivation if auto-refresh fails
     else:
         name = screening_type.name
         screening_type_id = screening_type.id
@@ -2442,6 +2476,16 @@ def add_document_unified():
             subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
             flash(f"{subsection_name} document '{form.document_name.data}' uploaded successfully for {patient.full_name}!", "success")
             
+            # ✅ EDGE CASE HANDLER: Auto-refresh screenings when document is uploaded
+            try:
+                from automated_edge_case_handler import trigger_auto_refresh_for_patient
+                refresh_result = trigger_auto_refresh_for_patient(patient_id, "document_upload")
+                if refresh_result.get("status") == "success":
+                    logger.info(f"Auto-refreshed {refresh_result.get('screenings_updated', 0)} screenings for patient {patient_id}")
+            except Exception as e:
+                logger.error(f"Auto-refresh failed after document upload: {e}")
+                # Don't fail the upload if auto-refresh fails
+            
             # Redirect to patient detail page
             return redirect(url_for("patient_detail", patient_id=patient_id))
 
@@ -2643,8 +2687,20 @@ def delete_document_from_repository(document_id):
         document = MedicalDocument.query.get_or_404(document_id)
         document_name = document.document_name
         
+        patient_id = document.patient_id  # Store patient ID before deletion
+        
         db.session.delete(document)
         db.session.commit()
+        
+        # ✅ EDGE CASE HANDLER: Auto-refresh screenings when document is deleted from repository
+        try:
+            from automated_edge_case_handler import trigger_auto_refresh_for_patient
+            refresh_result = trigger_auto_refresh_for_patient(patient_id, "repository_document_deletion")
+            if refresh_result.get("status") == "success":
+                logger.info(f"Auto-refreshed {refresh_result.get('screenings_updated', 0)} screenings for patient {patient_id}")
+        except Exception as e:
+            logger.error(f"Auto-refresh failed after repository document deletion: {e}")
+            # Don't fail the deletion if auto-refresh fails
         
         return jsonify({"success": True, "message": f"Document '{document_name}' deleted successfully"})
     except Exception as e:
@@ -2671,17 +2727,51 @@ def bulk_delete_documents():
         deleted_count = len(documents)
         document_names = [doc.document_name for doc in documents]
         
-        # Delete all documents
+        # Collect affected patient IDs for auto-refresh
+        affected_patient_ids = set()
         for document in documents:
-            db.session.delete(document)
-            
-        db.session.commit()
+            if document.patient_id:
+                affected_patient_ids.add(document.patient_id)
         
-        return jsonify({
-            "success": True, 
-            "message": f"Successfully deleted {deleted_count} document(s)",
-            "deleted_documents": document_names
-        })
+        # ✅ EDGE CASE HANDLER: Use batch mode for bulk operations
+        from automated_edge_case_handler import auto_refresh_manager
+        auto_refresh_manager.disable_auto_refresh()  # Disable during bulk operation
+        
+        try:
+            # Delete all documents
+            for document in documents:
+                db.session.delete(document)
+                
+            db.session.commit()
+            
+            # Re-enable auto-refresh and trigger for affected patients
+            auto_refresh_manager.enable_auto_refresh()
+            
+            # Trigger refresh for each affected patient
+            refresh_results = []
+            for patient_id in affected_patient_ids:
+                try:
+                    from automated_edge_case_handler import trigger_auto_refresh_for_patient
+                    refresh_result = trigger_auto_refresh_for_patient(patient_id, "bulk_document_deletion")
+                    refresh_results.append(refresh_result)
+                except Exception as e:
+                    logger.error(f"Auto-refresh failed for patient {patient_id} after bulk deletion: {e}")
+            
+            # Log summary
+            successful_refreshes = sum(1 for r in refresh_results if r.get("status") == "success")
+            logger.info(f"Bulk deletion: refreshed screenings for {successful_refreshes}/{len(affected_patient_ids)} affected patients")
+            
+            return jsonify({
+                "success": True, 
+                "message": f"Successfully deleted {deleted_count} document(s)",
+                "deleted_documents": document_names,
+                "patients_refreshed": successful_refreshes
+            })
+            
+        except Exception as e:
+            # Re-enable auto-refresh even if bulk operation fails
+            auto_refresh_manager.enable_auto_refresh()
+            raise e
         
     except Exception as e:
         db.session.rollback()
@@ -3484,9 +3574,10 @@ def screening_list():
     cache_timestamp = int(time_module.time())
 
     # Get all active screening types for the Add Recommendation modal
-    all_screening_types = (
-        ScreeningType.query.filter_by(is_active=True).order_by(ScreeningType.name).all()
-    )
+    # ✅ EDGE CASE HANDLER: Filter only active screening types
+    from automated_edge_case_handler import filter_active_screening_types_only
+    all_screening_types_unfiltered = ScreeningType.query.order_by(ScreeningType.name).all()
+    all_screening_types = filter_active_screening_types_only(all_screening_types_unfiltered)
 
     # Get all patients for the Add Recommendation modal
     patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
@@ -5059,6 +5150,17 @@ def delete_document(patient_id, document_id):
         db.session.commit()
 
         flash("Document deleted successfully.", "success")
+        
+        # ✅ EDGE CASE HANDLER: Auto-refresh screenings when document is deleted
+        try:
+            from automated_edge_case_handler import trigger_auto_refresh_for_patient
+            refresh_result = trigger_auto_refresh_for_patient(patient_id, "document_deletion")
+            if refresh_result.get("status") == "success":
+                logger.info(f"Auto-refreshed {refresh_result.get('screenings_updated', 0)} screenings for patient {patient_id}")
+        except Exception as e:
+            logger.error(f"Auto-refresh failed after document deletion: {e}")
+            # Don't fail the deletion if auto-refresh fails
+        
         return redirect(url_for("patient_detail", patient_id=patient_id))
 
     except Exception as e:
