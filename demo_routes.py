@@ -3457,7 +3457,6 @@ def screening_list():
                     if hasattr(screening.last_completed, 'date'):
                         screening_datetime = screening.last_completed
                     else:
-                        from datetime import datetime
                         screening_datetime = datetime.combine(screening.last_completed, datetime.min.time())
                     
                     # Include screening if it's within the cutoff window
