@@ -69,6 +69,7 @@ class ScreeningStatusEngine:
     def _get_applicable_screening_types(self, patient: Patient) -> List[ScreeningType]:
         """
         Get screening types applicable to this patient based on age, gender, and conditions
+        CRITICAL: Only returns ACTIVE screening types to prevent processing inactive types
         
         Args:
             patient: Patient object

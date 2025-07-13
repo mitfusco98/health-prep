@@ -208,15 +208,28 @@ class AutomatedScreeningRefreshManager:
                 existing_screenings = Screening.query.filter_by(screening_type=screening_type.name).all()
                 
                 if existing_screenings:
-                    # Mark them as inactive or delete them based on business rules
-                    # For now, we'll just log them for manual review
-                    logger.info(f"⚠️ Found {len(existing_screenings)} existing screenings for deactivated type '{screening_type.name}'")
+                    # Delete existing screenings for the deactivated screening type
+                    logger.info(f"🧹 CLEANING UP: Removing {len(existing_screenings)} existing screenings for deactivated type '{screening_type.name}'")
                     
-                    # You can choose to:
-                    # 1. Keep them for historical records
-                    # 2. Mark them as "Cancelled" 
-                    # 3. Delete them completely
-                    # For safety, we'll keep them but log for review
+                    cleanup_count = 0
+                    for screening in existing_screenings:
+                        try:
+                            # Remove document relationships first to avoid FK issues
+                            screening.documents.clear()
+                            db.session.delete(screening)
+                            cleanup_count += 1
+                        except Exception as cleanup_error:
+                            logger.error(f"Error cleaning up screening {screening.id}: {cleanup_error}")
+                    
+                    # Commit the cleanup
+                    db.session.commit()
+                    logger.info(f"✅ Successfully removed {cleanup_count} screenings for deactivated type '{screening_type.name}'")
+                    
+                    # Also clean up checklist default items
+                    try:
+                        self._update_checklist_default_items_for_deactivated_type(screening_type.name)
+                    except Exception as checklist_error:
+                        logger.error(f"Error updating checklist for deactivated type: {checklist_error}")
                     
                 return {
                     "status": "success",
@@ -298,6 +311,33 @@ class AutomatedScreeningRefreshManager:
             logger.info("📦 Batch mode enabled - auto-refresh will be deferred")
         else:
             logger.info("📦 Batch mode disabled - normal auto-refresh behavior")
+    
+    def _update_checklist_default_items_for_deactivated_type(self, deactivated_screening_name: str):
+        """
+        Update checklist default items when a screening type is deactivated
+        
+        Args:
+            deactivated_screening_name: Name of the screening type that was deactivated
+        """
+        try:
+            from models import ChecklistSettings
+            
+            settings = ChecklistSettings.query.first()
+            if settings and settings.default_items:
+                # Parse current default items
+                current_items = settings.default_items_list if hasattr(settings, 'default_items_list') else settings.default_items.split('\n')
+                
+                # Remove the deactivated screening type
+                updated_items = [item.strip() for item in current_items if item.strip() != deactivated_screening_name]
+                
+                # Update the settings
+                settings.default_items = '\n'.join(updated_items)
+                db.session.commit()
+                
+                logger.info(f"🗑️ Removed '{deactivated_screening_name}' from checklist default items")
+                
+        except Exception as e:
+            logger.error(f"Error updating checklist default items: {e}")
 
 # Global instance for use throughout the application
 auto_refresh_manager = AutomatedScreeningRefreshManager()

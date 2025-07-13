@@ -236,9 +236,14 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                         fresh_document = db.session.get(MedicalDocument, document.id)
                         
                         if fresh_document and _validate_document_exists(fresh_document):
-                            current_screening.add_document(fresh_document, confidence_score=1.0, match_source='automated')
-                            linked_document_count += 1
-                            print(f"  → Linked document {fresh_document.filename} to screening {current_screening.screening_type}")
+                            try:
+                                current_screening.add_document(fresh_document, confidence_score=1.0, match_source='automated')
+                                linked_document_count += 1
+                                print(f"  → Linked document {fresh_document.filename} to screening {current_screening.screening_type}")
+                            except Exception as link_error:
+                                print(f"  → Error linking document {fresh_document.filename}: {link_error}")
+                                # Try to continue with other documents
+                                continue
                         else:
                             print(f"  → Skipping deleted/invalid document {document.id}")
                     except Exception as doc_error:
@@ -250,7 +255,13 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 print(f"  ⚠️  FINAL CORRECTION: Complete status to Incomplete for {current_screening.screening_type} - no documents successfully linked")
                 current_screening.status = 'Incomplete'
         
-        db.session.commit()
+        # Commit with error handling to prevent SystemExit issues
+        try:
+            db.session.commit()
+        except Exception as commit_error:
+            print(f"ERROR during screening update commit: {commit_error}")
+            db.session.rollback()
+            raise
         
     except Exception as e:
         db.session.rollback()
