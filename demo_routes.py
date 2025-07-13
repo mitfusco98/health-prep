@@ -3479,8 +3479,8 @@ def screening_list():
         show_all = request.args.get('show_all') == 'true'
         admin_override = show_all and session.get('is_admin', False)
         
-        # Query existing screenings from database
-        query = Screening.query.join(Patient)
+        # Query existing screenings from database - ONLY INCLUDE ACTIVE SCREENING TYPES
+        query = Screening.query.join(Patient).join(ScreeningType, Screening.screening_type == ScreeningType.name).filter(ScreeningType.is_active == True)
         
         # Count total screenings before applying cutoff filter
         total_screenings_before_cutoff = query.count()
@@ -3585,8 +3585,10 @@ def screening_list():
     # Get filter options for screenings tab
     distinct_statuses = []
     if tab == "screenings":
-        # Get distinct statuses for filter dropdown
-        distinct_statuses = [row[0] for row in db.session.query(Screening.status).distinct().all() if row[0]]
+        # Get distinct statuses for filter dropdown - ONLY FROM ACTIVE SCREENING TYPES
+        distinct_statuses = [row[0] for row in db.session.query(Screening.status).distinct()\
+                            .join(ScreeningType, Screening.screening_type == ScreeningType.name)\
+                            .filter(ScreeningType.is_active == True).all() if row[0]]
 
     try:
         return render_template(
