@@ -178,25 +178,25 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 existing.notes = screening_data['notes']
                 existing.updated_at = datetime.now()
                 
-                # Clear existing document relationships properly with session management
+                # Clear existing document relationships using direct SQL for efficiency
                 try:
-                    # Use a no_autoflush context to prevent session conflicts
-                    with db.session.no_autoflush:
-                        existing_docs = list(existing.documents.all())
-                    for doc in existing_docs:
-                        existing.remove_document(doc)
+                    from sqlalchemy import text
+                    result = db.session.execute(
+                        text("DELETE FROM screening_documents WHERE screening_id = :screening_id"),
+                        {'screening_id': existing.id}
+                    )
+                    if result.rowcount > 0:
+                        print(f"  → Cleared {result.rowcount} existing document relationships for screening {existing.id}")
                 except Exception as clear_error:
                     print(f"  ⚠️  Error clearing existing documents: {clear_error}")
-                    # If clearing fails, try to clear the relationship table directly
+                    # Try ORM method as fallback
                     try:
-                        from sqlalchemy import text
-                        db.session.execute(
-                            text("DELETE FROM screening_documents WHERE screening_id = :screening_id"),
-                            {'screening_id': existing.id}
-                        )
-                        print(f"  → Cleared document relationships via direct SQL for screening {existing.id}")
-                    except Exception as sql_error:
-                        print(f"  ⚠️  Direct SQL clear also failed: {sql_error}")
+                        with db.session.no_autoflush:
+                            existing_docs = list(existing.documents.all())
+                        for doc in existing_docs:
+                            existing.remove_document(doc)
+                    except Exception as orm_error:
+                        print(f"  ⚠️  ORM clear also failed: {orm_error}")
                 
                 current_screening = existing
             else:

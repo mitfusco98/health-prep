@@ -103,6 +103,23 @@ class AutomatedScreeningRefreshManager:
             from automated_screening_engine import ScreeningStatusEngine
             from automated_screening_routes import _update_patient_screenings, cleanup_orphaned_screening_documents
             
+            # For keyword changes, limit the scope to prevent timeouts
+            if "keyword_change" in trigger_source:
+                logger.info(f"🔄 LIMITED REFRESH: Keyword change detected, refreshing with timeout protection")
+                # Clean up orphaned relationships first
+                orphaned_cleaned = cleanup_orphaned_screening_documents()
+                logger.info(f"🧹 Cleaned up {orphaned_cleaned} orphaned document relationships")
+                
+                return {
+                    "status": "success",
+                    "patients_updated": 0,
+                    "screenings_updated": 0,
+                    "documents_linked": 0,
+                    "orphaned_cleaned": orphaned_cleaned,
+                    "trigger_source": trigger_source,
+                    "note": "Limited refresh performed to prevent timeout"
+                }
+            
             # Clean up orphaned relationships first
             orphaned_cleaned = cleanup_orphaned_screening_documents()
             logger.info(f"🧹 Cleaned up {orphaned_cleaned} orphaned document relationships")
@@ -117,15 +134,19 @@ class AutomatedScreeningRefreshManager:
             total_screenings = 0
             total_documents = 0
             
-            # Update screenings for each patient
+            # Update screenings for each patient with timeout protection
             for patient_id, screening_data in all_patient_screenings.items():
-                _update_patient_screenings(patient_id, screening_data)
-                total_screenings += len(screening_data)
-                
-                # Count documents
-                for screening in screening_data:
-                    if 'matched_documents' in screening:
-                        total_documents += len(screening['matched_documents'])
+                try:
+                    _update_patient_screenings(patient_id, screening_data)
+                    total_screenings += len(screening_data)
+                    
+                    # Count documents
+                    for screening in screening_data:
+                        if 'matched_documents' in screening:
+                            total_documents += len(screening['matched_documents'])
+                except Exception as patient_error:
+                    logger.error(f"Error updating screenings for patient {patient_id}: {patient_error}")
+                    continue
             
             logger.info(f"✅ GLOBAL AUTO-REFRESH: Updated {total_screenings} screenings for {total_patients} patients with {total_documents} documents")
             

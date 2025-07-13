@@ -410,20 +410,25 @@ class Screening(db.Model):
     def remove_document(self, document):
         """Remove a document from this screening"""
         try:
-            if document in self.documents:
-                with db.session.no_autoflush:
-                    self.documents.remove(document)
+            # Use direct SQL to avoid session conflicts during bulk operations
+            from sqlalchemy import text
+            result = db.session.execute(
+                text("DELETE FROM screening_documents WHERE screening_id = :screening_id AND document_id = :document_id"),
+                {'screening_id': self.id, 'document_id': document.id}
+            )
+            if result.rowcount > 0:
+                print(f"  → Removed document {document.id} from screening {self.id}")
         except Exception as e:
             print(f"Error removing document {document.id} from screening {self.id}: {e}")
-            # Try direct SQL removal as fallback
+            # Try ORM method as fallback
             try:
-                from sqlalchemy import text
-                db.session.execute(
-                    text("DELETE FROM screening_documents WHERE screening_id = :screening_id AND document_id = :document_id"),
-                    {'screening_id': self.id, 'document_id': document.id}
-                )
-            except Exception as sql_error:
-                print(f"Direct SQL removal also failed: {sql_error}")
+                with db.session.no_autoflush:
+                    # Check if document is actually in the relationship
+                    existing_docs = list(self.documents.all())
+                    if document in existing_docs:
+                        self.documents.remove(document)
+            except Exception as orm_error:
+                print(f"ORM removal also failed: {orm_error}")
 
     def get_document_metadata(self, document):
         """Get metadata for a specific document relationship"""
