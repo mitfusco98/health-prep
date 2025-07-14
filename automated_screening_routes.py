@@ -178,25 +178,36 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 existing.notes = screening_data['notes']
                 existing.updated_at = datetime.now()
                 
-                # Clear existing document relationships using direct SQL for efficiency
+                # Clear existing document relationships with timeout protection
                 try:
                     from sqlalchemy import text
-                    result = db.session.execute(
-                        text("DELETE FROM screening_documents WHERE screening_id = :screening_id"),
-                        {'screening_id': existing.id}
-                    )
-                    if result.rowcount > 0:
-                        print(f"  → Cleared {result.rowcount} existing document relationships for screening {existing.id}")
+                    import signal
+                    
+                    def timeout_handler(signum, frame):
+                        raise TimeoutError("Database operation timed out")
+                    
+                    # Set 3-second timeout for this operation
+                    signal.signal(signal.SIGALRM, timeout_handler)
+                    signal.alarm(3)
+                    
+                    try:
+                        result = db.session.execute(
+                            text("DELETE FROM screening_documents WHERE screening_id = :screening_id"),
+                            {'screening_id': existing.id}
+                        )
+                        signal.alarm(0)  # Cancel timeout
+                        if result.rowcount > 0:
+                            print(f"  → Cleared {result.rowcount} existing document relationships for screening {existing.id}")
+                    except TimeoutError:
+                        signal.alarm(0)
+                        print(f"  ⚠️  Timeout clearing documents for screening {existing.id}, skipping relationship update")
+                        # Skip document relationship updates if clearing times out
+                        continue
+                        
                 except Exception as clear_error:
                     print(f"  ⚠️  Error clearing existing documents: {clear_error}")
-                    # Try ORM method as fallback
-                    try:
-                        with db.session.no_autoflush:
-                            existing_docs = list(existing.documents.all())
-                        for doc in existing_docs:
-                            existing.remove_document(doc)
-                    except Exception as orm_error:
-                        print(f"  ⚠️  ORM clear also failed: {orm_error}")
+                    # Skip this screening update if we can't clear relationships safely
+                    continue
                 
                 current_screening = existing
             else:

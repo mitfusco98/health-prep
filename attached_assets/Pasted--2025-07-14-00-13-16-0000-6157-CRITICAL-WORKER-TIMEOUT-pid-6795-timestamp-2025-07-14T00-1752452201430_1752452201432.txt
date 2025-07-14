@@ -1,0 +1,85 @@
+[2025-07-14 00:13:16 +0000] [6157] [CRITICAL] WORKER TIMEOUT (pid:6795)
+{"timestamp": "2025-07-14T00:13:16.399686Z", "level": "ERROR", "logger": "app", "message": "Rolling back due to exception: 1", "module": "app", "function": "teardown_request", "line": 181, "thread": 139772453250560, "process": 6795, "request": {"method": "POST", "path": "/screening-types/5/edit", "remote_addr": "10.82.9.253", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "edit_screening_type"}, "session": {"session_id": "AM84B-XynUcttcWNJCxn3EULvfTNSBrlMaXtNZLslwk", "user_id": null, "username": null}, "security": {"ip_address": "10.82.9.253", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1752451965.4626358}}
+{"timestamp": "2025-07-14T00:13:16.399940Z", "level": "ERROR", "logger": "app", "message": "Rolling back due to exception: 1", "module": "app", "function": "teardown_request", "line": 181, "thread": 139772453250560, "process": 6795, "request": {"method": "POST", "path": "/screening-types/5/edit", "remote_addr": "10.82.9.253", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "edit_screening_type"}, "session": {"session_id": "AM84B-XynUcttcWNJCxn3EULvfTNSBrlMaXtNZLslwk", "user_id": null, "username": null}, "security": {"ip_address": "10.82.9.253", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1752451965.4626358}}
+[2025-07-14 00:13:16 +0000] [6795] [ERROR] Error handling request /screening-types/5/edit
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 134, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 177, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/middleware/proxy_fix.py", line 183, in __call__
+    return self.app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/db_utils.py", line 106, in wrapper
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/demo_routes.py", line 1556, in edit_screening_type
+    status_result = auto_refresh_manager.handle_screening_type_status_change(screening_type.id, new_status)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/automated_edge_case_handler.py", line 251, in handle_screening_type_status_change
+    refresh_result = self.refresh_all_screenings(f"screening_type_activated_{screening_type.name}")
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/automated_edge_case_handler.py", line 140, in refresh_all_screenings
+    _update_patient_screenings(patient_id, screening_data)
+  File "/home/runner/workspace/automated_screening_routes.py", line 184, in _update_patient_screenings
+    result = db.session.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 779, in execute
+    return self._proxied.execute(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2260, in _execute_internal
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/encodings/utf_8.py", line 15, in decode
+    def decode(input, errors='strict'):
+    
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-07-14 00:13:16 +0000] [6795] [INFO] Worker exiting (pid: 6795)
+[2025-07-14 00:13:16 +0000] [6941] [INFO] Booting worker with pid: 6941
+Warning: Invalid JSON in keywords field, skipping: '[&quot;pap&quot;,&quot;cervical&quot;,&quot;cervic...'
+Edit - Trigger conditions data received: []
+Edit - Decoded trigger conditions data: []
+Edit - Parsed trigger conditions: []
+Edit - Set trigger conditions for screening type Pap Smear
+Keywords data received: [&quot;pap&quot;,&quot;cervical&quot;,&quot;cervical cancer&quot;,&quot;surepath&quot;,&quot;thinprep&quot;]
+Decoded keywords data: ["pap","cervical","cervical cancer","surepath","thinprep"]
+Parsed keywords: ['pap', 'cervical', 'cervical cancer', 'surepath', 'thinprep']
+Successfully saved 5 keywords: ['pap', 'cervical', 'cervical cancer', 'surepath', 'thinprep']

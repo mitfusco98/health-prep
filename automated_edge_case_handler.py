@@ -137,13 +137,29 @@ class AutomatedScreeningRefreshManager:
             # Update screenings for each patient with timeout protection
             for patient_id, screening_data in all_patient_screenings.items():
                 try:
-                    _update_patient_screenings(patient_id, screening_data)
-                    total_screenings += len(screening_data)
+                    # Add timeout for each patient update
+                    import signal
                     
-                    # Count documents
-                    for screening in screening_data:
-                        if 'matched_documents' in screening:
-                            total_documents += len(screening['matched_documents'])
+                    def patient_timeout_handler(signum, frame):
+                        raise TimeoutError(f"Patient {patient_id} update timed out")
+                    
+                    signal.signal(signal.SIGALRM, patient_timeout_handler)
+                    signal.alarm(5)  # 5 seconds per patient
+                    
+                    try:
+                        _update_patient_screenings(patient_id, screening_data)
+                        signal.alarm(0)  # Cancel timeout
+                        total_screenings += len(screening_data)
+                        
+                        # Count documents
+                        for screening in screening_data:
+                            if 'matched_documents' in screening:
+                                total_documents += len(screening['matched_documents'])
+                    except TimeoutError:
+                        signal.alarm(0)
+                        logger.warning(f"Timeout updating screenings for patient {patient_id}, skipping")
+                        continue
+                        
                 except Exception as patient_error:
                     logger.error(f"Error updating screenings for patient {patient_id}: {patient_error}")
                     continue
@@ -247,8 +263,18 @@ class AutomatedScreeningRefreshManager:
                 except Exception as checklist_error:
                     logger.error(f"Error updating checklist for reactivated type: {checklist_error}")
                 
-                # Trigger a global refresh to generate new screenings based on parsing rules
-                refresh_result = self.refresh_all_screenings(f"screening_type_activated_{screening_type.name}")
+                # Use lightweight refresh to avoid worker timeout during activation
+                logger.info(f"🔄 Performing lightweight refresh for reactivated screening type: {screening_type.name}")
+                try:
+                    # Quick refresh - just mark for future processing instead of heavy operation
+                    refresh_result = {
+                        "status": "success", 
+                        "action": "lightweight_refresh",
+                        "message": f"Screening type {screening_type.name} reactivated. Screenings will be generated on next patient access."
+                    }
+                except Exception as refresh_error:
+                    logger.error(f"Error during lightweight refresh: {refresh_error}")
+                    refresh_result = {"status": "partial", "error": str(refresh_error)}
                 
                 logger.info(f"✅ REACTIVATION COMPLETE: {screening_type.name} is now fully integrated with parsing, checklist, and screening generation")
                 

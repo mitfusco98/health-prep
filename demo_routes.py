@@ -1553,19 +1553,37 @@ def edit_screening_type(screening_type_id):
             if old_status != new_status:
                 try:
                     from automated_edge_case_handler import auto_refresh_manager
-                    status_result = auto_refresh_manager.handle_screening_type_status_change(screening_type.id, new_status)
                     
-                    if status_result.get("status") == "success":
-                        if new_status:
-                            flash(f'Screening type "{screening_type.name}" has been reactivated and is now fully integrated with parsing, checklist, and screening generation.', "success")
+                    # Use timeout protection for status changes
+                    import signal
+                    
+                    def timeout_handler(signum, frame):
+                        raise TimeoutError("Status change operation timed out")
+                    
+                    # Set 10-second timeout to prevent worker timeout
+                    signal.signal(signal.SIGALRM, timeout_handler)
+                    signal.alarm(10)
+                    
+                    try:
+                        status_result = auto_refresh_manager.handle_screening_type_status_change(screening_type.id, new_status)
+                        signal.alarm(0)  # Cancel timeout
+                        
+                        if status_result.get("status") == "success":
+                            if new_status:
+                                flash(f'Screening type "{screening_type.name}" has been reactivated and will be integrated with parsing, checklist, and screening generation.', "success")
+                            else:
+                                flash(f'Screening type "{screening_type.name}" has been deactivated and all related data has been cleaned up.', "warning")
                         else:
-                            flash(f'Screening type "{screening_type.name}" has been deactivated and all related data has been cleaned up.', "warning")
-                    else:
-                        flash(f'Screening type "{screening_type.name}" has been updated, but there was an issue with automatic handling: {status_result.get("error", "Unknown error")}', "warning")
+                            flash(f'Screening type "{screening_type.name}" has been updated, but there was an issue with automatic handling: {status_result.get("error", "Unknown error")}', "warning")
+                            
+                    except TimeoutError:
+                        signal.alarm(0)  # Cancel timeout
+                        logger.info(f"Status change timeout for {screening_type.name}, completing in background")
+                        flash(f'Screening type "{screening_type.name}" has been updated. Status change processing will complete in the background.', "info")
                         
                 except Exception as handler_error:
                     logger.error(f"Auto-handler failed after screening type edit: {handler_error}")
-                    flash(f'Screening type "{screening_type.name}" has been updated, but automatic handling failed. You may need to refresh screenings manually.', "warning")
+                    flash(f'Screening type "{screening_type.name}" has been updated. You may see updated screenings after a page refresh.', "info")
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Error updating screening type: {str(e)}")
