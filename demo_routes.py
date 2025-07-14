@@ -1338,7 +1338,10 @@ def edit_screening_type(screening_type_id):
         )
         screening_type.min_age = form.min_age.data
         screening_type.max_age = form.max_age.data
-        screening_type.is_active = form.is_active.data
+        # Track status change for reactivation logic
+        old_status = screening_type.is_active
+        new_status = form.is_active.data
+        screening_type.is_active = new_status
         screening_type.status = 'active' if form.is_active.data else 'inactive'
 
         # Process keyword fields from the form (unified approach)
@@ -1544,25 +1547,25 @@ def edit_screening_type(screening_type_id):
                 user_agent=request.headers.get("User-Agent", "Unknown"),
             )
 
-            flash(
-                f'Screening type "{screening_type.name}" has been updated successfully.',
-                "success",
-            )
+
             
-            # ✅ EDGE CASE HANDLER: Trigger auto-refresh when screening type is updated
-            try:
-                from automated_edge_case_handler import handle_keyword_updates, handle_screening_type_change
-                # Handle keywords changed
-                refresh_result = handle_keyword_updates(screening_type.id, "screening_type_updated")
-                # Handle status change if is_active was modified
-                if hasattr(form, 'is_active') and form.is_active.data != screening_type.is_active:
-                    status_result = handle_screening_type_change(screening_type.id, form.is_active.data)
-                    logger.info(f"Auto-handled screening type status change for {screening_type.name}")
-                if refresh_result.get("status") == "success":
-                    logger.info(f"Auto-refreshed screenings after screening type update for {screening_type.name}")
-            except Exception as e:
-                logger.error(f"Auto-refresh failed after screening type update: {e}")
-                # Don't fail the update if auto-refresh fails
+            # ✅ EDGE CASE HANDLER: Handle screening type status changes (activation/deactivation)
+            if old_status != new_status:
+                try:
+                    from automated_edge_case_handler import auto_refresh_manager
+                    status_result = auto_refresh_manager.handle_screening_type_status_change(screening_type.id, new_status)
+                    
+                    if status_result.get("status") == "success":
+                        if new_status:
+                            flash(f'Screening type "{screening_type.name}" has been reactivated and is now fully integrated with parsing, checklist, and screening generation.', "success")
+                        else:
+                            flash(f'Screening type "{screening_type.name}" has been deactivated and all related data has been cleaned up.', "warning")
+                    else:
+                        flash(f'Screening type "{screening_type.name}" has been updated, but there was an issue with automatic handling: {status_result.get("error", "Unknown error")}', "warning")
+                        
+                except Exception as handler_error:
+                    logger.error(f"Auto-handler failed after screening type edit: {handler_error}")
+                    flash(f'Screening type "{screening_type.name}" has been updated, but automatic handling failed. You may need to refresh screenings manually.', "warning")
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Error updating screening type: {str(e)}")

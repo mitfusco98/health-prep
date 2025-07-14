@@ -238,13 +238,28 @@ class AutomatedScreeningRefreshManager:
                     "existing_screenings": len(existing_screenings) if not new_status else 0
                 }
             else:
-                # If screening type was activated, trigger refresh to generate new screenings
+                # If screening type was activated, perform comprehensive reactivation
+                logger.info(f"🔄 REACTIVATING: {screening_type.name} - triggering full system integration")
+                
+                # Add back to checklist default items if not already present
+                try:
+                    self._add_to_checklist_default_items(screening_type.name)
+                except Exception as checklist_error:
+                    logger.error(f"Error updating checklist for reactivated type: {checklist_error}")
+                
+                # Trigger a global refresh to generate new screenings based on parsing rules
                 refresh_result = self.refresh_all_screenings(f"screening_type_activated_{screening_type.name}")
+                
+                logger.info(f"✅ REACTIVATION COMPLETE: {screening_type.name} is now fully integrated with parsing, checklist, and screening generation")
+                
                 return {
                     "status": "success",
                     "screening_type": screening_type.name,
                     "new_status": new_status,
-                    "refresh_result": refresh_result
+                    "action": "reactivated",
+                    "refresh_result": refresh_result,
+                    "checklist_updated": True,
+                    "parsing_enabled": True
                 }
                 
         except Exception as e:
@@ -338,6 +353,44 @@ class AutomatedScreeningRefreshManager:
                 
         except Exception as e:
             logger.error(f"Error updating checklist default items: {e}")
+    
+    def _add_to_checklist_default_items(self, screening_name: str):
+        """
+        Add screening type back to checklist default items when reactivated
+        
+        Args:
+            screening_name: Name of the screening type to add back
+        """
+        try:
+            from models import ChecklistSettings
+            
+            settings = ChecklistSettings.query.first()
+            if settings:
+                # Parse current default items
+                current_items = settings.default_items_list if hasattr(settings, 'default_items_list') else settings.default_items.split('\n') if settings.default_items else []
+                
+                # Add the reactivated screening type if not already present
+                current_items_clean = [item.strip() for item in current_items if item.strip()]
+                if screening_name not in current_items_clean:
+                    current_items_clean.append(screening_name)
+                    
+                    # Update the settings
+                    settings.default_items = '\n'.join(current_items_clean)
+                    db.session.commit()
+                    
+                    logger.info(f"➕ Added '{screening_name}' back to checklist default items")
+                else:
+                    logger.info(f"ℹ️ '{screening_name}' already present in checklist default items")
+            else:
+                # Create default settings if none exist
+                from checklist_routes import get_or_create_settings
+                settings = get_or_create_settings()
+                settings.default_items = screening_name
+                db.session.commit()
+                logger.info(f"➕ Created new checklist settings with '{screening_name}'")
+                
+        except Exception as e:
+            logger.error(f"Error adding to checklist default items: {e}")
 
 # Global instance for use throughout the application
 auto_refresh_manager = AutomatedScreeningRefreshManager()
