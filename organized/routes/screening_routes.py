@@ -29,6 +29,17 @@ def screening_list():
         screenings = (
             Screening.query.join(Patient).order_by(Screening.due_date.asc()).all()
         )
+        
+        # CRITICAL VALIDATION: Check for incomplete screenings with documents
+        validation_errors = []
+        for screening in screenings:
+            if screening.status == "Incomplete":
+                documents = screening.documents.all() if hasattr(screening, 'documents') else []
+                if documents and len(documents) > 0:
+                    validation_errors.append(f"Screening {screening.id} ({screening.screening_type}) is Incomplete but has {len(documents)} documents")
+        
+        if validation_errors:
+            flash(f"⚠️ Data integrity issue: {len(validation_errors)} incomplete screenings have documents. Please contact admin.", "warning")
 
         # Get all patients and screening types for the form
         patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
