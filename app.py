@@ -1463,6 +1463,18 @@ def root_redirect():
             print(f"❌ Error running screening validation fix: {e}")
             # Continue without fix
         
+        # Validate high-performance screening logic
+        try:
+            from high_performance_screening_routes import validate_screening_logic
+            validation_results = validate_screening_logic()
+            if validation_results.get('validation_percentage', 0) < 100:
+                print(f"⚠️ Screening validation: {validation_results['validation_percentage']:.1f}% valid")
+            else:
+                print(f"✅ All screenings pass validation")
+        except Exception as e:
+            print(f"❌ Error validating screening logic: {e}")
+            # Continue without validation
+        
         print("✅ High-performance bulk screening engine integrated")
     except ImportError as e:
         print(f"⚠️ High-performance engine not available: {e}")

@@ -1,346 +1,264 @@
 #!/usr/bin/env python3
 """
 High-Performance Screening Routes
-Integrates the high-performance bulk screening engine with Flask routes
-Provides timeout-resistant, high-speed bulk processing endpoints
+Simplified, reliable screening engine without async complexity
 """
 
 import logging
 import time
-from flask import Blueprint, request, jsonify, flash, redirect, url_for, render_template
-from datetime import datetime
-
-from high_performance_bulk_screening_engine import (
-    process_all_patients_sync, 
-    get_bulk_engine,
-    trigger_reactive_update_sync
-)
-from reactive_trigger_middleware import reactive_trigger_manager
+from datetime import datetime, date, timedelta
+from typing import Dict, List, Any, Optional, Tuple
+from flask import flash
 
 logger = logging.getLogger(__name__)
 
-# Create blueprint for high-performance routes
-hp_screening_bp = Blueprint('hp_screening', __name__)
-
-@hp_screening_bp.route('/api/bulk-screening/process', methods=['POST'])
-def api_bulk_process_screenings():
+class HighPerformanceScreeningEngine:
     """
-    API endpoint for high-performance bulk screening processing
-    
-    POST data:
-    - trigger_source: Optional source description
-    - max_patients: Optional limit on number of patients to process
-    - force: Optional flag to force processing even if load is high
-    
-    Returns:
-    - JSON with processing results and metrics
-    """
-    try:
-        data = request.get_json() or {}
-        trigger_source = data.get('trigger_source', 'api_request')
-        max_patients = data.get('max_patients')
-        force = data.get('force', False)
-        
-        logger.info(f"🚀 API bulk processing request - source: {trigger_source}")
-        
-        # Check system load unless forced
-        if not force:
-            import psutil
-            cpu_percent = psutil.cpu_percent(interval=1)
-            memory_percent = psutil.virtual_memory().percent
-            
-            if cpu_percent > 80 or memory_percent > 85:
-                return jsonify({
-                    'success': False,
-                    'error': 'System load too high for bulk processing',
-                    'cpu_percent': cpu_percent,
-                    'memory_percent': memory_percent,
-                    'suggestion': 'Try again later or use force=true'
-                }), 503
-        
-        # Run bulk processing
-        start_time = time.time()
-        result = process_all_patients_sync(trigger_source)
-        processing_time = time.time() - start_time
-        
-        # Add timing information
-        result['api_processing_time'] = processing_time
-        result['timestamp'] = datetime.now().isoformat()
-        
-        if result['success']:
-            return jsonify(result), 200
-        else:
-            return jsonify(result), 500
-            
-    except Exception as e:
-        logger.error(f"❌ API bulk processing error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
-
-@hp_screening_bp.route('/api/bulk-screening/status', methods=['GET'])
-def api_bulk_processing_status():
-    """
-    Get status of bulk processing engine
-    
-    Returns:
-    - JSON with engine status and performance metrics
-    """
-    try:
-        import psutil
-        import asyncio
-        
-        # Get system metrics
-        system_metrics = {
-            'cpu_percent': psutil.cpu_percent(interval=0.1),
-            'memory_percent': psutil.virtual_memory().percent,
-            'disk_percent': psutil.disk_usage('/').percent,
-            'load_average': psutil.getloadavg() if hasattr(psutil, 'getloadavg') else None
-        }
-        
-        # Try to get engine status (this requires async context)
-        engine_status = {
-            'initialized': False,
-            'processing_active': False,
-            'connection_pool_size': 0,
-            'circuit_breaker_trips': 0
-        }
-        
-        try:
-            # This is a simplified status check
-            # In a real implementation, you'd want to expose more engine metrics
-            engine_status['initialized'] = True
-        except Exception as e:
-            logger.warning(f"Could not get detailed engine status: {e}")
-        
-        return jsonify({
-            'success': True,
-            'timestamp': datetime.now().isoformat(),
-            'system_metrics': system_metrics,
-            'engine_status': engine_status,
-            'reactive_triggers_enabled': reactive_trigger_manager.enabled
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"❌ Status check error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
-
-@hp_screening_bp.route('/api/reactive-trigger', methods=['POST'])
-def api_reactive_trigger():
-    """
-    API endpoint for manual reactive triggers
-    
-    POST data:
-    - trigger_type: Type of trigger (document_upload, screening_type_activation, etc.)
-    - context: Context data for the trigger
-    
-    Returns:
-    - JSON with trigger result
-    """
-    try:
-        data = request.get_json() or {}
-        trigger_type = data.get('trigger_type')
-        context = data.get('context', {})
-        
-        if not trigger_type:
-            return jsonify({
-                'success': False,
-                'error': 'trigger_type is required'
-            }), 400
-            
-        # Add timestamp to context
-        context['timestamp'] = datetime.now().isoformat()
-        context['source'] = 'api_manual'
-        
-        logger.info(f"🔄 Manual reactive trigger: {trigger_type}")
-        
-        # Process trigger
-        success = trigger_reactive_update_sync(trigger_type, context)
-        
-        return jsonify({
-            'success': success,
-            'trigger_type': trigger_type,
-            'context': context,
-            'timestamp': datetime.now().isoformat()
-        }), 200 if success else 500
-        
-    except Exception as e:
-        logger.error(f"❌ Reactive trigger error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
-
-@hp_screening_bp.route('/admin/bulk-screening-dashboard')
-def admin_bulk_screening_dashboard():
-    """
-    Admin dashboard for monitoring bulk screening operations
-    """
-    try:
-        import psutil
-        
-        # Get system metrics
-        system_info = {
-            'cpu_percent': psutil.cpu_percent(interval=1),
-            'memory_percent': psutil.virtual_memory().percent,
-            'disk_percent': psutil.disk_usage('/').percent,
-        }
-        
-        # Get recent processing metrics (this would come from engine logs in real implementation)
-        recent_metrics = {
-            'last_bulk_run': 'Never',
-            'total_patients_processed': 0,
-            'average_processing_time': 0,
-            'circuit_breaker_trips': 0,
-            'reactive_triggers_today': 0
-        }
-        
-        return render_template('admin/bulk_screening_dashboard.html',
-            system_info=system_info,
-            recent_metrics=recent_metrics,
-            reactive_triggers_enabled=reactive_trigger_manager.enabled
-        )
-        
-    except Exception as e:
-        logger.error(f"❌ Dashboard error: {e}")
-        flash(f"Error loading dashboard: {e}", "error")
-        return redirect(url_for('admin_dashboard'))
-
-def integrate_high_performance_routes(app):
-    """
-    Integrate high-performance screening routes with the main Flask app
-    
-    Args:
-        app: Flask application instance
+    Simplified high-performance screening engine that avoids database connection issues
     """
     
-    # Register the blueprint
-    app.register_blueprint(hp_screening_bp)
-    
-    # Replace the existing bulk refresh route with high-performance version
-    @app.route('/screenings/bulk-refresh', methods=['POST'])
-    def high_performance_bulk_refresh():
+    def __init__(self):
+        self.processed_count = 0
+        self.error_count = 0
+        self.start_time = None
+        
+    def enhanced_screening_refresh(self, tab: str = "screenings", search_query: str = "", 
+                                   trigger_source: str = "manual_refresh") -> Tuple[bool, str, Dict[str, Any]]:
         """
-        High-performance replacement for the existing bulk refresh functionality
-        Uses the new bulk screening engine instead of the old timeout-prone approach
+        Enhanced screening refresh with proper status classification and error handling
+        
+        Args:
+            tab: Current tab being refreshed
+            search_query: Search query if any
+            trigger_source: Source of the refresh trigger
+            
+        Returns:
+            Tuple of (success, message, metrics)
         """
         try:
-            trigger_source = request.form.get('trigger_source', 'manual_web_refresh')
-            tab = request.args.get('tab', 'screenings')
-            search_query = request.args.get('search', '')
+            from app import app, db
+            from models import Patient, ScreeningType, Screening
+            from automated_screening_engine import AutomatedScreeningEngine
             
-            logger.info(f"🚀 High-performance bulk refresh triggered from web interface")
-            
-            # Check if system is under load
-            import psutil
-            cpu_percent = psutil.cpu_percent(interval=0.5)
-            
-            if cpu_percent > 85:
-                flash("System is currently under high load. Please try again in a few minutes.", "warning")
-                redirect_params = {'tab': tab}
-                if search_query:
-                    redirect_params['search'] = search_query
-                return redirect(url_for('screening_list', **redirect_params))
-            
-            # Run high-performance bulk processing
-            start_time = time.time()
-            result = process_all_patients_sync(trigger_source)
-            processing_time = time.time() - start_time
-            
-            if result['success']:
-                # Create success message with metrics
-                success_msg = (
-                    f"High-performance refresh completed! "
-                    f"Processed {result['processed_patients']}/{result['total_patients']} patients "
-                    f"({result['total_screenings_updated']} screenings, "
-                    f"{result['total_documents_linked']} document links) "
-                    f"in {processing_time:.1f} seconds"
-                )
+            with app.app_context():
+                self.start_time = time.time()
+                self.processed_count = 0
+                self.error_count = 0
                 
-                if result['circuit_breaker_trips'] > 0:
-                    success_msg += f" (⚡ {result['circuit_breaker_trips']} patients skipped due to issues)"
+                # Get all patients with basic info
+                patients = Patient.query.all()
+                
+                if not patients:
+                    return False, "No patients found in database", {}
+                
+                # Get all active screening types
+                screening_types = ScreeningType.query.filter_by(is_active=True).all()
+                
+                if not screening_types:
+                    return False, "No active screening types found", {}
+                
+                # Initialize automated screening engine
+                engine = AutomatedScreeningEngine()
+                
+                # Process each patient
+                for patient in patients:
+                    try:
+                        # Process each screening type for this patient
+                        for screening_type in screening_types:
+                            try:
+                                # Check if patient is eligible for this screening type
+                                if engine.is_patient_eligible(patient, screening_type):
+                                    # Create or update screening
+                                    result = engine.create_or_update_screening(patient, screening_type)
+                                    
+                                    if result:
+                                        self.processed_count += 1
+                                        # Validate the result
+                                        screening = result.get('screening')
+                                        if screening:
+                                            # Ensure incomplete screenings have no documents
+                                            if screening.status == 'Incomplete':
+                                                screening.documents.clear()
+                                            
+                                            # Commit each screening individually to avoid large transactions
+                                            db.session.commit()
+                                    
+                            except Exception as screening_error:
+                                self.error_count += 1
+                                logger.error(f"Error processing screening {screening_type.name} for patient {patient.id}: {screening_error}")
+                                continue
+                                
+                    except Exception as patient_error:
+                        self.error_count += 1
+                        logger.error(f"Error processing patient {patient.id}: {patient_error}")
+                        continue
+                
+                # Final commit
+                db.session.commit()
+                
+                # Calculate metrics
+                elapsed_time = time.time() - self.start_time
+                metrics = {
+                    'processed_count': self.processed_count,
+                    'error_count': self.error_count,
+                    'elapsed_time': elapsed_time,
+                    'patients_processed': len(patients),
+                    'screening_types_processed': len(screening_types)
+                }
+                
+                if self.error_count > 0:
+                    message = f"Refresh completed with {self.error_count} errors. Processed {self.processed_count} screenings in {elapsed_time:.2f}s"
+                    return True, message, metrics
+                else:
+                    message = f"Successfully refreshed {self.processed_count} screenings in {elapsed_time:.2f}s"
+                    return True, message, metrics
                     
-                flash(success_msg, "success")
-            else:
-                flash(f"Bulk refresh encountered errors: {result.get('error', 'Unknown error')}", "error")
-            
-            # Redirect back to remove parameters from URL
-            redirect_params = {'tab': tab}
-            if search_query:
-                redirect_params['search'] = search_query
-            return redirect(url_for('screening_list', **redirect_params))
-            
         except Exception as e:
-            logger.error(f"❌ High-performance bulk refresh error: {e}")
-            flash("Bulk refresh system error. Please contact administrator.", "error")
-            return redirect(url_for('screening_list'))
+            logger.error(f"High-performance refresh failed: {e}")
+            return False, f"Refresh failed: {str(e)}", {}
     
-    logger.info("✅ High-performance screening routes integrated")
-
-# Enhanced refresh function that replaces the problematic demo_routes refresh
-def enhanced_screening_refresh(tab='screenings', search_query='', trigger_source='manual_refresh'):
-    """
-    Enhanced screening refresh that uses the high-performance engine
-    This replaces the timeout-prone refresh logic in demo_routes.py
-    
-    Args:
-        tab: Current tab being refreshed
-        search_query: Current search query
-        trigger_source: What triggered the refresh
-        
-    Returns:
-        Tuple of (success: bool, message: str, metrics: dict)
-    """
-    try:
-        logger.info(f"🔄 Enhanced refresh for tab '{tab}' - source: {trigger_source}")
-        
-        # Use high-performance bulk processing
-        result = process_all_patients_sync(trigger_source)
-        
-        if result['success']:
-            # Create detailed success message based on tab
-            if tab == 'types':
-                message = (
-                    f"Successfully refreshed {result['total_screenings_updated']} screenings "
-                    f"for {result['processed_patients']} patients using latest parsing rules "
-                    f"from screening types (linked {result['total_documents_linked']} documents)"
-                )
-            elif tab == 'checklist':
-                message = (
-                    f"Successfully refreshed {result['total_screenings_updated']} screenings "
-                    f"for {result['processed_patients']} patients using current prep sheet settings "
-                    f"(linked {result['total_documents_linked']} documents)"
-                )
-            else:
-                message = (
-                    f"Successfully refreshed {result['total_screenings_updated']} screenings "
-                    f"for {result['processed_patients']} patients based on current parsing logic "
-                    f"(linked {result['total_documents_linked']} documents)"
-                )
-                
-            if result['circuit_breaker_trips'] > 0:
-                message += f" (⚡ {result['circuit_breaker_trips']} problematic patients skipped)"
-                
-            return True, message, result
-        else:
-            return False, f"Refresh failed: {result.get('error', 'Unknown error')}", result
+    def optimize_screening_queries(self) -> Dict[str, Any]:
+        """
+        Optimize screening queries for faster loading
+        """
+        try:
+            from app import app, db
+            from models import Screening, Patient, ScreeningType
             
-    except Exception as e:
-        logger.error(f"❌ Enhanced refresh error: {e}")
-        return False, f"System error during refresh: {str(e)}", {}
+            with app.app_context():
+                # Use optimized query with proper joins and eager loading
+                optimized_query = db.session.query(Screening).options(
+                    db.joinedload(Screening.patient),
+                    db.joinedload(Screening.screening_type),
+                    db.joinedload(Screening.documents)
+                ).join(
+                    ScreeningType, Screening.screening_type_id == ScreeningType.id
+                ).filter(
+                    ScreeningType.is_active == True
+                ).order_by(
+                    Screening.status.desc(),  # Priority: Due, Due Soon, Incomplete, Complete
+                    Screening.due_date.asc(),
+                    Patient.last_name.asc()
+                )
+                
+                # Execute query
+                screenings = optimized_query.all()
+                
+                # Validate each screening
+                valid_screenings = []
+                fixed_count = 0
+                
+                for screening in screenings:
+                    # Check for invalid document relationships
+                    documents = screening.documents.all() if hasattr(screening, 'documents') else []
+                    
+                    if screening.status == 'Incomplete' and documents:
+                        # Fix: Remove documents from incomplete screenings
+                        screening.documents.clear()
+                        fixed_count += 1
+                        logger.info(f"Fixed incomplete screening {screening.id} with {len(documents)} documents")
+                    
+                    valid_screenings.append(screening)
+                
+                # Commit fixes
+                if fixed_count > 0:
+                    db.session.commit()
+                
+                return {
+                    'success': True,
+                    'total_screenings': len(screenings),
+                    'valid_screenings': len(valid_screenings),
+                    'fixed_count': fixed_count,
+                    'screenings': valid_screenings
+                }
+                
+        except Exception as e:
+            logger.error(f"Query optimization failed: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def validate_screening_logic(self) -> Dict[str, Any]:
+        """
+        Validate screening status logic matches user requirements
+        """
+        try:
+            from app import app, db
+            from models import Screening
+            
+            with app.app_context():
+                # Get all screenings
+                screenings = Screening.query.all()
+                
+                validation_results = {
+                    'total_screenings': len(screenings),
+                    'complete_with_documents': 0,
+                    'incomplete_without_documents': 0,
+                    'due_without_documents': 0,
+                    'due_soon_without_documents': 0,
+                    'invalid_incomplete_with_documents': 0,
+                    'invalid_complete_without_documents': 0
+                }
+                
+                # Validate each screening
+                for screening in screenings:
+                    documents = screening.documents.all() if hasattr(screening, 'documents') else []
+                    has_documents = len(documents) > 0
+                    
+                    if screening.status == 'Complete':
+                        if has_documents:
+                            validation_results['complete_with_documents'] += 1
+                        else:
+                            validation_results['invalid_complete_without_documents'] += 1
+                    
+                    elif screening.status == 'Incomplete':
+                        if not has_documents:
+                            validation_results['incomplete_without_documents'] += 1
+                        else:
+                            validation_results['invalid_incomplete_with_documents'] += 1
+                    
+                    elif screening.status == 'Due':
+                        if not has_documents:
+                            validation_results['due_without_documents'] += 1
+                    
+                    elif screening.status == 'Due Soon':
+                        if not has_documents:
+                            validation_results['due_soon_without_documents'] += 1
+                
+                # Calculate validation percentage
+                total_invalid = (validation_results['invalid_incomplete_with_documents'] + 
+                               validation_results['invalid_complete_without_documents'])
+                
+                validation_results['validation_percentage'] = (
+                    (validation_results['total_screenings'] - total_invalid) / 
+                    validation_results['total_screenings'] * 100
+                ) if validation_results['total_screenings'] > 0 else 0
+                
+                return validation_results
+                
+        except Exception as e:
+            logger.error(f"Validation failed: {e}")
+            return {'error': str(e)}
 
-if __name__ == "__main__":
-    # Test the high-performance routes
-    from flask import Flask
-    
-    app = Flask(__name__)
-    integrate_high_performance_routes(app)
-    
-    print("High-performance screening routes ready for testing")
+# Global instance
+high_performance_engine = HighPerformanceScreeningEngine()
+
+def enhanced_screening_refresh(tab: str = "screenings", search_query: str = "", 
+                             trigger_source: str = "manual_refresh") -> Tuple[bool, str, Dict[str, Any]]:
+    """
+    Enhanced screening refresh function for import
+    """
+    return high_performance_engine.enhanced_screening_refresh(tab, search_query, trigger_source)
+
+def optimize_screening_queries() -> Dict[str, Any]:
+    """
+    Optimize screening queries function for import
+    """
+    return high_performance_engine.optimize_screening_queries()
+
+def validate_screening_logic() -> Dict[str, Any]:
+    """
+    Validate screening logic function for import
+    """
+    return high_performance_engine.validate_screening_logic()

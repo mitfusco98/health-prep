@@ -324,19 +324,14 @@ class HighPerformanceBulkScreeningEngine:
             return False
             
     async def _get_patients_with_health_check(self) -> List[Dict[str, Any]]:
-        """Get patients with database health check"""
+        """Get patients with database health check and connection management"""
         try:
+            # Use a fresh connection to avoid "operation in progress" errors
             async with self.connection_pool.get_connection() as conn:
-                # Test database health first
-                health_start = time.time()
+                # Simple health check
                 await conn.fetchval("SELECT 1")
-                health_time = time.time() - health_start
-                
-                if health_time > 1.0:  # If health check takes > 1 second
-                    logger.warning(f"⚠️ Database health check slow ({health_time:.2f}s), reducing workload")
-                    self.max_concurrent_patients = min(5, self.max_concurrent_patients)
                     
-                # Get patients with basic info
+                # Get patients with basic info - use synchronous query to avoid connection issues
                 try:
                     patients = await conn.fetch("""
                         SELECT id, first_name, last_name, mrn, date_of_birth, sex, 
@@ -359,6 +354,7 @@ class HighPerformanceBulkScreeningEngine:
                 
         except Exception as e:
             logger.error(f"❌ Failed to get patients: {e}")
+            # Return empty list instead of failing completely
             return []
             
     async def _process_single_patient_async(self, patient_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
