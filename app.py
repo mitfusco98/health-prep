@@ -1421,53 +1421,53 @@ def root_redirect():
     return redirect(url_for('index'))
 
 # Initialize high-performance bulk screening engine and reactive triggers
-try:
-    from high_performance_screening_routes import integrate_high_performance_routes
-    from reactive_trigger_middleware import integrate_reactive_triggers_with_routes
-    
-    # Integrate high-performance routes
-    integrate_high_performance_routes(app)
-    
-    # Integrate reactive triggers with existing routes
-    integrate_reactive_triggers_with_routes(app)
-    
-    # Integrate enhanced screening routes with database access layer
-    from enhanced_screening_routes import integrate_enhanced_screening_routes
-    integrate_enhanced_screening_routes(app)
-    
-    # Integrate intelligent cache manager
-    from cache_integration_routes import integrate_cache_routes
-    integrate_cache_routes(app)
-    
-    # Integrate cache reactive triggers
-    from cache_reactive_triggers import integrate_cache_triggers_with_routes
-    integrate_cache_triggers_with_routes(app)
-    
-    # Integrate async processing middleware
-    from async_integration_middleware import integrate_async_middleware
-    integrate_async_middleware(app)
-    
-    # Initialize async processors within app context
     try:
-        from async_screening_processor import initialize_async_processors
-        initialize_async_processors(app)
+        from high_performance_screening_routes import integrate_high_performance_routes
+        from reactive_trigger_middleware import integrate_reactive_triggers_with_routes
+        
+        # Integrate high-performance routes
+        integrate_high_performance_routes(app)
+        
+        # Integrate reactive triggers with existing routes
+        integrate_reactive_triggers_with_routes(app)
+        
+        # Integrate enhanced screening routes with database access layer
+        from enhanced_screening_routes import integrate_enhanced_screening_routes
+        integrate_enhanced_screening_routes(app)
+        
+        # Integrate intelligent cache manager
+        from cache_integration_routes import integrate_cache_routes
+        integrate_cache_routes(app)
+        
+        # Integrate cache reactive triggers
+        from cache_reactive_triggers import integrate_cache_triggers_with_routes
+        integrate_cache_triggers_with_routes(app)
+        
+        # Integrate async processing middleware
+        from async_integration_middleware import integrate_async_middleware
+        integrate_async_middleware(app)
+        
+        # Initialize async processors within app context
+        try:
+            from async_screening_processor import initialize_async_processors
+            initialize_async_processors(app)
+        except Exception as e:
+            print(f"❌ Error initializing async processors: {e}")
+            # Continue without async processors for now
+        
+        # Run screening validation fix
+        try:
+            from screening_validation_fix import run_screening_validation_fix
+            run_screening_validation_fix()
+        except Exception as e:
+            print(f"❌ Error running screening validation fix: {e}")
+            # Continue without fix
+        
+        print("✅ High-performance bulk screening engine integrated")
+    except ImportError as e:
+        print(f"⚠️ High-performance engine not available: {e}")
     except Exception as e:
-        print(f"❌ Error initializing async processors: {e}")
-        # Continue without async processors for now
-    
-    # Run screening validation fix
-    try:
-        from screening_validation_fix import run_screening_validation_fix
-        run_screening_validation_fix()
-    except Exception as e:
-        print(f"❌ Error running screening validation fix: {e}")
-        # Continue without fix
-    
-    print("✅ High-performance bulk screening engine integrated")
-except ImportError as e:
-    print(f"⚠️ High-performance engine not available: {e}")
-except Exception as e:
-    print(f"❌ Error integrating high-performance engine: {e}")
+        print(f"❌ Error integrating high-performance engine: {e}")
 
 # The main home route is handled by demo_routes.py with the 'index' endpoint
 
