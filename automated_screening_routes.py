@@ -155,13 +155,32 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
         screenings_data: List of screening dictionaries from engine
     """
     try:
-        # Add timeout protection to database query
+        # Add comprehensive timeout protection starting with database connection
         import signal
         def db_timeout_handler(signum, frame):
-            raise TimeoutError("Database query timed out")
+            raise TimeoutError("Database operation timed out")
         
+        # Test database connection first with timeout protection
         signal.signal(signal.SIGALRM, db_timeout_handler)
-        signal.alarm(3)  # 3 second timeout for database query
+        signal.alarm(2)  # 2 second timeout for connection test
+        
+        try:
+            # Test connection with simple query
+            from sqlalchemy import text
+            db.session.execute(text("SELECT 1"))
+            signal.alarm(0)  # Cancel timeout
+        except TimeoutError:
+            signal.alarm(0)
+            print(f"⏱️  Database connection timeout for patient {patient_id}, skipping")
+            return
+        except Exception as conn_error:
+            signal.alarm(0)
+            print(f"⚠️  Database connection error for patient {patient_id}: {conn_error}")
+            return
+        
+        # Now load existing screenings with timeout protection
+        signal.signal(signal.SIGALRM, db_timeout_handler)
+        signal.alarm(3)  # 3 second timeout for query
         
         try:
             # Optimize: Load all existing screenings for patient at once
@@ -172,11 +191,11 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
             signal.alarm(0)  # Cancel timeout
         except TimeoutError:
             signal.alarm(0)
-            print(f"⏱️  Database timeout loading screenings for patient {patient_id}, skipping")
+            print(f"⏱️  Database query timeout loading screenings for patient {patient_id}, skipping")
             return
         except Exception as query_error:
             signal.alarm(0)
-            print(f"⚠️  Database error loading screenings for patient {patient_id}: {query_error}")
+            print(f"⚠️  Database query error loading screenings for patient {patient_id}: {query_error}")
             return
         
         for screening_data in screenings_data:
@@ -309,19 +328,25 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
         # Commit with error handling and timeout protection to prevent SystemExit issues
         try:
             signal.signal(signal.SIGALRM, db_timeout_handler)
-            signal.alarm(5)  # Increased to 5 seconds for batch commit
+            signal.alarm(8)  # Increased to 8 seconds for batch commit with connection recovery
             db.session.commit()
             signal.alarm(0)
             print(f"✅ Updated {len(screenings_data)} screenings for patient {patient_id}")
         except TimeoutError:
             signal.alarm(0)
-            db.session.rollback()
+            try:
+                db.session.rollback()
+            except:
+                pass  # Ignore rollback errors during timeout
             print(f"⏱️  Database commit timeout for patient {patient_id} - screenings skipped")
             # Don't raise - continue with other patients
         except Exception as commit_error:
             signal.alarm(0)
+            try:
+                db.session.rollback()
+            except:
+                pass  # Ignore rollback errors during connection issues
             print(f"ERROR during screening update commit: {commit_error}")
-            db.session.rollback()
             # Don't raise - continue with other patients
         
     except Exception as e:

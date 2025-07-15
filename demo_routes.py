@@ -3431,6 +3431,21 @@ def screening_list():
             engine = ScreeningStatusEngine()
             all_patient_screenings = engine.generate_all_patient_screenings()
             
+            # Test database connection before starting updates
+            try:
+                from sqlalchemy import text
+                db.session.execute(text("SELECT 1"))
+                patients = Patient.query.all()
+                total_patients = len(patients)
+                
+                if total_patients == 0:
+                    flash("No patients found to update screenings for.", "warning")
+                    return redirect(url_for('screening_list'))
+            except Exception as db_error:
+                print(f"⚠️  Database connection error during patient fetch: {db_error}")
+                flash("Database connection issue during refresh. Please try again.", "error")
+                return redirect(url_for('screening_list'))
+            
             # Update screenings with proper document relationships
             from automated_screening_routes import _update_patient_screenings
             total_screenings_updated = 0
@@ -3445,7 +3460,7 @@ def screening_list():
                         raise TimeoutError(f"Patient {patient_id} update timed out")
                     
                     signal.signal(signal.SIGALRM, patient_update_timeout_handler)
-                    signal.alarm(10)  # Increased to 10 seconds per patient for batch processing
+                    signal.alarm(15)  # Increased to 15 seconds per patient for batch processing with connection tests
                     
                     try:
                         _update_patient_screenings(patient_id, screening_data)
@@ -3495,7 +3510,7 @@ def screening_list():
             print(f"Error refreshing automated screenings: {e}")
             import traceback
             traceback.print_exc()
-            flash(f"Error refreshing automated screenings: {e}", "danger")
+            flash("Database error during refresh. Please check connection and try again.", "danger")
     
     # For the screenings tab, load existing screenings from database
     screenings = []
