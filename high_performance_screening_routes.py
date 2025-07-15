@@ -60,32 +60,28 @@ class HighPerformanceScreeningEngine:
                 # Initialize automated screening engine
                 engine = ScreeningStatusEngine()
                 
-                # Process each patient
+                # Process each patient using the existing ScreeningStatusEngine workflow
                 for patient in patients:
                     try:
-                        # Process each screening type for this patient
-                        for screening_type in screening_types:
+                        # Use the existing generate_patient_screenings method which handles eligibility
+                        screening_data_list = engine.generate_patient_screenings(patient.id)
+                        
+                        for screening_data in screening_data_list:
                             try:
-                                # Check if patient is eligible for this screening type
-                                if engine.is_patient_eligible(patient, screening_type):
-                                    # Create or update screening
-                                    result = engine.create_or_update_screening(patient, screening_type)
-                                    
-                                    if result:
-                                        self.processed_count += 1
-                                        # Validate the result
-                                        screening = result.get('screening')
-                                        if screening:
-                                            # Ensure incomplete screenings have no documents
-                                            if screening.status == 'Incomplete':
-                                                screening.documents.clear()
-                                            
-                                            # Commit each screening individually to avoid large transactions
-                                            db.session.commit()
+                                # Use the existing automated_screening_routes functionality
+                                from automated_screening_routes import _update_patient_screenings
+                                
+                                # Update screenings for this patient
+                                result = _update_patient_screenings(patient.id, [screening_data])
+                                
+                                if result:
+                                    self.processed_count += 1
+                                    # Commit each screening individually to avoid large transactions
+                                    db.session.commit()
                                     
                             except Exception as screening_error:
                                 self.error_count += 1
-                                logger.error(f"Error processing screening {screening_type.name} for patient {patient.id}: {screening_error}")
+                                logger.error(f"Error processing screening {screening_data.get('screening_type', 'Unknown')} for patient {patient.id}: {screening_error}")
                                 continue
                                 
                     except Exception as patient_error:
