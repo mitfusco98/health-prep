@@ -68,12 +68,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Enhanced refresh functionality that works across all tabs
 function refreshScreenings(event, tab) {
+    // Prevent default link behavior
+    event.preventDefault();
+    
     const button = event.target.closest('a');
     const originalText = button.innerHTML;
-    
-    // Show loading state
-    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
-    button.style.pointerEvents = 'none';
     
     const confirmMessage = tab === 'types' 
         ? 'Refresh all automated screenings using the current parsing rules from this tab? This will update document matches immediately.'
@@ -82,20 +81,17 @@ function refreshScreenings(event, tab) {
         : 'Refresh all automated screenings based on current parsing logic? This may take a moment.';
     
     if (!confirm(confirmMessage)) {
-        // Reset button if cancelled
-        button.innerHTML = originalText;
-        button.style.pointerEvents = 'auto';
         return false;
     }
     
-    // Allow the navigation to proceed
-    setTimeout(() => {
-        // Reset button state after a delay (in case of back navigation)
-        button.innerHTML = originalText;
-        button.style.pointerEvents = 'auto';
-    }, 8000);
+    // Show loading state
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
+    button.style.pointerEvents = 'none';
     
-    return true; // Allow default link behavior
+    // Navigate to the refresh URL
+    window.location.href = button.href;
+    
+    return false;
 }
 
 // Handle document access errors
