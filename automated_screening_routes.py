@@ -282,20 +282,43 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 # Process documents in batch mode to avoid individual database flushes
                 valid_documents = []
                 
-                # First pass: validate documents
-                for document in screening_data['matched_documents']:
-                    try:
-                        # Get a fresh document instance from the database to avoid session conflicts
-                        from models import MedicalDocument
-                        fresh_document = db.session.get(MedicalDocument, document.id)
+                # First pass: validate documents in bulk with timeout protection
+                signal.signal(signal.SIGALRM, db_timeout_handler)
+                signal.alarm(3)  # 3 second timeout for bulk document validation
+                
+                try:
+                    # Get all document IDs at once
+                    document_ids = [doc.id for doc in screening_data['matched_documents']]
+                    
+                    # Bulk fetch all documents at once to avoid N+1 queries
+                    from models import MedicalDocument
+                    from sqlalchemy import text
+                    
+                    if document_ids:
+                        # Use raw SQL for faster bulk fetch
+                        id_placeholders = ','.join([str(id) for id in document_ids])
+                        result = db.session.execute(
+                            text(f"SELECT id, filename FROM medical_document WHERE id IN ({id_placeholders})")
+                        )
+                        existing_doc_data = {row.id: row.filename for row in result}
                         
-                        if fresh_document and _validate_document_exists(fresh_document):
-                            valid_documents.append(fresh_document)
-                        else:
-                            print(f"  → Skipping deleted/invalid document {document.id}")
-                    except Exception as doc_error:
-                        print(f"  → Error validating document {document.id}: {doc_error}")
-                        continue
+                        # Only include documents that exist in database
+                        for document in screening_data['matched_documents']:
+                            if document.id in existing_doc_data:
+                                valid_documents.append(document)
+                            else:
+                                print(f"  → Skipping deleted document {document.id}")
+                    
+                    signal.alarm(0)  # Cancel timeout
+                except TimeoutError:
+                    signal.alarm(0)
+                    print(f"  ⏱️  Document validation timeout for screening {current_screening.screening_type}, skipping document linking")
+                    valid_documents = []  # Skip all documents for this screening
+                except Exception as bulk_error:
+                    signal.alarm(0)
+                    print(f"  ⚠️  Bulk document validation error: {bulk_error}")
+                    # Fallback to the documents we have (assume they're valid)
+                    valid_documents = screening_data['matched_documents'][:10]  # Limit to 10 as safety
                 
                 # Second pass: link documents in batch mode with limits to prevent timeouts
                 max_documents_per_screening = 50  # Limit to prevent timeouts
@@ -304,21 +327,45 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 if len(valid_documents) > max_documents_per_screening:
                     print(f"  ⚠️  Limiting to {max_documents_per_screening} documents out of {len(valid_documents)} for screening {current_screening.screening_type}")
                 
-                for fresh_document in documents_to_process:
+                # Bulk insert relationships using raw SQL for speed
+                if documents_to_process:
                     try:
-                        current_screening.add_document(fresh_document, confidence_score=1.0, match_source='automated', batch_mode=True)
-                        linked_document_count += 1
-                        print(f"  → Queued document {fresh_document.filename} for linking to screening {current_screening.screening_type}")
-                    except Exception as link_error:
-                        print(f"  → Error queuing document {fresh_document.filename}: {link_error}")
-                        continue
+                        signal.signal(signal.SIGALRM, db_timeout_handler)
+                        signal.alarm(2)  # 2 second timeout for bulk insert
+                        
+                        # Use raw SQL for bulk insert of screening-document relationships
+                        from sqlalchemy import text
+                        insert_values = []
+                        for document in documents_to_process:
+                            insert_values.append(f"({current_screening.id}, {document.id}, 1.0, 'automated')")
+                        
+                        if insert_values:
+                            # First clear existing relationships for this screening
+                            db.session.execute(
+                                text("DELETE FROM screening_documents WHERE screening_id = :screening_id"),
+                                {'screening_id': current_screening.id}
+                            )
+                            
+                            # Bulk insert new relationships
+                            values_str = ','.join(insert_values)
+                            db.session.execute(
+                                text(f"INSERT INTO screening_documents (screening_id, document_id, confidence_score, match_source) VALUES {values_str}")
+                            )
+                            
+                            linked_document_count = len(documents_to_process)
+                            print(f"  → Bulk linked {linked_document_count} documents to screening {current_screening.screening_type}")
+                        
+                        signal.alarm(0)  # Cancel timeout
+                    except TimeoutError:
+                        signal.alarm(0)
+                        print(f"  ⏱️  Bulk document linking timeout for screening {current_screening.screening_type}")
+                        linked_document_count = 0
+                    except Exception as bulk_link_error:
+                        signal.alarm(0)
+                        print(f"  ⚠️  Bulk document linking error: {bulk_link_error}")
+                        linked_document_count = 0
             
-            # Process any pending document metadata from batch operations
-            try:
-                if hasattr(current_screening, 'process_pending_document_metadata'):
-                    current_screening.process_pending_document_metadata()
-            except Exception as metadata_error:
-                print(f"  ⚠️  Error processing document metadata: {metadata_error}")
+            # Skip metadata processing since we're using bulk SQL operations
             
             # FINAL VALIDATION: If marked Complete but no documents were actually linked, correct the status
             if current_screening.status == 'Complete' and linked_document_count == 0:

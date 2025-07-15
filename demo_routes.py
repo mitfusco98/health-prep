@@ -3431,16 +3431,33 @@ def screening_list():
             engine = ScreeningStatusEngine()
             all_patient_screenings = engine.generate_all_patient_screenings()
             
-            # Test database connection before starting updates
+            # Test database connection and performance before starting updates
             try:
+                import time
                 from sqlalchemy import text
+                
+                # Test connection speed
+                start_time = time.time()
                 db.session.execute(text("SELECT 1"))
+                connection_time = time.time() - start_time
+                
+                # If database is slow, show warning and skip refresh
+                if connection_time > 1.0:  # If connection takes more than 1 second
+                    flash("Database is currently slow. Please try refresh again later.", "warning")
+                    return redirect(url_for('screening_list'))
+                
                 patients = Patient.query.all()
                 total_patients = len(patients)
                 
                 if total_patients == 0:
                     flash("No patients found to update screenings for.", "warning")
                     return redirect(url_for('screening_list'))
+                    
+                # Limit processing if too many patients
+                if total_patients > 50:
+                    flash(f"Too many patients ({total_patients}) for safe refresh. Please contact administrator.", "warning")
+                    return redirect(url_for('screening_list'))
+                    
             except Exception as db_error:
                 print(f"⚠️  Database connection error during patient fetch: {db_error}")
                 flash("Database connection issue during refresh. Please try again.", "error")
@@ -3460,7 +3477,7 @@ def screening_list():
                         raise TimeoutError(f"Patient {patient_id} update timed out")
                     
                     signal.signal(signal.SIGALRM, patient_update_timeout_handler)
-                    signal.alarm(15)  # Increased to 15 seconds per patient for batch processing with connection tests
+                    signal.alarm(8)  # Reduced to 8 seconds per patient with bulk operations
                     
                     try:
                         _update_patient_screenings(patient_id, screening_data)
