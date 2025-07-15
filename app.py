@@ -1443,6 +1443,14 @@ try:
     from cache_reactive_triggers import integrate_cache_triggers_with_routes
     integrate_cache_triggers_with_routes(app)
     
+    # Integrate async processing middleware
+    from async_integration_middleware import integrate_async_middleware
+    integrate_async_middleware(app)
+    
+    # Initialize async processors
+    from async_screening_processor import initialize_async_processors
+    initialize_async_processors(app)
+    
     print("✅ High-performance bulk screening engine integrated")
 except ImportError as e:
     print(f"⚠️ High-performance engine not available: {e}")

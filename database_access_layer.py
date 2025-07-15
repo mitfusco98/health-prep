@@ -754,5 +754,7 @@ if __name__ == "__main__":
             await dal.close()
         else:
             print("Failed to initialize database access layer")
+    
+
             
     asyncio.run(test_database_access_layer())
