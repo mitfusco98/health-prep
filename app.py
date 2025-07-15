@@ -1435,6 +1435,14 @@ try:
     from enhanced_screening_routes import integrate_enhanced_screening_routes
     integrate_enhanced_screening_routes(app)
     
+    # Integrate intelligent cache manager
+    from cache_integration_routes import integrate_cache_routes
+    integrate_cache_routes(app)
+    
+    # Integrate cache reactive triggers
+    from cache_reactive_triggers import integrate_cache_triggers_with_routes
+    integrate_cache_triggers_with_routes(app)
+    
     print("✅ High-performance bulk screening engine integrated")
 except ImportError as e:
     print(f"⚠️ High-performance engine not available: {e}")

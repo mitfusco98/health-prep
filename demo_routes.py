@@ -3393,7 +3393,23 @@ def screening_list():
         print(f"Status options list (property): {settings.status_options_list}")
         print(f"=== END DEBUG ===")
         # Get active screening types instead of default_items_list
-        active_screening_types = ScreeningType.query.filter_by(is_active=True, status='active').order_by(ScreeningType.name).all()
+        # Get active screening types using cache
+        try:
+            from intelligent_cache_manager import get_cache_manager
+            cache_mgr = get_cache_manager()
+            active_screening_types_data = cache_mgr.cache_screening_types(active_only=True)
+            
+            # Convert cached data back to model-like objects for template compatibility
+            class ScreeningTypeProxy:
+                def __init__(self, data):
+                    for key, value in data.items():
+                        setattr(self, key, value)
+            
+            active_screening_types = [ScreeningTypeProxy(st_data) for st_data in active_screening_types_data]
+            
+        except Exception as e:
+            print(f"Cache error for active screening types, falling back to database: {e}")
+            active_screening_types = ScreeningType.query.filter_by(is_active=True).order_by(ScreeningType.name).all()
 
     # Create forms for screening type management
     from forms import ScreeningTypeForm
@@ -3423,12 +3439,26 @@ def screening_list():
             # Use the new high-performance bulk screening engine
             from high_performance_screening_routes import enhanced_screening_refresh
             
+            # Trigger batch operation for cache consistency
+            from intelligent_cache_manager import get_cache_manager
+            cache_mgr = get_cache_manager()
+            cache_mgr.trigger_invalidation('batch_operation_start', {
+                'operation': 'screening_refresh',
+                'trigger_source': f"manual_refresh_tab_{tab}"
+            })
+            
             # Run enhanced high-performance refresh
             success, message, metrics = enhanced_screening_refresh(
                 tab=tab, 
                 search_query=search_query, 
                 trigger_source=f"manual_refresh_tab_{tab}"
             )
+            
+            # End batch operation
+            cache_mgr.trigger_invalidation('batch_operation_end', {
+                'operation': 'screening_refresh',
+                'trigger_source': f"manual_refresh_tab_{tab}"
+            })
             
             if success:
                 flash(message, "success")
@@ -3569,11 +3599,26 @@ def screening_list():
     # Generate timestamp for cache busting
     cache_timestamp = int(time_module.time())
 
-    # Get all active screening types for the Add Recommendation modal
-    # ✅ EDGE CASE HANDLER: Filter only active screening types
-    from automated_edge_case_handler import filter_active_screening_types_only
-    all_screening_types_unfiltered = ScreeningType.query.order_by(ScreeningType.name).all()
-    all_screening_types = filter_active_screening_types_only(all_screening_types_unfiltered)
+    # Get all active screening types for the Add Recommendation modal - use cache
+    try:
+        from intelligent_cache_manager import get_cache_manager
+        cache_mgr = get_cache_manager()
+        all_screening_types_data = cache_mgr.cache_screening_types(active_only=True)
+        
+        # Convert cached data back to model-like objects for template compatibility
+        class ScreeningTypeProxy:
+            def __init__(self, data):
+                for key, value in data.items():
+                    setattr(self, key, value)
+        
+        all_screening_types = [ScreeningTypeProxy(st_data) for st_data in all_screening_types_data]
+        
+    except Exception as e:
+        print(f"Cache error for all screening types, falling back to database: {e}")
+        # ✅ EDGE CASE HANDLER: Filter only active screening types
+        from automated_edge_case_handler import filter_active_screening_types_only
+        all_screening_types_unfiltered = ScreeningType.query.order_by(ScreeningType.name).all()
+        all_screening_types = filter_active_screening_types_only(all_screening_types_unfiltered)
 
     # Get all patients for the Add Recommendation modal
     patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
