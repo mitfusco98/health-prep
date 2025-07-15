@@ -51,11 +51,21 @@ def screening_list():
         validation_errors = []
         frequency_errors = []
         
+        # Fix missing frequencies for existing screenings
         for screening in screenings:
             if screening.status == "Incomplete":
                 documents = screening.documents.all() if hasattr(screening, 'documents') else []
                 if documents and len(documents) > 0:
                     validation_errors.append(f"Screening {screening.id} ({screening.screening_type}) is Incomplete but has {len(documents)} documents")
+            
+            # Populate frequency from screening type if missing
+            if not screening.frequency:
+                screening_type = ScreeningType.query.filter_by(name=screening.screening_type).first()
+                if screening_type:
+                    if screening_type.formatted_frequency:
+                        screening.frequency = screening_type.formatted_frequency
+                    elif screening_type.default_frequency:
+                        screening.frequency = screening_type.default_frequency
         
         # Check for screening types without frequencies
         screening_types_used = set(s.screening_type for s in screenings)
