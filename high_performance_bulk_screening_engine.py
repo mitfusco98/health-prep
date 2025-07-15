@@ -22,6 +22,7 @@ import os
 from app import app, db
 from models import Patient, ScreeningType, Screening, MedicalDocument
 from automated_edge_case_handler import AutomatedScreeningRefreshManager
+from database_access_layer import get_database_access_layer
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -197,6 +198,9 @@ class HighPerformanceBulkScreeningEngine:
             if not pool_initialized:
                 return False
                 
+            # Initialize database access layer
+            self.db_access_layer = await get_database_access_layer()
+                
             # Test database performance
             performance_ok = await self._test_database_performance()
             if not performance_ok:
@@ -239,6 +243,12 @@ class HighPerformanceBulkScreeningEngine:
                 
             self.metrics.total_patients = len(patients)
             logger.info(f"📊 Processing {len(patients)} patients with {self.max_concurrent_patients} concurrent workers")
+            
+            # Clean up orphaned relationships before processing
+            if hasattr(self, 'db_access_layer'):
+                cleanup_result = await self.db_access_layer.cleanup_orphaned_screening_documents()
+                if cleanup_result.records_deleted > 0:
+                    logger.info(f"🧹 Cleaned up {cleanup_result.records_deleted} orphaned relationships")
             
             # Process patients in batches using async semaphore for concurrency control
             semaphore = asyncio.Semaphore(self.max_concurrent_patients)

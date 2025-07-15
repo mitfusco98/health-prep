@@ -1431,6 +1431,10 @@ try:
     # Integrate reactive triggers with existing routes
     integrate_reactive_triggers_with_routes(app)
     
+    # Integrate enhanced screening routes with database access layer
+    from enhanced_screening_routes import integrate_enhanced_screening_routes
+    integrate_enhanced_screening_routes(app)
+    
     print("✅ High-performance bulk screening engine integrated")
 except ImportError as e:
     print(f"⚠️ High-performance engine not available: {e}")
