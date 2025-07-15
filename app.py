@@ -1420,6 +1420,23 @@ def root_redirect():
     """Redirect to home page"""
     return redirect(url_for('index'))
 
+# Initialize high-performance bulk screening engine and reactive triggers
+try:
+    from high_performance_screening_routes import integrate_high_performance_routes
+    from reactive_trigger_middleware import integrate_reactive_triggers_with_routes
+    
+    # Integrate high-performance routes
+    integrate_high_performance_routes(app)
+    
+    # Integrate reactive triggers with existing routes
+    integrate_reactive_triggers_with_routes(app)
+    
+    print("✅ High-performance bulk screening engine integrated")
+except ImportError as e:
+    print(f"⚠️ High-performance engine not available: {e}")
+except Exception as e:
+    print(f"❌ Error integrating high-performance engine: {e}")
+
 # The main home route is handled by demo_routes.py with the 'index' endpoint
 
 # Import all route modules to register them with the app

@@ -3420,102 +3420,20 @@ def screening_list():
     
     if refresh_requested:
         try:
-            # Clean up orphaned document relationships first
-            from automated_screening_routes import cleanup_orphaned_screening_documents
-            orphaned_cleaned = cleanup_orphaned_screening_documents()
+            # Use the new high-performance bulk screening engine
+            from high_performance_screening_routes import enhanced_screening_refresh
             
-            # Import and use the automated screening engine
-            from automated_screening_engine import ScreeningStatusEngine
+            # Run enhanced high-performance refresh
+            success, message, metrics = enhanced_screening_refresh(
+                tab=tab, 
+                search_query=search_query, 
+                trigger_source=f"manual_refresh_tab_{tab}"
+            )
             
-            # Initialize the engine and generate screenings for all patients
-            engine = ScreeningStatusEngine()
-            all_patient_screenings = engine.generate_all_patient_screenings()
-            
-            # Test database connection and performance before starting updates
-            try:
-                import time
-                from sqlalchemy import text
-                
-                # Test connection speed
-                start_time = time.time()
-                db.session.execute(text("SELECT 1"))
-                connection_time = time.time() - start_time
-                
-                # If database is slow, show warning and skip refresh
-                if connection_time > 1.0:  # If connection takes more than 1 second
-                    flash("Database is currently slow. Please try refresh again later.", "warning")
-                    return redirect(url_for('screening_list'))
-                
-                patients = Patient.query.all()
-                total_patients = len(patients)
-                
-                if total_patients == 0:
-                    flash("No patients found to update screenings for.", "warning")
-                    return redirect(url_for('screening_list'))
-                    
-                # Limit processing if too many patients
-                if total_patients > 50:
-                    flash(f"Too many patients ({total_patients}) for safe refresh. Please contact administrator.", "warning")
-                    return redirect(url_for('screening_list'))
-                    
-            except Exception as db_error:
-                print(f"⚠️  Database connection error during patient fetch: {db_error}")
-                flash("Database connection issue during refresh. Please try again.", "error")
-                return redirect(url_for('screening_list'))
-            
-            # Update screenings with proper document relationships
-            from automated_screening_routes import _update_patient_screenings
-            total_screenings_updated = 0
-            total_documents_linked = 0
-            
-            for patient_id, screening_data in all_patient_screenings.items():
-                try:
-                    # Add timeout protection for individual patient updates
-                    import signal
-                    
-                    def patient_update_timeout_handler(signum, frame):
-                        raise TimeoutError(f"Patient {patient_id} update timed out")
-                    
-                    signal.signal(signal.SIGALRM, patient_update_timeout_handler)
-                    signal.alarm(8)  # Reduced to 8 seconds per patient with bulk operations
-                    
-                    try:
-                        _update_patient_screenings(patient_id, screening_data)
-                        signal.alarm(0)  # Cancel timeout
-                        total_screenings_updated += len(screening_data)
-                        
-                        # Count total documents linked
-                        for screening in screening_data:
-                            if 'matched_documents' in screening:
-                                total_documents_linked += len(screening['matched_documents'])
-                    except TimeoutError:
-                        signal.alarm(0)
-                        print(f"⏱️  Timeout updating screenings for patient {patient_id}, skipping")
-                        continue
-                    except Exception as update_error:
-                        signal.alarm(0)
-                        print(f"⚠️  Error updating screenings for patient {patient_id}: {update_error}")
-                        # Continue with other patients even if one fails
-                        continue
-                        
-                except Exception as patient_error:
-                    print(f"Error updating screenings for patient {patient_id}: {patient_error}")
-                    continue
-            
-            print(f"Tab '{tab}': Cleaned up {orphaned_cleaned} orphaned document relationships")
-            print(f"Tab '{tab}': Refreshed {total_screenings_updated} automated screenings for {len(all_patient_screenings)} patients")
-            print(f"Tab '{tab}': Linked {total_documents_linked} documents using many-to-many relationships with latest parsing logic")
-            
-            # Create tab-specific success message
-            cleanup_msg = f" (cleaned up {orphaned_cleaned} invalid relationships)" if orphaned_cleaned > 0 else ""
-            if tab == 'types':
-                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships using the latest parsing rules from screening types{cleanup_msg}"
-            elif tab == 'checklist':
-                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships using current prep sheet settings{cleanup_msg}"
+            if success:
+                flash(message, "success")
             else:
-                success_msg = f"Successfully refreshed {total_screenings_updated} screenings for {len(all_patient_screenings)} patients with {total_documents_linked} document relationships based on current parsing logic{cleanup_msg}"
-            
-            flash(success_msg, "success")
+                flash(message, "danger")
             
             # Redirect back to remove the regenerate parameter from URL while preserving search
             redirect_params = {'tab': tab}
@@ -3524,10 +3442,10 @@ def screening_list():
             return redirect(url_for('screening_list', **redirect_params))
             
         except Exception as e:
-            print(f"Error refreshing automated screenings: {e}")
+            print(f"Error in high-performance refresh: {e}")
             import traceback
             traceback.print_exc()
-            flash("Database error during refresh. Please check connection and try again.", "danger")
+            flash("High-performance refresh system error. Please contact administrator.", "danger")
     
     # For the screenings tab, load existing screenings from database
     screenings = []
