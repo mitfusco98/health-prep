@@ -38,7 +38,7 @@ class HighPerformanceScreeningEngine:
         try:
             from app import app, db
             from models import Patient, ScreeningType, Screening
-            from automated_screening_engine import AutomatedScreeningEngine
+            from automated_screening_engine import ScreeningStatusEngine
             
             with app.app_context():
                 self.start_time = time.time()
@@ -58,7 +58,7 @@ class HighPerformanceScreeningEngine:
                     return False, "No active screening types found", {}
                 
                 # Initialize automated screening engine
-                engine = AutomatedScreeningEngine()
+                engine = ScreeningStatusEngine()
                 
                 # Process each patient
                 for patient in patients:
