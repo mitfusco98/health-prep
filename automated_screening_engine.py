@@ -69,7 +69,7 @@ class ScreeningStatusEngine:
     def _get_applicable_screening_types(self, patient: Patient) -> List[ScreeningType]:
         """
         Get screening types applicable to this patient based on age, gender, and conditions
-        CRITICAL: Only returns ACTIVE screening types to prevent processing inactive types
+        CRITICAL: Only returns ACTIVE screening types with defined frequencies
 
         Args:
             patient: Patient object
@@ -79,10 +79,15 @@ class ScreeningStatusEngine:
         """
         applicable_types = []
 
-        # Get all active screening types
+        # Get all active screening types with defined frequencies
         all_screening_types = ScreeningType.query.filter_by(is_active=True).all()
 
         for screening_type in all_screening_types:
+            # Skip screening types without defined frequency
+            if not self._has_valid_frequency(screening_type):
+                print(f"⚠️ Skipping {screening_type.name} - no frequency defined")
+                continue
+                
             if self._patient_qualifies_for_screening(patient, screening_type):
                 applicable_types.append(screening_type)
 
@@ -405,6 +410,32 @@ class ScreeningStatusEngine:
 
         return None
 
+    def _has_valid_frequency(self, screening_type: ScreeningType) -> bool:
+        """
+        Check if screening type has a valid frequency defined
+        
+        Args:
+            screening_type: ScreeningType object
+            
+        Returns:
+            True if frequency is properly defined
+        """
+        # Check for structured frequency (preferred)
+        has_structured_frequency = (
+            screening_type.frequency_number and 
+            screening_type.frequency_unit and
+            screening_type.frequency_number > 0
+        )
+        
+        # Check for legacy default frequency
+        has_default_frequency = (
+            screening_type.default_frequency and 
+            screening_type.default_frequency.strip() and
+            screening_type.default_frequency.lower() not in ['', 'none', 'null']
+        )
+        
+        return has_structured_frequency or has_default_frequency
+    
     def _format_frequency(self, screening_type: ScreeningType) -> str:
         """Format frequency for display"""
         if screening_type.frequency_number and screening_type.frequency_unit:

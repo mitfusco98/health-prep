@@ -13,6 +13,23 @@ import json
 screening_bp = Blueprint("screening", __name__, url_prefix="/screenings")
 
 
+def _has_valid_frequency(screening_type):
+    """Check if screening type has valid frequency defined"""
+    has_structured_frequency = (
+        screening_type.frequency_number and 
+        screening_type.frequency_unit and
+        screening_type.frequency_number > 0
+    )
+    
+    has_default_frequency = (
+        screening_type.default_frequency and 
+        screening_type.default_frequency.strip() and
+        screening_type.default_frequency.lower() not in ['', 'none', 'null']
+    )
+    
+    return has_structured_frequency or has_default_frequency
+
+
 @screening_bp.route("/")
 def screening_list():
     """List all patients with due screenings and manage screening types"""
@@ -32,14 +49,26 @@ def screening_list():
         
         # CRITICAL VALIDATION: Check for incomplete screenings with documents
         validation_errors = []
+        frequency_errors = []
+        
         for screening in screenings:
             if screening.status == "Incomplete":
                 documents = screening.documents.all() if hasattr(screening, 'documents') else []
                 if documents and len(documents) > 0:
                     validation_errors.append(f"Screening {screening.id} ({screening.screening_type}) is Incomplete but has {len(documents)} documents")
         
+        # Check for screening types without frequencies
+        screening_types_used = set(s.screening_type for s in screenings)
+        for screening_type_name in screening_types_used:
+            screening_type = ScreeningType.query.filter_by(name=screening_type_name).first()
+            if screening_type and not _has_valid_frequency(screening_type):
+                frequency_errors.append(f"Screening type '{screening_type_name}' is missing frequency definition")
+        
         if validation_errors:
             flash(f"⚠️ Data integrity issue: {len(validation_errors)} incomplete screenings have documents. Please contact admin.", "warning")
+            
+        if frequency_errors:
+            flash(f"⚠️ Frequency missing: {len(frequency_errors)} screening types need frequency defined in Types tab.", "warning")
 
         # Get all patients and screening types for the form
         patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
