@@ -449,9 +449,16 @@ def patient_detail(patient_id):
         .all()
     )
 
-    # Get screening recommendations
+    # Get screening recommendations with optimized query
     screenings = (
-        Screening.query.filter_by(patient_id=patient_id)
+        Screening.query
+        .filter_by(patient_id=patient_id)
+        .join(ScreeningType, Screening.screening_type_id == ScreeningType.id)
+        .filter(ScreeningType.is_active == True)
+        .options(
+            db.joinedload(Screening.screening_type),
+            db.selectinload(Screening.documents)
+        )
         .order_by(Screening.due_date)
         .all()
     )
@@ -740,7 +747,17 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         patient_id=patient_id, is_active=True
     ).all()
 
-    screenings = Screening.query.filter_by(patient_id=patient_id).all()
+    screenings = (
+        Screening.query
+        .filter_by(patient_id=patient_id)
+        .join(ScreeningType, Screening.screening_type_id == ScreeningType.id)
+        .filter(ScreeningType.is_active == True)
+        .options(
+            db.joinedload(Screening.screening_type),
+            db.selectinload(Screening.documents)
+        )
+        .all()
+    )
 
     # Get immunizations
     immunizations = (
@@ -1757,8 +1774,18 @@ def download_patient_prep_sheet(patient_id):
     # Get all conditions regardless of date
     conditions = Condition.query.filter_by(patient_id=patient_id).all()
 
-    # Get all screenings
-    screenings = Screening.query.filter_by(patient_id=patient_id).all()
+    # Get all screenings with optimized query
+    screenings = (
+        Screening.query
+        .filter_by(patient_id=patient_id)
+        .join(ScreeningType, Screening.screening_type_id == ScreeningType.id)
+        .filter(ScreeningType.is_active == True)
+        .options(
+            db.joinedload(Screening.screening_type),
+            db.selectinload(Screening.documents)
+        )
+        .all()
+    )
 
     # Get the most recent vitals
     vitals = (

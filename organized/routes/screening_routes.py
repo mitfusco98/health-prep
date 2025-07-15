@@ -42,43 +42,63 @@ def screening_list():
             "screening_list.html", screening_types=screening_types, active_tab="types"
         )
     else:
-        # Show patient screenings
-        screenings = (
-            Screening.query.join(Patient).order_by(Screening.due_date.asc()).all()
-        )
-        
-        # CRITICAL VALIDATION: Check for incomplete screenings with documents
-        validation_errors = []
-        frequency_errors = []
-        
-        # Fix missing frequencies for existing screenings
-        for screening in screenings:
-            if screening.status == "Incomplete":
-                documents = screening.documents.all() if hasattr(screening, 'documents') else []
-                if documents and len(documents) > 0:
-                    validation_errors.append(f"Screening {screening.id} ({screening.screening_type}) is Incomplete but has {len(documents)} documents")
+        # Show patient screenings with optimized query
+        try:
+            # Use optimized query with eager loading to prevent N+1 problems
+            screenings = (
+                Screening.query
+                .join(Patient)  # Join patient for filtering
+                .join(ScreeningType, Screening.screening_type_id == ScreeningType.id)  # Join screening type
+                .filter(ScreeningType.is_active == True)  # Only active screening types
+                .options(
+                    db.joinedload(Screening.patient),  # Eager load patient
+                    db.joinedload(Screening.screening_type),  # Eager load screening type  
+                    db.selectinload(Screening.documents)  # Eager load documents
+                )
+                .order_by(
+                    # Priority order: Due first, then Due Soon, then others
+                    db.case(
+                        (Screening.status == 'Due', 1),
+                        (Screening.status == 'Due Soon', 2),
+                        (Screening.status == 'Incomplete', 3),
+                        (Screening.status == 'Complete', 4),
+                        else_=5
+                    ),
+                    Screening.due_date.asc().nullslast(),
+                    Patient.last_name.asc()
+                )
+                .limit(1000)  # Limit results for performance
+                .all()
+            )
             
-            # Populate frequency from screening type if missing
-            if not screening.frequency:
-                screening_type = ScreeningType.query.filter_by(name=screening.screening_type).first()
-                if screening_type:
-                    if screening_type.formatted_frequency:
-                        screening.frequency = screening_type.formatted_frequency
-                    elif screening_type.default_frequency:
-                        screening.frequency = screening_type.default_frequency
-        
-        # Check for screening types without frequencies
-        screening_types_used = set(s.screening_type for s in screenings)
-        for screening_type_name in screening_types_used:
-            screening_type = ScreeningType.query.filter_by(name=screening_type_name).first()
-            if screening_type and not _has_valid_frequency(screening_type):
-                frequency_errors.append(f"Screening type '{screening_type_name}' is missing frequency definition")
-        
-        if validation_errors:
-            flash(f"⚠️ Data integrity issue: {len(validation_errors)} incomplete screenings have documents. Please contact admin.", "warning")
+            # Quick validation without additional database queries
+            validation_errors = []
+            frequency_errors = []
             
-        if frequency_errors:
-            flash(f"⚠️ Frequency missing: {len(frequency_errors)} screening types need frequency defined in Types tab.", "warning")
+            # Process screenings efficiently
+            for screening in screenings:
+                # Validate documents vs status (using already loaded data)
+                if screening.status == "Incomplete":
+                    documents = list(screening.documents) if hasattr(screening, 'documents') else []
+                    if documents and len(documents) > 0:
+                        validation_errors.append(f"Screening {screening.id} ({screening.screening_type.name if screening.screening_type else 'Unknown'}) is Incomplete but has {len(documents)} documents")
+                
+                # Use already loaded screening_type data
+                if screening.screening_type and not _has_valid_frequency(screening.screening_type):
+                    frequency_errors.append(f"Screening type '{screening.screening_type.name}' is missing frequency definition")
+            
+            # Show validation messages
+            if validation_errors:
+                flash(f"⚠️ Data integrity issue: {len(validation_errors)} incomplete screenings have documents. Please contact admin.", "warning")
+                
+            if frequency_errors:
+                flash(f"⚠️ Frequency missing: {len(frequency_errors)} screening types need frequency defined in Types tab.", "warning")
+                
+        except Exception as e:
+            # Fallback to basic query if optimized version fails
+            print(f"Optimized screening query failed: {e}")
+            screenings = Screening.query.join(Patient).order_by(Screening.due_date.asc()).limit(100).all()
+            flash("Using simplified view due to database optimization issue", "info")
 
         # Get all patients and screening types for the form
         patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
