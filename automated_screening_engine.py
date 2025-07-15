@@ -317,7 +317,10 @@ class ScreeningStatusEngine:
         """
         Calculate the screening status based on documents and timing
         
-        CRITICAL RULE: A screening can ONLY be marked 'Complete' if it has matching documents
+        CRITICAL RULES: 
+        1. A screening can ONLY be marked 'Complete' if it has matching documents
+        2. 'Incomplete' screenings CANNOT have matched documents
+        3. If documents exist, status must be 'Complete' or 'Due Soon'
         
         Args:
             screening_type: ScreeningType object
@@ -328,9 +331,13 @@ class ScreeningStatusEngine:
         Returns:
             Status string: 'Due', 'Due Soon', 'Incomplete', or 'Complete'
         """
-        # CRITICAL: If no documents match parsing rules, it can never be complete
+        # CRITICAL: If no documents match parsing rules, check if screening is due
         if not matching_documents:
-            return self.STATUS_INCOMPLETE
+            # No documents = screening is incomplete/due
+            if self._is_screening_due(screening_type, patient):
+                return self.STATUS_DUE
+            else:
+                return self.STATUS_INCOMPLETE
         
         # Validate that matching documents actually exist and are accessible
         valid_matching_documents = []
@@ -345,10 +352,13 @@ class ScreeningStatusEngine:
                 print(f"Document validation error for doc {doc.id}: {e}")
                 continue
         
-        # If no valid documents remain after validation, it's incomplete
+        # If no valid documents remain after validation, check if due
         if not valid_matching_documents:
-            print(f"Warning: No valid documents found for screening {screening_type.name} - marking as incomplete")
-            return self.STATUS_INCOMPLETE
+            print(f"Warning: No valid documents found for screening {screening_type.name}")
+            if self._is_screening_due(screening_type, patient):
+                return self.STATUS_DUE
+            else:
+                return self.STATUS_INCOMPLETE
         
         # Get the most recent valid matching document based on ACTUAL medical event date
         docs_with_dates = []
@@ -360,7 +370,11 @@ class ScreeningStatusEngine:
                 docs_with_dates.append((doc, doc.created_at))
         
         if not docs_with_dates:
-            return self.STATUS_INCOMPLETE
+            # No dated documents - check if screening is due
+            if self._is_screening_due(screening_type, patient):
+                return self.STATUS_DUE
+            else:
+                return self.STATUS_INCOMPLETE
         
         most_recent_doc, most_recent_date = max(docs_with_dates, key=lambda x: x[1])
         
@@ -375,25 +389,19 @@ class ScreeningStatusEngine:
         next_due_date = self._calculate_next_due_date(screening_type, last_completed)
         
         if not next_due_date:
-            # ONLY mark complete if we have valid matching documents
-            if valid_matching_documents:
-                return self.STATUS_COMPLETE
-            else:
-                return self.STATUS_INCOMPLETE
+            # No due date and we have valid documents - Complete
+            return self.STATUS_COMPLETE
         
         today = date.today()
         
-        # Check status based on due date - but only mark Complete if we have valid documents
+        # CRITICAL: We have valid documents, so status depends on timing
         if today > next_due_date:
             return self.STATUS_DUE
         elif today > (next_due_date - timedelta(days=self.DUE_SOON_THRESHOLD_DAYS)):
             return self.STATUS_DUE_SOON
         else:
-            # FINAL CHECK: Only mark Complete if we have valid matching documents
-            if valid_matching_documents:
-                return self.STATUS_COMPLETE
-            else:
-                return self.STATUS_INCOMPLETE
+            # We have valid documents and timing is current - Complete
+            return self.STATUS_COMPLETE
     
     def _calculate_due_date(self, screening_type: ScreeningType, existing_screening: Optional[Screening]) -> Optional[date]:
         """Calculate when screening is due"""

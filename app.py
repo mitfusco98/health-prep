@@ -1447,9 +1447,21 @@ try:
     from async_integration_middleware import integrate_async_middleware
     integrate_async_middleware(app)
     
-    # Initialize async processors
-    from async_screening_processor import initialize_async_processors
-    initialize_async_processors(app)
+    # Initialize async processors within app context
+    try:
+        from async_screening_processor import initialize_async_processors
+        initialize_async_processors(app)
+    except Exception as e:
+        print(f"❌ Error initializing async processors: {e}")
+        # Continue without async processors for now
+    
+    # Run screening validation fix
+    try:
+        from screening_validation_fix import run_screening_validation_fix
+        run_screening_validation_fix()
+    except Exception as e:
+        print(f"❌ Error running screening validation fix: {e}")
+        # Continue without fix
     
     print("✅ High-performance bulk screening engine integrated")
 except ImportError as e:

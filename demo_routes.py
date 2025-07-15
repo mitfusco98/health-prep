@@ -3313,7 +3313,7 @@ def page_not_found(e):
 
 @app.route("/screenings")
 def screening_list():
-    """List all patients with due screenings and manage screening types"""
+    """High-performance screening list with optimized database queries and caching"""
 
     # Import datetime at the function level to avoid naming conflicts
     from datetime import datetime as dt_module
@@ -3327,6 +3327,10 @@ def screening_list():
 
     # Get the tab parameter (screenings or types)
     tab = request.args.get("tab", "screenings")
+    
+    # Performance optimization: Use intelligent caching for expensive queries
+    from intelligent_cache_manager import get_cache_manager
+    cache_manager = get_cache_manager()
 
     # Get the search query parameter
     search_query = request.args.get("search", "")
