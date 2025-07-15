@@ -3460,6 +3460,10 @@ def screening_list():
                         signal.alarm(0)
                         print(f"⏱️  Timeout updating screenings for patient {patient_id}, skipping")
                         continue
+                    except Exception as update_error:
+                        signal.alarm(0)
+                        print(f"⚠️  Error updating screenings for patient {patient_id}: {update_error}")
+                        continue
                         
                 except Exception as patient_error:
                     print(f"Error updating screenings for patient {patient_id}: {patient_error}")

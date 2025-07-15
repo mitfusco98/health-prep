@@ -155,12 +155,33 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
         screenings_data: List of screening dictionaries from engine
     """
     try:
+        # Add timeout protection to database query
+        import signal
+        def db_timeout_handler(signum, frame):
+            raise TimeoutError("Database query timed out")
+        
+        signal.signal(signal.SIGALRM, db_timeout_handler)
+        signal.alarm(3)  # 3 second timeout for database query
+        
+        try:
+            # Optimize: Load all existing screenings for patient at once
+            existing_screenings = {
+                screening.screening_type: screening 
+                for screening in Screening.query.filter_by(patient_id=patient_id).all()
+            }
+            signal.alarm(0)  # Cancel timeout
+        except TimeoutError:
+            signal.alarm(0)
+            print(f"⏱️  Database timeout loading screenings for patient {patient_id}, skipping")
+            return
+        except Exception as query_error:
+            signal.alarm(0)
+            print(f"⚠️  Database error loading screenings for patient {patient_id}: {query_error}")
+            return
+        
         for screening_data in screenings_data:
-            # Find existing screening or create new one
-            existing = Screening.query.filter_by(
-                patient_id=patient_id,
-                screening_type=screening_data['screening_type']
-            ).first()
+            # Use pre-loaded screening instead of individual query
+            existing = existing_screenings.get(screening_data['screening_type'])
             
             if existing:
                 # CRITICAL VALIDATION: Complete status requires matched documents
@@ -181,14 +202,13 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 # Clear existing document relationships with timeout protection
                 try:
                     from sqlalchemy import text
-                    import signal
                     
-                    def timeout_handler(signum, frame):
-                        raise TimeoutError("Database operation timed out")
+                    def clear_timeout_handler(signum, frame):
+                        raise TimeoutError("Document clearing timed out")
                     
-                    # Set 3-second timeout for this operation
-                    signal.signal(signal.SIGALRM, timeout_handler)
-                    signal.alarm(3)
+                    # Set 2-second timeout for this operation
+                    signal.signal(signal.SIGALRM, clear_timeout_handler)
+                    signal.alarm(2)
                     
                     try:
                         result = db.session.execute(
@@ -266,10 +286,20 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 print(f"  ⚠️  FINAL CORRECTION: Complete status to Incomplete for {current_screening.screening_type} - no documents successfully linked")
                 current_screening.status = 'Incomplete'
         
-        # Commit with error handling to prevent SystemExit issues
+        # Commit with error handling and timeout protection to prevent SystemExit issues
         try:
+            signal.signal(signal.SIGALRM, db_timeout_handler)
+            signal.alarm(3)  # 3 second timeout for commit
             db.session.commit()
+            signal.alarm(0)
+            print(f"✅ Updated {len(screenings_data)} screenings for patient {patient_id}")
+        except TimeoutError:
+            signal.alarm(0)
+            db.session.rollback()
+            print(f"⏱️  Database commit timeout for patient {patient_id}")
+            raise
         except Exception as commit_error:
+            signal.alarm(0)
             print(f"ERROR during screening update commit: {commit_error}")
             db.session.rollback()
             raise
