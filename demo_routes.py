@@ -3437,13 +3437,33 @@ def screening_list():
             total_documents_linked = 0
             
             for patient_id, screening_data in all_patient_screenings.items():
-                _update_patient_screenings(patient_id, screening_data)
-                total_screenings_updated += len(screening_data)
-                
-                # Count total documents linked
-                for screening in screening_data:
-                    if 'matched_documents' in screening:
-                        total_documents_linked += len(screening['matched_documents'])
+                try:
+                    # Add timeout protection for individual patient updates
+                    import signal
+                    
+                    def patient_update_timeout_handler(signum, frame):
+                        raise TimeoutError(f"Patient {patient_id} update timed out")
+                    
+                    signal.signal(signal.SIGALRM, patient_update_timeout_handler)
+                    signal.alarm(5)  # 5 seconds per patient max
+                    
+                    try:
+                        _update_patient_screenings(patient_id, screening_data)
+                        signal.alarm(0)  # Cancel timeout
+                        total_screenings_updated += len(screening_data)
+                        
+                        # Count total documents linked
+                        for screening in screening_data:
+                            if 'matched_documents' in screening:
+                                total_documents_linked += len(screening['matched_documents'])
+                    except TimeoutError:
+                        signal.alarm(0)
+                        print(f"⏱️  Timeout updating screenings for patient {patient_id}, skipping")
+                        continue
+                        
+                except Exception as patient_error:
+                    print(f"Error updating screenings for patient {patient_id}: {patient_error}")
+                    continue
             
             print(f"Tab '{tab}': Cleaned up {orphaned_cleaned} orphaned document relationships")
             print(f"Tab '{tab}': Refreshed {total_screenings_updated} automated screenings for {len(all_patient_screenings)} patients")

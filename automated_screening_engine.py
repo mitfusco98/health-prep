@@ -208,6 +208,15 @@ class ScreeningStatusEngine:
         Returns:
             True if document matches screening criteria
         """
+        # CRITICAL: If screening type has no keywords configured, no documents can match
+        has_content_keywords = bool(screening_type.get_content_keywords())
+        has_document_keywords = bool(screening_type.get_document_keywords())
+        has_filename_keywords = bool(screening_type.filename_keywords)
+        
+        if not has_content_keywords and not has_document_keywords and not has_filename_keywords:
+            # No keywords configured - no documents can match
+            return False
+        
         # Import enhanced matcher
         try:
             from enhanced_keyword_matcher import EnhancedKeywordMatcher
@@ -218,39 +227,40 @@ class ScreeningStatusEngine:
         
         # Check content keywords with enhanced matching
         content_match = False
-        if screening_type.content_keywords and document.content:
+        if has_content_keywords and document.content:
             try:
                 content_keywords = json.loads(screening_type.content_keywords)
-                result = matcher.match_keywords_in_content(document.content, content_keywords)
-                content_match = result['is_match']
+                if content_keywords:  # Only match if keywords exist
+                    result = matcher.match_keywords_in_content(document.content, content_keywords)
+                    content_match = result['is_match']
             except (json.JSONDecodeError, TypeError):
                 pass
         
         # Check document type keywords (keep simple matching for this)
         doc_type_match = False
-        if screening_type.document_keywords and document.document_type:
+        if has_document_keywords and document.document_type:
             try:
                 doc_keywords = json.loads(screening_type.document_keywords)
-                doc_type_match = any(keyword.lower() in document.document_type.lower() 
-                                   for keyword in doc_keywords)
+                if doc_keywords:  # Only match if keywords exist
+                    doc_type_match = any(keyword.lower() in document.document_type.lower() 
+                                       for keyword in doc_keywords)
             except (json.JSONDecodeError, TypeError):
                 pass
         
         # Check filename keywords with enhanced matching
         filename_match = False
-        if screening_type.filename_keywords and document.filename:
+        if has_filename_keywords and document.filename:
             try:
                 filename_keywords = json.loads(screening_type.filename_keywords)
-                result = matcher.match_keywords_in_content(document.filename, filename_keywords)
-                filename_match = result['is_match']
+                if filename_keywords:  # Only match if keywords exist
+                    result = matcher.match_keywords_in_content(document.filename, filename_keywords)
+                    filename_match = result['is_match']
             except (json.JSONDecodeError, TypeError):
                 pass
         
         # Document matches if content matches AND (document type matches OR no doc type filter)
         # This ensures content relevance while allowing doc type filtering
-        has_doc_type_filter = bool(screening_type.document_keywords)
-        
-        if has_doc_type_filter:
+        if has_document_keywords:
             # If doc type filter exists, require both content match AND doc type match
             return (content_match or filename_match) and doc_type_match
         else:
@@ -261,31 +271,40 @@ class ScreeningStatusEngine:
         """
         Fallback simple matching method
         """
+        # CRITICAL: If screening type has no keywords configured, no documents can match
+        has_content_keywords = bool(screening_type.get_content_keywords())
+        has_document_keywords = bool(screening_type.get_document_keywords())
+        has_filename_keywords = bool(screening_type.filename_keywords)
+        
+        if not has_content_keywords and not has_document_keywords and not has_filename_keywords:
+            # No keywords configured - no documents can match
+            return False
+        
         # Check content keywords
-        if screening_type.content_keywords:
+        if has_content_keywords:
             try:
                 content_keywords = json.loads(screening_type.content_keywords)
-                if document.content and any(keyword.lower() in document.content.lower() 
+                if content_keywords and document.content and any(keyword.lower() in document.content.lower() 
                                          for keyword in content_keywords):
                     return True
             except (json.JSONDecodeError, TypeError):
                 pass
         
         # Check document type keywords
-        if screening_type.document_keywords:
+        if has_document_keywords:
             try:
                 doc_keywords = json.loads(screening_type.document_keywords)
-                if document.document_type and any(keyword.lower() in document.document_type.lower() 
+                if doc_keywords and document.document_type and any(keyword.lower() in document.document_type.lower() 
                                                for keyword in doc_keywords):
                     return True
             except (json.JSONDecodeError, TypeError):
                 pass
         
         # Check filename keywords
-        if screening_type.filename_keywords:
+        if has_filename_keywords:
             try:
                 filename_keywords = json.loads(screening_type.filename_keywords)
-                if document.filename and any(keyword.lower() in document.filename.lower() 
+                if filename_keywords and document.filename and any(keyword.lower() in document.filename.lower() 
                                           for keyword in filename_keywords):
                     return True
             except (json.JSONDecodeError, TypeError):
