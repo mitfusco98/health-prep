@@ -373,7 +373,7 @@ class Screening(db.Model):
             print(f"Error during document relationship validation: {e}")
             return 0
 
-    def add_document(self, document, confidence_score=1.0, match_source='automated'):
+    def add_document(self, document, confidence_score=1.0, match_source='automated', batch_mode=False):
         """Add a document to this screening with metadata"""
         try:
             # Check if document is already linked to avoid duplicates
@@ -383,29 +383,63 @@ class Screening(db.Model):
                     # Add document to the many-to-many relationship
                     self.documents.append(document)
                 
-                # Flush to create the relationship in the database
-                db.session.flush()
+                # Only flush if not in batch mode - batch mode will commit all at once
+                if not batch_mode:
+                    db.session.flush()
                 
-                # Update the association table with metadata if needed
-                try:
-                    from sqlalchemy import text
+                # Store metadata for later update if in batch mode
+                if batch_mode:
+                    # Store for batch processing
+                    if not hasattr(self, '_pending_document_metadata'):
+                        self._pending_document_metadata = []
+                    self._pending_document_metadata.append({
+                        'document_id': document.id,
+                        'confidence_score': confidence_score,
+                        'match_source': match_source
+                    })
+                else:
+                    # Update the association table with metadata immediately
+                    try:
+                        from sqlalchemy import text
+                        db.session.execute(
+                            text("UPDATE screening_documents SET confidence_score = :score, match_source = :source "
+                                 "WHERE screening_id = :screening_id AND document_id = :document_id"),
+                            {
+                                'score': confidence_score,
+                                'source': match_source,
+                                'screening_id': self.id,
+                                'document_id': document.id
+                            }
+                        )
+                    except Exception as e:
+                        # If metadata update fails, still keep the relationship
+                        print(f"Warning: Could not update document metadata: {e}")
+                        pass
+        except Exception as e:
+            print(f"Error adding document {document.id} to screening {self.id}: {e}")
+            raise
+    
+    def process_pending_document_metadata(self):
+        """Process any pending document metadata updates from batch operations"""
+        if hasattr(self, '_pending_document_metadata') and self._pending_document_metadata:
+            try:
+                from sqlalchemy import text
+                for metadata in self._pending_document_metadata:
                     db.session.execute(
                         text("UPDATE screening_documents SET confidence_score = :score, match_source = :source "
                              "WHERE screening_id = :screening_id AND document_id = :document_id"),
                         {
-                            'score': confidence_score,
-                            'source': match_source,
+                            'score': metadata['confidence_score'],
+                            'source': metadata['match_source'],
                             'screening_id': self.id,
-                            'document_id': document.id
+                            'document_id': metadata['document_id']
                         }
                     )
-                except Exception as e:
-                    # If metadata update fails, still keep the relationship
-                    print(f"Warning: Could not update document metadata: {e}")
-                    pass
-        except Exception as e:
-            print(f"Error adding document {document.id} to screening {self.id}: {e}")
-            raise
+                # Clear the pending metadata
+                self._pending_document_metadata = []
+            except Exception as e:
+                print(f"Warning: Could not update batch document metadata: {e}")
+                pass
 
     def remove_document(self, document):
         """Remove a document from this screening"""

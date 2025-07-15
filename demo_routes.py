@@ -3445,7 +3445,7 @@ def screening_list():
                         raise TimeoutError(f"Patient {patient_id} update timed out")
                     
                     signal.signal(signal.SIGALRM, patient_update_timeout_handler)
-                    signal.alarm(5)  # 5 seconds per patient max
+                    signal.alarm(10)  # Increased to 10 seconds per patient for batch processing
                     
                     try:
                         _update_patient_screenings(patient_id, screening_data)
@@ -3463,6 +3463,7 @@ def screening_list():
                     except Exception as update_error:
                         signal.alarm(0)
                         print(f"⚠️  Error updating screenings for patient {patient_id}: {update_error}")
+                        # Continue with other patients even if one fails
                         continue
                         
                 except Exception as patient_error:

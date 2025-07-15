@@ -257,9 +257,13 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                 
                 current_screening = new_screening
             
-            # Add document relationships using the new many-to-many table with validation
+            # Add document relationships using batch processing to avoid individual flushes
             linked_document_count = 0
             if 'matched_documents' in screening_data and screening_data['matched_documents']:
+                # Process documents in batch mode to avoid individual database flushes
+                valid_documents = []
+                
+                # First pass: validate documents
                 for document in screening_data['matched_documents']:
                     try:
                         # Get a fresh document instance from the database to avoid session conflicts
@@ -267,19 +271,35 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
                         fresh_document = db.session.get(MedicalDocument, document.id)
                         
                         if fresh_document and _validate_document_exists(fresh_document):
-                            try:
-                                current_screening.add_document(fresh_document, confidence_score=1.0, match_source='automated')
-                                linked_document_count += 1
-                                print(f"  → Linked document {fresh_document.filename} to screening {current_screening.screening_type}")
-                            except Exception as link_error:
-                                print(f"  → Error linking document {fresh_document.filename}: {link_error}")
-                                # Try to continue with other documents
-                                continue
+                            valid_documents.append(fresh_document)
                         else:
                             print(f"  → Skipping deleted/invalid document {document.id}")
                     except Exception as doc_error:
-                        print(f"  → Error linking document {document.id}: {doc_error}")
-                        # Continue with other documents even if one fails
+                        print(f"  → Error validating document {document.id}: {doc_error}")
+                        continue
+                
+                # Second pass: link documents in batch mode with limits to prevent timeouts
+                max_documents_per_screening = 50  # Limit to prevent timeouts
+                documents_to_process = valid_documents[:max_documents_per_screening]
+                
+                if len(valid_documents) > max_documents_per_screening:
+                    print(f"  ⚠️  Limiting to {max_documents_per_screening} documents out of {len(valid_documents)} for screening {current_screening.screening_type}")
+                
+                for fresh_document in documents_to_process:
+                    try:
+                        current_screening.add_document(fresh_document, confidence_score=1.0, match_source='automated', batch_mode=True)
+                        linked_document_count += 1
+                        print(f"  → Queued document {fresh_document.filename} for linking to screening {current_screening.screening_type}")
+                    except Exception as link_error:
+                        print(f"  → Error queuing document {fresh_document.filename}: {link_error}")
+                        continue
+            
+            # Process any pending document metadata from batch operations
+            try:
+                if hasattr(current_screening, 'process_pending_document_metadata'):
+                    current_screening.process_pending_document_metadata()
+            except Exception as metadata_error:
+                print(f"  ⚠️  Error processing document metadata: {metadata_error}")
             
             # FINAL VALIDATION: If marked Complete but no documents were actually linked, correct the status
             if current_screening.status == 'Complete' and linked_document_count == 0:
@@ -289,20 +309,20 @@ def _update_patient_screenings(patient_id: int, screenings_data: list):
         # Commit with error handling and timeout protection to prevent SystemExit issues
         try:
             signal.signal(signal.SIGALRM, db_timeout_handler)
-            signal.alarm(3)  # 3 second timeout for commit
+            signal.alarm(5)  # Increased to 5 seconds for batch commit
             db.session.commit()
             signal.alarm(0)
             print(f"✅ Updated {len(screenings_data)} screenings for patient {patient_id}")
         except TimeoutError:
             signal.alarm(0)
             db.session.rollback()
-            print(f"⏱️  Database commit timeout for patient {patient_id}")
-            raise
+            print(f"⏱️  Database commit timeout for patient {patient_id} - screenings skipped")
+            # Don't raise - continue with other patients
         except Exception as commit_error:
             signal.alarm(0)
             print(f"ERROR during screening update commit: {commit_error}")
             db.session.rollback()
-            raise
+            # Don't raise - continue with other patients
         
     except Exception as e:
         db.session.rollback()
