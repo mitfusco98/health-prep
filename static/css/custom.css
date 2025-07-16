@@ -49,9 +49,9 @@
 
 /* Status dropdown styling to match buttons */
 .status-select {
-    border-color: #6c757d;
+    border-color: #17a2b8;
     background-color: transparent;
-    color: #6c757d;
+    color: #17a2b8;
     border-radius: 0.25rem;
     transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
     text-align: center;
@@ -63,7 +63,7 @@
 }
 
 .status-select:hover, .status-select:focus {
-    background-color: #6c757d;
+    background-color: #17a2b8;
     color: #fff;
 }
 
@@ -111,8 +111,8 @@
 
 .keywords-display:focus {
     background-color: #343a40;
-    border-color: #6c757d;
-    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+    border-color: #17a2b8;
+    box-shadow: 0 0 0 0.2rem rgba(23, 162, 184, 0.25);
 }
 
 .keyword-tag {
@@ -123,11 +123,11 @@
 
 .keyword-tag:hover {
     background-color: #5a6268;
-    border-color: #6c757d;
+    border-color: #17a2b8;
 }
 
 .keyword-tag .section-label {
-    background-color: #6c757d;
+    background-color: #17a2b8;
     color: #fff;
 }
 
@@ -168,9 +168,9 @@
 
 .keywords-input:focus {
     background-color: #495057;
-    border-color: #6c757d;
+    border-color: #17a2b8;
     color: #e9ecef;
-    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(23, 162, 184, 0.25);
 }
 
 .keywords-input::placeholder {
@@ -187,9 +187,9 @@
 
 .section-selector:focus {
     background-color: #495057;
-    border-color: #6c757d;
+    border-color: #17a2b8;
     color: #e9ecef;
-    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(23, 162, 184, 0.25);
 }
 
 .section-selector option {
@@ -200,15 +200,15 @@
 /* Keywords management buttons */
 .keywords-btn {
     background-color: transparent;
-    border: 1px solid #6c757d;
-    color: #6c757d;
+    border: 1px solid #17a2b8;
+    color: #17a2b8;
     border-radius: 0.25rem;
     padding: 0.375rem 0.75rem;
     transition: all 0.15s ease-in-out;
 }
 
 .keywords-btn:hover {
-    background-color: #6c757d;
+    background-color: #17a2b8;
     color: #fff;
 }
 

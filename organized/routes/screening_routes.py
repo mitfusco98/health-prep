@@ -262,17 +262,17 @@ def toggle_screening_type_status(screening_type_id):
     
     # Toggle status
     new_status = not screening_type.is_active
+    screening_type.is_active = new_status
     
-    # Sync all variants with unified status management
-    variant_count = variant_manager.sync_variant_statuses(base_name, new_status)
+    # Optionally sync all variants (uncomment if you want unified status across variants)
+    # variant_manager.sync_variant_statuses(base_name, new_status)
+    
+    db.session.commit()
     
     consolidated_status = variant_manager.get_consolidated_status(base_name)
     status_msg = "active" if consolidated_status else "inactive"
     
-    if variant_count > 1:
-        flash(f'All {variant_count} variants of "{base_name}" have been set to {status_msg}.', "success")
-    else:
-        flash(f'Screening type "{screening_type.name}" status updated to {status_msg}.', "success")
+    flash(f'Screening type "{screening_type.name}" status updated. Consolidated "{base_name}" status is {status_msg}.', "success")
     
     return redirect(url_for("screening.screening_list", tab="types"))
 

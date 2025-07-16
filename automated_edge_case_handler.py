@@ -231,9 +231,7 @@ class AutomatedScreeningRefreshManager:
                     for screening in existing_screenings:
                         try:
                             # Remove document relationships first to avoid FK issues
-                            # Use SQLAlchemy relationship methods to clear many-to-many relationships
-                            for doc in list(screening.documents):
-                                screening.documents.remove(doc)
+                            screening.documents.clear()
                             db.session.delete(screening)
                             cleanup_count += 1
                         except Exception as cleanup_error:
