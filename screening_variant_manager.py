@@ -43,15 +43,29 @@ class ScreeningVariantManager:
         return None
 
     def find_screening_variants(self, base_name: str) -> List[ScreeningType]:
-        """Find all screening type variants for a base name"""
+        """Find all screening type variants and duplicates for a base name"""
         variants = []
         all_screenings = ScreeningType.query.all()
 
         for screening in all_screenings:
-            if self.extract_base_name(screening.name).lower() == base_name.lower():
+            extracted_base = self.extract_base_name(screening.name).lower()
+            
+            # Match by extracted base name (handles pattern-based variants)
+            if extracted_base == base_name.lower():
+                variants.append(screening)
+            # Also match by exact name (handles duplicate names)
+            elif screening.name.lower() == base_name.lower():
                 variants.append(screening)
 
-        return variants
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_variants = []
+        for variant in variants:
+            if variant.id not in seen:
+                seen.add(variant.id)
+                unique_variants.append(variant)
+
+        return unique_variants
 
     def get_consolidated_screening_groups(self) -> Dict[str, List[ScreeningType]]:
         """Get all screening types grouped by base name"""
@@ -104,9 +118,39 @@ class ScreeningVariantManager:
         if not new_status:
             self._trigger_deactivation_cascade(base_name)
 
+    def find_all_related_screening_types(self, screening_type_id: int) -> List[ScreeningType]:
+        """Find all screening types related to the given one (variants + exact duplicates)"""
+        screening_type = ScreeningType.query.get(screening_type_id)
+        if not screening_type:
+            return []
+        
+        related_screenings = []
+        all_screenings = ScreeningType.query.all()
+        
+        base_name = self.extract_base_name(screening_type.name)
+        original_name = screening_type.name
+        
+        for screening in all_screenings:
+            # Include if it's a pattern-based variant
+            if self.extract_base_name(screening.name).lower() == base_name.lower():
+                related_screenings.append(screening)
+            # Include if it's an exact name duplicate
+            elif screening.name.lower() == original_name.lower():
+                related_screenings.append(screening)
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_screenings = []
+        for screening in related_screenings:
+            if screening.id not in seen:
+                seen.add(screening.id)
+                unique_screenings.append(screening)
+        
+        return unique_screenings
+
     def sync_single_variant_status(self, screening_type_id: int, new_status: bool) -> bool:
         """
-        Sync status of a single variant and all its related variants
+        Sync status of a single variant and all its related variants and duplicates
 
         Args:
             screening_type_id: ID of the screening type being changed
@@ -121,22 +165,20 @@ class ScreeningVariantManager:
             if not screening_type:
                 return False
 
-            base_name = self.extract_base_name(screening_type.name)
+            # Find ALL related screening types (variants + exact duplicates)
+            related_screenings = self.find_all_related_screening_types(screening_type_id)
 
-            # Find all variants of this base name
-            variants = self.find_screening_variants(base_name)
-
-            # Update status for all variants
-            for variant in variants:
-                variant.is_active = new_status
-                print(f"Setting {variant.name} (ID: {variant.id}) to {'active' if new_status else 'inactive'}")
+            # Update status for all related screening types
+            for related_screening in related_screenings:
+                related_screening.is_active = new_status
+                print(f"Setting {related_screening.name} (ID: {related_screening.id}) to {'active' if new_status else 'inactive'}")
 
             db.session.commit()
-            print(f"Successfully synced {len(variants)} variants for base name '{base_name}' to {'active' if new_status else 'inactive'}")
+            print(f"Successfully synced {len(related_screenings)} related screening types to {'active' if new_status else 'inactive'}")
 
             # Trigger cascade cleanup if deactivating
             if not new_status:
-                self._trigger_deactivation_cascade(base_name)
+                self._trigger_deactivation_cascade_by_screenings(related_screenings)
 
             return True
 
@@ -156,6 +198,17 @@ class ScreeningVariantManager:
                 handle_screening_type_change(variant.id, False)
         except Exception as e:
             print(f"Warning: Could not trigger deactivation cascade for {base_name}: {e}")
+
+    def _trigger_deactivation_cascade_by_screenings(self, screenings: List[ScreeningType]):
+        """Trigger cascade cleanup when specific screening types are deactivated"""
+        try:
+            from automated_edge_case_handler import handle_screening_type_change
+            
+            # Clean up all existing screenings for these specific screening types
+            for screening in screenings:
+                handle_screening_type_change(screening.id, False)
+        except Exception as e:
+            print(f"Warning: Could not trigger deactivation cascade for screening types: {e}")
 
     def get_variant_display_info(self, screening: ScreeningType) -> Dict[str, str]:
         """Get display information for a screening variant"""
