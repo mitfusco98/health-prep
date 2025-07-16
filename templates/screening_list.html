@@ -73,27 +73,27 @@ document.addEventListener('DOMContentLoaded', function() {
 function refreshScreenings(event, tab) {
     // Prevent default link behavior
     event.preventDefault();
-
+    
     const button = event.target.closest('a');
     const originalText = button.innerHTML;
-
+    
     const confirmMessage = tab === 'types' 
         ? 'Refresh all automated screenings using the current parsing rules from this tab? This will update document matches immediately.'
         : tab === 'checklist'
         ? 'Refresh all automated screenings using current prep sheet settings? This will update document relationships based on the latest configuration.'
         : 'Refresh all automated screenings based on current parsing logic? This may take a moment.';
-
+    
     if (!confirm(confirmMessage)) {
         return false;
     }
-
+    
     // Show loading state
     button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
     button.style.pointerEvents = 'none';
-
+    
     // Navigate to the refresh URL
     window.location.href = button.href;
-
+    
     return false;
 }
 
@@ -239,9 +239,9 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </form>
     </div>
-
-
-
+    
+    
+    
     <div class="card-body p-0">
         {% if screenings %}
         <div class="table-responsive">
@@ -760,7 +760,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         <div class="mb-3">
                             <label class="form-label">Available Status Options</label>
-                            <div id="status-buttons"` class="d-flex flex-wrap gap-2 mb-3">
+                            <div id="status-buttons" class="d-flex flex-wrap gap-2 mb-3">
                                 {% set current_status_list = settings.status_options_list if settings else ['due'] %}
 
                                 <button type="button" class="btn status-btn {% if 'due' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
@@ -891,36 +891,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     {% if active_screening_types %}
                     <hr class="my-4">
                     <h6 class="mb-3">Active Screening Types Cutoffs</h6>
-                    <p class="text-muted small mb-3">Individual cutoff settings for each consolidated screening type in default checklist items</p>
+                    <p class="text-muted small mb-3">These cutoffs apply to all active screening types in default checklist items</p>
+
                     <div class="row">
-                        {% set current_default_list = settings.default_items_list if settings and settings.default_items_list else [] %}
-                        {% set processed_base_names = [] %}
                         {% for screening in active_screening_types %}
-                            {% set base_name = variant_manager.extract_base_name(screening.name) %}
-                            {% if base_name in current_default_list and base_name not in processed_base_names %}
-                                {% set _ = processed_base_names.append(base_name) %}
-                                {% set variants = variant_manager.find_screening_variants(base_name) %}
-                                <div class="col-md-6 mb-3">
-                                    <label for="screening_cutoff_{{ base_name|replace(' ', '_')|lower }}" class="form-label">
-                                        <i class="fas fa-check-circle text-info me-2"></i>{{ base_name }}
-                                        {% if variants|length > 1 %}
-                                        <small class="text-muted">({{ variants|length }} variants)</small>
-                                        {% endif %}
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="number" class="form-control screening-cutoff" 
-                                               id="screening_cutoff_{{ base_name|replace(' ', '_')|lower }}" 
-                                               name="screening_cutoff_{{ base_name }}"
-                                               data-screening-name="{{ base_name }}"
-                                               data-original-value="{{ settings.get_screening_cutoff(base_name) if settings else 0 }}"
-                                               data-user-modified="false"
-                                               data-preset-modified="false"
-                                               min="0" max="120" 
-                                               value="{{ settings.get_screening_cutoff(base_name) if settings else 0 }}" required>
-                                        <span class="input-group-text">months</span>
-                                    </div>
-                                    <div class="form-text">How old {{ base_name.lower() }} to include (0 = to last appointment)</div>
+                            {% if screening.name in (settings.default_items_list if settings and settings.default_items_list else []) %}
+                            <div class="col-md-4 col-lg-3 mb-2">
+                                <div class="text-center">
+                                    <h6 class="text-info">{{ screening.name }}</h6>
+                                    {% set cutoff_value = settings.screening_cutoffs_dict.get(screening.name, 0) if settings and settings.screening_cutoffs_dict else 0 %}
+                                    <span class="badge bg-info">{{ cutoff_value ~ ' months' if cutoff_value > 0 else 'To Last Appointment Date' }}</span>
                                 </div>
+                            </div>
                             {% endif %}
                         {% endfor %}
                     </div>
@@ -1058,7 +1040,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <div class="input-group">
                                         <input type="number" class="form-control screening-cutoff" 
                                                id="screening_cutoff_{{ base_name|replace(' ', '_')|lower }}" 
-                                               name="screening_cutoff_{{ base_name }}"
+                                               name="screening_cutoff_{{ base_name|replace(' ', '_')|lower }}"
                                                data-screening-name="{{ base_name }}"
                                                data-original-value="{{ settings.get_screening_cutoff(base_name) if settings else 0 }}"
                                                data-user-modified="false"
@@ -1067,7 +1049,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                                value="{{ settings.get_screening_cutoff(base_name) if settings else 0 }}" required>
                                         <span class="input-group-text">months</span>
                                     </div>
-                                    <div class="form-text">How old {{ base_name.lower() }} to include (0 = to last appointment)</div>
+                                    <div class="form-text">Cutoff for {{ base_name }} documents 
+                                        {% if variants|length > 1 %}
+                                        (includes: {{ variants|map(attribute='name')|join(', ') }})
+                                        {% endif %}
+                                    </div>
                                 </div>
                             {% endif %}
                         {% endfor %}
