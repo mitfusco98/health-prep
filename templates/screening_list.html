@@ -894,15 +894,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="text-muted small mb-3">These cutoffs apply to all active screening types in default checklist items</p>
 
                     <div class="row">
+                        {% set processed_base_names = [] %}
                         {% for screening in active_screening_types %}
                             {% if screening.name in (settings.default_items_list if settings and settings.default_items_list else []) %}
-                            <div class="col-md-4 col-lg-3 mb-2">
-                                <div class="text-center">
-                                    <h6 class="text-info">{{ screening.name }}</h6>
-                                    {% set cutoff_value = settings.screening_cutoffs_dict.get(screening.name, 0) if settings and settings.screening_cutoffs_dict else 0 %}
-                                    <span class="badge bg-info">{{ cutoff_value ~ ' months' if cutoff_value > 0 else 'To Last Appointment Date' }}</span>
-                                </div>
-                            </div>
+                                {% set base_name = variant_manager.extract_base_name(screening.name) %}
+                                {% if base_name not in processed_base_names %}
+                                    {% set _ = processed_base_names.append(base_name) %}
+                                    {% set variants = variant_manager.find_screening_variants(base_name) %}
+                                    {% set active_variants = variants|selectattr('is_active')|list %}
+                                    {% if active_variants %}
+                                        <div class="col-md-4 col-lg-3 mb-2">
+                                            <div class="text-center">
+                                                <h6 class="text-info">{{ base_name }}</h6>
+                                                {% if active_variants|length > 1 %}
+                                                    <small class="text-muted d-block mb-1">{{ active_variants|length }} variants</small>
+                                                {% endif %}
+                                                {% set cutoff_value = settings.get_screening_cutoff(base_name) if settings else 0 %}
+                                                <span class="badge bg-info">{{ cutoff_value ~ ' months' if cutoff_value > 0 else 'To Last Appointment Date' }}</span>
+                                                {% if active_variants|length > 1 %}
+                                                    <div class="mt-1">
+                                                        <small class="text-muted" style="font-size: 0.7rem;">
+                                                            Applies to: {{ active_variants|map(attribute='name')|join(', ') }}
+                                                        </small>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
                             {% endif %}
                         {% endfor %}
                     </div>
