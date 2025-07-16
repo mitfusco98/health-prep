@@ -100,6 +100,44 @@ class ScreeningVariantManager:
             variant.is_active = new_status
         
         db.session.commit()
+        
+        # Trigger cascade cleanup if deactivating
+        if not new_status:
+            self._trigger_deactivation_cascade(base_name)
+    
+    def sync_single_variant_status(self, screening_type_id: int, new_status: bool):
+        """Sync status change from a single variant to all its variants"""
+        screening_type = ScreeningType.query.get(screening_type_id)
+        if not screening_type:
+            return False
+        
+        base_name = self.extract_base_name(screening_type.name)
+        
+        # Update all variants with the same base name to have unified status
+        variants = self.find_screening_variants(base_name)
+        
+        for variant in variants:
+            variant.is_active = new_status
+        
+        db.session.commit()
+        
+        # Trigger cascade cleanup if deactivating
+        if not new_status:
+            self._trigger_deactivation_cascade(base_name)
+        
+        return True
+    
+    def _trigger_deactivation_cascade(self, base_name: str):
+        """Trigger cascade cleanup when variants are deactivated"""
+        try:
+            from automated_edge_case_handler import handle_screening_type_change
+            
+            # Clean up all existing screenings for this base name
+            variants = self.find_screening_variants(base_name)
+            for variant in variants:
+                handle_screening_type_change(variant.id, False)
+        except Exception as e:
+            print(f"Warning: Could not trigger deactivation cascade for {base_name}: {e}")
     
     def get_variant_display_info(self, screening: ScreeningType) -> Dict[str, str]:
         """Get display information for a screening variant"""

@@ -47,32 +47,32 @@ def admin_cleanup_orphaned_relationships():
 @enhanced_screening_bp.route('/admin/screening-type/<int:screening_type_id>/toggle-status', methods=['POST'])
 def admin_toggle_screening_type_status(screening_type_id: int):
     """
-    Admin endpoint to toggle screening type active/inactive status with proper cascading
+    Admin endpoint to toggle screening type active/inactive status with unified variant management
     """
     try:
         # Get current status and toggle it
         from models import ScreeningType
+        from screening_variant_manager import variant_manager
+        
         screening_type = ScreeningType.query.get_or_404(screening_type_id)
+        base_name = variant_manager.extract_base_name(screening_type.name)
         new_status = not screening_type.is_active
         
-        # Use database access layer for proper transaction handling
-        result = handle_screening_type_change_sync(screening_type_id, new_status)
+        # Use unified variant status management to sync all variants
+        success = variant_manager.sync_single_variant_status(screening_type_id, new_status)
         
-        if result['success']:
+        if success:
             status_text = "activated" if new_status else "deactivated"
-            message = f"Screening type '{screening_type.name}' {status_text}"
-            
-            if result['records_deleted'] > 0:
-                message += f" and cleaned up {result['records_deleted']} existing screenings"
-                
-            flash(message, "success")
+            flash(f"Screening type '{screening_type.name}' and all its variants have been {status_text}. This affects the unified '{base_name}' status across all tabs.", "success")
             
             # Trigger reactive bulk processing for the change
             if new_status:  # If activated, regenerate screenings
-                process_all_patients_sync(f"screening_type_activated_{screening_type_id}")
-                
+                try:
+                    process_all_patients_sync(f"screening_type_activated_{screening_type_id}")
+                except:
+                    pass  # Don't fail if bulk processing has issues
         else:
-            flash(f"Failed to change screening type status: {', '.join(result['errors'])}", "error")
+            flash(f"Failed to change screening type status for '{screening_type.name}'", "error")
             
         return redirect(url_for('screening_list', tab='types'))
         

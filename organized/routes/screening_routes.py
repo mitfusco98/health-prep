@@ -226,16 +226,11 @@ def delete_screening_type(screening_type_id):
     ).count()
 
     if patient_screenings > 0:
-        # Mark as inactive instead of deleting
-        screening_type.is_active = False
-        db.session.commit()
-        
-        # Check if this affects the consolidated status
-        consolidated_status = variant_manager.get_consolidated_status(base_name)
-        status_msg = "active" if consolidated_status else "inactive"
+        # Use unified variant status management to sync all variants
+        variant_manager.sync_single_variant_status(screening_type_id, False)
         
         flash(
-            f'Screening type "{screening_type.name}" has been marked as inactive because it is used by {patient_screenings} patient(s). Consolidated "{base_name}" status is now {status_msg}.',
+            f'Screening type "{screening_type.name}" and all its variants have been marked as inactive because it is used by {patient_screenings} patient(s). This affects the unified "{base_name}" status.',
             "warning",
         )
     else:
@@ -256,23 +251,21 @@ def delete_screening_type(screening_type_id):
 
 @screening_bp.route("/types/<int:screening_type_id>/toggle_status")
 def toggle_screening_type_status(screening_type_id):
-    """Toggle screening type status and sync variants"""
+    """Toggle screening type status and sync all variants with unified status"""
     screening_type = ScreeningType.query.get_or_404(screening_type_id)
     base_name = variant_manager.extract_base_name(screening_type.name)
     
     # Toggle status
     new_status = not screening_type.is_active
-    screening_type.is_active = new_status
     
-    # Optionally sync all variants (uncomment if you want unified status across variants)
-    # variant_manager.sync_variant_statuses(base_name, new_status)
+    # Use unified variant status management to sync all variants
+    success = variant_manager.sync_single_variant_status(screening_type_id, new_status)
     
-    db.session.commit()
-    
-    consolidated_status = variant_manager.get_consolidated_status(base_name)
-    status_msg = "active" if consolidated_status else "inactive"
-    
-    flash(f'Screening type "{screening_type.name}" status updated. Consolidated "{base_name}" status is {status_msg}.', "success")
+    if success:
+        status_text = "activated" if new_status else "deactivated"
+        flash(f'Screening type "{screening_type.name}" and all its variants have been {status_text}. This affects the unified "{base_name}" status across all tabs.', "success")
+    else:
+        flash(f'Error updating screening type status for "{screening_type.name}".', "error")
     
     return redirect(url_for("screening.screening_list", tab="types"))
 
