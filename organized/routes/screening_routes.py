@@ -264,6 +264,14 @@ def toggle_screening_type_status(screening_type_id):
     if success:
         status_text = "activated" if new_status else "deactivated"
         flash(f'Screening type "{screening_type.name}" and all its variants have been {status_text}. This affects the unified "{base_name}" status across all tabs.', "success")
+        
+        # Additional check: Trigger edge case handler for proper cleanup
+        if not new_status:
+            try:
+                from automated_edge_case_handler import handle_screening_type_change
+                handle_screening_type_change(screening_type_id, new_status)
+            except Exception as e:
+                print(f"Warning: Edge case handler failed: {e}")
     else:
         flash(f'Error updating screening type status for "{screening_type.name}".', "error")
     

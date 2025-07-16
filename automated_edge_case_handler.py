@@ -231,7 +231,10 @@ class AutomatedScreeningRefreshManager:
                     for screening in existing_screenings:
                         try:
                             # Remove document relationships first to avoid FK issues
-                            screening.documents.clear()
+                            if hasattr(screening, 'documents') and screening.documents:
+                                # Clear the relationship properly
+                                for doc in list(screening.documents):
+                                    screening.documents.remove(doc)
                             db.session.delete(screening)
                             cleanup_count += 1
                         except Exception as cleanup_error:
