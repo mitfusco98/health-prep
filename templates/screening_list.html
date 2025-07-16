@@ -2,6 +2,9 @@
 
 {% block title %}HealthPrep - Screening List{% endblock %}
 
+<!-- Include screening modals JavaScript -->
+<script src="{{ url_for('static', filename='js/screening_modals.js') }}"></script>
+
 {% block extra_js %}
 <script>
 // Load keywords and display as badges
@@ -519,9 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="btn btn-outline-secondary" type="submit">Search</button>
                 </form>
 
-                <a href="{{ url_for('screening_list', tab='types', regenerate='true', search=search_query) }}" class="btn btn-success me-2" onclick="return refreshScreenings(event, 'types')">
-                    <i class="fas fa-sync-alt me-1"></i>Refresh
-                </a>
+
 
                 <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
                     Add Type
@@ -744,9 +745,6 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h4 class="mb-0">Prep Sheet Checklist Settings</h4>
-                <a href="{{ url_for('screening_list', tab='checklist', regenerate='true', search=search_query) }}" class="btn btn-success" onclick="return refreshScreenings(event, 'checklist')">
-                    <i class="fas fa-sync-alt me-1"></i>Refresh Screenings
-                </a>
             </div>
 
             <!-- Status Options Configuration -->
@@ -1023,28 +1021,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     {% if active_screening_types %}
                     <hr class="my-4">
                     <h6 class="mb-3">Active Screening Types Cutoffs</h6>
-                    <p class="text-muted small mb-3">Individual cutoff settings for each active screening type in default checklist items</p>
+                    <p class="text-muted small mb-3">Individual cutoff settings for each consolidated screening type in default checklist items</p>
                     <div class="row">
+                        {% set current_default_list = settings.default_items_list if settings and settings.default_items_list else [] %}
+                        {% set processed_base_names = [] %}
                         {% for screening in active_screening_types %}
-                            {% if screening.name in (settings.default_items_list if settings and settings.default_items_list else []) %}
-                            <div class="col-md-6 mb-3">
-                                <label for="screening_cutoff_{{ loop.index }}" class="form-label">
-                                    <i class="fas fa-check-circle text-info me-2"></i>{{ screening.name }}
-                                </label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control screening-cutoff" 
-                                           id="screening_cutoff_{{ loop.index }}" 
-                                           name="screening_cutoff_{{ screening.name|replace(' ', '_')|lower }}"
-                                           data-screening-name="{{ screening.name }}"
-                                           data-original-value="{{ settings.get_screening_cutoff(screening.name) if settings else 0 }}"
-                                           data-user-modified="false"
-                                           data-preset-modified="false"
-                                           min="0" max="120" 
-                                           value="{{ settings.get_screening_cutoff(screening.name) if settings else 0 }}" required>
-                                    <span class="input-group-text">months</span>
+                            {% set base_name = variant_manager.extract_base_name(screening.name) %}
+                            {% if base_name in current_default_list and base_name not in processed_base_names %}
+                                {% set _ = processed_base_names.append(base_name) %}
+                                {% set variants = variant_manager.find_screening_variants(base_name) %}
+                                <div class="col-md-6 mb-3">
+                                    <label for="screening_cutoff_{{ base_name|replace(' ', '_')|lower }}" class="form-label">
+                                        <i class="fas fa-check-circle text-info me-2"></i>{{ base_name }}
+                                        {% if variants|length > 1 %}
+                                        <small class="text-muted">({{ variants|length }} variants)</small>
+                                        {% endif %}
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control screening-cutoff" 
+                                               id="screening_cutoff_{{ base_name|replace(' ', '_')|lower }}" 
+                                               name="screening_cutoff_{{ base_name|replace(' ', '_')|lower }}"
+                                               data-screening-name="{{ base_name }}"
+                                               data-original-value="{{ settings.get_screening_cutoff(base_name) if settings else 0 }}"
+                                               data-user-modified="false"
+                                               data-preset-modified="false"
+                                               min="0" max="120" 
+                                               value="{{ settings.get_screening_cutoff(base_name) if settings else 0 }}" required>
+                                        <span class="input-group-text">months</span>
+                                    </div>
+                                    <div class="form-text">Cutoff for {{ base_name }} documents 
+                                        {% if variants|length > 1 %}
+                                        (includes: {{ variants|map(attribute='name')|join(', ') }})
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                <div class="form-text">Cutoff for {{ screening.name }} documents</div>
-                            </div>
                             {% endif %}
                         {% endfor %}
                     </div>

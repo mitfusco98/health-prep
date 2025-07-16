@@ -166,5 +166,48 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add base name to selected screenings
             addToSelectedScreenings(baseName);
         }
+        
+        // Update display
+        updateScreeningDisplay();
     }
+    
+    function addToSelectedScreenings(value) {
+        const hiddenInput = document.getElementById('screening-selections');
+        const currentValue = hiddenInput.value;
+        const currentList = currentValue ? currentValue.split(',') : [];
+        
+        if (!currentList.includes(value)) {
+            currentList.push(value);
+            hiddenInput.value = currentList.join(',');
+        }
+    }
+    
+    function removeFromSelectedScreenings(value) {
+        const hiddenInput = document.getElementById('screening-selections');
+        const currentValue = hiddenInput.value;
+        const currentList = currentValue ? currentValue.split(',') : [];
+        
+        const index = currentList.indexOf(value);
+        if (index > -1) {
+            currentList.splice(index, 1);
+            hiddenInput.value = currentList.join(',');
+        }
+    }
+    
+    function updateScreeningDisplay() {
+        const hiddenInput = document.getElementById('screening-selections');
+        const displayElement = document.getElementById('screening-list-display');
+        
+        if (hiddenInput && displayElement) {
+            const currentValue = hiddenInput.value;
+            const displayText = currentValue ? currentValue.replace(/,/g, ', ') : 'None';
+            displayElement.textContent = displayText;
+        }
+    }
+    
+    // Make functions globally available
+    window.toggleConsolidatedScreening = toggleConsolidatedScreening;
+    window.addToSelectedScreenings = addToSelectedScreenings;
+    window.removeFromSelectedScreenings = removeFromSelectedScreenings;
+    window.updateScreeningDisplay = updateScreeningDisplay;
 });
