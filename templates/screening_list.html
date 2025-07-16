@@ -546,76 +546,99 @@ document.addEventListener('DOMContentLoaded', function() {
                     </tr>
                 </thead>
                 <tbody>
+                    {% set processed_base_names = [] %}
                     {% for screening_type in screening_types %}
-                    <tr>
-                        <td>
-                            <div>
+                    {% set base_name = variant_manager.extract_base_name(screening_type.name) %}
+                    {% if base_name not in processed_base_names %}
+                        {% set _ = processed_base_names.append(base_name) %}
+                        {% set variants = variant_manager.find_screening_variants(base_name) %}
+                        {% set consolidated_status = variant_manager.get_consolidated_status(base_name) %}
+                        {% set primary_screening = variant_manager.get_primary_screening_for_base(base_name) %}
+                        <tr>
+                            <td>
                                 <div>
-                                    <strong>{{ screening_type.name }}</strong>
-                                </div>
-                                <div class="mt-1">
-                                    <div id="keywords-display-{{ screening_type.id }}" class="keywords-badges-container">
-                                        <small class="text-muted">Loading keywords...</small>
+                                    <div>
+                                        <strong>{{ base_name }}</strong>
+                                        {% if variants|length > 1 %}
+                                        <small class="text-muted">({{ variants|length }} variants)</small>
+                                        <div class="mt-1">
+                                            {% for variant in variants %}
+                                                <small class="badge bg-light text-dark me-1">{{ variant.name }}</small>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="mt-1">
+                                        <div id="keywords-display-{{ primary_screening.id }}" class="keywords-badges-container">
+                                            <small class="text-muted">Loading keywords...</small>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td>{{ screening_type.formatted_frequency }}</td>
-                        <td>
-                            {% if screening_type.gender_specific %}
-                                {{ screening_type.gender_specific }}
-                            {% else %}
-                                All Genders
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if screening_type.min_age and screening_type.max_age %}
-                                Ages {{ screening_type.min_age }} to {{ screening_type.max_age }}
-                            {% elif screening_type.min_age %}
-                                Age {{ screening_type.min_age }}+
-                            {% elif screening_type.max_age %}
-                                Up to age {{ screening_type.max_age }}
-                            {% else %}
-                                All Ages
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% set trigger_conditions = screening_type.get_trigger_conditions() %}
-                            {% if trigger_conditions %}
-                                <div class="d-flex flex-wrap gap-1">
-                                    {% for condition in trigger_conditions[:3] %}
-                                        <span class="badge bg-info text-dark small" title="{{ condition.display }} ({{ condition.code }})">
-                                            {{ condition.display|truncate(20) }}
-                                        </span>
-                                    {% endfor %}
-                                    {% if trigger_conditions|length > 3 %}
-                                        <span class="badge bg-light text-dark small">+{{ trigger_conditions|length - 3 }} more</span>
+                            </td>
+                            <td>{{ primary_screening.formatted_frequency }}</td>
+                            <td>
+                                {% if primary_screening.gender_specific %}
+                                    {{ primary_screening.gender_specific }}
+                                {% else %}
+                                    All Genders
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if primary_screening.min_age and primary_screening.max_age %}
+                                    Ages {{ primary_screening.min_age }} to {{ primary_screening.max_age }}
+                                {% elif primary_screening.min_age %}
+                                    Age {{ primary_screening.min_age }}+
+                                {% elif primary_screening.max_age %}
+                                    Up to age {{ primary_screening.max_age }}
+                                {% else %}
+                                    All Ages
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set trigger_conditions = primary_screening.get_trigger_conditions() %}
+                                {% if trigger_conditions %}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for condition in trigger_conditions[:3] %}
+                                            <span class="badge bg-info text-dark small" title="{{ condition.display }} ({{ condition.code }})">
+                                                {{ condition.display|truncate(20) }}
+                                            </span>
+                                        {% endfor %}
+                                        {% if trigger_conditions|length > 3 %}
+                                            <span class="badge bg-light text-dark small">+{{ trigger_conditions|length - 3 }} more</span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <small class="text-muted">None</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if consolidated_status %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('edit_screening_type', screening_type_id=primary_screening.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        Edit
+                                    </a>
+                                    {% if variants|length > 1 %}
+                                    <a href="{{ url_for('screening.toggle_screening_type_status', screening_type_id=primary_screening.id) }}" 
+                                       class="btn btn-sm btn-outline-{{ 'danger' if consolidated_status else 'success' }}"
+                                       onclick="return confirm('This will {{ 'deactivate' if consolidated_status else 'activate' }} all {{ variants|length }} variants of {{ base_name }}. Continue?');">
+                                        {{ 'Deactivate All' if consolidated_status else 'Activate All' }}
+                                    </a>
                                     {% endif %}
+                                    <a href="{{ url_for('delete_screening_type', screening_type_id=primary_screening.id, ts=cache_timestamp) }}" class="btn btn-sm btn-outline-danger" 
+                                       onclick="return confirm('Are you sure you want to delete this screening type?');">
+                                        Delete
+                                    </a>
                                 </div>
-                            {% else %}
-                                <small class="text-muted">None</small>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if screening_type.is_active %}
-                                <span class="badge bg-success">Active</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Inactive</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="btn-group" role="group">
-                                <a href="{{ url_for('edit_screening_type', screening_type_id=screening_type.id) }}" 
-                                   class="btn btn-sm btn-outline-primary">
-                                    Edit
-                                </a>
-                                <a href="{{ url_for('delete_screening_type', screening_type_id=screening_type.id, ts=cache_timestamp) }}" class="btn btn-sm btn-outline-danger" 
-                                   onclick="return confirm('Are you sure you want to delete this screening type?');">
-                                    Delete
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
+                            </td>
+                        </tr>
+                    {% endif %}
                     {% endfor %}
                 </tbody>
             </table>

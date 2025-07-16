@@ -74,6 +74,40 @@ class ScreeningVariantManager:
         if not variants:
             return None
         
+        # Find the one that matches the base name exactly (primary)
+        for variant in variants:
+            if variant.name.lower() == base_name.lower():
+                return variant
+        
+        # If no exact match, return first variant
+        return variants[0]
+    
+    def sync_variant_statuses(self, base_name: str, new_status: bool):
+        """Sync active status across all variants of a base screening type"""
+        variants = self.find_screening_variants(base_name)
+        
+        for variant in variants:
+            if variant.is_active != new_status:
+                variant.is_active = new_status
+        
+        db.session.commit()
+        return len(variants)
+    
+    def get_consolidated_status(self, base_name: str) -> bool:
+        """Get the consolidated active status for a base screening type"""
+        variants = self.find_screening_variants(base_name)
+        
+        if not variants:
+            return False
+        
+        # Return True if ANY variant is active
+        return any(variant.is_active for variant in variants)
+    
+    def should_show_unified_button(self, base_name: str) -> bool:
+        """Check if we should show unified status button for this base name"""
+        variants = self.find_screening_variants(base_name)
+        return len(variants) > 1
+        
         # Primary is the one with exact name match or shortest name
         primary_candidates = [v for v in variants if v.name.lower() == base_name.lower()]
         if primary_candidates:
