@@ -129,18 +129,7 @@
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="notes" class="form-label">{{ form.notes.label }}</label>
-                        {{ form.notes(class="form-control", rows=3) }}
-                        {% if form.notes.errors %}
-                            {% for error in form.notes.errors %}
-                            <div class="text-danger mt-1">{{ error }}</div>
-                            {% endfor %}
-                        {% endif %}
-                        {% if form.notes.description %}
-                            <div class="form-text">{{ form.notes.description }}</div>
-                        {% endif %}
-                    </div>
+                    
                     
                     <div class="d-grid gap-2">
                         {{ form.submit(class="btn btn-primary") }}

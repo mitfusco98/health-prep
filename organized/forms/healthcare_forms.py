@@ -453,11 +453,7 @@ class DocumentUploadForm(FlaskForm):
         ],
         description="The type of document being uploaded",
     )
-    notes = TextAreaField(
-        "Notes",
-        validators=[Optional()],
-        description="Any additional notes about this document",
-    )
+    
     submit = SubmitField("Upload Document")
 
 
