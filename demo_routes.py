@@ -563,30 +563,30 @@ def patient_detail(patient_id):
         .all()
     )
 
-    # Organize documents by type
+    # Organize documents by type - support both legacy and new document types
     lab_documents = [
-        doc for doc in documents if doc.document_type == "LAB_REPORT"
+        doc for doc in documents if doc.document_type in ["LAB_REPORT", "LABORATORIES"]
     ]
     imaging_documents = [
         doc
         for doc in documents
-        if doc.document_type == "RADIOLOGY_REPORT"
+        if doc.document_type in ["RADIOLOGY_REPORT", "IMAGING"]
     ]
     consult_documents = [
-        doc for doc in documents if doc.document_type == "CONSULTATION"
+        doc for doc in documents if doc.document_type in ["CONSULTATION", "CONSULTS"]
     ]
     hospital_documents = [
         doc
         for doc in documents
-        if doc.document_type == "DISCHARGE_SUMMARY"
+        if doc.document_type in ["DISCHARGE_SUMMARY", "HOSPITAL_RECORDS"]
     ]
     
     # Other documents (not categorized as lab, imaging, consult, or hospital)
     categorized_types = {
-        "LAB_REPORT",
-        "RADIOLOGY_REPORT", 
-        "CONSULTATION",
-        "DISCHARGE_SUMMARY"
+        "LAB_REPORT", "LABORATORIES",
+        "RADIOLOGY_REPORT", "IMAGING",
+        "CONSULTATION", "CONSULTS",
+        "DISCHARGE_SUMMARY", "HOSPITAL_RECORDS"
     }
     other_documents = [
         doc for doc in documents 
@@ -817,10 +817,10 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     
     # Categorize documents for "other" section (documents not in main categories)
     categorized_types = {
-        "LAB_REPORT",
-        "RADIOLOGY_REPORT",
-        "CONSULTATION", 
-        "DISCHARGE_SUMMARY"
+        "LAB_REPORT", "LABORATORIES",
+        "RADIOLOGY_REPORT", "IMAGING",
+        "CONSULTATION", "CONSULTS", 
+        "DISCHARGE_SUMMARY", "HOSPITAL_RECORDS"
     }
     other_documents = [
         doc for doc in documents 
