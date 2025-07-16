@@ -2555,7 +2555,6 @@ def add_document_unified():
                 mime_type=mime_type,
                 source_system=form.source_system.data,
                 document_date=form.document_date.data,
-                notes=form.notes.data,
                 doc_metadata=json.dumps(document_metadata) if document_metadata else None,
             )
 
