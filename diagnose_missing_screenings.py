@@ -196,12 +196,80 @@ def fix_all_missing_screenings():
         db.session.commit()
         print("✅ All patient screenings updated")
 
-if __name__ == "__main__":
-    # Diagnose Magan Mohammed specifically
-    diagnose_patient_screenings("Magan Mohammed")
+def diagnose_all_patients():
+    """
+    Run screening diagnosis for all patients in the database
+    """
+    with app.app_context():
+        patients = Patient.query.all()
+        print(f"\n🔍 SCREENING DIAGNOSIS FOR ALL PATIENTS ({len(patients)} total)")
+        print("=" * 80)
+        
+        summary_stats = {
+            'total_patients': len(patients),
+            'patients_with_screenings': 0,
+            'patients_without_screenings': 0,
+            'total_eligible_screenings': 0,
+            'patients_by_eligibility': {}
+        }
+        
+        for i, patient in enumerate(patients, 1):
+            print(f"\n[{i}/{len(patients)}] 👤 {patient.full_name} (Age: {patient.age}, Gender: {patient.sex})")
+            
+            # Check current screenings
+            current_screenings = Screening.query.filter_by(patient_id=patient.id).all()
+            has_screenings = len(current_screenings) > 0
+            
+            if has_screenings:
+                summary_stats['patients_with_screenings'] += 1
+                print(f"   📋 Current screenings: {len(current_screenings)}")
+            else:
+                summary_stats['patients_without_screenings'] += 1
+                print(f"   📋 Current screenings: 0")
+            
+            # Check eligibility for all screening types
+            all_screening_types = ScreeningType.query.filter_by(is_active=True).all()
+            engine = ScreeningStatusEngine()
+            eligible_count = 0
+            eligible_types = []
+            
+            for screening_type in all_screening_types:
+                has_valid_freq = engine._has_valid_frequency(screening_type)
+                is_eligible = engine._patient_qualifies_for_screening(patient, screening_type)
+                
+                if is_eligible and has_valid_freq:
+                    eligible_count += 1
+                    eligible_types.append(screening_type.name)
+            
+            summary_stats['total_eligible_screenings'] += eligible_count
+            eligibility_key = f"{eligible_count}_eligible"
+            summary_stats['patients_by_eligibility'][eligibility_key] = summary_stats['patients_by_eligibility'].get(eligibility_key, 0) + 1
+            
+            if eligible_count > 0:
+                print(f"   ✅ Eligible for {eligible_count} screenings: {', '.join(eligible_types[:3])}{'...' if len(eligible_types) > 3 else ''}")
+            else:
+                print(f"   ❌ Eligible for 0 screenings")
+                
+        # Print summary
+        print(f"\n" + "="*80)
+        print(f"📊 OVERALL SUMMARY")
+        print(f"   Total patients: {summary_stats['total_patients']}")
+        print(f"   Patients with screenings: {summary_stats['patients_with_screenings']}")
+        print(f"   Patients without screenings: {summary_stats['patients_without_screenings']}")
+        print(f"   Average eligible screenings per patient: {summary_stats['total_eligible_screenings'] / summary_stats['total_patients']:.1f}")
+        
+        print(f"\n📈 ELIGIBILITY BREAKDOWN:")
+        for eligibility, count in sorted(summary_stats['patients_by_eligibility'].items()):
+            eligible_num = eligibility.split('_')[0]
+            print(f"   {count} patients eligible for {eligible_num} screenings")
 
-    # Option to fix the screenings
+if __name__ == "__main__":
+    # Run diagnosis for all patients
+    diagnose_all_patients()
+    
     print("\n" + "="*60)
-    print("To generate missing screenings:")
+    print("To diagnose a specific patient:")
+    print("diagnose_patient_screenings('Patient Name')")
+    print("\nTo generate missing screenings:")
     print("fix_missing_screenings_for_patient(patient_id)")
     print("fix_all_missing_screenings()")
