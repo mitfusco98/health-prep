@@ -444,14 +444,13 @@ class DocumentUploadForm(FlaskForm):
         "Document Type",
         validators=[DataRequired()],
         choices=[
-            ("LAB_REPORT", "Lab Report"),
-            ("RADIOLOGY_REPORT", "Imaging Report"),
-            ("CONSULTATION", "Consult"),
-            ("DISCHARGE_SUMMARY", "Hospital Record"),
-            ("CLINICAL_NOTE", "Clinical Note"),
+            ("LABORATORIES", "Laboratories"),
+            ("IMAGING", "Imaging"),
+            ("CONSULTS", "Consults"),
+            ("HOSPITAL_RECORDS", "Hospital Records"),
             ("OTHER", "Other"),
         ],
-        description="The type of document being uploaded",
+        description="The medical data subsection this document belongs to",
     )
     
     submit = SubmitField("Upload Document")
