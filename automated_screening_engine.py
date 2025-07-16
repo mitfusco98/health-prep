@@ -263,14 +263,16 @@ class ScreeningStatusEngine:
             except (json.JSONDecodeError, TypeError):
                 pass
 
-        # Document matches if content matches AND (document type matches OR no doc type filter)
-        # This ensures content relevance while allowing doc type filtering
+        # STRICTER MATCHING LOGIC: Always require content/filename match
+        # If document type keywords are configured, also require document type match
+        keyword_match = content_match or filename_match
+        
         if has_document_keywords:
-            # If doc type filter exists, require both content match AND doc type match
-            return (content_match or filename_match) and doc_type_match
+            # Require both keyword match AND document type match
+            return keyword_match and doc_type_match
         else:
-            # If no doc type filter, content or filename match is sufficient
-            return content_match or filename_match
+            # Only keyword match required, but it must be present
+            return keyword_match
 
     def _simple_document_matching(self, document: MedicalDocument, screening_type: ScreeningType) -> bool:
         """
