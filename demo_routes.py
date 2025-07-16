@@ -141,6 +141,52 @@ import uuid
 logger = logging.getLogger(__name__)
 
 
+def _patient_meets_trigger_conditions(patient_conditions, screening_type):
+    """
+    Check if patient's conditions match the screening type's trigger conditions
+    
+    Args:
+        patient_conditions: List of patient's Condition objects
+        screening_type: ScreeningType object with trigger_conditions
+    
+    Returns:
+        bool: True if patient meets trigger conditions
+    """
+    trigger_conditions = screening_type.get_trigger_conditions()
+    if not trigger_conditions:
+        return True  # No trigger conditions means all patients qualify
+    
+    # Check if any patient condition matches any trigger condition
+    for condition in patient_conditions:
+        condition_name_lower = condition.name.lower()
+        condition_code = condition.code or ""
+        
+        for trigger in trigger_conditions:
+            # Check by display name
+            if 'display' in trigger:
+                trigger_display_lower = trigger['display'].lower()
+                if any(keyword in condition_name_lower for keyword in ['diabetes', 'diabetic']) and \
+                   any(keyword in trigger_display_lower for keyword in ['diabetes', 'diabetic']):
+                    return True
+            
+            # Check by code
+            if 'code' in trigger and condition_code:
+                if condition_code == trigger['code']:
+                    return True
+                    
+            # Check by partial name matching for common conditions
+            if 'display' in trigger:
+                trigger_name = trigger['display'].lower()
+                # Handle diabetes variants
+                if 'diabetes' in trigger_name and 'diabetes' in condition_name_lower:
+                    return True
+                # Handle hypertension variants  
+                if 'hypertension' in trigger_name and any(keyword in condition_name_lower for keyword in ['hypertension', 'blood pressure', 'hypertensive']):
+                    return True
+    
+    return False
+
+
 def log_validation_error(endpoint, validation_errors, form_data, user_id=None):
     """Log form validation errors to admin logs - delegates to centralized middleware"""
     from validation_middleware import ValidationLogger
@@ -3567,7 +3613,7 @@ def screening_list():
                 )
 
         # Get all screenings before cutoff filtering for counting
-        all_screenings = query.order_by(
+        all_screenings_raw = query.order_by(
             db.case(
                 (Screening.status == "Due", 0),
                 (Screening.status == "Due Soon", 1),
@@ -3577,6 +3623,20 @@ def screening_list():
             Patient.last_name,
             Patient.first_name
         ).all()
+        
+        # Filter out screenings where patients don't meet trigger conditions
+        all_screenings = []
+        for screening in all_screenings_raw:
+            screening_type = ScreeningType.query.filter_by(name=screening.screening_type).first()
+            if screening_type and screening_type.trigger_conditions:
+                # This is a condition-triggered screening - validate patient has required conditions
+                patient_conditions = Condition.query.filter_by(patient_id=screening.patient_id, is_active=True).all()
+                if _patient_meets_trigger_conditions(patient_conditions, screening_type):
+                    all_screenings.append(screening)
+                # If patient doesn't meet conditions, skip this screening
+            else:
+                # No trigger conditions - include all screenings of this type
+                all_screenings.append(screening)
         
         # Apply cutoff filtering unless admin override is active
         if not admin_override and cutoff_info['has_cutoffs']:
