@@ -2482,7 +2482,10 @@ def add_document_unified():
         if default_patient_id:
             form.patient_id.data = default_patient_id
         if default_subsection:
-            form.document_type.data = default_subsection
+            # Ensure the subsection value is valid for the form choices
+            valid_choices = [choice[0] for choice in form.document_type.choices]
+            if default_subsection in valid_choices:
+                form.document_type.data = default_subsection
 
     if form.validate_on_submit():
         # Get the selected patient
@@ -2615,7 +2618,7 @@ def add_document(patient_id):
             "hospital": "HOSPITAL_RECORDS",
             "other": "OTHER"
         }
-        redirect_params["subsection"] = type_mapping.get(subsection, "OTHER")
+        redirect_params["subsection"] = type_mapping.get(subsection.lower(), "OTHER")
     
     return redirect(url_for("add_document_unified", **redirect_params))
 
