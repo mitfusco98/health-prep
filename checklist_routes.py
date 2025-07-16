@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from app import app, db
 from models import ChecklistSettings, Appointment
 from db_utils import safe_db_operation
+from screening_variant_manager import variant_manager
 
 
 def get_or_create_settings():
@@ -126,20 +127,21 @@ def update_checklist_generation():
     # Get selected screening types from the checkboxes
     selected_screening_types = request.form.getlist('selected_screening_types')
     print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
-    print(f"DEBUG: Number of selected items: {len(selected_screening_types)}")
-    print(f"DEBUG: All form data: {dict(request.form)}")
+    
+    # Consolidate to base names to handle variants
+    consolidated_base_names = set()
+    for screening_name in selected_screening_types:
+        base_name = variant_manager.extract_base_name(screening_name)
+        consolidated_base_names.add(base_name)
+    
+    consolidated_list = list(consolidated_base_names)
+    print(f"DEBUG: Consolidated to base names: {consolidated_list}")
 
-    # Debug: Check what's in the form data
-    for key, value in request.form.items():
-        if 'screening' in key.lower():
-            print(f"DEBUG: Form field '{key}' = '{value}'")
-
-    # Update default items with selected screening types
-    if selected_screening_types:
-        # Join the selected screening types with newlines
-        settings.default_items = '\n'.join(selected_screening_types)
-        print(f"DEBUG: Updated default_items to: '{settings.default_items}'")
-        print(f"DEBUG: Length of default_items string: {len(settings.default_items)}")
+    # Update default items with consolidated base names
+    if consolidated_list:
+        # Join the consolidated screening base names with newlines
+        settings.default_items = '\n'.join(consolidated_list)
+        print(f"DEBUG: Updated default_items to consolidated: '{settings.default_items}'")
     else:
         # Fall back to manual default items input if no screening types selected
         default_items = request.form.get('default_items', '')

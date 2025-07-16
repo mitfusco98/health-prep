@@ -8,6 +8,7 @@ from models import ScreeningType, Screening, Patient
 from app import db
 from datetime import datetime, date
 import json
+from screening_variant_manager import variant_manager
 
 # Create screening blueprint
 screening_bp = Blueprint("screening", __name__, url_prefix="/screenings")
@@ -36,10 +37,18 @@ def screening_list():
     tab = request.args.get("tab", "patients")
 
     if tab == "types":
-        # Show screening types management
+        # Show screening types management with variant grouping
         screening_types = ScreeningType.query.order_by(ScreeningType.name).all()
+        
+        # Group by base names for variant management
+        variant_groups = variant_manager.get_consolidated_screening_groups()
+        
         return render_template(
-            "screening_list.html", screening_types=screening_types, active_tab="types"
+            "screening_list.html", 
+            screening_types=screening_types, 
+            variant_groups=variant_groups,
+            variant_manager=variant_manager,
+            active_tab="types"
         )
     else:
         # Show patient screenings with optimized query
@@ -208,6 +217,7 @@ def edit_screening_type(screening_type_id):
 def delete_screening_type(screening_type_id):
     """Delete a screening type or mark as inactive if in use"""
     screening_type = ScreeningType.query.get_or_404(screening_type_id)
+    base_name = variant_manager.extract_base_name(screening_type.name)
 
     # Check if this screening type is used in any patient screenings
     patient_screenings = Screening.query.filter_by(
@@ -218,8 +228,13 @@ def delete_screening_type(screening_type_id):
         # Mark as inactive instead of deleting
         screening_type.is_active = False
         db.session.commit()
+        
+        # Check if this affects the consolidated status
+        consolidated_status = variant_manager.get_consolidated_status(base_name)
+        status_msg = "active" if consolidated_status else "inactive"
+        
         flash(
-            f'Screening type "{screening_type.name}" has been marked as inactive because it is used by {patient_screenings} patient(s).',
+            f'Screening type "{screening_type.name}" has been marked as inactive because it is used by {patient_screenings} patient(s). Consolidated "{base_name}" status is now {status_msg}.',
             "warning",
         )
     else:
@@ -227,8 +242,37 @@ def delete_screening_type(screening_type_id):
         name = screening_type.name
         db.session.delete(screening_type)
         db.session.commit()
-        flash(f'Screening type "{name}" has been deleted successfully.', "success")
+        
+        # Check remaining variants
+        remaining_variants = variant_manager.find_screening_variants(base_name)
+        if remaining_variants:
+            flash(f'Screening type "{name}" has been deleted successfully. Other variants of "{base_name}" remain active.', "success")
+        else:
+            flash(f'Screening type "{name}" has been deleted successfully. No other variants remain.', "success")
 
+    return redirect(url_for("screening.screening_list", tab="types"))
+
+
+@screening_bp.route("/types/<int:screening_type_id>/toggle_status")
+def toggle_screening_type_status(screening_type_id):
+    """Toggle screening type status and sync variants"""
+    screening_type = ScreeningType.query.get_or_404(screening_type_id)
+    base_name = variant_manager.extract_base_name(screening_type.name)
+    
+    # Toggle status
+    new_status = not screening_type.is_active
+    screening_type.is_active = new_status
+    
+    # Optionally sync all variants (uncomment if you want unified status across variants)
+    # variant_manager.sync_variant_statuses(base_name, new_status)
+    
+    db.session.commit()
+    
+    consolidated_status = variant_manager.get_consolidated_status(base_name)
+    status_msg = "active" if consolidated_status else "inactive"
+    
+    flash(f'Screening type "{screening_type.name}" status updated. Consolidated "{base_name}" status is {status_msg}.', "success")
+    
     return redirect(url_for("screening.screening_list", tab="types"))
 
 

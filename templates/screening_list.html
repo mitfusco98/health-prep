@@ -810,15 +810,28 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div id="screening-buttons" class="d-flex flex-wrap gap-2 mb-3">
                                     {% set current_default_list = settings.default_items_list if settings and settings.default_items_list else [] %}
 
-                                    {% for screening in active_screening_types %}
-                                    <button type="button" class="btn screening-btn {% if screening.name in current_default_list %}btn-primary{% else %}btn-outline-primary{% endif %}" 
-                                            data-value="{{ screening.name }}" onclick="toggleScreening(this)">
-                                        {{ screening.name }}
-                                        {% if screening.formatted_frequency %}
-                                        <br><small>{{ screening.formatted_frequency }}</small>
-                                        {% endif %}
-                                    </button>
-                                    {% endfor %}
+                                    {% set processed_base_names = [] %}
+                    {% for screening in active_screening_types %}
+                        {% set base_name = variant_manager.extract_base_name(screening.name) %}
+                        {% if base_name not in processed_base_names %}
+                            {% set _ = processed_base_names.append(base_name) %}
+                            {% set variants = variant_manager.find_screening_variants(base_name) %}
+                            {% set is_selected = base_name in current_default_list %}
+                            <button type="button" class="btn screening-btn {% if is_selected %}btn-primary{% else %}btn-outline-primary{% endif %}" 
+                                    data-value="{{ base_name }}" 
+                                    data-variants="{{ variants|map(attribute='name')|join(',') }}"
+                                    onclick="toggleConsolidatedScreening(this)"
+                                    title="Includes: {{ variants|map(attribute='name')|join(', ') }}">
+                                {{ base_name }}
+                                {% if variants|length > 1 %}
+                                <small class="variant-count">({{ variants|length }} variants)</small>
+                                {% endif %}
+                                {% if screening.formatted_frequency %}
+                                <br><small>{{ screening.formatted_frequency }}</small>
+                                {% endif %}
+                            </button>
+                        {% endif %}
+                    {% endfor %}
                                 </div>
                             </div>
 

@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Tuple
 import json
 from app import app, db
 from models import Patient, ScreeningType, Screening, MedicalDocument
+from screening_variant_manager import variant_manager
 
 class ScreeningStatusEngine:
     """Engine for automatic screening status determination"""
@@ -96,6 +97,8 @@ class ScreeningStatusEngine:
     def _patient_qualifies_for_screening(self, patient: Patient, screening_type: ScreeningType) -> bool:
         """
         Check if patient qualifies for this screening type
+        
+        Enhanced to check trigger conditions for variant screening types
 
         Args:
             patient: Patient object
@@ -115,7 +118,33 @@ class ScreeningStatusEngine:
             if screening_type.gender_specific.lower() != patient.sex.lower():
                 return False
 
+        # Check trigger conditions for variant screenings
+        trigger_conditions = screening_type.get_trigger_conditions()
+        if trigger_conditions:
+            # This is a condition-triggered variant - check if patient has the conditions
+            patient_has_trigger_condition = self._patient_has_trigger_conditions(patient, trigger_conditions)
+            if not patient_has_trigger_condition:
+                return False
+
         return True
+    
+    def _patient_has_trigger_conditions(self, patient: Patient, trigger_conditions: List[Dict]) -> bool:
+        """Check if patient has any of the trigger conditions"""
+        if not trigger_conditions:
+            return True  # No conditions required
+            
+        # Check patient conditions against trigger conditions
+        patient_conditions = patient.conditions
+        
+        for condition in patient_conditions:
+            for trigger in trigger_conditions:
+                trigger_code = trigger.get('code', '')
+                # Simple code matching - can be enhanced with FHIR terminology services
+                if trigger_code and (trigger_code in str(condition.code) or 
+                                   trigger_code.lower() in condition.name.lower()):
+                    return True
+        
+        return False
 
     def _determine_screening_status(self, patient: Patient, screening_type: ScreeningType) -> Optional[Dict]:
         """
