@@ -213,16 +213,19 @@ class ScreeningStatusEngine:
         Returns:
             True if document matches screening criteria
         """
-        # CRITICAL: If screening type has no keywords configured, no documents can match
+        # Check if screening type has proper keywords configured
         has_content_keywords = bool(screening_type.get_content_keywords())
         has_document_keywords = bool(screening_type.get_document_keywords())
         has_filename_keywords = bool(screening_type.filename_keywords)
 
-        if not has_content_keywords and not has_document_keywords and not has_filename_keywords:
-            # No keywords configured - no documents can match
-            return False
+        # FALLBACK SYSTEM: Use screening type name as keywords when no proper keywords defined
+        use_fallback_matching = not has_content_keywords and not has_document_keywords and not has_filename_keywords
+        
+        if use_fallback_matching:
+            # Use screening type name as keyword for basic document matching
+            return self._fallback_screening_name_matching(document, screening_type)
 
-        # Import enhanced matcher
+        # Import enhanced matcher for proper keyword matching
         try:
             from enhanced_keyword_matcher import EnhancedKeywordMatcher
             matcher = EnhancedKeywordMatcher()
@@ -278,14 +281,17 @@ class ScreeningStatusEngine:
         """
         Fallback simple matching method
         """
-        # CRITICAL: If screening type has no keywords configured, no documents can match
+        # Check if screening type has proper keywords configured
         has_content_keywords = bool(screening_type.get_content_keywords())
         has_document_keywords = bool(screening_type.get_document_keywords())
         has_filename_keywords = bool(screening_type.filename_keywords)
 
-        if not has_content_keywords and not has_document_keywords and not has_filename_keywords:
-            # No keywords configured - no documents can match
-            return False
+        # FALLBACK SYSTEM: Use screening type name when no proper keywords defined
+        use_fallback_matching = not has_content_keywords and not has_document_keywords and not has_filename_keywords
+        
+        if use_fallback_matching:
+            # Use screening type name as keyword for basic document matching
+            return self._fallback_screening_name_matching(document, screening_type)
 
         # Check content keywords
         if has_content_keywords:
@@ -318,6 +324,91 @@ class ScreeningStatusEngine:
                 pass
 
         return False
+    
+    def _fallback_screening_name_matching(self, document: MedicalDocument, screening_type: ScreeningType) -> bool:
+        """
+        FALLBACK SYSTEM: Match documents using screening type name as keywords
+        This provides basic matching capability when no proper keywords are configured
+        
+        Args:
+            document: MedicalDocument object
+            screening_type: ScreeningType object
+            
+        Returns:
+            True if document content/filename contains screening type name (or parts of it)
+        """
+        if not screening_type.name:
+            return False
+            
+        # Generate fallback keywords from screening type name
+        fallback_keywords = self._generate_fallback_keywords(screening_type.name)
+        
+        # Check document content
+        if document.content:
+            for keyword in fallback_keywords:
+                if keyword.lower() in document.content.lower():
+                    return True
+        
+        # Check document filename
+        if document.filename:
+            for keyword in fallback_keywords:
+                if keyword.lower() in document.filename.lower():
+                    return True
+        
+        # Check document type if relevant
+        if document.document_type:
+            for keyword in fallback_keywords:
+                if keyword.lower() in document.document_type.lower():
+                    return True
+                    
+        return False
+    
+    def _generate_fallback_keywords(self, screening_name: str) -> List[str]:
+        """
+        Generate fallback keywords from screening type name
+        
+        Args:
+            screening_name: Name of the screening type
+            
+        Returns:
+            List of keywords derived from screening name
+        """
+        fallback_keywords = []
+        
+        # Add the full name
+        fallback_keywords.append(screening_name)
+        
+        # Split by common separators and add individual words
+        import re
+        words = re.split(r'[_\-\s/]+', screening_name.lower())
+        
+        # Add meaningful words (filter out very short words)
+        for word in words:
+            word = word.strip()
+            if len(word) >= 3:  # Only words 3+ characters
+                fallback_keywords.append(word)
+        
+        # Add some common medical abbreviations/variations
+        name_lower = screening_name.lower()
+        
+        # Common screening name patterns
+        if "mammogram" in name_lower:
+            fallback_keywords.extend(["mammography", "breast imaging"])
+        elif "colonoscopy" in name_lower:
+            fallback_keywords.extend(["colon", "colonoscopic"])
+        elif "pap" in name_lower or "cervical" in name_lower:
+            fallback_keywords.extend(["pap smear", "cervical cytology"])
+        elif "cholesterol" in name_lower:
+            fallback_keywords.extend(["lipid", "lipids"])
+        elif "blood pressure" in name_lower or "bp" in name_lower:
+            fallback_keywords.extend(["hypertension", "bp"])
+        elif "eye" in name_lower or "vision" in name_lower:
+            fallback_keywords.extend(["ophthalmology", "optometry"])
+        
+        # Remove duplicates and empty strings
+        fallback_keywords = list(set([k for k in fallback_keywords if k.strip()]))
+        
+        return fallback_keywords
 
     def _calculate_status(self, screening_type: ScreeningType, matching_documents: List[MedicalDocument], 
                          existing_screening: Optional[Screening], patient: Patient) -> str:
