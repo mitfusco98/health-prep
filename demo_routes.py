@@ -453,10 +453,9 @@ def patient_detail(patient_id):
     screenings = (
         Screening.query
         .filter_by(patient_id=patient_id)
-        .join(ScreeningType, Screening.screening_type_id == ScreeningType.id)
+        .join(ScreeningType, Screening.screening_type == ScreeningType.name)
         .filter(ScreeningType.is_active == True)
         .options(
-            db.joinedload(Screening.screening_type),
             db.selectinload(Screening.documents)
         )
         .order_by(Screening.due_date)
