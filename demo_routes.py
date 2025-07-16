@@ -3662,6 +3662,9 @@ def screening_list():
                             .join(ScreeningType, Screening.screening_type == ScreeningType.name)\
                             .filter(ScreeningType.is_active == True).all() if row[0]]
 
+    # Import variant manager for template
+    from screening_variant_manager import variant_manager
+    
     try:
         return render_template(
             "screening_list.html",
@@ -3685,6 +3688,7 @@ def screening_list():
             total_screenings_before_cutoff=total_screenings_before_cutoff,
             screenings_hidden_by_cutoff=screenings_hidden_by_cutoff,
             admin_override=request.args.get('show_all') == 'true' and session.get('is_admin', False),
+            variant_manager=variant_manager,  # Add missing variant_manager
         )
     except Exception as e:
         print(f"Error rendering screening_list.html: {str(e)}")

@@ -123,6 +123,7 @@ def screening_list():
             patients=patients,
             screening_types=screening_types,
             active_tab="patients",
+            variant_manager=variant_manager,  # Add missing variant_manager
         )
 
 
