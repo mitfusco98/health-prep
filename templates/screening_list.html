@@ -814,9 +814,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     onclick="toggleConsolidatedScreening(this)"
                                     title="Includes: {{ variants|map(attribute='name')|join(', ') }}">
                                 {{ base_name }}
-                                {% if variants|length > 1 %}
-                                <small class="variant-count">({{ variants|length }} variants)</small>
-                                {% endif %}
+                                
                                 {% if screening.formatted_frequency %}
                                 <br><small>{{ screening.formatted_frequency }}</small>
                                 {% endif %}
@@ -899,9 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <div class="col-md-4 col-lg-3 mb-2">
                                             <div class="text-center">
                                                 <h6 class="text-info">{{ base_name }}</h6>
-                                                {% if active_variants|length > 1 %}
-                                                    <small class="text-muted d-block mb-1">{{ active_variants|length }} variants</small>
-                                                {% endif %}
+                                                
                                                 {% set cutoff_value = settings.get_screening_cutoff(base_name) if settings else 0 %}
                                                 <span class="badge bg-info">{{ cutoff_value ~ ' months' if cutoff_value > 0 else 'To Last Appointment Date' }}</span>
                                                 {% if active_variants|length > 1 %}
@@ -1045,9 +1041,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="col-md-6 mb-3">
                                     <label for="screening_cutoff_{{ base_name|replace(' ', '_')|lower }}" class="form-label">
                                         <i class="fas fa-check-circle text-info me-2"></i>{{ base_name }}
-                                        {% if variants|length > 1 %}
-                                        <small class="text-muted">({{ variants|length }} variants)</small>
-                                        {% endif %}
+                                        
                                     </label>
                                     <div class="input-group">
                                         <input type="number" class="form-control screening-cutoff" 
