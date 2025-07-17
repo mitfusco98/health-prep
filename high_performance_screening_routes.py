@@ -148,49 +148,49 @@ class HighPerformanceScreeningEngine:
             # FIXED: No nested app context - works within existing Flask request context
             # Use optimized query with proper joins and eager loading
             optimized_query = db.session.query(Screening).options(
-                    db.joinedload(Screening.patient),
-                    db.joinedload(Screening.screening_type),
-                    db.joinedload(Screening.documents)
-                ).join(
-                    ScreeningType, Screening.screening_type_id == ScreeningType.id
-                ).filter(
-                    ScreeningType.is_active == True
-                ).order_by(
-                    Screening.status.desc(),  # Priority: Due, Due Soon, Incomplete, Complete
-                    Screening.due_date.asc(),
-                    Patient.last_name.asc()
-                )
+                db.joinedload(Screening.patient),
+                db.joinedload(Screening.screening_type),
+                db.joinedload(Screening.documents)
+            ).join(
+                ScreeningType, Screening.screening_type_id == ScreeningType.id
+            ).filter(
+                ScreeningType.is_active == True
+            ).order_by(
+                Screening.status.desc(),  # Priority: Due, Due Soon, Incomplete, Complete
+                Screening.due_date.asc(),
+                Patient.last_name.asc()
+            )
+            
+            # Execute query
+            screenings = optimized_query.all()
+            
+            # Validate each screening
+            valid_screenings = []
+            fixed_count = 0
+            
+            for screening in screenings:
+                # Check for invalid document relationships
+                documents = screening.documents.all() if hasattr(screening, 'documents') else []
                 
-                # Execute query
-                screenings = optimized_query.all()
+                if screening.status == 'Incomplete' and documents:
+                    # Fix: Remove documents from incomplete screenings
+                    screening.documents.clear()
+                    fixed_count += 1
+                    logger.info(f"Fixed incomplete screening {screening.id} with {len(documents)} documents")
                 
-                # Validate each screening
-                valid_screenings = []
-                fixed_count = 0
-                
-                for screening in screenings:
-                    # Check for invalid document relationships
-                    documents = screening.documents.all() if hasattr(screening, 'documents') else []
-                    
-                    if screening.status == 'Incomplete' and documents:
-                        # Fix: Remove documents from incomplete screenings
-                        screening.documents.clear()
-                        fixed_count += 1
-                        logger.info(f"Fixed incomplete screening {screening.id} with {len(documents)} documents")
-                    
-                    valid_screenings.append(screening)
-                
-                # Commit fixes
-                if fixed_count > 0:
-                    db.session.commit()
-                
-                return {
-                    'success': True,
-                    'total_screenings': len(screenings),
-                    'valid_screenings': len(valid_screenings),
-                    'fixed_count': fixed_count,
-                    'screenings': valid_screenings
-                }
+                valid_screenings.append(screening)
+            
+            # Commit fixes
+            if fixed_count > 0:
+                db.session.commit()
+            
+            return {
+                'success': True,
+                'total_screenings': len(screenings),
+                'valid_screenings': len(valid_screenings),
+                'fixed_count': fixed_count,
+                'screenings': valid_screenings
+            }
                 
         except Exception as e:
             logger.error(f"Query optimization failed: {e}")
