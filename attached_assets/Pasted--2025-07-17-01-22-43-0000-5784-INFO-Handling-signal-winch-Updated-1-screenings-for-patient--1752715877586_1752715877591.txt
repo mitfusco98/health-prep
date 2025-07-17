@@ -1,0 +1,292 @@
+[2025-07-17 01:22:43 +0000] [5784] [INFO] Handling signal: winch
+✅ Updated 1 screenings for patient 6
+✅ Updated 1 screenings for patient 6
+  → Bulk linked 1 documents to screening Vaccination History
+✅ Updated 1 screenings for patient 6
+✅ Updated 1 screenings for patient 8
+✅ Updated 1 screenings for patient 8
+✅ Updated 1 screenings for patient 8
+  → Cleared 1 existing document relationships for screening 928
+  → Bulk linked 1 documents to screening Colonoscopy
+✅ Updated 1 screenings for patient 3
+  → Cleared 1 existing document relationships for screening 929
+  → Bulk linked 1 documents to screening Lipid Panel
+✅ Updated 1 screenings for patient 3
+✅ Updated 1 screenings for patient 3
+  → Bulk linked 1 documents to screening Vaccination History
+✅ Updated 1 screenings for patient 3
+  → Cleared 2 existing document relationships for screening 932
+  → Bulk linked 2 documents to screening Colonoscopy
+✅ Updated 1 screenings for patient 5
+  → Cleared 2 existing document relationships for screening 933
+  → Bulk linked 2 documents to screening Lipid Panel
+✅ Updated 1 screenings for patient 5
+  → Cleared 1 existing document relationships for screening 935
+  → Bulk linked 1 documents to screening Bone Density Screening
+✅ Updated 1 screenings for patient 5
+✅ Updated 1 screenings for patient 5
+  → Cleared 1 existing document relationships for screening 937
+  → Bulk linked 1 documents to screening Colonoscopy
+✅ Updated 1 screenings for patient 9
+  → Cleared 1 existing document relationships for screening 938
+  → Bulk linked 1 documents to screening Lipid Panel
+✅ Updated 1 screenings for patient 9
+  → Cleared 1 existing document relationships for screening 940
+  → Bulk linked 1 documents to screening Bone Density Screening
+✅ Updated 1 screenings for patient 9
+✅ Updated 1 screenings for patient 9
+✅ Updated 1 screenings for patient 9
+✅ Updated 1 screenings for patient 4
+✅ Updated 1 screenings for patient 4
+✅ Updated 1 screenings for patient 4
+✅ Updated 1 screenings for patient 1
+✅ Updated 1 screenings for patient 1
+✅ Updated 1 screenings for patient 1
+✅ Updated 1 screenings for patient 1
+✅ Updated 1 screenings for patient 10
+✅ Updated 1 screenings for patient 10
+✅ Updated 1 screenings for patient 10
+  → Bulk linked 1 documents to screening Vaccination History
+✅ Updated 1 screenings for patient 10
+  → Bulk linked 1 documents to screening Vaccination History
+✅ Updated 1 screenings for patient 13
+  → Bulk linked 1 documents to screening Vaccination History
+✅ Updated 1 screenings for patient 14
+  → Cleared 1 existing document relationships for screening 961
+  → Bulk linked 1 documents to screening Colonoscopy
+✅ Updated 1 screenings for patient 15
+  → Cleared 1 existing document relationships for screening 962
+  → Bulk linked 1 documents to screening Lipid Panel
+[2025-07-17 01:28:13 +0000] [5784] [CRITICAL] WORKER TIMEOUT (pid:5795)
+{"timestamp": "2025-07-17T01:28:13.461221Z", "level": "ERROR", "logger": "app", "message": "Rolling back due to exception: 1", "module": "app", "function": "teardown_request", "line": 181, "thread": 140238624663040, "process": 5795, "request": {"method": "GET", "path": "/screenings", "remote_addr": "10.82.6.131", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "screening_list"}, "session": {"session_id": "88y0A18syRgNzwn1zElTX4xu_t9XBh3HmS15RJ3Jwjc", "user_id": null, "username": null}, "security": {"ip_address": "10.82.6.131", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1752715663.2551308}}
+{"timestamp": "2025-07-17T01:28:13.463790Z", "level": "ERROR", "logger": "app", "message": "Rolling back due to exception: 1", "module": "app", "function": "teardown_request", "line": 181, "thread": 140238624663040, "process": 5795, "request": {"method": "GET", "path": "/screenings", "remote_addr": "10.82.6.131", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "screening_list"}, "session": {"session_id": "88y0A18syRgNzwn1zElTX4xu_t9XBh3HmS15RJ3Jwjc", "user_id": null, "username": null}, "security": {"ip_address": "10.82.6.131", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1752715663.2551308}}
+[2025-07-17 01:28:13 +0000] [5795] [ERROR] Error handling request /screenings?tab=screenings&regenerate=true&search=
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 134, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 177, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/middleware/proxy_fix.py", line 183, in __call__
+    return self.app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/demo_routes.py", line 3527, in screening_list
+    success, message, metrics = enhanced_screening_refresh(
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/high_performance_screening_routes.py", line 248, in enhanced_screening_refresh
+    return high_performance_engine.enhanced_screening_refresh(tab, search_query, trigger_source)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/high_performance_screening_routes.py", line 75, in enhanced_screening_refresh
+    result = _update_patient_screenings(patient.id, [screening_data])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/automated_screening_routes.py", line 379, in _update_patient_screenings
+    db.session.commit()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 599, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2032, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4353, in flush
+    self._flush(objects)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4488, in _flush
+    with util.safe_reraise():
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 4449, in _flush
+    flush_context.execute()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 85, in save_obj
+    _emit_update_statements(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py", line 912, in _emit_update_statements
+    c = connection.execute(
+        ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+  File "/nix/store/clx0mcir7qw8zk36zbr4jra789g3knf6-python3-3.11.10/lib/python3.11/encodings/utf_8.py", line 15, in decode
+    def decode(input, errors='strict'):
+    
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-07-17 01:28:13 +0000] [5795] [INFO] Worker exiting (pid: 5795)
+[2025-07-17 01:28:13 +0000] [6125] [INFO] Booting worker with pid: 6125
+✅ Updated 1 screenings for patient 6
+✅ Updated 1 screenings for patient 6
+  → Cleared 1 existing document relationships for screening 989
+  → Bulk linked 1 documents to screening Vaccination History
+✅ Updated 1 screenings for patient 6
+✅ Updated 1 screenings for patient 8
+✅ Updated 1 screenings for patient 8
+✅ Updated 1 screenings for patient 8
+  → Cleared 1 existing document relationships for screening 928
+  → Bulk linked 1 documents to screening Colonoscopy
+✅ Updated 1 screenings for patient 3
+  → Cleared 1 existing document relationships for screening 929
+  → Bulk linked 1 documents to screening Lipid Panel
+✅ Updated 1 screenings for patient 3
+✅ Updated 1 screenings for patient 3
+  → Cleared 1 existing document relationships for screening 991
+  → Bulk linked 1 documents to screening Vaccination History
+✅ Updated 1 screenings for patient 3
+  → Cleared 2 existing document relationships for screening 932
+  → Bulk linked 2 documents to screening Colonoscopy
+✅ Updated 1 screenings for patient 5
+  → Cleared 2 existing document relationships for screening 933
+  → Bulk linked 2 documents to screening Lipid Panel
+✅ Updated 1 screenings for patient 5
+  → Cleared 1 existing document relationships for screening 935
+  → Bulk linked 1 documents to screening Bone Density Screening
+✅ Updated 1 screenings for patient 5
+✅ Updated 1 screenings for patient 5
+  → Cleared 1 existing document relationships for screening 937
+  → Bulk linked 1 documents to screening Colonoscopy
+✅ Updated 1 screenings for patient 9
+  → Cleared 1 existing document relationships for screening 938
+  → Bulk linked 1 documents to screening Lipid Panel
+✅ Updated 1 screenings for patient 9
+  → Cleared 1 existing document relationships for screening 940
+  → Bulk linked 1 documents to screening Bone Density Screening
+✅ Updated 1 screenings for patient 9
+✅ Updated 1 screenings for patient 9
+✅ Updated 1 screenings for patient 9
+✅ Updated 1 screenings for patient 4
+✅ Updated 1 screenings for patient 4
+✅ Updated 1 screenings for patient 4
+✅ Updated 1 screenings for patient 1
+✅ Updated 1 screenings for patient 1
+✅ Updated 1 screenings for patient 1
+✅ Updated 1 screenings for patient 1
+✅ Updated 1 screenings for patient 10
+✅ Updated 1 screenings for patient 10
+✅ Updated 1 screenings for patient 10
+  → Cleared 1 existing document relationships for screening 996
+  → Bulk linked 1 documents to screening Vaccination History
+✅ Updated 1 screenings for patient 10
+  → Cleared 1 existing document relationships for screening 997
+  → Bulk linked 1 documents to screening Vaccination History
+✅ Updated 1 screenings for patient 13
+  → Cleared 1 existing document relationships for screening 998
+  → Bulk linked 1 documents to screening Vaccination History
+✅ Updated 1 screenings for patient 14
+[2025-07-17 01:28:48 +0000] [5784] [CRITICAL] WORKER TIMEOUT (pid:6125)
+{"timestamp": "2025-07-17T01:28:49.056067Z", "level": "ERROR", "logger": "app", "message": "Rolling back due to exception: 1", "module": "app", "function": "teardown_request", "line": 181, "thread": 140238624663040, "process": 6125, "request": {"method": "GET", "path": "/screenings", "remote_addr": "10.82.7.141", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "screening_list"}, "session": {"session_id": "88y0A18syRgNzwn1zElTX4xu_t9XBh3HmS15RJ3Jwjc", "user_id": null, "username": null}, "security": {"ip_address": "10.82.7.141", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1752715698.5527647}}
+{"timestamp": "2025-07-17T01:28:49.056330Z", "level": "ERROR", "logger": "app", "message": "Rolling back due to exception: 1", "module": "app", "function": "teardown_request", "line": 181, "thread": 140238624663040, "process": 6125, "request": {"method": "GET", "path": "/screenings", "remote_addr": "10.82.7.141", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "screening_list"}, "session": {"session_id": "88y0A18syRgNzwn1zElTX4xu_t9XBh3HmS15RJ3Jwjc", "user_id": null, "username": null}, "security": {"ip_address": "10.82.7.141", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1752715698.5527647}}
+[2025-07-17 01:28:49 +0000] [6125] [ERROR] Error handling request /screenings?tab=screenings&regenerate=true&search=
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 134, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 177, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/middleware/proxy_fix.py", line 183, in __call__
+    return self.app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/demo_routes.py", line 3527, in screening_list
+    success, message, metrics = enhanced_screening_refresh(
+                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/high_performance_screening_routes.py", line 248, in enhanced_screening_refresh
+    return high_performance_engine.enhanced_screening_refresh(tab, search_query, trigger_source)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/high_performance_screening_routes.py", line 67, in enhanced_screening_refresh
+    screening_data_list = engine.generate_patient_screenings(patient.id)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/automated_screening_engine.py", line 37, in generate_patient_screenings
+    with self.app.app_context():
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/ctx.py", line 284, in __exit__
+    self.pop(exc_value)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/ctx.py", line 262, in pop
+    self.app.do_teardown_appcontext(exc)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1382, in do_teardown_appcontext
+    self.ensure_sync(func)(exc)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask_sqlalchemy/extension.py", line 448, in _teardown_session
+    self.session.remove()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/scoping.py", line 261, in remove
+    self.registry().close()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2521, in close
+    self._close_impl(invalidate=False)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2590, in _close_impl
+    transaction.close(invalidate)
+  File "<string>", line 2, in close
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 1419, in close
+    transaction.close()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2586, in close
+    self._do_close()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2724, in _do_close
+    self._close_impl()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2710, in _close_impl
+    self._connection_rollback_impl()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2702, in _connection_rollback_impl
+    self.connection._rollback_impl()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1127, in _rollback_impl
+    self._handle_dbapi_exception(e, None, None, None, None)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1125, in _rollback_impl
+    self.engine.dialect.do_rollback(self.connection)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 703, in do_rollback
+    dbapi_connection.rollback()
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/base.py", line 204, in handle_abort
+    sys.exit(1)
+SystemExit: 1
+[2025-07-17 01:28:49 +0000] [6125] [INFO] Worker exiting (pid: 6125)
+[2025-07-17 01:28:49 +0000] [6135] [INFO] Booting worker with pid: 6135

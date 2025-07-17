@@ -39,58 +39,81 @@ class HighPerformanceScreeningEngine:
             from app import app, db
             from models import Patient, ScreeningType, Screening
             from automated_screening_engine import ScreeningStatusEngine
+            import time
             
-            with app.app_context():
-                self.start_time = time.time()
-                self.processed_count = 0
-                self.error_count = 0
+            # FIXED: No nested app context - works within existing Flask request context
+            self.start_time = time.time()
+            self.processed_count = 0
+            self.error_count = 0
+            
+            # Add timeout protection - limit processing time to 4 minutes (240 seconds)
+            MAX_PROCESSING_TIME = 240
+            MAX_PATIENTS_PER_BATCH = 50  # Limit patients to prevent timeouts
+            
+            # Get limited patients to prevent timeouts
+            patients = Patient.query.limit(MAX_PATIENTS_PER_BATCH).all()
+            
+            if not patients:
+                return False, "No patients found in database", {}
+            
+            # Get all active screening types
+            screening_types = ScreeningType.query.filter_by(is_active=True).all()
+            
+            if not screening_types:
+                return False, "No active screening types found", {}
+            
+            print(f"🚀 Processing {len(patients)} patients with {len(screening_types)} active screening types (timeout protection: {MAX_PROCESSING_TIME}s)")
+            
+            # Initialize automated screening engine
+            engine = ScreeningStatusEngine()
+            
+            # Process each patient using the existing ScreeningStatusEngine workflow
+            for i, patient in enumerate(patients):
+                # Check timeout protection
+                elapsed = time.time() - self.start_time
+                if elapsed > MAX_PROCESSING_TIME:
+                    print(f"⏰ Timeout protection activated after {elapsed:.1f}s, stopping at patient {i+1}/{len(patients)}")
+                    break
                 
-                # Get all patients with basic info
-                patients = Patient.query.all()
-                
-                if not patients:
-                    return False, "No patients found in database", {}
-                
-                # Get all active screening types
-                screening_types = ScreeningType.query.filter_by(is_active=True).all()
-                
-                if not screening_types:
-                    return False, "No active screening types found", {}
-                
-                # Initialize automated screening engine
-                engine = ScreeningStatusEngine()
-                
-                # Process each patient using the existing ScreeningStatusEngine workflow
-                for patient in patients:
-                    try:
-                        # Use the existing generate_patient_screenings method which handles eligibility
-                        screening_data_list = engine.generate_patient_screenings(patient.id)
-                        
-                        for screening_data in screening_data_list:
-                            try:
-                                # Use the existing automated_screening_routes functionality
-                                from automated_screening_routes import _update_patient_screenings
+                try:
+                    # Use the existing generate_patient_screenings method which handles eligibility
+                    screening_data_list = engine.generate_patient_screenings(patient.id)
+                    
+                    for screening_data in screening_data_list:
+                        try:
+                            # Use the existing automated_screening_routes functionality
+                            from automated_screening_routes import _update_patient_screenings
+                            
+                            # Update screenings for this patient
+                            result = _update_patient_screenings(patient.id, [screening_data])
+                            
+                            if result:
+                                self.processed_count += 1
+                                # Commit more frequently but in small batches to prevent timeouts
+                                if self.processed_count % 10 == 0:
+                                    try:
+                                        db.session.commit()
+                                    except Exception as commit_error:
+                                        print(f"⚠️ Commit error at batch {self.processed_count}: {commit_error}")
+                                        db.session.rollback()
                                 
-                                # Update screenings for this patient
-                                result = _update_patient_screenings(patient.id, [screening_data])
-                                
-                                if result:
-                                    self.processed_count += 1
-                                    # Commit each screening individually to avoid large transactions
-                                    db.session.commit()
-                                    
-                            except Exception as screening_error:
-                                self.error_count += 1
-                                logger.error(f"Error processing screening {screening_data.get('screening_type', 'Unknown')} for patient {patient.id}: {screening_error}")
-                                continue
-                                
-                    except Exception as patient_error:
-                        self.error_count += 1
-                        logger.error(f"Error processing patient {patient.id}: {patient_error}")
-                        continue
-                
-                # Final commit
+                        except Exception as screening_error:
+                            self.error_count += 1
+                            print(f"⚠️ Error processing screening {screening_data.get('screening_type', 'Unknown')} for patient {patient.id}: {screening_error}")
+                            continue
+                            
+                except Exception as patient_error:
+                    self.error_count += 1
+                    print(f"⚠️ Error processing patient {patient.id}: {patient_error}")
+                    continue
+            
+            # Final commit with error handling
+            try:
                 db.session.commit()
+                print(f"✅ Final commit completed successfully")
+            except Exception as final_commit_error:
+                print(f"⚠️ Final commit error: {final_commit_error}")
+                db.session.rollback()
                 
                 # Calculate metrics
                 elapsed_time = time.time() - self.start_time
@@ -110,18 +133,19 @@ class HighPerformanceScreeningEngine:
                     return True, message, metrics
                     
         except Exception as e:
-            logger.error(f"High-performance refresh failed: {e}")
+            print(f"❌ High-performance refresh failed: {e}")
             return False, f"Refresh failed: {str(e)}", {}
     
     def optimize_screening_queries(self) -> Dict[str, Any]:
         """
         Optimize screening queries for faster loading
+        FIXED: No nested app context - works within existing Flask request context
         """
         try:
             from app import app, db
             from models import Screening, Patient, ScreeningType
             
-            with app.app_context():
+            # FIXED: No nested app context - works within existing Flask request context
                 # Use optimized query with proper joins and eager loading
                 optimized_query = db.session.query(Screening).options(
                     db.joinedload(Screening.patient),

@@ -27,6 +27,7 @@ class ScreeningStatusEngine:
     def generate_patient_screenings(self, patient_id: int) -> List[Dict]:
         """
         Generate automated screenings for a specific patient
+        FIXED: No nested app context - works within existing Flask request context
 
         Args:
             patient_id: Patient ID to generate screenings for
@@ -34,38 +35,37 @@ class ScreeningStatusEngine:
         Returns:
             List of screening dictionaries with status determinations
         """
-        with self.app.app_context():
-            patient = Patient.query.get(patient_id)
-            if not patient:
-                return []
+        patient = Patient.query.get(patient_id)
+        if not patient:
+            return []
 
-            # Get applicable screening types for this patient
-            applicable_screenings = self._get_applicable_screening_types(patient)
+        # Get applicable screening types for this patient
+        applicable_screenings = self._get_applicable_screening_types(patient)
 
-            # Generate status for each applicable screening
-            screenings = []
-            for screening_type in applicable_screenings:
-                screening_data = self._determine_screening_status(patient, screening_type)
-                if screening_data:
-                    screenings.append(screening_data)
+        # Generate status for each applicable screening
+        screenings = []
+        for screening_type in applicable_screenings:
+            screening_data = self._determine_screening_status(patient, screening_type)
+            if screening_data:
+                screenings.append(screening_data)
 
-            return screenings
+        return screenings
 
     def generate_all_patient_screenings(self) -> Dict[int, List[Dict]]:
         """
         Generate automated screenings for all patients
+        FIXED: No nested app context - works within existing Flask request context
 
         Returns:
             Dictionary mapping patient_id to list of screening data
         """
-        with self.app.app_context():
-            all_patients = Patient.query.all()
-            results = {}
+        all_patients = Patient.query.all()
+        results = {}
 
-            for patient in all_patients:
-                results[patient.id] = self.generate_patient_screenings(patient.id)
+        for patient in all_patients:
+            results[patient.id] = self.generate_patient_screenings(patient.id)
 
-            return results
+        return results
 
     def _get_applicable_screening_types(self, patient: Patient) -> List[ScreeningType]:
         """
