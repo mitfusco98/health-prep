@@ -143,7 +143,8 @@ logger = logging.getLogger(__name__)
 
 def _patient_meets_trigger_conditions(patient_conditions, screening_type):
     """
-    Check if patient's conditions match the screening type's trigger conditions
+    Enhanced condition matching for screening type trigger conditions
+    Supports robust matching of condition variants and related codes
     
     Args:
         patient_conditions: List of patient's Condition objects
@@ -156,32 +157,109 @@ def _patient_meets_trigger_conditions(patient_conditions, screening_type):
     if not trigger_conditions:
         return True  # No trigger conditions means all patients qualify
     
-    # Check if any patient condition matches any trigger condition
+    # Define condition variant mappings for better matching
+    condition_variants = {
+        'diabetes': [
+            'diabetes mellitus', 'diabetes', 'diabetic', 'type 1 diabetes', 'type 2 diabetes',
+            'type i diabetes', 'type ii diabetes', 'insulin dependent diabetes',
+            'non-insulin dependent diabetes', 'gestational diabetes', 'dm', 't1dm', 't2dm'
+        ],
+        'hypertension': [
+            'hypertension', 'high blood pressure', 'elevated blood pressure', 'htn',
+            'essential hypertension', 'primary hypertension', 'secondary hypertension',
+            'hypertensive', 'blood pressure'
+        ],
+        'hyperlipidemia': [
+            'hyperlipidemia', 'dyslipidemia', 'high cholesterol', 'elevated cholesterol',
+            'lipid disorder', 'cholesterol', 'hypercholesterolemia'
+        ],
+        'obesity': [
+            'obesity', 'obese', 'overweight', 'excessive weight', 'morbid obesity'
+        ]
+    }
+    
+    # ICD-10 code relationships for condition matching
+    diabetes_codes = ['E10', 'E11', 'E12', 'E13', 'E14', '73211009', 'Z79.4']
+    hypertension_codes = ['I10', 'I11', 'I12', 'I13', 'I15', '38341003']
+    lipid_codes = ['E78', 'E78.0', 'E78.1', 'E78.2', 'E78.5', '55822004']
+    
+    def normalize_condition_name(name):
+        """Normalize condition name for better matching"""
+        if not name:
+            return ""
+        normalized = name.lower().strip()
+        # Remove common prefixes/suffixes that might interfere with matching
+        normalized = normalized.replace('essential ', '').replace('primary ', '')
+        normalized = normalized.replace(' mellitus', '').replace(' disorder', '')
+        normalized = normalized.replace('type 1 ', 'type i ').replace('type 2 ', 'type ii ')
+        return normalized
+    
+    def codes_are_related(patient_code, trigger_code):
+        """Check if codes are related (same condition family)"""
+        if not patient_code or not trigger_code:
+            return False
+        
+        # Direct match
+        if patient_code == trigger_code:
+            return True
+        
+        # Check if both codes are in same condition family
+        patient_code_prefix = patient_code[:3] if len(patient_code) >= 3 else patient_code
+        
+        if patient_code in diabetes_codes or patient_code_prefix == 'E11':
+            return trigger_code in diabetes_codes or trigger_code == '73211009'
+        if patient_code in hypertension_codes or patient_code_prefix == 'I10':
+            return trigger_code in hypertension_codes or trigger_code == '38341003'
+        if patient_code in lipid_codes or patient_code_prefix == 'E78':
+            return trigger_code in lipid_codes or trigger_code == '55822004'
+        
+        return False
+    
+    def condition_names_match(patient_name, trigger_name):
+        """Enhanced condition name matching with variants"""
+        patient_normalized = normalize_condition_name(patient_name)
+        trigger_normalized = normalize_condition_name(trigger_name)
+        
+        # Direct substring match
+        if trigger_normalized in patient_normalized or patient_normalized in trigger_normalized:
+            return True
+        
+        # Check against condition variant mappings
+        for condition_family, variants in condition_variants.items():
+            trigger_matches_family = any(variant in trigger_normalized for variant in variants)
+            patient_matches_family = any(variant in patient_normalized for variant in variants)
+            
+            if trigger_matches_family and patient_matches_family:
+                return True
+        
+        # Word-based matching for complex condition names
+        trigger_words = set(trigger_normalized.replace('-', ' ').split())
+        patient_words = set(patient_normalized.replace('-', ' ').split())
+        
+        # If significant overlap in key words
+        key_words = {'diabetes', 'hypertension', 'cholesterol', 'lipid', 'blood', 'pressure'}
+        trigger_key_words = trigger_words.intersection(key_words)
+        patient_key_words = patient_words.intersection(key_words)
+        
+        if trigger_key_words and patient_key_words and trigger_key_words.intersection(patient_key_words):
+            return True
+        
+        return False
+    
+    # Check each patient condition against trigger conditions
     for condition in patient_conditions:
-        condition_name_lower = condition.name.lower()
+        condition_name = condition.name or ""
         condition_code = condition.code or ""
         
         for trigger in trigger_conditions:
-            # Check by display name
-            if 'display' in trigger:
-                trigger_display_lower = trigger['display'].lower()
-                if any(keyword in condition_name_lower for keyword in ['diabetes', 'diabetic']) and \
-                   any(keyword in trigger_display_lower for keyword in ['diabetes', 'diabetic']):
+            # Enhanced code matching
+            if 'code' in trigger and condition_code:
+                if codes_are_related(condition_code, trigger['code']):
                     return True
             
-            # Check by code
-            if 'code' in trigger and condition_code:
-                if condition_code == trigger['code']:
-                    return True
-                    
-            # Check by partial name matching for common conditions
+            # Enhanced name matching
             if 'display' in trigger:
-                trigger_name = trigger['display'].lower()
-                # Handle diabetes variants
-                if 'diabetes' in trigger_name and 'diabetes' in condition_name_lower:
-                    return True
-                # Handle hypertension variants  
-                if 'hypertension' in trigger_name and any(keyword in condition_name_lower for keyword in ['hypertension', 'blood pressure', 'hypertensive']):
+                if condition_names_match(condition_name, trigger['display']):
                     return True
     
     return False
