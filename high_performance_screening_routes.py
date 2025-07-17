@@ -146,8 +146,8 @@ class HighPerformanceScreeningEngine:
             from models import Screening, Patient, ScreeningType
             
             # FIXED: No nested app context - works within existing Flask request context
-                # Use optimized query with proper joins and eager loading
-                optimized_query = db.session.query(Screening).options(
+            # Use optimized query with proper joins and eager loading
+            optimized_query = db.session.query(Screening).options(
                     db.joinedload(Screening.patient),
                     db.joinedload(Screening.screening_type),
                     db.joinedload(Screening.documents)
