@@ -1478,8 +1478,21 @@ def edit_screening_type(screening_type_id):
         # Track status change for reactivation logic
         old_status = screening_type.is_active
         new_status = form.is_active.data
-        screening_type.is_active = new_status
-        screening_type.status = 'active' if form.is_active.data else 'inactive'
+        
+        # Use variant manager to sync status across all related variants
+        from screening_variant_manager import ScreeningVariantManager
+        variant_manager = ScreeningVariantManager()
+        
+        if old_status != new_status:
+            # Sync status across all related variants (including exact duplicates)
+            success = variant_manager.sync_single_variant_status(screening_type.id, new_status)
+            if not success:
+                flash(f'Warning: Could not sync status across all variants for "{screening_type.name}"', "warning")
+        else:
+            # Even if status didn't change, ensure this individual record is set correctly
+            screening_type.is_active = new_status
+        
+        screening_type.status = 'active' if new_status else 'inactive'
 
         # Process keyword fields from the form (unified approach)
         import json
@@ -1761,9 +1774,16 @@ def delete_screening_type(screening_type_id):
     ).count()
 
     if patient_screenings > 0:
-        # Instead of deleting, mark as inactive
-        screening_type.is_active = False
-        db.session.commit()
+        # Instead of deleting, mark as inactive using variant manager
+        from screening_variant_manager import ScreeningVariantManager
+        variant_manager = ScreeningVariantManager()
+        
+        # Sync deactivation across all related variants
+        success = variant_manager.sync_single_variant_status(screening_type.id, False)
+        if not success:
+            # Fallback to direct deactivation if variant sync fails
+            screening_type.is_active = False
+            db.session.commit()
 
         # Enhanced admin logging for screening type deactivation
         from models import AdminLog
