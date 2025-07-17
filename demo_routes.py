@@ -3670,7 +3670,17 @@ def screening_list():
             query = query.filter(Screening.status == status_filter)
             
         if screening_type_filter:
-            query = query.filter(Screening.screening_type == screening_type_filter)
+            # Check if this is a consolidated screening type - if so, show all variants
+            from screening_variant_manager import variant_manager
+            variants = variant_manager.find_screening_variants(screening_type_filter)
+            
+            if variants and len(variants) > 1:
+                # This is a consolidated type with multiple variants - show all variants
+                variant_names = [v.name for v in variants]
+                query = query.filter(Screening.screening_type.in_(variant_names))
+            else:
+                # Regular single screening type filtering
+                query = query.filter(Screening.screening_type == screening_type_filter)
 
         # Apply search filter if provided (exact patient name match for dropdown)
         if search_query:
@@ -3799,12 +3809,34 @@ def screening_list():
     # Import variant manager for template
     from screening_variant_manager import variant_manager
     
+    # Process screening types for consolidated display in filter dropdown
+    consolidated_screening_types = []
+    if tab == "screenings":
+        processed_base_names = set()
+        for screening_type in all_screening_types:
+            base_name = variant_manager.extract_base_name(screening_type.name)
+            if base_name not in processed_base_names:
+                processed_base_names.add(base_name)
+                
+                # Find all variants for this base name
+                variants = variant_manager.find_screening_variants(base_name)
+                active_variants = [v for v in variants if hasattr(v, 'is_active') and v.is_active]
+                
+                if active_variants:
+                    # Create consolidated entry
+                    consolidated_entry = type('ConsolidatedScreeningType', (), {
+                        'name': base_name,
+                        'is_consolidated': len(active_variants) > 1,
+                        'variants': active_variants
+                    })()
+                    consolidated_screening_types.append(consolidated_entry)
+    
     try:
         return render_template(
             "screening_list.html",
             screenings=screenings,
             screening_types=screening_types,
-            all_screening_types=all_screening_types,
+            all_screening_types=consolidated_screening_types if tab == "screenings" else all_screening_types,
             add_form=add_form,
             edit_form=edit_form,
             search_query=search_query,
