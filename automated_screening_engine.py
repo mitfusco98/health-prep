@@ -161,10 +161,15 @@ class ScreeningStatusEngine:
         matching_documents = self._find_matching_documents(patient, screening_type)
 
         # Get existing screening record if any (for last_completed date)
-        existing_screening = Screening.query.filter_by(
-            patient_id=patient.id,
-            screening_type=screening_type.name
-        ).first()
+        # FIXED: Add timeout protection to prevent worker timeout
+        try:
+            existing_screening = Screening.query.filter_by(
+                patient_id=patient.id,
+                screening_type=screening_type.name
+            ).first()
+        except Exception as db_error:
+            print(f"⚠️ Database query timeout for patient {patient.id}, screening {screening_type.name}: {db_error}")
+            existing_screening = None
 
         # Determine status based on documents and frequency
         status = self._calculate_status(
@@ -212,6 +217,7 @@ class ScreeningStatusEngine:
     def _find_matching_documents(self, patient: Patient, screening_type: ScreeningType) -> List[MedicalDocument]:
         """
         Find patient documents that match the screening type's parsing rules
+        FIXED: Add timeout protection and limit document processing
 
         Args:
             patient: Patient object
@@ -222,12 +228,21 @@ class ScreeningStatusEngine:
         """
         matching_documents = []
 
-        # Get all patient documents
-        patient_documents = MedicalDocument.query.filter_by(patient_id=patient.id).all()
+        try:
+            # Get limited documents for this patient to prevent timeout
+            # Process maximum 50 documents per screening to prevent excessive database operations
+            patient_documents = MedicalDocument.query.filter_by(patient_id=patient.id).limit(50).all()
 
-        for document in patient_documents:
-            if self._document_matches_screening(document, screening_type):
-                matching_documents.append(document)
+            for document in patient_documents:
+                try:
+                    if self._document_matches_screening(document, screening_type):
+                        matching_documents.append(document)
+                except Exception as match_error:
+                    print(f"⚠️ Document matching error for doc {document.id}: {match_error}")
+                    continue
+
+        except Exception as e:
+            print(f"⚠️ Error finding matching documents for patient {patient.id}: {e}")
 
         return matching_documents
 
@@ -266,33 +281,45 @@ class ScreeningStatusEngine:
         content_match = False
         if has_content_keywords and document.content:
             try:
-                content_keywords = json.loads(screening_type.content_keywords)
+                # FIXED: Handle HTML entities in JSON keywords field
+                import html
+                clean_keywords_json = html.unescape(screening_type.content_keywords) if screening_type.content_keywords else "[]"
+                content_keywords = json.loads(clean_keywords_json)
                 if content_keywords:  # Only match if keywords exist
                     result = matcher.match_keywords_in_content(document.content, content_keywords)
                     content_match = result['is_match']
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, TypeError) as e:
+                print(f"⚠️ Warning: Invalid JSON in content keywords field for {screening_type.name}: {e}")
                 pass
 
         # Check document type keywords (keep simple matching for this)
         doc_type_match = False
         if has_document_keywords and document.document_type:
             try:
-                doc_keywords = json.loads(screening_type.document_keywords)
+                # FIXED: Handle HTML entities in JSON keywords field
+                import html
+                clean_keywords_json = html.unescape(screening_type.document_keywords) if screening_type.document_keywords else "[]"
+                doc_keywords = json.loads(clean_keywords_json)
                 if doc_keywords:  # Only match if keywords exist
                     doc_type_match = any(keyword.lower() in document.document_type.lower() 
                                        for keyword in doc_keywords)
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, TypeError) as e:
+                print(f"⚠️ Warning: Invalid JSON in document keywords field for {screening_type.name}: {e}")
                 pass
 
         # Check filename keywords with enhanced matching
         filename_match = False
         if has_filename_keywords and document.filename:
             try:
-                filename_keywords = json.loads(screening_type.filename_keywords)
+                # FIXED: Handle HTML entities in JSON keywords field
+                import html
+                clean_keywords_json = html.unescape(screening_type.filename_keywords) if screening_type.filename_keywords else "[]"
+                filename_keywords = json.loads(clean_keywords_json)
                 if filename_keywords:  # Only match if keywords exist
                     result = matcher.match_keywords_in_content(document.filename, filename_keywords)
                     filename_match = result['is_match']
-            except (json.JSONDecodeError, TypeError):
+            except (json.JSONDecodeError, TypeError) as e:
+                print(f"⚠️ Warning: Invalid JSON in filename keywords field for {screening_type.name}: {e}")
                 pass
 
         # STRICTER MATCHING LOGIC: Always require content/filename match

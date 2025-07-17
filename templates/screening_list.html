@@ -125,13 +125,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Attach refresh handlers to all refresh buttons
-document.addEventListener('DOMContentLoaded', function() {
-    const refreshButtons = document.querySelectorAll('a[href*="regenerate=true"]');
-    refreshButtons.forEach(button => {
-        button.addEventListener('click', refreshScreenings);
-    });
-});
+// REMOVED: Duplicate event listener that was causing double popup confirmations
+// The onclick attribute in HTML already handles the refresh function
 </script>
 {% endblock %}
 

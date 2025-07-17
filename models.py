@@ -894,14 +894,19 @@ class ScreeningType(db.Model):
             self.trigger_conditions = None
 
     def get_trigger_conditions(self):
-        """Get trigger conditions as list of dictionaries"""
+        """Get trigger conditions as list of dictionaries
+        FIXED: Handle HTML entities in JSON trigger conditions field"""
         if not self.trigger_conditions:
             return []
 
         try:
             import json
-            return json.loads(self.trigger_conditions)
-        except (json.JSONDecodeError, TypeError):
+            import html
+            # FIXED: Handle HTML entities like &quot; in JSON data
+            clean_trigger_json = html.unescape(self.trigger_conditions)
+            return json.loads(clean_trigger_json)
+        except (json.JSONDecodeError, TypeError) as e:
+            print(f"⚠️ Warning: Invalid JSON in trigger conditions field for {self.name}: {e}")
             return []
 
     def matches_condition_code(self, condition_code, code_system=None):

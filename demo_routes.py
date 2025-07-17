@@ -1627,7 +1627,30 @@ def edit_screening_type(screening_type_id):
                         status_result = auto_refresh_manager.handle_screening_type_status_change(screening_type.id, new_status)
                         signal.alarm(0)  # Cancel timeout
                         
-                        if status_result.get("status") == "success":
+                        # ENHANCED: For reactivation, trigger comprehensive screening regeneration
+                        if new_status and status_result.get("status") == "success":
+                            print(f"🔄 Triggering comprehensive screening regeneration for reactivated variant: {screening_type.name}")
+                            
+                            # Use high-performance screening refresh to regenerate screenings for all eligible patients
+                            try:
+                                from high_performance_screening_routes import enhanced_screening_refresh
+                                refresh_success, refresh_message, refresh_metrics = enhanced_screening_refresh(
+                                    tab="types", 
+                                    search_query="", 
+                                    trigger_source=f"reactivation_{screening_type.name}_{screening_type.id}"
+                                )
+                                
+                                if refresh_success:
+                                    patients_processed = refresh_metrics.get('patients_processed', 0)
+                                    screenings_processed = refresh_metrics.get('processed_count', 0)
+                                    flash(f'Screening type "{screening_type.name}" has been reactivated and {screenings_processed} screenings regenerated for {patients_processed} patients.', "success")
+                                else:
+                                    flash(f'Screening type "{screening_type.name}" has been reactivated. Screening regeneration is processing in background.', "info")
+                            except Exception as regen_error:
+                                print(f"⚠️ Screening regeneration error: {regen_error}")
+                                flash(f'Screening type "{screening_type.name}" has been reactivated. Please refresh the screening list to see updated results.', "warning")
+                        
+                        elif status_result.get("status") == "success":
                             if new_status:
                                 flash(f'Screening type "{screening_type.name}" has been reactivated and will be integrated with parsing, checklist, and screening generation.', "success")
                             else:
