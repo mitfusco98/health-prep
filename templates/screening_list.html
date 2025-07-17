@@ -516,14 +516,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </h5>
             </div>
             <div class="col-auto d-flex">
-                <form class="d-flex me-2" method="get">
-                    <input type="hidden" name="tab" value="types">
-                    <input class="form-control me-2" type="search" placeholder="Search screening types" name="search" value="{{ search_query }}">
-                    <button class="btn btn-outline-secondary" type="submit">Search</button>
-                </form>
-
-
-
                 <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
                     Add Type
                 </a>

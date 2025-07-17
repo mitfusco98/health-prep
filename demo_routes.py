@@ -3498,12 +3498,6 @@ def screening_list():
         # Get all screening types
         screening_types_query = ScreeningType.query.order_by(ScreeningType.name)
 
-        # Apply search filter if provided
-        if search_query:
-            screening_types_query = screening_types_query.filter(
-                ScreeningType.name.ilike(f"%{search_query}%")
-            )
-
         screening_types = screening_types_query.all()
 
     # Check if this is a refresh request (can be triggered from any tab)
