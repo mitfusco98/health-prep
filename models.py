@@ -264,11 +264,10 @@ class Screening(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"), nullable=False)
     
-    # Enhanced relationship structure
-    screening_type_id = db.Column(db.Integer, db.ForeignKey("screening_type.id"), nullable=True)  # New FK relationship
+    # Use string-based relationship for now (FK can be added later via migration)
     screening_type = db.Column(
         db.String(100), nullable=False
-    )  # Keep for backward compatibility during transition
+    )  # Primary screening type reference
     
     due_date = db.Column(db.Date)
     last_completed = db.Column(db.Date)
@@ -285,9 +284,8 @@ class Screening(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    # Enhanced relationships
+    # Relationships
     patient = db.relationship("Patient", backref=db.backref("screenings", lazy=True))
-    screening_type_obj = db.relationship("ScreeningType", backref=db.backref("screenings", lazy=True))
     documents = db.relationship("MedicalDocument", 
                                secondary=screening_documents,
                                backref=db.backref("screenings", lazy=True),
