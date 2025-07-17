@@ -273,11 +273,6 @@ class Screening(db.Model):
     last_completed = db.Column(db.Date)
     frequency = db.Column(db.String(50))  # e.g., 'Annual', 'Every 5 years'
     status = db.Column(db.String(20), default='Incomplete')  # 'Due', 'Due Soon', 'Incomplete', 'Complete'
-    
-    # Enhanced status fields for better control
-    is_visible = db.Column(db.Boolean, default=True)  # Controls visibility regardless of screening type status
-    is_system_generated = db.Column(db.Boolean, default=True)  # Track if system or manually created
-    
     notes = db.Column(db.Text)  # Keep for backward compatibility and general notes
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
