@@ -97,7 +97,7 @@ class UnifiedScreeningEngine:
         if not trigger_conditions:
             return True
         
-        patient_conditions = [c.condition_name.lower() for c in patient.conditions]
+        patient_conditions = [c.name.lower() for c in patient.conditions]
         
         for trigger in trigger_conditions:
             if trigger.lower() in patient_conditions:
