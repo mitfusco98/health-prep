@@ -1,3 +1,4 @@
+html
 {% extends 'base_demo.html' %}
 
 {% block title %}HealthPrep - Screening List{% endblock %}
@@ -73,27 +74,27 @@ document.addEventListener('DOMContentLoaded', function() {
 function refreshScreenings(event, tab) {
     // Prevent default link behavior
     event.preventDefault();
-    
+
     const button = event.target.closest('a');
     const originalText = button.innerHTML;
-    
+
     const confirmMessage = tab === 'types' 
         ? 'Refresh all automated screenings using the current parsing rules from this tab? This will update document matches immediately.'
         : tab === 'checklist'
         ? 'Refresh all automated screenings using current prep sheet settings? This will update document relationships based on the latest configuration.'
         : 'Refresh all automated screenings based on current parsing logic? This may take a moment.';
-    
+
     if (!confirm(confirmMessage)) {
         return false;
     }
-    
+
     // Show loading state
     button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
     button.style.pointerEvents = 'none';
-    
+
     // Navigate to the refresh URL
     window.location.href = button.href;
-    
+
     return false;
 }
 
@@ -239,9 +240,9 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </form>
     </div>
-    
-    
-    
+
+
+
     <div class="card-body p-0">
         {% if screenings %}
         <div class="table-responsive">
@@ -1495,7 +1496,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Track actual typing/keystrokes
         input.addEventListener('keypress', function() {
             // Any keystroke indicates user modification
-            this.dataset.userModified = 'true';
+            this.dataset.userModified = ''true';
             this.dataset.presetModified = 'false';
             console.log(`User keystroke detected for ${this.dataset.screeningName}`);
         });
