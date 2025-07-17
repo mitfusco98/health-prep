@@ -1370,7 +1370,18 @@ def edit_screening_type(screening_type_id):
         form = ScreeningTypeForm()
 
     if request.method == "POST" and form.validate_on_submit():
-        # We'll allow duplicate names since screenings may have different protocols based on gender
+        # ENHANCED: Capture "before" state for selective refresh
+        old_state = {
+            'name': screening_type.name,
+            'frequency_number': screening_type.frequency_number,
+            'frequency_unit': screening_type.frequency_unit,
+            'gender_specific': screening_type.gender_specific,
+            'min_age': screening_type.min_age,
+            'max_age': screening_type.max_age,
+            'is_active': screening_type.is_active,
+            'keywords': screening_type.get_keywords(),
+            'trigger_conditions': screening_type.get_trigger_conditions()
+        }
 
         # Update the screening type with form data
         screening_type.name = form.name.data
@@ -1387,6 +1398,19 @@ def edit_screening_type(screening_type_id):
         # Track status change for reactivation logic
         old_status = screening_type.is_active
         new_status = form.is_active.data
+        
+        # Capture "after" state
+        new_state = {
+            'name': screening_type.name,
+            'frequency_number': screening_type.frequency_number,
+            'frequency_unit': screening_type.frequency_unit,
+            'gender_specific': screening_type.gender_specific,
+            'min_age': screening_type.min_age,
+            'max_age': screening_type.max_age,
+            'is_active': screening_type.is_active,
+            'keywords': screening_type.get_keywords(),
+            'trigger_conditions': screening_type.get_trigger_conditions()
+        }
         
         # Use variant manager to sync status across all related variants
         from screening_variant_manager import ScreeningVariantManager
@@ -1608,64 +1632,91 @@ def edit_screening_type(screening_type_id):
 
 
             
-            # ✅ EDGE CASE HANDLER: Handle screening type status changes (activation/deactivation)
-            if old_status != new_status:
+            # ENHANCED: Use selective refresh manager for intelligent updates
+            changes_detected = []
+            
+            # Detect specific changes for selective refresh
+            from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
+            
+            for field, old_val in old_state.items():
+                new_val = new_state.get(field)
+                if old_val != new_val:
+                    print(f"🔍 Detected change in {field}: {old_val} → {new_val}")
+                    
+                    # Map field changes to change types
+                    if field == 'is_active':
+                        selective_refresh_manager.mark_screening_type_dirty(
+                            screening_type.id, ChangeType.ACTIVATION_STATUS, old_val, new_val
+                        )
+                        changes_detected.append(f"activation status")
+                    elif field in ['frequency_number', 'frequency_unit']:
+                        selective_refresh_manager.mark_screening_type_dirty(
+                            screening_type.id, ChangeType.FREQUENCY, old_val, new_val
+                        )
+                        changes_detected.append(f"frequency settings")
+                    elif field in ['min_age', 'max_age']:
+                        selective_refresh_manager.mark_screening_type_dirty(
+                            screening_type.id, ChangeType.AGE_CRITERIA, old_val, new_val
+                        )
+                        changes_detected.append(f"age criteria")
+                    elif field == 'gender_specific':
+                        selective_refresh_manager.mark_screening_type_dirty(
+                            screening_type.id, ChangeType.GENDER_CRITERIA, old_val, new_val
+                        )
+                        changes_detected.append(f"gender criteria")
+                    elif field == 'keywords':
+                        selective_refresh_manager.mark_screening_type_dirty(
+                            screening_type.id, ChangeType.KEYWORDS, old_val, new_val
+                        )
+                        changes_detected.append(f"keywords")
+                    elif field == 'trigger_conditions':
+                        selective_refresh_manager.mark_screening_type_dirty(
+                            screening_type.id, ChangeType.TRIGGER_CONDITIONS, old_val, new_val
+                        )
+                        changes_detected.append(f"trigger conditions")
+            
+            # Process selective refresh if changes detected
+            if changes_detected:
                 try:
-                    from automated_edge_case_handler import auto_refresh_manager
+                    # Use background processing for better performance
+                    from background_screening_processor import background_processor, TaskPriority
+                    from screening_cache_manager import screening_cache_manager
                     
-                    # Use timeout protection for status changes
-                    import signal
+                    # Invalidate relevant cache entries
+                    screening_cache_manager.invalidate_screening_type(screening_type.id)
                     
-                    def timeout_handler(signum, frame):
-                        raise TimeoutError("Status change operation timed out")
-                    
-                    # Set 10-second timeout to prevent worker timeout
-                    signal.signal(signal.SIGALRM, timeout_handler)
-                    signal.alarm(10)
-                    
-                    try:
-                        status_result = auto_refresh_manager.handle_screening_type_status_change(screening_type.id, new_status)
-                        signal.alarm(0)  # Cancel timeout
+                    # Determine if this should be processed immediately or in background
+                    if ChangeType.ACTIVATION_STATUS in [change.change_type for change in selective_refresh_manager.change_log[-len(changes_detected):]]:
+                        # Activation changes need immediate processing for user feedback
+                        stats = selective_refresh_manager.process_selective_refresh()
                         
-                        # ENHANCED: For reactivation, trigger comprehensive screening regeneration
-                        if new_status and status_result.get("status") == "success":
-                            print(f"🔄 Triggering comprehensive screening regeneration for reactivated variant: {screening_type.name}")
-                            
-                            # Use high-performance screening refresh to regenerate screenings for all eligible patients
-                            try:
-                                from high_performance_screening_routes import enhanced_screening_refresh
-                                refresh_success, refresh_message, refresh_metrics = enhanced_screening_refresh(
-                                    tab="types", 
-                                    search_query="", 
-                                    trigger_source=f"reactivation_{screening_type.name}_{screening_type.id}"
-                                )
-                                
-                                if refresh_success:
-                                    patients_processed = refresh_metrics.get('patients_processed', 0)
-                                    screenings_processed = refresh_metrics.get('processed_count', 0)
-                                    flash(f'Screening type "{screening_type.name}" has been reactivated and {screenings_processed} screenings regenerated for {patients_processed} patients.', "success")
-                                else:
-                                    flash(f'Screening type "{screening_type.name}" has been reactivated. Screening regeneration is processing in background.', "info")
-                            except Exception as regen_error:
-                                print(f"⚠️ Screening regeneration error: {regen_error}")
-                                flash(f'Screening type "{screening_type.name}" has been reactivated. Please refresh the screening list to see updated results.', "warning")
-                        
-                        elif status_result.get("status") == "success":
-                            if new_status:
-                                flash(f'Screening type "{screening_type.name}" has been reactivated and will be integrated with parsing, checklist, and screening generation.', "success")
-                            else:
-                                flash(f'Screening type "{screening_type.name}" has been deactivated and all related data has been cleaned up.', "warning")
+                        if stats.affected_patients > 0:
+                            flash(f'Screening type "{screening_type.name}" updated. {stats.screenings_updated} screenings refreshed for {stats.affected_patients} patients in {stats.processing_time:.1f}s.', "success")
                         else:
-                            flash(f'Screening type "{screening_type.name}" has been updated, but there was an issue with automatic handling: {status_result.get("error", "Unknown error")}', "warning")
+                            flash(f'Screening type "{screening_type.name}" updated successfully.', "success")
+                    else:
+                        # Other changes can be processed in background
+                        affected_patients = set()
+                        for change in selective_refresh_manager.change_log[-len(changes_detected):]:
+                            affected_patients.update(selective_refresh_manager.get_affected_patients(change))
                             
-                    except TimeoutError:
-                        signal.alarm(0)  # Cancel timeout
-                        logger.info(f"Status change timeout for {screening_type.name}, completing in background")
-                        flash(f'Screening type "{screening_type.name}" has been updated. Status change processing will complete in the background.', "info")
-                        
-                except Exception as handler_error:
-                    logger.error(f"Auto-handler failed after screening type edit: {handler_error}")
-                    flash(f'Screening type "{screening_type.name}" has been updated. You may see updated screenings after a page refresh.', "info")
+                        if affected_patients:
+                            task_id = background_processor.submit_screening_refresh_task(
+                                patient_ids=list(affected_patients),
+                                screening_type_ids=[screening_type.id],
+                                priority=TaskPriority.NORMAL,
+                                context={"changes": changes_detected, "screening_type_name": screening_type.name}
+                            )
+                            flash(f'Screening type "{screening_type.name}" updated. Refreshing {len(affected_patients)} affected patients in background (Task: {task_id[:8]}).', "info")
+                        else:
+                            flash(f'Screening type "{screening_type.name}" updated successfully.', "success")
+                            
+                except Exception as refresh_error:
+                    print(f"⚠️ Selective refresh error: {refresh_error}")
+                    flash(f'Screening type "{screening_type.name}" updated. Changes will take effect on next page refresh.', "warning")
+            else:
+                # No significant changes detected, just update the record
+                flash(f'Screening type "{screening_type.name}" has been updated successfully.', "success")
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Error updating screening type: {str(e)}")
@@ -3532,6 +3583,7 @@ def screening_list():
 
     # Check if this is a refresh request (can be triggered from any tab)
     refresh_requested = request.args.get('regenerate') == 'true'
+    selective_refresh_requested = request.args.get('selective') == 'true'
     
     if refresh_requested:
         try:

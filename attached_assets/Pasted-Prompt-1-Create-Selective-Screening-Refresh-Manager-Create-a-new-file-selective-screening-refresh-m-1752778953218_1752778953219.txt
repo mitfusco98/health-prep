@@ -1,0 +1,45 @@
+Prompt 1: Create Selective Screening Refresh Manager
+Create a new file selective_screening_refresh_manager.py that implements intelligent selective refresh logic. This manager should:
+
+Track which screening types have changed and what kind of changes occurred
+Determine which patients are affected by specific changes
+Only refresh screenings for affected patients when screening type settings change
+Cache unchanged screenings to avoid unnecessary reprocessing
+Implement change detection for keywords, cutoffs, frequency settings, and activation status
+Provide methods to mark specific screening types as "dirty" and batch process only affected screenings
+Prompt 2: Integrate Change Detection in Screening Type Routes
+Modify the screening type edit routes in demo_routes.py to:
+
+Capture the "before" state of screening type settings before any changes
+Compare "before" and "after" states to detect exactly what changed
+Call the selective refresh manager with specific change context
+Only trigger refresh for patients who have documents or conditions that match the changed screening type
+Add logging to track which screenings are being refreshed and why
+Implement rollback capability if refresh fails
+Prompt 3: Create Intelligent Cache Layer for Screenings
+Create screening_cache_manager.py that:
+
+Caches screening results with dependency tracking (which screening types, keywords, cutoffs affect each screening)
+Implements cache invalidation based on specific changes rather than global clearing
+Stores screening metadata to determine if a refresh is needed
+Provides methods to check if a patient's screenings are still valid given recent changes
+Implements lazy loading - only refresh when screenings are actually accessed
+Add cache statistics and performance monitoring
+Prompt 4: Implement Asynchronous Background Processing
+Create background_screening_processor.py that:
+
+Implements a background task queue for screening refresh operations
+Processes screening updates asynchronously to avoid blocking the main request
+Provides progress tracking and status updates for long-running operations
+Implements batching to process multiple patients efficiently
+Add retry logic for failed processing
+Provides real-time updates to the UI about processing status
+Prompt 5: Update UI with Progressive Refresh Indicators
+Modify templates/screening_list.html to:
+
+Add loading indicators that show which screenings are being refreshed
+Implement progressive loading - show cached results immediately, then update with fresh data
+Add a "refresh status" indicator showing what percentage of screenings are up-to-date
+Provide manual refresh buttons for specific screening types
+Show timestamps of when each screening was last updated
+Add notification system for when background refresh completes

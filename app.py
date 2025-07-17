@@ -1485,6 +1485,7 @@ def root_redirect():
 
 # Import all route modules to register them with the app
 import demo_routes
+import api_routes_selective_refresh
 import api_routes
 import auth_routes
 import async_routes
