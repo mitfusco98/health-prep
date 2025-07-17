@@ -96,10 +96,8 @@ class ScreeningStatusEngine:
 
     def _patient_qualifies_for_screening(self, patient: Patient, screening_type: ScreeningType) -> bool:
         """
-        Check if patient qualifies for this screening type
+        Check if patient qualifies for this screening type using unified engine
         
-        Enhanced to check trigger conditions for variant screening types
-
         Args:
             patient: Patient object
             screening_type: ScreeningType object
@@ -107,22 +105,11 @@ class ScreeningStatusEngine:
         Returns:
             True if patient qualifies for this screening
         """
-        # Check age requirements
-        if screening_type.min_age and patient.age < screening_type.min_age:
-            return False
-        if screening_type.max_age and patient.age > screening_type.max_age:
-            return False
-
-        # Check gender requirements
-        if screening_type.gender_specific:
-            if screening_type.gender_specific.lower() != patient.sex.lower():
-                return False
-
-        # Check trigger conditions for variant screenings
-        trigger_conditions = screening_type.get_trigger_conditions()
-        if trigger_conditions:
-            # This is a condition-triggered variant - check if patient has the conditions
-            patient_has_trigger_condition = self._patient_has_trigger_conditions(patient, trigger_conditions)
+        # Use unified engine for consistent demographic filtering
+        from unified_screening_engine import unified_engine
+        
+        is_eligible, reason = unified_engine.is_patient_eligible(patient, screening_type)
+        return is_eligible
             if not patient_has_trigger_condition:
                 return False
 
@@ -248,7 +235,8 @@ class ScreeningStatusEngine:
 
     def _document_matches_screening(self, document: MedicalDocument, screening_type: ScreeningType) -> bool:
         """
-        Check if a document matches the screening type's parsing rules using enhanced keyword matching
+        Check if a document matches the screening type's parsing rules using unified engine
+        NO FALLBACK TO SCREENING NAMES - only matches on configured keywords
 
         Args:
             document: MedicalDocument object
@@ -257,72 +245,11 @@ class ScreeningStatusEngine:
         Returns:
             True if document matches screening criteria
         """
-        # Check if screening type has proper keywords configured
-        has_content_keywords = bool(screening_type.get_content_keywords())
-        has_document_keywords = bool(screening_type.get_document_keywords())
-        has_filename_keywords = bool(screening_type.filename_keywords)
-
-        # FALLBACK SYSTEM: Use screening type name as keywords when no proper keywords defined
-        use_fallback_matching = not has_content_keywords and not has_document_keywords and not has_filename_keywords
+        # Use unified engine for reliable, consistent matching
+        from unified_screening_engine import unified_engine
         
-        if use_fallback_matching:
-            # Use screening type name as keyword for basic document matching
-            return self._fallback_screening_name_matching(document, screening_type)
-
-        # Import enhanced matcher for proper keyword matching
-        try:
-            from enhanced_keyword_matcher import EnhancedKeywordMatcher
-            matcher = EnhancedKeywordMatcher()
-        except ImportError:
-            # Fallback to simple matching if enhanced matcher not available
-            return self._simple_document_matching(document, screening_type)
-
-        # Check content keywords with enhanced matching
-        content_match = False
-        if has_content_keywords and document.content:
-            try:
-                # FIXED: Handle HTML entities in JSON keywords field
-                import html
-                clean_keywords_json = html.unescape(screening_type.content_keywords) if screening_type.content_keywords else "[]"
-                content_keywords = json.loads(clean_keywords_json)
-                if content_keywords:  # Only match if keywords exist
-                    result = matcher.match_keywords_in_content(document.content, content_keywords)
-                    content_match = result['is_match']
-            except (json.JSONDecodeError, TypeError) as e:
-                print(f"⚠️ Warning: Invalid JSON in content keywords field for {screening_type.name}: {e}")
-                pass
-
-        # Check document type keywords (keep simple matching for this)
-        doc_type_match = False
-        if has_document_keywords and document.document_type:
-            try:
-                # FIXED: Handle HTML entities in JSON keywords field
-                import html
-                clean_keywords_json = html.unescape(screening_type.document_keywords) if screening_type.document_keywords else "[]"
-                doc_keywords = json.loads(clean_keywords_json)
-                if doc_keywords:  # Only match if keywords exist
-                    doc_type_match = any(keyword.lower() in document.document_type.lower() 
-                                       for keyword in doc_keywords)
-            except (json.JSONDecodeError, TypeError) as e:
-                print(f"⚠️ Warning: Invalid JSON in document keywords field for {screening_type.name}: {e}")
-                pass
-
-        # Check filename keywords with enhanced matching
-        filename_match = False
-        if has_filename_keywords and document.filename:
-            try:
-                # FIXED: Handle HTML entities in JSON keywords field
-                import html
-                clean_keywords_json = html.unescape(screening_type.filename_keywords) if screening_type.filename_keywords else "[]"
-                filename_keywords = json.loads(clean_keywords_json)
-                if filename_keywords:  # Only match if keywords exist
-                    result = matcher.match_keywords_in_content(document.filename, filename_keywords)
-                    filename_match = result['is_match']
-            except (json.JSONDecodeError, TypeError) as e:
-                print(f"⚠️ Warning: Invalid JSON in filename keywords field for {screening_type.name}: {e}")
-                pass
-
-        # STRICTER MATCHING LOGIC: Always require content/filename match
+        match_result = unified_engine.match_document_to_screening(document, screening_type)
+        return match_result['is_match']
         # If document type keywords are configured, also require document type match
         keyword_match = content_match or filename_match
         
@@ -381,151 +308,19 @@ class ScreeningStatusEngine:
 
         return False
     
-    def _fallback_screening_name_matching(self, document: MedicalDocument, screening_type: ScreeningType) -> bool:
-        """
-        FALLBACK SYSTEM: Match documents using screening type name as keywords
-        This provides basic matching capability when no proper keywords are configured
-        
-        Args:
-            document: MedicalDocument object
-            screening_type: ScreeningType object
-            
-        Returns:
-            True if document content/filename contains screening type name (or parts of it)
-        """
-        if not screening_type.name:
-            return False
-            
-        # Generate fallback keywords from screening type name
-        fallback_keywords = self._generate_fallback_keywords(screening_type.name)
-        
-        # Check document content
-        if document.content:
-            for keyword in fallback_keywords:
-                if keyword.lower() in document.content.lower():
-                    return True
-        
-        # Check document filename
-        if document.filename:
-            for keyword in fallback_keywords:
-                if keyword.lower() in document.filename.lower():
-                    return True
-        
-        # Check document type if relevant
-        if document.document_type:
-            for keyword in fallback_keywords:
-                if keyword.lower() in document.document_type.lower():
-                    return True
-                    
-        return False
-    
-    def _generate_fallback_keywords(self, screening_name: str) -> List[str]:
-        """
-        Generate fallback keywords from screening type name
-        
-        Args:
-            screening_name: Name of the screening type
-            
-        Returns:
-            List of keywords derived from screening name
-        """
-        fallback_keywords = []
-        
-        # Add the full name
-        fallback_keywords.append(screening_name)
-        
-        # Split by common separators and add individual words
-        import re
-        words = re.split(r'[_\-\s/]+', screening_name.lower())
-        
-        # Add meaningful words (filter out very short words)
-        for word in words:
-            word = word.strip()
-            if len(word) >= 3:  # Only words 3+ characters
-                fallback_keywords.append(word)
-        
-        # Add some common medical abbreviations/variations
-        name_lower = screening_name.lower()
-        
-        # Common screening name patterns
-        if "mammogram" in name_lower:
-            fallback_keywords.extend(["mammography", "breast imaging"])
-        elif "colonoscopy" in name_lower:
-            fallback_keywords.extend(["colon", "colonoscopic"])
-        elif "pap" in name_lower or "cervical" in name_lower:
-            fallback_keywords.extend(["pap smear", "cervical cytology"])
-        elif "cholesterol" in name_lower:
-            fallback_keywords.extend(["lipid", "lipids"])
-        elif "blood pressure" in name_lower or "bp" in name_lower:
-            fallback_keywords.extend(["hypertension", "bp"])
-        elif "eye" in name_lower or "vision" in name_lower:
-            fallback_keywords.extend(["ophthalmology", "optometry"])
-        
-        # Remove duplicates and empty strings
-        fallback_keywords = list(set([k for k in fallback_keywords if k.strip()]))
-        
-        return fallback_keywords
+    # REMOVED: Problematic fallback matching methods that created false positives
+    # All matching now uses unified_screening_engine for reliability
 
     def _calculate_status(self, screening_type: ScreeningType, matching_documents: List[MedicalDocument], 
                          existing_screening: Optional[Screening], patient: Patient) -> str:
         """
-        Calculate the screening status based on documents and timing
-
-        USER-DEFINED STATUS RULES:
-        - 'incomplete' = no document matching but up to date on screening frequency 
-        - 'due' = no document matches and overdue on screening frequency
-        - 'due soon' = no document matching within 30 days of next deadline
-        - 'Complete' = has matching documents
-
-        Args:
-            screening_type: ScreeningType object
-            matching_documents: List of matching documents
-            existing_screening: Existing Screening record if any
-            patient: Patient object
-
-        Returns:
-            Status string: 'Due', 'Due Soon', 'Incomplete', or 'Complete'
+        Calculate the screening status using unified engine for consistency
         """
-        # USER-DEFINED STATUS LOGIC:
-        # 'incomplete' = no document matching but up to date on screening frequency 
-        # 'due' = no document matches and overdue on screening frequency
-        # 'due soon' = no document matching within 30 days of next deadline
-        # 'Complete' = has matching documents
-
-        # Step 1: If we have matching documents, it's Complete
-        if matching_documents:
-            return self.STATUS_COMPLETE
-
-        # Step 2: No documents - determine timing-based status
-        # Get the last completion date to calculate when next screening is due
-        last_completed_date = None
+        # Use unified engine for reliable status determination
+        from unified_screening_engine import unified_engine
         
-        if existing_screening and existing_screening.last_completed:
-            last_completed_date = existing_screening.last_completed
-        else:
-            # No previous completion - use today's date for calculations
-            # This handles first-time screenings
-            last_completed_date = date.today()
-
-        # Calculate when next screening is due
-        next_due_date = self._calculate_next_due_date(screening_type, last_completed_date)
-        
-        # If no frequency is defined, default to Due (requires manual review)
-        if not next_due_date:
-            return self.STATUS_DUE
-
-        today = date.today()
-
-        # Step 3: Apply timing logic for no-document cases
-        if today > next_due_date:
-            # Past due date = Due
-            return self.STATUS_DUE
-        elif today > (next_due_date - timedelta(days=self.DUE_SOON_THRESHOLD_DAYS)):
-            # Within 30 days of due date = Due Soon
-            return self.STATUS_DUE_SOON
-        else:
-            # Up to date on frequency but no documents = Incomplete
-            return self.STATUS_INCOMPLETE
+        status_info = unified_engine.determine_screening_status(patient, screening_type)
+        return status_info['status'] if status_info['status'] else self.STATUS_INCOMPLETE
 
     def _calculate_due_date(self, screening_type: ScreeningType, existing_screening: Optional[Screening]) -> Optional[date]:
         """Calculate when screening is due"""

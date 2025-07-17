@@ -264,16 +264,22 @@ class Screening(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"), nullable=False)
     
-    # Use string-based relationship for now (FK can be added later via migration)
+    # Enhanced schema with FK and visibility support
     screening_type = db.Column(
         db.String(100), nullable=False
     )  # Primary screening type reference
+    screening_type_id = db.Column(db.Integer, db.ForeignKey("screening_type.id"))  # FK relationship
     
     due_date = db.Column(db.Date)
     last_completed = db.Column(db.Date)
     frequency = db.Column(db.String(50))  # e.g., 'Annual', 'Every 5 years'
     status = db.Column(db.String(20), default='Incomplete')  # 'Due', 'Due Soon', 'Incomplete', 'Complete'
     notes = db.Column(db.Text)  # Keep for backward compatibility and general notes
+    
+    # Enhanced columns for data preservation system
+    is_visible = db.Column(db.Boolean, default=True)  # Controls visibility instead of deletion
+    is_system_generated = db.Column(db.Boolean, default=True)  # Track if auto-generated
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
