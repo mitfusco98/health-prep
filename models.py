@@ -263,21 +263,31 @@ class Screening(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"), nullable=False)
+    
+    # Enhanced relationship structure
+    screening_type_id = db.Column(db.Integer, db.ForeignKey("screening_type.id"), nullable=True)  # New FK relationship
     screening_type = db.Column(
         db.String(100), nullable=False
-    )  # e.g., 'Mammogram', 'Colonoscopy'
+    )  # Keep for backward compatibility during transition
+    
     due_date = db.Column(db.Date)
     last_completed = db.Column(db.Date)
     frequency = db.Column(db.String(50))  # e.g., 'Annual', 'Every 5 years'
     status = db.Column(db.String(20), default='Incomplete')  # 'Due', 'Due Soon', 'Incomplete', 'Complete'
+    
+    # Enhanced status fields for better control
+    is_visible = db.Column(db.Boolean, default=True)  # Controls visibility regardless of screening type status
+    is_system_generated = db.Column(db.Boolean, default=True)  # Track if system or manually created
+    
     notes = db.Column(db.Text)  # Keep for backward compatibility and general notes
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    # Relationships
+    # Enhanced relationships
     patient = db.relationship("Patient", backref=db.backref("screenings", lazy=True))
+    screening_type_obj = db.relationship("ScreeningType", backref=db.backref("screenings", lazy=True))
     documents = db.relationship("MedicalDocument", 
                                secondary=screening_documents,
                                backref=db.backref("screenings", lazy=True),

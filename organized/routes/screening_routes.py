@@ -57,11 +57,11 @@ def screening_list():
             screenings = (
                 Screening.query
                 .join(Patient)  # Join patient for filtering
-                .join(ScreeningType, Screening.screening_type_id == ScreeningType.id)  # Join screening type
+                .join(ScreeningType, Screening.screening_type == ScreeningType.name)  # Join screening type by name
                 .filter(ScreeningType.is_active == True)  # Only active screening types
+                .filter(Screening.is_visible == True)  # Only visible screenings (not hidden by deactivation)
                 .options(
                     db.joinedload(Screening.patient),  # Eager load patient
-                    db.joinedload(Screening.screening_type),  # Eager load screening type  
                     db.selectinload(Screening.documents)  # Eager load documents
                 )
                 .order_by(

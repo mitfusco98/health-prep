@@ -206,32 +206,33 @@ class DatabaseAccessLayer:
                     
                     result.records_updated += 1
                     
-                    # Handle deactivation cascading
+                    # Handle deactivation cascading - hide instead of delete to preserve data
                     if new_status == False and current_status == True:
-                        # Clean up existing screenings for this type
-                        screening_cleanup_result = await conn.fetch("""
-                            DELETE FROM screening 
-                            WHERE screening_type = $1
+                        # Hide existing screenings for this type instead of deleting them
+                        screening_update_result = await conn.fetch("""
+                            UPDATE screening 
+                            SET is_visible = false, updated_at = $2
+                            WHERE screening_type = $1 AND is_visible = true
                             RETURNING id, patient_id
-                        """, screening_type_name)
+                        """, screening_type_name, datetime.utcnow())
                         
-                        screening_count = len(screening_cleanup_result)
-                        result.records_deleted += screening_count
+                        screening_count = len(screening_update_result)
+                        result.records_updated += screening_count
+                        result.additional_notes = f"Hidden {screening_count} screenings for deactivated type (preserved for reactivation)"
                         
-                        # Clean up document relationships for deleted screenings
-                        if screening_count > 0:
-                            screening_ids = [row['id'] for row in screening_cleanup_result]
-                            
-                            # Use prepared statement for bulk deletion
-                            await conn.execute("""
-                                DELETE FROM screening_documents 
-                                WHERE screening_id = ANY($1)
-                            """, screening_ids)
-                            
-                        logger.info(f"🔄 Deactivated '{screening_type_name}' and cleaned up {screening_count} screenings")
-                        
+                    # Handle reactivation cascading - restore hidden screenings
                     elif new_status == True and current_status == False:
-                        logger.info(f"🔄 Activated '{screening_type_name}' - will regenerate screenings on next refresh")
+                        # Restore previously hidden screenings for this type
+                        screening_restore_result = await conn.fetch("""
+                            UPDATE screening 
+                            SET is_visible = true, updated_at = $2
+                            WHERE screening_type = $1 AND is_visible = false
+                            RETURNING id, patient_id
+                        """, screening_type_name, datetime.utcnow())
+                        
+                        restored_count = len(screening_restore_result)
+                        result.records_updated += restored_count
+                        result.additional_notes = f"Restored {restored_count} previously hidden screenings for reactivated type"
                         
                     result.success = True
                     result.processing_time = asyncio.get_event_loop().time() - start_time

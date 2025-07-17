@@ -3657,7 +3657,7 @@ def screening_list():
         admin_override = show_all and session.get('is_admin', False)
         
         # Query existing screenings from database - ONLY INCLUDE ACTIVE SCREENING TYPES
-        query = Screening.query.join(Patient).join(ScreeningType, Screening.screening_type == ScreeningType.name).filter(ScreeningType.is_active == True)
+        query = Screening.query.join(Patient).join(ScreeningType, Screening.screening_type == ScreeningType.name).filter(ScreeningType.is_active == True).filter(Screening.is_visible == True)
         
         # Count total screenings before applying cutoff filter
         total_screenings_before_cutoff = query.count()

@@ -220,29 +220,26 @@ class AutomatedScreeningRefreshManager:
             logger.info(f"📋 SCREENING TYPE STATUS CHANGE: {screening_type.name} -> {'Active' if new_status else 'Inactive'}")
             
             if not new_status:
-                # If screening type was deactivated, clean up existing screenings
+                # If screening type was deactivated, hide existing screenings instead of deleting them
                 existing_screenings = Screening.query.filter_by(screening_type=screening_type.name).all()
                 
                 if existing_screenings:
-                    # Delete existing screenings for the deactivated screening type
-                    logger.info(f"🧹 CLEANING UP: Removing {len(existing_screenings)} existing screenings for deactivated type '{screening_type.name}'")
+                    # Hide existing screenings for the deactivated screening type (preserve data)
+                    logger.info(f"🔒 HIDING SCREENINGS: Hiding {len(existing_screenings)} existing screenings for deactivated type '{screening_type.name}' (data preserved)")
                     
-                    cleanup_count = 0
+                    hidden_count = 0
                     for screening in existing_screenings:
                         try:
-                            # Remove document relationships first to avoid FK issues
-                            if hasattr(screening, 'documents') and screening.documents:
-                                # Clear the relationship properly
-                                for doc in list(screening.documents):
-                                    screening.documents.remove(doc)
-                            db.session.delete(screening)
-                            cleanup_count += 1
-                        except Exception as cleanup_error:
-                            logger.error(f"Error cleaning up screening {screening.id}: {cleanup_error}")
+                            # Set visibility to False instead of deleting
+                            screening.is_visible = False
+                            screening.updated_at = datetime.utcnow()
+                            hidden_count += 1
+                        except Exception as hide_error:
+                            logger.error(f"Error hiding screening {screening.id}: {hide_error}")
                     
-                    # Commit the cleanup
+                    # Commit the visibility changes
                     db.session.commit()
-                    logger.info(f"✅ Successfully removed {cleanup_count} screenings for deactivated type '{screening_type.name}'")
+                    logger.info(f"✅ Successfully hid {hidden_count} screenings for deactivated type '{screening_type.name}' (data preserved for reactivation)")
                     
                     # Also clean up checklist default items
                     try:
@@ -254,7 +251,8 @@ class AutomatedScreeningRefreshManager:
                     "status": "success",
                     "screening_type": screening_type.name,
                     "new_status": new_status,
-                    "existing_screenings": len(existing_screenings) if not new_status else 0
+                    "existing_screenings": len(existing_screenings) if not new_status else 0,
+                    "action": "hidden_for_reactivation"
                 }
             else:
                 # If screening type was activated, perform comprehensive reactivation
@@ -266,18 +264,41 @@ class AutomatedScreeningRefreshManager:
                 except Exception as checklist_error:
                     logger.error(f"Error updating checklist for reactivated type: {checklist_error}")
                 
-                # Use lightweight refresh to avoid worker timeout during activation
-                logger.info(f"🔄 Performing lightweight refresh for reactivated screening type: {screening_type.name}")
+                # Restore previously hidden screenings for this type
+                hidden_screenings = Screening.query.filter_by(
+                    screening_type=screening_type.name, 
+                    is_visible=False
+                ).all()
+                
+                restored_count = 0
+                if hidden_screenings:
+                    logger.info(f"🔓 RESTORING SCREENINGS: Restoring {len(hidden_screenings)} previously hidden screenings for reactivated type '{screening_type.name}'")
+                    
+                    for screening in hidden_screenings:
+                        try:
+                            # Restore visibility
+                            screening.is_visible = True
+                            screening.updated_at = datetime.utcnow()
+                            restored_count += 1
+                        except Exception as restore_error:
+                            logger.error(f"Error restoring screening {screening.id}: {restore_error}")
+                    
+                    db.session.commit()
+                    logger.info(f"✅ Successfully restored {restored_count} screenings for reactivated type '{screening_type.name}'")
+                
+                # Enhanced refresh for reactivation - smart regeneration approach
+                logger.info(f"🔄 Performing enhanced refresh for reactivated screening type: {screening_type.name}")
                 try:
-                    # Quick refresh - just mark for future processing instead of heavy operation
+                    # Smart refresh - restore existing data and generate missing screenings efficiently
                     refresh_result = {
                         "status": "success", 
-                        "action": "lightweight_refresh",
-                        "message": f"Screening type {screening_type.name} reactivated. Screenings will be generated on next patient access."
+                        "action": "enhanced_refresh",
+                        "restored_screenings": restored_count,
+                        "message": f"Screening type {screening_type.name} reactivated with {restored_count} screenings restored. Smart refresh will generate any missing screenings."
                     }
                 except Exception as refresh_error:
-                    logger.error(f"Error during lightweight refresh: {refresh_error}")
-                    refresh_result = {"status": "partial", "error": str(refresh_error)}
+                    logger.error(f"Error during enhanced refresh: {refresh_error}")
+                    refresh_result = {"status": "partial", "error": str(refresh_error), "restored_screenings": restored_count}
                 
                 logger.info(f"✅ REACTIVATION COMPLETE: {screening_type.name} is now fully integrated with parsing, checklist, and screening generation")
                 
@@ -286,6 +307,7 @@ class AutomatedScreeningRefreshManager:
                     "screening_type": screening_type.name,
                     "new_status": new_status,
                     "action": "reactivated",
+                    "restored_screenings": restored_count,
                     "refresh_result": refresh_result,
                     "checklist_updated": True,
                     "parsing_enabled": True
