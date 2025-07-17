@@ -916,141 +916,50 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         .all()
     )
 
-    # Get age and sex specific screenings
-    recommended_screenings = []
-
-    # Get checklist settings
+    # 🚀 SEAMLESS INTEGRATION: Use automated screening engine for all applicable screening types
+    # This automatically includes ALL active screening types without manual intervention
+    from automated_screening_engine import ScreeningStatusEngine
+    
+    # Get checklist settings for filtering and customization (not gatekeeper)
     from checklist_routes import get_or_create_settings
-
     checklist_settings = get_or_create_settings()
-    content_sources = checklist_settings.content_sources_list
-
-    # Get patient's age first (needed for demographic filtering)
-    if patient.date_of_birth:
-        today = datetime.today()
-        patient_age = (
-            today.year
-            - patient.date_of_birth.year
-            - (
-                (today.month, today.day)
-                < (patient.date_of_birth.month, patient.date_of_birth.day)
-            )
-        )
-    else:
-        patient_age = None
-
-    # Start with active screening types if database source is enabled
-    if "database" in content_sources:
-        # Get the selected default items from checklist settings
-        default_items_list = checklist_settings.default_items_list if checklist_settings.default_items else []
+    
+    # Use automated engine to get all applicable screening types for this patient
+    screening_engine = ScreeningStatusEngine()
+    automated_screenings = screening_engine.generate_patient_screenings(patient.id)
+    
+    # Extract screening type names from automated engine results
+    recommended_screenings = [screening['screening_type'] for screening in automated_screenings]
+    
+    print(f"🔍 Automated screening engine found {len(recommended_screenings)} applicable screenings for {patient.first_name} {patient.last_name}: {recommended_screenings}")
+    
+    # Apply checklist filtering if default_items are configured (customization layer)
+    if checklist_settings.default_items:
+        default_items_list = checklist_settings.default_items_list
+        if default_items_list:
+            # Filter to only include items selected in checklist settings
+            filtered_screenings = []
+            for screening_name in recommended_screenings:
+                # Check if this screening or its base name is in default items
+                base_name = variant_manager.extract_base_name(screening_name)
+                if screening_name in default_items_list or base_name in default_items_list:
+                    filtered_screenings.append(screening_name)
+            recommended_screenings = filtered_screenings
+            print(f"📋 Filtered by checklist settings to {len(recommended_screenings)} screenings: {recommended_screenings}")
+    
+    # Fallback if no screenings found (edge case protection)
+    if not recommended_screenings:
+        # Basic screenings for all patients (only as fallback)
+        recommended_screenings = ["Vaccination History", "Lipid Panel", "A1c", "Colonoscopy"]
         
-        # Filter default items by patient demographics (age and gender)
-        applicable_screenings = []
-        for item_name in default_items_list:
-            # Find the corresponding screening type to check demographics
-            screening_type = ScreeningType.query.filter_by(name=item_name, is_active=True, status='active').first()
-            if screening_type:
-                # Check age criteria
-                age_match = True
-                if screening_type.min_age is not None and patient_age is not None and patient_age < screening_type.min_age:
-                    age_match = False
-                if screening_type.max_age is not None and patient_age is not None and patient_age > screening_type.max_age:
-                    age_match = False
-                
-                # Check gender criteria
-                gender_match = True
-                if screening_type.gender_specific and patient.sex and screening_type.gender_specific.lower() != patient.sex.lower():
-                    gender_match = False
-                
-                # Add if criteria match
-                if age_match and gender_match:
-                    applicable_screenings.append(item_name)
-            else:
-                # If no screening type found, include the item anyway (for custom items)
-                applicable_screenings.append(item_name)
-        
-        # Use filtered default items from checklist settings
-        recommended_screenings.extend(applicable_screenings)
+        # Add sex-specific screenings for females
+        if patient.sex and patient.sex.lower() == "female":
+            recommended_screenings.extend(["Pap Smear", "Mammogram", "DEXA Scan"])
 
-    # Only add other items if database source isn't selected or if no applicable screenings found
-    if "database" not in content_sources or not recommended_screenings:
-
-        # Query active screening types from the database if age/gender-based content is enabled
-        if "age_based" in content_sources or "gender_based" in content_sources:
-            screening_types = (
-                ScreeningType.query.filter_by(is_active=True)
-                .order_by(ScreeningType.name)
-                .all()
-            )
-
-            # Filter screening types based on patient attributes and content sources
-            for screening_type in screening_types:
-                # Skip if age-based source is disabled and this is an age-specific screening
-                if "age_based" not in content_sources and (
-                    screening_type.min_age is not None
-                    or screening_type.max_age is not None
-                ):
-                    continue
-
-                # Skip if gender-based source is disabled and this is a gender-specific screening
-                if (
-                    "gender_based" not in content_sources
-                    and screening_type.gender_specific
-                ):
-                    continue
-
-                # Gender-specific check
-                if (
-                    screening_type.gender_specific
-                    and patient.sex
-                    and screening_type.gender_specific.lower() != patient.sex.lower()
-                ):
-                    continue
-
-                # Age-specific check
-                if patient_age is not None:
-                    if (
-                        screening_type.min_age is not None
-                        and patient_age < screening_type.min_age
-                    ):
-                        continue
-                    if (
-                        screening_type.max_age is not None
-                        and patient_age > screening_type.max_age
-                    ):
-                        continue
-
-                # Add this screening to the recommended list
-                recommended_screenings.append(screening_type.name)
-
-        # If no screening types are configured or none match, use default list
-        if not recommended_screenings:
-            # Basic screenings for all patients (fallback if nothing else applies)
-            recommended_screenings.extend(
-                ["Vaccination History", "Lipid Panel", "A1c", "Colonoscopy"]
-            )
-
-            # Sex-specific screenings if gender-based source is enabled
-            if (
-                "gender_based" in content_sources
-                and patient.sex
-                and patient.sex.lower() == "female"
-            ):
-                recommended_screenings.extend(["Pap Smear", "Mammogram", "DEXA Scan"])
-
-        # Condition-specific screenings if condition-based source is enabled
-        if "condition_based" in content_sources and active_conditions:
-            has_diabetes = any("diabetes" in c.name.lower() for c in active_conditions)
-            if has_diabetes:
-                recommended_screenings.extend(
-                    ["Diabetic Eye Exam", "Microalbumin", "Foot Exam"]
-                )
-
-    # Only add existing screenings from database if that source is enabled
-    if "existing_screenings" in content_sources:
-        for screening in screenings:
-            if screening.screening_type not in recommended_screenings:
-                recommended_screenings.append(screening.screening_type)
+    # Add existing screenings if they're not already included
+    for screening in screenings:
+        if screening.screening_type not in recommended_screenings:
+            recommended_screenings.append(screening.screening_type)
 
     # Generate a prep sheet summary
     prep_sheet_data = generate_prep_sheet(
