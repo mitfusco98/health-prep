@@ -224,7 +224,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 <select name="screening_type" class="form-select" onchange="this.form.submit()">
                     <option value="">All Types</option>
                     {% for type in all_screening_types %}
+                    {% if type.is_consolidated %}
+                    <option value="{{ type.name }}" {% if type.name == screening_type_filter %}selected{% endif %} 
+                            title="Includes: {{ type.variants|map(attribute='name')|join(', ') }}">
+                        {{ type.name }}
+                        {% if type.variants|length > 1 %}
+                        ({{ type.variants|length }} variants)
+                        {% endif %}
+                    </option>
+                    {% else %}
                     <option value="{{ type.name }}" {% if type.name == screening_type_filter %}selected{% endif %}>{{ type.name }}</option>
+                    {% endif %}
                     {% endfor %}
                 </select>
             </div>
