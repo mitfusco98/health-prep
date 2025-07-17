@@ -286,15 +286,47 @@ class AutomatedScreeningRefreshManager:
                     db.session.commit()
                     logger.info(f"✅ Successfully restored {restored_count} screenings for reactivated type '{screening_type.name}'")
                 
-                # Enhanced refresh for reactivation - smart regeneration approach
+                # Enhanced refresh for reactivation - generate missing screenings for eligible patients
                 logger.info(f"🔄 Performing enhanced refresh for reactivated screening type: {screening_type.name}")
                 try:
-                    # Smart refresh - restore existing data and generate missing screenings efficiently
+                    # Generate missing screenings for patients who should have this screening type but don't
+                    from automated_screening_engine import ScreeningStatusEngine
+                    
+                    engine = ScreeningStatusEngine()
+                    generated_count = 0
+                    
+                    # Get all patients who should have this screening but don't
+                    patients_needing_screening = Patient.query.filter(
+                        ~Patient.id.in_(
+                            db.session.query(Screening.patient_id).filter(
+                                Screening.screening_type == screening_type.name,
+                                Screening.is_visible == True
+                            )
+                        )
+                    ).all()
+                    
+                    for patient in patients_needing_screening:
+                        try:
+                            # Check if patient is eligible for this screening type
+                            if engine._is_patient_eligible(patient, screening_type):
+                                # Generate screening for this patient
+                                new_screening = engine._create_screening_for_patient(patient, screening_type)
+                                if new_screening:
+                                    generated_count += 1
+                                    logger.debug(f"Generated screening for patient {patient.id} ({patient.full_name})")
+                        except Exception as patient_error:
+                            logger.warning(f"Error generating screening for patient {patient.id}: {patient_error}")
+                            continue
+                    
+                    db.session.commit()
+                    logger.info(f"✅ Generated {generated_count} new screenings for eligible patients")
+                    
                     refresh_result = {
                         "status": "success", 
                         "action": "enhanced_refresh",
                         "restored_screenings": restored_count,
-                        "message": f"Screening type {screening_type.name} reactivated with {restored_count} screenings restored. Smart refresh will generate any missing screenings."
+                        "generated_screenings": generated_count,
+                        "message": f"Screening type {screening_type.name} reactivated: {restored_count} restored, {generated_count} generated."
                     }
                 except Exception as refresh_error:
                     logger.error(f"Error during enhanced refresh: {refresh_error}")
