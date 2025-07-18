@@ -110,10 +110,6 @@ class ScreeningStatusEngine:
         
         is_eligible, reason = unified_engine.is_patient_eligible(patient, screening_type)
         return is_eligible
-            if not patient_has_trigger_condition:
-                return False
-
-        return True
     
     def _patient_has_trigger_conditions(self, patient: Patient, trigger_conditions: List[Dict]) -> bool:
         """Check if patient has any of the trigger conditions"""
