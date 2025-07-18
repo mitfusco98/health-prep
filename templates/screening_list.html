@@ -180,12 +180,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </h5>
             </div>
             <div class="col-auto d-flex">
-                <a href="{{ url_for('screening_list', tab='screenings', regenerate='true', search=search_query) }}" class="btn btn-success me-2" onclick="return refreshScreenings(event, 'screenings')">
-                    <i class="fas fa-sync-alt me-1"></i>Refresh
-                </a>
-                <a href="{{ url_for('screening_list', tab='screenings', selective='true', search=search_query) }}" class="btn btn-outline-primary me-2" onclick="return refreshScreenings(event, 'screenings')">
-                    <i class="fas fa-magic me-1"></i>Smart Refresh
-                </a>
                 <a href="{{ url_for('add_screening_form') }}" class="btn btn-primary">
                     Add Screening
                 </a>
