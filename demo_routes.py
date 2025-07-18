@@ -3609,10 +3609,10 @@ def screening_list():
                                     db.session.add(new_screening)
                                     existing_screening = new_screening
                                 
-                                # Link documents to screening
+                                # Link documents to screening using proper SQLAlchemy syntax
                                 if screening_data.get('matched_documents'):
-                                    # Clear existing document relationships
-                                    existing_screening.documents.clear()
+                                    # Clear existing document relationships properly
+                                    existing_screening.documents = []
                                     
                                     # Add new document relationships
                                     for doc_id in screening_data['matched_documents']:
@@ -3669,10 +3669,10 @@ def screening_list():
                                     db.session.add(new_screening)
                                     existing_screening = new_screening
                                 
-                                # Link documents to screening
+                                # Link documents to screening using proper SQLAlchemy syntax  
                                 if screening_data.get('matched_documents'):
-                                    # Clear existing document relationships
-                                    existing_screening.documents.clear()
+                                    # Clear existing document relationships properly
+                                    existing_screening.documents = []
                                     
                                     # Add new document relationships
                                     for doc_id in screening_data['matched_documents']:
