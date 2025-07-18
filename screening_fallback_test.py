@@ -24,7 +24,8 @@ def test_fallback_system():
         
         for st in screening_types:
             has_content = bool(st.get_content_keywords())
-            has_document = bool(st.get_document_keywords()) 
+            has_document = bool(st.get_document_keywords())
+            has_keywords = bool(st.get_all_keywords()) 
             has_filename = bool(st.filename_keywords)
             
             if not has_content and not has_document and not has_filename:

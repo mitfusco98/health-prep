@@ -91,7 +91,7 @@ def test_automated_screening_engine_date_fix():
         print("\n🧪 TESTING AUTOMATED SCREENING ENGINE DATE FIX")
         print("=" * 50)
         
-        from automated_screening_engine import ScreeningStatusEngine
+        from unified_screening_engine import unified_engine
         
         # Find Cam Davis again
         cam = Patient.query.filter(
@@ -103,7 +103,7 @@ def test_automated_screening_engine_date_fix():
             print("❌ Cam Davis not found")
             return
         
-        engine = ScreeningStatusEngine()
+        engine = unified_engine
         
         # Generate fresh screenings for Cam
         screenings = engine.generate_patient_screenings(cam.id)

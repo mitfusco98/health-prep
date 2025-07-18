@@ -19,9 +19,9 @@ def diagnose_pap_smear_matches(patient_id=None):
         return
     
     print(f"🔍 Analyzing Pap Smear screening configuration:")
+    print(f"  All keywords: {pap_smear.get_all_keywords()}")
     print(f"  Content keywords: {pap_smear.get_content_keywords()}")
     print(f"  Document keywords: {pap_smear.get_document_keywords()}")
-    print(f"  Filename keywords: {pap_smear.get_filename_keywords()}")
     
     # Get patient(s) to analyze
     if patient_id:
@@ -56,20 +56,20 @@ def diagnose_pap_smear_matches(patient_id=None):
                 filename_has_keywords = False
                 doc_type_has_keywords = False
                 
-                if pap_smear.get_content_keywords() and doc.content:
-                    for keyword in pap_smear.get_content_keywords():
+                if pap_smear.get_all_keywords() and doc.content:
+                    for keyword in pap_smear.get_all_keywords():
                         if keyword.lower() in doc.content.lower():
                             content_has_keywords = True
                             print(f"    📄 Content contains: '{keyword}'")
                 
-                if pap_smear.get_filename_keywords() and doc.filename:
-                    for keyword in pap_smear.get_filename_keywords():
+                if pap_smear.get_all_keywords() and doc.filename:
+                    for keyword in pap_smear.get_all_keywords():
                         if keyword.lower() in doc.filename.lower():
                             filename_has_keywords = True
                             print(f"    📁 Filename contains: '{keyword}'")
                 
-                if pap_smear.get_document_keywords() and doc.document_type:
-                    for keyword in pap_smear.get_document_keywords():
+                if pap_smear.get_all_keywords() and doc.document_type:
+                    for keyword in pap_smear.get_all_keywords():
                         if keyword.lower() in doc.document_type.lower():
                             doc_type_has_keywords = True
                             print(f"    📋 Document type contains: '{keyword}'")

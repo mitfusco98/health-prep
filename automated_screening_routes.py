@@ -19,8 +19,8 @@ def generate_patient_screenings_api(patient_id):
     API endpoint to generate automated screenings for a specific patient
     """
     try:
-        from automated_screening_engine import ScreeningStatusEngine
-        engine = ScreeningStatusEngine()
+        from unified_screening_engine import unified_engine
+        engine = unified_engine
         screenings = engine.generate_patient_screenings(patient_id)
         
         # Update database with generated screenings
@@ -46,8 +46,8 @@ def generate_all_screenings_api():
     API endpoint to regenerate all automated screenings for all patients
     """
     try:
-        from automated_screening_engine import ScreeningStatusEngine
-        engine = ScreeningStatusEngine()
+        from unified_screening_engine import unified_engine
+        engine = unified_engine
         all_screenings = engine.generate_all_patient_screenings()
         
         total_generated = 0
@@ -111,8 +111,8 @@ def refresh_patient_screenings(patient_id):
     Refresh automated screenings for a specific patient
     """
     try:
-        from automated_screening_engine import ScreeningStatusEngine
-        engine = ScreeningStatusEngine()
+        from unified_screening_engine import unified_engine
+        engine = unified_engine
         screenings = engine.generate_patient_screenings(patient_id)
         _update_patient_screenings(patient_id, screenings)
         
@@ -130,8 +130,8 @@ def regenerate_all_screenings():
     Admin function to regenerate all automated screenings
     """
     try:
-        from automated_screening_engine import ScreeningStatusEngine
-        engine = ScreeningStatusEngine()
+        from unified_screening_engine import unified_engine
+        engine = unified_engine
         all_screenings = engine.generate_all_patient_screenings()
         
         total_generated = 0

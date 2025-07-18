@@ -13,7 +13,7 @@ from app import app, db
 from models import Screening, MedicalDocument, Patient, ScreeningType
 # Import classes properly  
 try:
-    from automated_screening_engine import ScreeningEngine
+    from unified_screening_engine import unified_engine
 except ImportError:
     ScreeningEngine = None
 
@@ -26,7 +26,7 @@ import re
 
 class KeywordDiagnosticTool:
     def __init__(self):
-        self.engine = ScreeningEngine() if ScreeningEngine else None
+        self.engine = unified_engine if ScreeningEngine else None
         self.matcher = DocumentScreeningMatcher() if DocumentScreeningMatcher else None
     
     def analyze_patient_screening(self, patient_name, screening_type_name=None):

@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app import app, db
 from models import Patient, Screening, MedicalDocument
-from automated_screening_engine import ScreeningStatusEngine
+from unified_screening_engine import unified_engine
 from datetime import datetime, date
 
 def correct_all_screening_dates():
@@ -90,7 +90,7 @@ def regenerate_all_screenings_with_correct_dates():
         print("\n🔄 REGENERATING ALL SCREENINGS WITH CORRECT DATE LOGIC")
         print("=" * 60)
         
-        engine = ScreeningStatusEngine()
+        engine = unified_engine
         
         # Get all patients
         patients = Patient.query.all()

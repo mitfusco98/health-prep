@@ -1370,7 +1370,7 @@ def edit_screening_type(screening_type_id):
             'min_age': screening_type.min_age,
             'max_age': screening_type.max_age,
             'is_active': screening_type.is_active,
-            'keywords': screening_type.get_content_keywords(),
+            'keywords': screening_type.get_all_keywords(),
             'trigger_conditions': screening_type.get_trigger_conditions()
         }
 
@@ -1399,7 +1399,7 @@ def edit_screening_type(screening_type_id):
             'min_age': screening_type.min_age,
             'max_age': screening_type.max_age,
             'is_active': screening_type.is_active,
-            'keywords': screening_type.get_content_keywords(),
+            'keywords': screening_type.get_all_keywords(),
             'trigger_conditions': screening_type.get_trigger_conditions()
         }
         
