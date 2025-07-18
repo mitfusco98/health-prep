@@ -3494,7 +3494,7 @@ def screening_list():
         )
 
     # Import the checklist settings model and helper function
-    from models import ChecklistSettings
+    from models import ChecklistSettings, Patient, Screening, ScreeningType, MedicalDocument
 
     # Get or create checklist settings for the checklist tab
     def get_or_create_settings():
@@ -3568,14 +3568,12 @@ def screening_list():
                 
                 # If search query is specified, only refresh those patients
                 if search_query:
-                    from models import Patient
                     patients_to_refresh = Patient.query.filter(
                         (Patient.first_name.ilike(f'%{search_query}%')) |
                         (Patient.last_name.ilike(f'%{search_query}%'))
                     ).limit(10).all()  # Limit to 10 patients to prevent timeouts
                 else:
                     # For full refresh, use batch processing with limits
-                    from models import Patient
                     patients_to_refresh = Patient.query.limit(25).all()  # Process in batches
                 
                 # Process patients with timeout protection
