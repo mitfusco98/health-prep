@@ -245,3 +245,152 @@
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
 }
+
+/* Trigger Conditions Management Styles - Dark Theme */
+.trigger-conditions-container {
+    border: 1px solid #495057;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    background-color: #343a40;
+}
+
+.trigger-conditions-form-group {
+    margin-bottom: 0;
+}
+
+.trigger-conditions-display {
+    min-height: 60px;
+    margin-top: 0.5rem;
+    background-color: #212529;
+    border: 1px solid #495057;
+    border-radius: 0.25rem;
+    padding: 0.75rem;
+}
+
+.trigger-conditions-help-text {
+    color: #adb5bd;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+/* Trigger condition form inputs */
+.trigger-conditions-container .form-select,
+.trigger-conditions-container .form-control {
+    background-color: #495057;
+    border: 1px solid #6c757d;
+    color: #e9ecef;
+}
+
+.trigger-conditions-container .form-select:focus,
+.trigger-conditions-container .form-control:focus {
+    background-color: #495057;
+    border-color: #80bdff;
+    color: #e9ecef;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.trigger-conditions-container .form-select option {
+    background-color: #495057;
+    color: #e9ecef;
+}
+
+.trigger-conditions-container .btn-outline-primary {
+    border-color: #0d6efd;
+    color: #0d6efd;
+    background-color: transparent;
+}
+
+.trigger-conditions-container .btn-outline-primary:hover {
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+/* Individual trigger condition badges */
+.trigger-conditions-display .badge {
+    background-color: #17a2b8 !important;
+    color: #fff;
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    margin: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.trigger-conditions-display .badge .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+    font-size: 0.75rem;
+    width: 0.75rem;
+    height: 0.75rem;
+}
+
+.trigger-conditions-display .badge .btn-close:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+}
+
+/* Empty state styling */
+.trigger-conditions-display .text-muted {
+    color: #6c757d !important;
+    font-style: italic;
+    text-align: center;
+    padding: 1rem;
+}
+
+/* Condition Autocomplete Styles - Dark Theme */
+.condition-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #343a40;
+    border: 1px solid #495057;
+    border-top: none;
+    border-radius: 0 0 0.375rem 0.375rem;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.5);
+}
+
+.condition-suggestion {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid #495057;
+    color: #e9ecef;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.condition-suggestion:hover {
+    background-color: #495057;
+    color: #fff;
+}
+
+.condition-suggestion:last-child {
+    border-bottom: none;
+}
+
+.condition-name {
+    font-weight: 500;
+    color: #e9ecef;
+    margin-bottom: 0.25rem;
+}
+
+.condition-codes {
+    font-size: 0.875rem;
+    color: #adb5bd;
+    margin-top: 0.25rem;
+}
+
+.condition-code {
+    display: inline-block;
+    margin-right: 0.5rem;
+    padding: 0.125rem 0.375rem;
+    background-color: #495057;
+    border: 1px solid #6c757d;
+    border-radius: 0.25rem;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    color: #adb5bd;
+    font-size: 0.75rem;
+}
