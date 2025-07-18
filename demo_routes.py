@@ -3635,36 +3635,92 @@ def screening_list():
     screenings_hidden_by_cutoff = 0
     
     if tab == "screenings":
-        # Import cutoff utilities
-        from cutoff_utils import get_cutoff_date_for_patient
-        
-        # Get cutoff settings info for display
-        settings = get_or_create_settings()
-        cutoff_info = {
-            'general_cutoff_months': settings.cutoff_months,
-            'labs_cutoff_months': settings.labs_cutoff_months,
-            'imaging_cutoff_months': settings.imaging_cutoff_months,
-            'consults_cutoff_months': settings.consults_cutoff_months,
-            'hospital_cutoff_months': settings.hospital_cutoff_months,
-            'screening_cutoffs': settings.screening_cutoffs,
-            'has_cutoffs': (settings.cutoff_months and settings.cutoff_months > 0) or 
-                          any([settings.labs_cutoff_months, settings.imaging_cutoff_months, 
-                               settings.consults_cutoff_months, settings.hospital_cutoff_months]),
-        }
-        
-        # Check if admin override is requested to show all screenings
-        show_all = request.args.get('show_all') == 'true'
-        admin_override = show_all and session.get('is_admin', False)
-        
-        # Query existing screenings from database - ONLY INCLUDE ACTIVE SCREENING TYPES
-        query = Screening.query.join(Patient).join(ScreeningType, Screening.screening_type == ScreeningType.name).filter(ScreeningType.is_active == True)
-        
-        # Count total screenings before applying cutoff filter
-        total_screenings_before_cutoff = query.count()
+        # ✅ USE HIGH-PERFORMANCE OPTIMIZATION FOR SCREENINGS TAB
+        try:
+            from screening_performance_optimizer import screening_optimizer
+            
+            # Get pagination parameters
+            page = int(request.args.get('page', 1))
+            page_size = min(int(request.args.get('page_size', 50)), 100)
+            status_filter = request.args.get('status', '')
+            screening_type_filter = request.args.get('screening_type', '')
+            
+            # Use optimized query with caching and pagination
+            query_result = screening_optimizer.get_optimized_screenings(
+                page=page,
+                page_size=page_size,
+                status_filter=status_filter,
+                screening_type_filter=screening_type_filter,
+                search_query=search_query
+            )
+            
+            screenings = query_result['screenings']
+            pagination_info = query_result['pagination']
+            filters_info = query_result['filters']
+            metadata = query_result['metadata']
+            
+            # Get screening statistics for dashboard
+            try:
+                stats = screening_optimizer.get_screening_stats()
+            except Exception:
+                stats = {'by_status': {}, 'by_type': {}, 'total_count': len(screenings)}
+            
+            # Set variables for template compatibility
+            total_screenings_before_cutoff = pagination_info['total_count']
+            screenings_hidden_by_cutoff = 0
+            
+            # Import cutoff utilities for legacy compatibility
+            from cutoff_utils import get_cutoff_date_for_patient
+            
+            # Get cutoff settings info for display
+            settings = get_or_create_settings()
+            cutoff_info = {
+                'general_cutoff_months': settings.cutoff_months,
+                'labs_cutoff_months': settings.labs_cutoff_months,
+                'imaging_cutoff_months': settings.imaging_cutoff_months,
+                'consults_cutoff_months': settings.consults_cutoff_months,
+                'hospital_cutoff_months': settings.hospital_cutoff_months,
+                'screening_cutoffs': settings.screening_cutoffs,
+                'has_cutoffs': (settings.cutoff_months and settings.cutoff_months > 0) or 
+                              any([settings.labs_cutoff_months, settings.imaging_cutoff_months, 
+                                   settings.consults_cutoff_months, settings.hospital_cutoff_months]),
+            }
+            
+        except Exception as e:
+            # Fallback to original logic if performance optimization fails
+            print(f"Performance optimization failed: {e}")
+            flash("Using simplified view due to performance optimization issue", "info")
+            
+            # Import cutoff utilities
+            from cutoff_utils import get_cutoff_date_for_patient
+            
+            # Get cutoff settings info for display
+            settings = get_or_create_settings()
+            cutoff_info = {
+                'general_cutoff_months': settings.cutoff_months,
+                'labs_cutoff_months': settings.labs_cutoff_months,
+                'imaging_cutoff_months': settings.imaging_cutoff_months,
+                'consults_cutoff_months': settings.consults_cutoff_months,
+                'hospital_cutoff_months': settings.hospital_cutoff_months,
+                'screening_cutoffs': settings.screening_cutoffs,
+                'has_cutoffs': (settings.cutoff_months and settings.cutoff_months > 0) or 
+                              any([settings.labs_cutoff_months, settings.imaging_cutoff_months, 
+                                   settings.consults_cutoff_months, settings.hospital_cutoff_months]),
+            }
+            
+            # Check if admin override is requested to show all screenings
+            show_all = request.args.get('show_all') == 'true'
+            admin_override = show_all and session.get('is_admin', False)
+            
+            # Query existing screenings from database - ONLY INCLUDE ACTIVE SCREENING TYPES
+            query = Screening.query.join(Patient).join(ScreeningType, Screening.screening_type == ScreeningType.name).filter(ScreeningType.is_active == True)
+            
+            # Count total screenings before applying cutoff filter
+            total_screenings_before_cutoff = query.count()
 
-        # Apply filters
-        status_filter = request.args.get('status')
-        screening_type_filter = request.args.get('screening_type')
+            # Apply filters
+            status_filter = request.args.get('status')
+            screening_type_filter = request.args.get('screening_type')
         
         if status_filter:
             query = query.filter(Screening.status == status_filter)
@@ -3855,6 +3911,14 @@ def screening_list():
             screenings_hidden_by_cutoff=screenings_hidden_by_cutoff,
             admin_override=request.args.get('show_all') == 'true' and session.get('is_admin', False),
             variant_manager=variant_manager,  # Add missing variant_manager
+            # ✅ PERFORMANCE OPTIMIZATION DATA FOR SCREENINGS TAB
+            pagination=pagination_info if tab == "screenings" and 'pagination_info' in locals() else {},
+            filters=filters_info if tab == "screenings" and 'filters_info' in locals() else {},
+            metadata=metadata if tab == "screenings" and 'metadata' in locals() else {},
+            stats=stats if tab == "screenings" and 'stats' in locals() else {},
+            # URL parameters for maintaining state  
+            current_page=int(request.args.get('page', 1)),
+            page_size=int(request.args.get('page_size', 50)),
         )
     except Exception as e:
         print(f"Error rendering screening_list.html: {str(e)}")
