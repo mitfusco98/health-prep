@@ -1,0 +1,162 @@
+<!-- High-Performance Pagination Component for Screening List -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <!-- Results Info -->
+        <div class="d-flex align-items-center">
+            <span class="text-muted">
+                Showing {{ ((pagination.current_page - 1) * pagination.page_size + 1) if pagination.total_count > 0 else 0 }}
+                to {{ min(pagination.current_page * pagination.page_size, pagination.total_count) }}
+                of {{ pagination.total_count }} screenings
+            </span>
+            {% if metadata.optimized %}
+                <span class="badge bg-success ms-2" title="Using optimized query with caching">⚡ Optimized</span>
+            {% endif %}
+        </div>
+
+        <!-- Page Size Selector -->
+        <div class="mt-2">
+            <label for="pageSizeSelect" class="form-label small">Per page:</label>
+            <select id="pageSizeSelect" class="form-select form-select-sm d-inline-block w-auto">
+                <option value="25" {{ 'selected' if page_size == 25 else '' }}>25</option>
+                <option value="50" {{ 'selected' if page_size == 50 else '' }}>50</option>
+                <option value="100" {{ 'selected' if page_size == 100 else '' }}>100</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <!-- Pagination Controls -->
+        {% if pagination.total_pages > 1 %}
+        <nav aria-label="Screening pagination">
+            <ul class="pagination justify-content-end mb-0">
+                <!-- Previous Page -->
+                <li class="page-item {{ 'disabled' if not pagination.has_prev else '' }}">
+                    <a class="page-link" href="{{ url_for('screening.screening_list', 
+                        page=pagination.prev_page, 
+                        page_size=page_size, 
+                        status=status_filter, 
+                        screening_type=screening_type_filter, 
+                        search=search_query) if pagination.has_prev else '#' }}">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+                </li>
+
+                <!-- Page Numbers -->
+                {% set start_page = max(1, pagination.current_page - 2) %}
+                {% set end_page = min(pagination.total_pages, pagination.current_page + 2) %}
+
+                {% if start_page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('screening.screening_list', 
+                            page=1, page_size=page_size, status=status_filter, 
+                            screening_type=screening_type_filter, search=search_query) }}">1</a>
+                    </li>
+                    {% if start_page > 2 %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endif %}
+
+                {% for page_num in range(start_page, end_page + 1) %}
+                    <li class="page-item {{ 'active' if page_num == pagination.current_page else '' }}">
+                        <a class="page-link" href="{{ url_for('screening.screening_list', 
+                            page=page_num, page_size=page_size, status=status_filter, 
+                            screening_type=screening_type_filter, search=search_query) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                {% endfor %}
+
+                {% if end_page < pagination.total_pages %}
+                    {% if end_page < pagination.total_pages - 1 %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('screening.screening_list', 
+                            page=pagination.total_pages, page_size=page_size, status=status_filter, 
+                            screening_type=screening_type_filter, search=search_query) }}">
+                            {{ pagination.total_pages }}
+                        </a>
+                    </li>
+                {% endif %}
+
+                <!-- Next Page -->
+                <li class="page-item {{ 'disabled' if not pagination.has_next else '' }}">
+                    <a class="page-link" href="{{ url_for('screening.screening_list', 
+                        page=pagination.next_page, 
+                        page_size=page_size, 
+                        status=status_filter, 
+                        screening_type=screening_type_filter, 
+                        search=search_query) if pagination.has_next else '#' }}">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Stats Dashboard -->
+{% if stats and stats.by_status %}
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body py-2">
+                <div class="row text-center">
+                    <div class="col-md-2">
+                        <strong>Total</strong><br>
+                        <span class="badge bg-secondary">{{ stats.total_count }}</span>
+                    </div>
+                    {% for status, count in stats.by_status.items() %}
+                    <div class="col-md-2">
+                        <strong>{{ status }}</strong><br>
+                        <span class="badge {{ 
+                            'bg-danger' if status == 'Due' else
+                            'bg-warning text-dark' if status == 'Due Soon' else
+                            'bg-info' if status == 'Incomplete' else
+                            'bg-success' if status == 'Complete' else
+                            'bg-secondary'
+                        }}">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+// Performance optimization: Debounced page size change
+let pageSizeTimeout;
+document.getElementById('pageSizeSelect').addEventListener('change', function() {
+    clearTimeout(pageSizeTimeout);
+    pageSizeTimeout = setTimeout(() => {
+        const newPageSize = this.value;
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.set('page_size', newPageSize);
+        currentUrl.searchParams.set('page', '1'); // Reset to first page
+        window.location.href = currentUrl.toString();
+    }, 300); // 300ms debounce
+});
+
+// Preload next page for better UX (if exists)
+{% if pagination.has_next %}
+document.addEventListener('DOMContentLoaded', function() {
+    const nextPageUrl = "{{ url_for('screening.screening_list', 
+        page=pagination.next_page, 
+        page_size=page_size, 
+        status=status_filter, 
+        screening_type=screening_type_filter, 
+        search=search_query) }}";
+    
+    // Preload next page after a delay
+    setTimeout(() => {
+        const link = document.createElement('link');
+        link.rel = 'prefetch';
+        link.href = nextPageUrl;
+        document.head.appendChild(link);
+    }, 2000); // Preload after 2 seconds
+});
+{% endif %}
+</script>

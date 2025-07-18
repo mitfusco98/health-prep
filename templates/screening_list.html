@@ -5,6 +5,8 @@ html
 
 <!-- Include screening modals JavaScript -->
 <script src="{{ url_for('static', filename='js/screening_modals.js') }}"></script>
+<!-- Include performance optimization JavaScript -->
+<script src="{{ url_for('static', filename='js/screening_performance.js') }}"></script>
 
 {% block extra_js %}
 <script>
@@ -355,6 +357,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 {% endif %}
             </p>
         </div>
+        {% endif %}
+        
+        <!-- High-Performance Pagination Component -->
+        {% if pagination and pagination.total_pages > 1 %}
+            {% include 'screening_pagination.html' %}
         {% endif %}
     </div>
 </div>

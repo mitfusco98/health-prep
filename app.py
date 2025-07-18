@@ -12,6 +12,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_compress import Compress
+from flask_caching import Cache
 from functools import wraps
 import time
 
@@ -83,6 +84,11 @@ app.config["COMPRESS_MIMETYPES"] = [
 ]
 app.config["COMPRESS_LEVEL"] = 6  # Balance between compression ratio and CPU usage
 app.config["COMPRESS_MIN_SIZE"] = 1000  # Only compress responses larger than 1KB
+
+# Initialize caching for performance optimization
+app.config["CACHE_TYPE"] = "simple"  # In-memory cache for now
+app.config["CACHE_DEFAULT_TIMEOUT"] = 300  # 5 minutes default timeout
+cache = Cache(app)
 # Security configuration is now handled by unified config system
 
 # CSRF protection is now enabled for all routes for security

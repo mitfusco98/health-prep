@@ -51,34 +51,30 @@ def screening_list():
             active_tab="types"
         )
     else:
-        # Show patient screenings with optimized query
+        # Show patient screenings with high-performance optimized query
         try:
-            # Use optimized query with eager loading to prevent N+1 problems
-            screenings = (
-                Screening.query
-                .join(Patient)  # Join patient for filtering
-                .join(ScreeningType, Screening.screening_type == ScreeningType.name)  # Join screening type by name
-                .filter(ScreeningType.is_active == True)  # Only active screening types
-                .filter(Screening.is_visible == True)  # Only visible screenings (not hidden by deactivation)
-                .options(
-                    db.joinedload(Screening.patient),  # Eager load patient
-                    db.selectinload(Screening.documents)  # Eager load documents
-                )
-                .order_by(
-                    # Priority order: Due first, then Due Soon, then others
-                    db.case(
-                        (Screening.status == 'Due', 1),
-                        (Screening.status == 'Due Soon', 2),
-                        (Screening.status == 'Incomplete', 3),
-                        (Screening.status == 'Complete', 4),
-                        else_=5
-                    ),
-                    Screening.due_date.asc().nullslast(),
-                    Patient.last_name.asc()
-                )
-                .limit(1000)  # Limit results for performance
-                .all()
+            from screening_performance_optimizer import screening_optimizer
+            
+            # Get pagination parameters
+            page = int(request.args.get('page', 1))
+            page_size = min(int(request.args.get('page_size', 50)), 100)
+            status_filter = request.args.get('status', '')
+            screening_type_filter = request.args.get('screening_type', '')
+            search_query = request.args.get('search', '')
+            
+            # Use optimized query with caching and pagination
+            query_result = screening_optimizer.get_optimized_screenings(
+                page=page,
+                page_size=page_size,
+                status_filter=status_filter,
+                screening_type_filter=screening_type_filter,
+                search_query=search_query
             )
+            
+            screenings = query_result['screenings']
+            pagination_info = query_result['pagination']
+            filters_info = query_result['filters']
+            metadata = query_result['metadata']
             
             # Quick validation without additional database queries
             validation_errors = []
@@ -105,9 +101,21 @@ def screening_list():
                 
         except Exception as e:
             # Fallback to basic query if optimized version fails
-            print(f"Optimized screening query failed: {e}")
-            screenings = Screening.query.join(Patient).order_by(Screening.due_date.asc()).limit(100).all()
-            flash("Using simplified view due to database optimization issue", "info")
+            print(f"Performance optimization failed: {e}")
+            screenings = Screening.query.join(Patient).filter(Screening.is_visible == True).order_by(Screening.due_date.asc()).limit(50).all()
+            flash("Using simplified view due to performance optimization issue", "info")
+            
+            # Create basic pagination info for fallback
+            pagination_info = {
+                'current_page': 1,
+                'total_pages': 1,
+                'total_count': len(screenings),
+                'page_size': 50,
+                'has_next': False,
+                'has_prev': False
+            }
+            filters_info = {}
+            metadata = {'optimized': False, 'fallback': True}
 
         # Get all patients and screening types for the form
         patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
@@ -117,13 +125,31 @@ def screening_list():
             .all()
         )
 
+        # Get screening statistics for dashboard
+        try:
+            from screening_performance_optimizer import screening_optimizer
+            stats = screening_optimizer.get_screening_stats()
+        except Exception:
+            stats = {'by_status': {}, 'by_type': {}, 'total_count': len(screenings)}
+
         return render_template(
             "screening_list.html",
             screenings=screenings,
             patients=patients,
             screening_types=screening_types,
             active_tab="patients",
-            variant_manager=variant_manager,  # Add missing variant_manager
+            variant_manager=variant_manager,
+            # Performance optimization data
+            pagination=pagination_info if 'pagination_info' in locals() else {},
+            filters=filters_info if 'filters_info' in locals() else {},
+            metadata=metadata if 'metadata' in locals() else {},
+            stats=stats,
+            # URL parameters for maintaining state
+            current_page=int(request.args.get('page', 1)),
+            page_size=int(request.args.get('page_size', 50)),
+            status_filter=request.args.get('status', ''),
+            screening_type_filter=request.args.get('screening_type', ''),
+            search_query=request.args.get('search', '')
         )
 
 
