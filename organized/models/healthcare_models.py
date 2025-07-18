@@ -506,19 +506,7 @@ class ChecklistSettings(db.Model):
             return []
         return self.status_options.split(",")
 
-    @property
-    def custom_status_list(self):
-        """Return custom status options as a list"""
-        if not self.custom_status_options:
-            return []
-        return self.custom_status_options.split(",")
-
-    @property
-    def all_status_options(self):
-        """Return all status options (default + custom) as a list"""
-        all_options = self.status_options_list
-        all_options.extend(self.custom_status_list)
-        return all_options
+    # Custom status functionality removed - using standard status options only
 
     @property
     def content_sources_list(self):

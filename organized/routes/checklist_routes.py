@@ -86,8 +86,7 @@ def update_checklist_generation():
     return redirect(url_for("checklist_settings"))
 
 
-@app.route("/checklist-settings/remove-custom-status", methods=["POST"])
-@safe_db_operation
+# Custom status routes removed - using standard status options only
 def remove_custom_status():
     """Remove a specific custom status option from the prep sheet quality checklist settings"""
     # Get the current settings

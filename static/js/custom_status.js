@@ -1,28 +1,15 @@
 /**
- * Enhanced Status Entry Functionality
+ * Standard Status Options Functionality
  * 
- * This script adds direct custom status entry to all status dropdowns by:
- * 1. Double-clicking on any dropdown to enter custom text
- * 2. Right-clicking on a dropdown shows a context menu to enter custom status
- * 3. Selecting "custom" from the dropdown enables free text entry in both status and note fields
- * 4. Automatically saves custom status entries to localStorage
+ * This script handles standard status dropdown functionality for screening checklists.
+ * Custom status entry has been removed in favor of predefined standard options.
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Enhanced status entry script loaded');
+    console.log('Standard status options script loaded');
     
     // Find all status dropdowns in the screening checklist
     const statusSelects = document.querySelectorAll('.screening-status-select');
-    
-    // Check if custom status option is enabled in settings
-    const customStatusEnabled = document.querySelector('#status_custom') ? 
-                               document.querySelector('#status_custom').checked : 
-                               true; // Default to enabled if not in settings page
-    
-    if (!customStatusEnabled && window.location.pathname.includes('checklist-settings')) {
-        console.log('Custom status not enabled in settings');
-        return; // Skip enhancement if we're on settings page and it's disabled
-    }
     
     statusSelects.forEach(function(select) {
         // Create a hidden input field that will store the custom value

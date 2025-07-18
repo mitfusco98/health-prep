@@ -30,80 +30,54 @@ def screening_checklist_rebuilt():
 
 
 @app.route('/save-status-options-simple', methods=['POST'])
+@login_required  
 def save_status_options_simple():
-    """Save status options with simple, reliable processing"""
+    """Save standard status options for prep sheet checklists"""
+    # Get or create settings
+    settings = ChecklistSettings.query.first()
+    if not settings:
+        settings = ChecklistSettings()
+        db.session.add(settings)
+
+    # Get standard status selections from form
+    status_selections = request.form.get('status_selections', '')
+
+    # Update settings with standard options only
+    settings.status_options = status_selections
+
     try:
-        # Debug: Print all form data
-        print(f"=== FORM DEBUG ===")
-        print(f"Form keys: {list(request.form.keys())}")
-        for key in request.form.keys():
-            values = request.form.getlist(key)
-            print(f"  {key}: {values}")
-        print(f"=== END DEBUG ===")
-
-        # Get current settings
-        settings = ChecklistSettings.query.first()
-        if not settings:
-            settings = ChecklistSettings()
-            db.session.add(settings)
-
-        # Get selections from the single hidden input
-        status_selections = request.form.get('status_selections', '')
-        print(f"Received status selections: '{status_selections}'")
-
-        # Custom status options are no longer supported
-        settings.custom_status_options = ''
-
-        # Update settings
-        settings.status_options = status_selections
-
-        # Commit to database
         db.session.commit()
-
-        total_options = len(status_selections.split(',') if status_selections else [])
-        flash(f'Successfully saved {len(status_selections.split(",") if status_selections else [])} status options', 'success')
-        print(f"Successfully saved status options: {status_selections}")
-
+        flash('Status options updated successfully!', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'Error saving status options: {str(e)}', 'danger')
-        print(f"Error saving status options: {e}")
+        flash(f'Error updating status options: {str(e)}', 'danger')
 
+    # Redirect back to checklist tab
     return redirect(url_for('screening_list', tab='checklist'))
 
 
 @app.route('/save-default-items-simple', methods=['POST'])
+@login_required
 def save_default_items_simple():
-    """Save default items with simple, reliable processing"""
+    """Save default screening items for prep sheet checklists"""
+    # Get or create settings
+    settings = ChecklistSettings.query.first()
+    if not settings:
+        settings = ChecklistSettings()
+        db.session.add(settings)
+
+    # Get screening selections from form
+    screening_selections = request.form.get('screening_selections', '')
+
+    # Update settings
+    settings.default_items = screening_selections
+
     try:
-        # Get current settings
-        settings = ChecklistSettings.query.first()
-        if not settings:
-            settings = ChecklistSettings()
-            db.session.add(settings)
-
-        # Get selections from the single hidden input
-        screening_selections = request.form.get('screening_selections', '')
-        print(f"Received screening selections: '{screening_selections}'")
-
-        # Convert comma-separated to newline-separated for storage
-        if screening_selections:
-            default_items = screening_selections.replace(',', '\n')
-        else:
-            default_items = ''
-
-        # Update settings
-        settings.default_items = default_items
-
-        # Commit to database
         db.session.commit()
-
-        flash(f'Successfully saved default items: {len(screening_selections.split(",") if screening_selections else [])} items', 'success')
-        print(f"Successfully saved default items: {default_items}")
-
+        flash('Default checklist items updated successfully!', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'Error saving default items: {str(e)}', 'danger')
-        print(f"Error saving default items: {e}")
+        flash(f'Error updating default items: {str(e)}', 'danger')
 
+    # Redirect back to checklist tab
     return redirect(url_for('screening_list', tab='checklist'))
