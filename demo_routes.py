@@ -3721,108 +3721,108 @@ def screening_list():
             # Apply filters
             status_filter = request.args.get('status')
             screening_type_filter = request.args.get('screening_type')
-        
-        if status_filter:
-            query = query.filter(Screening.status == status_filter)
             
-        if screening_type_filter:
-            # Check if this is a consolidated screening type - if so, show all variants
-            from screening_variant_manager import variant_manager
-            variants = variant_manager.find_screening_variants(screening_type_filter)
-            
-            if variants and len(variants) > 1:
-                # This is a consolidated type with multiple variants - show all variants
-                variant_names = [v.name for v in variants]
-                query = query.filter(Screening.screening_type.in_(variant_names))
-            else:
-                # Regular single screening type filtering
-                query = query.filter(Screening.screening_type == screening_type_filter)
+            if status_filter:
+                query = query.filter(Screening.status == status_filter)
+                
+            if screening_type_filter:
+                # Check if this is a consolidated screening type - if so, show all variants
+                from screening_variant_manager import variant_manager
+                variants = variant_manager.find_screening_variants(screening_type_filter)
+                
+                if variants and len(variants) > 1:
+                    # This is a consolidated type with multiple variants - show all variants
+                    variant_names = [v.name for v in variants]
+                    query = query.filter(Screening.screening_type.in_(variant_names))
+                else:
+                    # Regular single screening type filtering
+                    query = query.filter(Screening.screening_type == screening_type_filter)
 
-        # Apply search filter if provided (exact patient name match for dropdown)
-        if search_query:
-            # Check if it's a patient name (contains space) or screening type
-            if ' ' in search_query:
-                # Exact patient name match for dropdown selection
-                query = query.filter(
-                    db.func.concat(Patient.first_name, ' ', Patient.last_name) == search_query
-                )
-            else:
-                # Fallback to partial matching for screening types
-                query = query.filter(
-                    db.or_(
-                        Patient.first_name.ilike(f"%{search_query}%"),
-                        Patient.last_name.ilike(f"%{search_query}%"),
-                        Screening.screening_type.ilike(f"%{search_query}%"),
+            # Apply search filter if provided (exact patient name match for dropdown)
+            if search_query:
+                # Check if it's a patient name (contains space) or screening type
+                if ' ' in search_query:
+                    # Exact patient name match for dropdown selection
+                    query = query.filter(
+                        db.func.concat(Patient.first_name, ' ', Patient.last_name) == search_query
                     )
-                )
+                else:
+                    # Fallback to partial matching for screening types
+                    query = query.filter(
+                        db.or_(
+                            Patient.first_name.ilike(f"%{search_query}%"),
+                            Patient.last_name.ilike(f"%{search_query}%"),
+                            Screening.screening_type.ilike(f"%{search_query}%"),
+                        )
+                    )
 
-        # Get all screenings before cutoff filtering for counting
-        all_screenings_raw = query.order_by(
-            db.case(
-                (Screening.status == "Due", 0),
-                (Screening.status == "Due Soon", 1),
-                (Screening.status == "Incomplete", 2),
-                else_=3,
-            ),
-            Patient.last_name,
-            Patient.first_name
-        ).all()
-        
-        # Filter out screenings where patients don't meet trigger conditions
-        all_screenings = []
-        for screening in all_screenings_raw:
-            screening_type = ScreeningType.query.filter_by(name=screening.screening_type).first()
-            if screening_type and screening_type.trigger_conditions:
-                # This is a condition-triggered screening - validate patient has required conditions
-                patient_conditions = Condition.query.filter_by(patient_id=screening.patient_id, is_active=True).all()
-                if _patient_meets_trigger_conditions(patient_conditions, screening_type):
+            # Get all screenings before cutoff filtering for counting
+            all_screenings_raw = query.order_by(
+                db.case(
+                    (Screening.status == "Due", 0),
+                    (Screening.status == "Due Soon", 1),
+                    (Screening.status == "Incomplete", 2),
+                    else_=3,
+                ),
+                Patient.last_name,
+                Patient.first_name
+            ).all()
+            
+            # Filter out screenings where patients don't meet trigger conditions
+            all_screenings = []
+            for screening in all_screenings_raw:
+                screening_type = ScreeningType.query.filter_by(name=screening.screening_type).first()
+                if screening_type and screening_type.trigger_conditions:
+                    # This is a condition-triggered screening - validate patient has required conditions
+                    patient_conditions = Condition.query.filter_by(patient_id=screening.patient_id, is_active=True).all()
+                    if _patient_meets_trigger_conditions(patient_conditions, screening_type):
+                        all_screenings.append(screening)
+                    # If patient doesn't meet conditions, skip this screening
+                else:
+                    # No trigger conditions - include all screenings of this type
                     all_screenings.append(screening)
-                # If patient doesn't meet conditions, skip this screening
-            else:
-                # No trigger conditions - include all screenings of this type
-                all_screenings.append(screening)
-        
-        # Apply cutoff filtering unless admin override is active
-        if not admin_override and cutoff_info['has_cutoffs']:
-            screenings_after_cutoff = []
             
-            for screening in all_screenings:
-                patient = screening.patient
+            # Apply cutoff filtering unless admin override is active
+            if not admin_override and cutoff_info['has_cutoffs']:
+                screenings_after_cutoff = []
                 
-                # Always show screenings without completion dates (they're pending)
-                if not screening.last_completed:
-                    screenings_after_cutoff.append(screening)
-                    continue
-                
-                # Get cutoff date for this specific screening and patient
-                try:
-                    cutoff_date = get_cutoff_date_for_patient(
-                        patient.id, 
-                        data_type=None, 
-                        screening_name=screening.screening_type
-                    )
+                for screening in all_screenings:
+                    patient = screening.patient
                     
-                    # Convert last_completed to datetime for comparison
-                    if hasattr(screening.last_completed, 'date'):
-                        screening_datetime = screening.last_completed
-                    else:
-                        screening_datetime = datetime.combine(screening.last_completed, datetime.min.time())
-                    
-                    # Include screening if it's within the cutoff window
-                    if screening_datetime >= cutoff_date:
+                    # Always show screenings without completion dates (they're pending)
+                    if not screening.last_completed:
                         screenings_after_cutoff.append(screening)
+                        continue
                     
-                except Exception as e:
-                    # If there's an error with cutoff calculation, include the screening
-                    print(f"Error calculating cutoff for screening {screening.id}: {e}")
-                    screenings_after_cutoff.append(screening)
-            
-            screenings = screenings_after_cutoff
-            screenings_hidden_by_cutoff = len(all_screenings) - len(screenings)
-        else:
-            # No cutoff filtering or admin override - show all screenings
-            screenings = all_screenings
-            screenings_hidden_by_cutoff = 0
+                    # Get cutoff date for this specific screening and patient
+                    try:
+                        cutoff_date = get_cutoff_date_for_patient(
+                            patient.id, 
+                            data_type=None, 
+                            screening_name=screening.screening_type
+                        )
+                        
+                        # Convert last_completed to datetime for comparison
+                        if hasattr(screening.last_completed, 'date'):
+                            screening_datetime = screening.last_completed
+                        else:
+                            screening_datetime = datetime.combine(screening.last_completed, datetime.min.time())
+                        
+                        # Include screening if it's within the cutoff window
+                        if screening_datetime >= cutoff_date:
+                            screenings_after_cutoff.append(screening)
+                        
+                    except Exception as e:
+                        # If there's an error with cutoff calculation, include the screening
+                        print(f"Error calculating cutoff for screening {screening.id}: {e}")
+                        screenings_after_cutoff.append(screening)
+                
+                screenings = screenings_after_cutoff
+                screenings_hidden_by_cutoff = len(all_screenings) - len(screenings)
+            else:
+                # No cutoff filtering or admin override - show all screenings
+                screenings = all_screenings
+                screenings_hidden_by_cutoff = 0
     else:
         # For other tabs, don't process screenings
         screenings = []
@@ -3919,6 +3919,9 @@ def screening_list():
             # URL parameters for maintaining state  
             current_page=int(request.args.get('page', 1)),
             page_size=int(request.args.get('page_size', 50)),
+            # Template utility functions
+            min=min,  # Add min function for template
+            max=max,  # Add max function for template
         )
     except Exception as e:
         print(f"Error rendering screening_list.html: {str(e)}")
