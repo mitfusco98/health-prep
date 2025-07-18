@@ -136,7 +136,7 @@ class DocumentScreeningMatcher:
         document: MedicalDocument
     ) -> Tuple[bool, str]:
         """Check if document filename matches screening filename keywords"""
-        filename_keywords = screening_type.get_filename_keywords()
+        filename_keywords = screening_type.get_all_keywords()
         if not filename_keywords:
             return False, "No filename keywords defined"
         
@@ -158,7 +158,7 @@ class DocumentScreeningMatcher:
         document: MedicalDocument
     ) -> Tuple[bool, str]:
         """Check if document content matches screening content keywords"""
-        content_keywords = screening_type.get_content_keywords()
+        content_keywords = screening_type.get_all_keywords()
         if not content_keywords:
             return False, "No content keywords defined"
         
@@ -186,7 +186,7 @@ class DocumentScreeningMatcher:
         document: MedicalDocument
     ) -> Tuple[bool, str]:
         """Check if document.section matches screening_type document keywords"""
-        document_keywords = screening_type.get_document_keywords()
+        document_keywords = screening_type.get_all_keywords()
         if not document_keywords:
             return False, "No document section keywords defined"
         
