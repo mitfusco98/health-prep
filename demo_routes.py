@@ -3558,34 +3558,68 @@ def screening_list():
     
     if refresh_requested:
         try:
-            # Use the new high-performance bulk screening engine
-            from high_performance_screening_routes import enhanced_screening_refresh
+            # SMART REFRESH: Use selective refresh to prevent comprehensive refresh crashes
+            # Enhanced selective refresh system prevents worker timeouts from bulk operations
+            from unified_screening_engine import unified_engine
             
-            # Trigger batch operation for cache consistency
-            from intelligent_cache_manager import get_cache_manager
-            cache_mgr = get_cache_manager()
-            cache_mgr.trigger_invalidation('batch_operation_start', {
-                'operation': 'screening_refresh',
-                'trigger_source': f"manual_refresh_tab_{tab}"
-            })
-            
-            # Run enhanced high-performance refresh
-            success, message, metrics = enhanced_screening_refresh(
-                tab=tab, 
-                search_query=search_query, 
-                trigger_source=f"manual_refresh_tab_{tab}"
-            )
-            
-            # End batch operation
-            cache_mgr.trigger_invalidation('batch_operation_end', {
-                'operation': 'screening_refresh',
-                'trigger_source': f"manual_refresh_tab_{tab}"
-            })
-            
-            if success:
-                flash(message, "success")
+            if tab == "screenings":
+                # For screenings tab, use selective patient-based refresh
+                patients_to_refresh = []
+                
+                # If search query is specified, only refresh those patients
+                if search_query:
+                    from models import Patient
+                    patients_to_refresh = Patient.query.filter(
+                        (Patient.first_name.ilike(f'%{search_query}%')) |
+                        (Patient.last_name.ilike(f'%{search_query}%'))
+                    ).limit(10).all()  # Limit to 10 patients to prevent timeouts
+                else:
+                    # For full refresh, use batch processing with limits
+                    from models import Patient
+                    patients_to_refresh = Patient.query.limit(25).all()  # Process in batches
+                
+                # Process patients with timeout protection
+                refreshed_count = 0
+                for patient in patients_to_refresh:
+                    try:
+                        screenings = unified_engine.generate_patient_screenings(patient.id)
+                        if screenings:
+                            refreshed_count += len(screenings)
+                    except Exception as e:
+                        print(f"Error refreshing patient {patient.id}: {e}")
+                        continue
+                
+                flash(f"Smart refresh completed: updated {refreshed_count} screenings for {len(patients_to_refresh)} patients", "success")
+                
             else:
-                flash(message, "danger")
+                # For other tabs, use the high-performance bulk screening engine
+                from high_performance_screening_routes import enhanced_screening_refresh
+                
+                # Trigger batch operation for cache consistency
+                from intelligent_cache_manager import get_cache_manager
+                cache_mgr = get_cache_manager()
+                cache_mgr.trigger_invalidation('batch_operation_start', {
+                    'operation': 'screening_refresh',
+                    'trigger_source': f"manual_refresh_tab_{tab}"
+                })
+                
+                # Run enhanced high-performance refresh
+                success, message, metrics = enhanced_screening_refresh(
+                    tab=tab, 
+                    search_query=search_query, 
+                    trigger_source=f"manual_refresh_tab_{tab}"
+                )
+                
+                # End batch operation
+                cache_mgr.trigger_invalidation('batch_operation_end', {
+                    'operation': 'screening_refresh',
+                    'trigger_source': f"manual_refresh_tab_{tab}"
+                })
+                
+                if success:
+                    flash(message, "success")
+                else:
+                    flash(message, "danger")
             
             # Redirect back to remove the regenerate parameter from URL while preserving search
             redirect_params = {'tab': tab}

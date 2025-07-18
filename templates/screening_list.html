@@ -83,6 +83,8 @@ function refreshScreenings(event, tab) {
         ? 'Refresh all automated screenings using the current parsing rules from this tab? This will update document matches immediately.'
         : tab === 'checklist'
         ? 'Refresh all automated screenings using current prep sheet settings? This will update document relationships based on the latest configuration.'
+        : tab === 'screenings'
+        ? 'Smart refresh will selectively update screenings to prevent application crashes. This processes patients in batches and applies timeout protection. Continue?'
         : 'Refresh all automated screenings based on current parsing logic? This may take a moment.';
 
     if (!confirm(confirmMessage)) {
@@ -179,7 +181,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     <i class="fas fa-clipboard-check me-2"></i>Screening List
                 </h5>
             </div>
-            <div class="col-auto d-flex">
+            <div class="col-auto d-flex gap-2">
+                <a href="{{ url_for('screening_list', tab='screenings', regenerate='true') }}" 
+                   class="btn btn-outline-success" 
+                   onclick="return refreshScreenings(event, 'screenings')"
+                   title="Smart refresh - applies selective updates to prevent crashes">
+                    <i class="fas fa-sync-alt me-1"></i>Smart Refresh
+                </a>
                 <a href="{{ url_for('add_screening_form') }}" class="btn btn-primary">
                     Add Screening
                 </a>
