@@ -137,6 +137,145 @@ class UnifiedScreeningEngine:
         return False
     
     # =============================================================================
+    # SCREENING GENERATION METHODS
+    # =============================================================================
+    
+    def generate_patient_screenings(self, patient_id: int) -> List[Dict]:
+        """
+        Generate automated screenings for a specific patient using unified engine
+        
+        Args:
+            patient_id: Patient ID to generate screenings for
+            
+        Returns:
+            List of screening dictionaries with status determinations
+        """
+        patient = Patient.query.get(patient_id)
+        if not patient:
+            return []
+        
+        # Get all active screening types
+        all_screening_types = ScreeningType.query.filter_by(is_active=True).all()
+        
+        # Generate status for each applicable screening
+        screenings = []
+        for screening_type in all_screening_types:
+            # Check if patient is eligible for this screening type
+            is_eligible, reason = self.is_patient_eligible(patient, screening_type)
+            
+            if is_eligible:
+                # Generate screening data
+                screening_data = self._generate_screening_data(patient, screening_type)
+                if screening_data:
+                    screenings.append(screening_data)
+        
+        return screenings
+    
+    def _generate_screening_data(self, patient: Patient, screening_type: ScreeningType) -> Optional[Dict]:
+        """
+        Generate screening data for a patient and screening type
+        
+        Args:
+            patient: Patient object
+            screening_type: ScreeningType object
+            
+        Returns:
+            Dictionary with screening data
+        """
+        # Find matching documents
+        matching_documents = self._find_matching_documents(patient, screening_type)
+        
+        # Determine status based on documents and timing
+        status = self._determine_status_from_documents(matching_documents, screening_type)
+        
+        # Calculate due date based on frequency
+        due_date = self._calculate_due_date(screening_type, matching_documents)
+        
+        # Get last completed date from documents
+        last_completed = self._get_last_completed_date(matching_documents)
+        
+        return {
+            'screening_type': screening_type.name,
+            'patient_id': patient.id,
+            'status': status,
+            'due_date': due_date,
+            'last_completed': last_completed,
+            'frequency': screening_type.formatted_frequency,
+            'matched_documents': [doc.id for doc in matching_documents],
+            'match_source': 'unified_screening_engine'
+        }
+    
+    def _find_matching_documents(self, patient: Patient, screening_type: ScreeningType) -> List[MedicalDocument]:
+        """Find documents that match the screening type's criteria"""
+        matching_documents = []
+        
+        # Get all documents for this patient
+        patient_documents = MedicalDocument.query.filter_by(patient_id=patient.id).all()
+        
+        for document in patient_documents:
+            match_result = self.match_document_to_screening(document, screening_type)
+            if match_result['is_match']:
+                matching_documents.append(document)
+        
+        return matching_documents
+    
+    def _determine_status_from_documents(self, matching_documents: List[MedicalDocument], screening_type: ScreeningType) -> str:
+        """Determine screening status based on matched documents"""
+        if not matching_documents:
+            return self.STATUS_DUE
+        
+        # If we have documents, check timing
+        last_completed = self._get_last_completed_date(matching_documents)
+        if not last_completed:
+            return self.STATUS_INCOMPLETE
+        
+        # Check if screening is due based on frequency
+        due_date = self._calculate_due_date(screening_type, matching_documents)
+        if due_date:
+            today = date.today()
+            if today >= due_date:
+                return self.STATUS_DUE
+            elif (due_date - today).days <= self.DUE_SOON_THRESHOLD_DAYS:
+                return self.STATUS_DUE_SOON
+        
+        return self.STATUS_COMPLETE
+    
+    def _calculate_due_date(self, screening_type: ScreeningType, matching_documents: List[MedicalDocument]) -> Optional[date]:
+        """Calculate when screening is due next"""
+        if not screening_type.frequency_number or not screening_type.frequency_unit:
+            return None
+        
+        last_completed = self._get_last_completed_date(matching_documents)
+        if not last_completed:
+            return date.today()  # Due now if never completed
+        
+        # Calculate next due date based on frequency
+        if screening_type.frequency_unit == 'months':
+            from dateutil.relativedelta import relativedelta
+            return last_completed + relativedelta(months=screening_type.frequency_number)
+        elif screening_type.frequency_unit == 'years':
+            from dateutil.relativedelta import relativedelta
+            return last_completed + relativedelta(years=screening_type.frequency_number)
+        elif screening_type.frequency_unit == 'days':
+            return last_completed + timedelta(days=screening_type.frequency_number)
+        
+        return None
+    
+    def _get_last_completed_date(self, matching_documents: List[MedicalDocument]) -> Optional[date]:
+        """Get the most recent completion date from matching documents"""
+        if not matching_documents:
+            return None
+        
+        # Use document_date (medical event date) or created_at (upload date)
+        latest_date = None
+        for document in matching_documents:
+            doc_date = document.document_date or document.created_at.date()
+            if not latest_date or doc_date > latest_date:
+                latest_date = doc_date
+        
+        return latest_date
+    
+    # =============================================================================
     # UNIFIED KEYWORD MATCHING - NO FALLBACK TO SCREENING NAMES
     # =============================================================================
     

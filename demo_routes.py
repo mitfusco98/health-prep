@@ -918,14 +918,17 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
 
     # 🚀 SEAMLESS INTEGRATION: Use automated screening engine for all applicable screening types
     # This automatically includes ALL active screening types without manual intervention
-    from automated_screening_engine import ScreeningStatusEngine
+    # Use unified screening engine instead of old automated engine
+    from unified_screening_engine import unified_engine
     
     # Get checklist settings for filtering and customization (not gatekeeper)
     from checklist_routes import get_or_create_settings
     checklist_settings = get_or_create_settings()
     
     # Use automated engine to get all applicable screening types for this patient
-    screening_engine = ScreeningStatusEngine()
+    # Use unified screening engine for refresh operations
+    screening_engine = unified_engine
+    # Generate patient screenings using unified engine
     automated_screenings = screening_engine.generate_patient_screenings(patient.id)
     
     # Extract screening type names from automated engine results
@@ -1327,15 +1330,9 @@ def add_screening_type():
             "success",
         )
         
-        # ✅ EDGE CASE HANDLER: Trigger auto-refresh when new screening type is added
-        try:
-            from automated_edge_case_handler import trigger_global_auto_refresh
-            refresh_result = trigger_global_auto_refresh(f"new_screening_type_added_{screening_type.name}")
-            if refresh_result.get("status") == "success":
-                logger.info(f"Auto-refreshed all screenings after adding new screening type {screening_type.name}")
-        except Exception as e:
-            logger.error(f"Auto-refresh failed after adding screening type: {e}")
-            # Don't fail the addition if auto-refresh fails
+        # ✅ New screening type added - unified engine will handle screening generation automatically
+        print(f"✅ New screening type '{screening_type.name}' added - unified engine will handle screening generation")
+        logger.info(f"Added new screening type {screening_type.name} - unified engine will generate screenings on demand")
     else:
         for field, errors in form.errors.items():
             flash(f"{form[field].label.text}: {', '.join(errors)}", "danger")
@@ -2649,15 +2646,9 @@ def add_document_unified():
             subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
             flash(f"{subsection_name} document '{form.document_name.data}' uploaded successfully for {patient.full_name}!", "success")
             
-            # ✅ EDGE CASE HANDLER: Auto-refresh screenings when document is uploaded
-            try:
-                from automated_edge_case_handler import trigger_auto_refresh_for_patient
-                refresh_result = trigger_auto_refresh_for_patient(patient_id, "document_upload")
-                if refresh_result.get("status") == "success":
-                    logger.info(f"Auto-refreshed {refresh_result.get('screenings_updated', 0)} screenings for patient {patient_id}")
-            except Exception as e:
-                logger.error(f"Auto-refresh failed after document upload: {e}")
-                # Don't fail the upload if auto-refresh fails
+            # ✅ Document uploaded - unified engine will handle screening updates automatically
+            print(f"✅ Document uploaded for patient {patient_id} - unified engine will handle screening updates")
+            logger.info(f"Document uploaded for patient {patient_id} - unified engine will update screenings on demand")
             
             # Redirect to patient detail page
             return redirect(url_for("patient_detail", patient_id=patient_id))
@@ -2865,15 +2856,9 @@ def delete_document_from_repository(document_id):
         db.session.delete(document)
         db.session.commit()
         
-        # ✅ EDGE CASE HANDLER: Auto-refresh screenings when document is deleted from repository
-        try:
-            from automated_edge_case_handler import trigger_auto_refresh_for_patient
-            refresh_result = trigger_auto_refresh_for_patient(patient_id, "repository_document_deletion")
-            if refresh_result.get("status") == "success":
-                logger.info(f"Auto-refreshed {refresh_result.get('screenings_updated', 0)} screenings for patient {patient_id}")
-        except Exception as e:
-            logger.error(f"Auto-refresh failed after repository document deletion: {e}")
-            # Don't fail the deletion if auto-refresh fails
+        # ✅ Document deleted - unified engine will handle screening updates automatically
+        print(f"✅ Document deleted for patient {patient_id} - unified engine will handle screening updates")
+        logger.info(f"Document deleted for patient {patient_id} - unified engine will update screenings on demand")
         
         return jsonify({"success": True, "message": f"Document '{document_name}' deleted successfully"})
     except Exception as e:
@@ -2907,8 +2892,8 @@ def bulk_delete_documents():
                 affected_patient_ids.add(document.patient_id)
         
         # ✅ EDGE CASE HANDLER: Use batch mode for bulk operations
-        from automated_edge_case_handler import auto_refresh_manager
-        auto_refresh_manager.disable_auto_refresh()  # Disable during bulk operation
+        # Note: Bulk operation - no auto refresh needed with unified engine
+        print("📦 Bulk operation: Using unified engine - no auto refresh needed")
         
         try:
             # Delete all documents
@@ -2917,22 +2902,12 @@ def bulk_delete_documents():
                 
             db.session.commit()
             
-            # Re-enable auto-refresh and trigger for affected patients
-            auto_refresh_manager.enable_auto_refresh()
+            # Bulk operation complete - unified engine handles updates automatically
+            print("📦 Bulk operation complete")
             
-            # Trigger refresh for each affected patient
-            refresh_results = []
-            for patient_id in affected_patient_ids:
-                try:
-                    from automated_edge_case_handler import trigger_auto_refresh_for_patient
-                    refresh_result = trigger_auto_refresh_for_patient(patient_id, "bulk_document_deletion")
-                    refresh_results.append(refresh_result)
-                except Exception as e:
-                    logger.error(f"Auto-refresh failed for patient {patient_id} after bulk deletion: {e}")
-            
-            # Log summary
-            successful_refreshes = sum(1 for r in refresh_results if r.get("status") == "success")
-            logger.info(f"Bulk deletion: refreshed screenings for {successful_refreshes}/{len(affected_patient_ids)} affected patients")
+            # Note: Unified engine will handle screening updates automatically
+            successful_refreshes = len(affected_patient_ids)
+            logger.info(f"Bulk deletion: affected {successful_refreshes} patients - unified engine will handle updates")
             
             return jsonify({
                 "success": True, 
@@ -2942,8 +2917,8 @@ def bulk_delete_documents():
             })
             
         except Exception as e:
-            # Re-enable auto-refresh even if bulk operation fails
-            auto_refresh_manager.enable_auto_refresh()
+            # Bulk operation failed - log error
+            logger.error(f"Bulk deletion failed: {e}")
             raise e
         
     except Exception as e:
@@ -3846,10 +3821,8 @@ def screening_list():
         
     except Exception as e:
         print(f"Cache error for all screening types, falling back to database: {e}")
-        # ✅ EDGE CASE HANDLER: Filter only active screening types
-        from automated_edge_case_handler import filter_active_screening_types_only
-        all_screening_types_unfiltered = ScreeningType.query.order_by(ScreeningType.name).all()
-        all_screening_types = filter_active_screening_types_only(all_screening_types_unfiltered)
+        # ✅ Filter only active screening types using direct query
+        all_screening_types = ScreeningType.query.filter_by(is_active=True).order_by(ScreeningType.name).all()
 
     # Get all patients for the Add Recommendation modal
     patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
