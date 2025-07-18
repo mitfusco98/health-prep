@@ -3608,9 +3608,9 @@ def screening_list():
         try:
             from screening_performance_optimizer import screening_optimizer
             
-            # Get pagination parameters
+            # Get pagination parameters - use smaller default to show pagination
             page = int(request.args.get('page', 1))
-            page_size = min(int(request.args.get('page_size', 50)), 100)
+            page_size = min(int(request.args.get('page_size', 25)), 100)
             status_filter = request.args.get('status', '')
             screening_type_filter = request.args.get('screening_type', '')
             
@@ -3809,7 +3809,7 @@ def screening_list():
                 
             # Add simple pagination for fallback mode
             page = int(request.args.get('page', 1))
-            page_size = min(int(request.args.get('page_size', 50)), 100)
+            page_size = min(int(request.args.get('page_size', 25)), 100)
             start_idx = (page - 1) * page_size
             end_idx = start_idx + page_size
             
@@ -3918,13 +3918,13 @@ def screening_list():
             admin_override=request.args.get('show_all') == 'true' and session.get('is_admin', False),
             variant_manager=variant_manager,  # Add missing variant_manager
             # ✅ PERFORMANCE OPTIMIZATION DATA FOR SCREENINGS TAB
-            pagination=pagination_info if tab == "screenings" and 'pagination_info' in locals() else {},
-            filters=filters_info if tab == "screenings" and 'filters_info' in locals() else {},
-            metadata=metadata if tab == "screenings" and 'metadata' in locals() else {},
-            stats=stats if tab == "screenings" and 'stats' in locals() else {},
+            pagination=locals().get('pagination_info', {}),
+            filters=locals().get('filters_info', {}),
+            metadata=locals().get('metadata', {}),
+            stats=locals().get('stats', {}),
             # URL parameters for maintaining state  
             current_page=int(request.args.get('page', 1)),
-            page_size=int(request.args.get('page_size', 50)),
+            page_size=int(request.args.get('page_size', 25)),
             # Template utility functions
             min=min,  # Add min function for template
             max=max,  # Add max function for template
