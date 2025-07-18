@@ -54,9 +54,10 @@
 3. ✅ **COMPLETED**: Update efficient_screening_matcher.py and diagnostic tools
 
 ### Medium Priority:
-1. Review and update remaining automated_screening_engine imports
-2. Audit direct deletion operations in migration scripts
-3. Implement comprehensive deprecation testing
+1. ✅ **COMPLETED**: Fixed automated_screening_engine imports in 4 critical files
+2. ✅ **PARTIALLY COMPLETED**: Fixed critical screening type deletion to use soft delete pattern
+3. **IN PROGRESS**: Audit remaining direct deletion operations (26 high-priority db.session.delete calls identified)
+4. Implement comprehensive deprecation testing
 
 ### Low Priority:
 1. Plan migration from Query.get() to Session.get() across codebase
