@@ -931,24 +931,12 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     # Generate patient screenings using unified engine
     automated_screenings = screening_engine.generate_patient_screenings(patient.id)
     
-    # Extract screening type names from automated engine results
+    # Extract screening type names from automated engine results  
+    # DECOUPLED: No filtering by default_items here - unified engine determines eligibility only
     recommended_screenings = [screening['screening_type'] for screening in automated_screenings]
     
     print(f"🔍 Automated screening engine found {len(recommended_screenings)} applicable screenings for {patient.first_name} {patient.last_name}: {recommended_screenings}")
-    
-    # Apply checklist filtering if default_items are configured (customization layer)
-    if checklist_settings.default_items:
-        default_items_list = checklist_settings.default_items_list
-        if default_items_list:
-            # Filter to only include items selected in checklist settings
-            filtered_screenings = []
-            for screening_name in recommended_screenings:
-                # Check if this screening or its base name is in default items
-                base_name = variant_manager.extract_base_name(screening_name)
-                if screening_name in default_items_list or base_name in default_items_list:
-                    filtered_screenings.append(screening_name)
-            recommended_screenings = filtered_screenings
-            print(f"📋 Filtered by checklist settings to {len(recommended_screenings)} screenings: {recommended_screenings}")
+    print(f"📋 Default items filtering is now handled only in prep sheet template, not in parsing logic")
     
     # Fallback if no screenings found (edge case protection)
     if not recommended_screenings:
@@ -964,7 +952,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         if screening.screening_type not in recommended_screenings:
             recommended_screenings.append(screening.screening_type)
 
-    # Generate a prep sheet summary
+    # Generate a prep sheet summary with decoupled filtering
     prep_sheet_data = generate_prep_sheet(
         patient,
         recent_vitals,
@@ -977,6 +965,11 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         last_visit_date,
         past_appointments,
     )
+    
+    # Pass default_items settings to template for prep sheet filtering (decoupled from parsing)
+    prep_sheet_filter_items = []
+    if checklist_settings.default_items:
+        prep_sheet_filter_items = checklist_settings.default_items_list
 
     # Get enhanced screening recommendations with document relationships using new system
     try:
@@ -1086,6 +1079,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             today=datetime.now(),
             cache_timestamp=cache_timestamp,
             checklist_settings=checklist_settings,
+            prep_sheet_filter_items=prep_sheet_filter_items,  # Decoupled filtering for prep sheet only
             # Enhanced document matching data
             document_screening_data=document_screening_data,
             screening_document_matches=screening_document_matches,

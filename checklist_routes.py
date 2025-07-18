@@ -128,6 +128,10 @@ def update_checklist_generation():
     selected_screening_types = request.form.getlist('selected_screening_types')
     print(f"DEBUG: Received selected_screening_types: {selected_screening_types}")
     
+    # Clean up inactive screening types from default items (automatic maintenance)
+    from models import ScreeningType
+    active_screening_names = {st.name for st in ScreeningType.query.filter_by(is_active=True).all()}
+    
     # Consolidate to base names to handle variants
     consolidated_base_names = set()
     for screening_name in selected_screening_types:
@@ -137,16 +141,27 @@ def update_checklist_generation():
     consolidated_list = list(consolidated_base_names)
     print(f"DEBUG: Consolidated to base names: {consolidated_list}")
 
-    # Update default items with consolidated base names
+    # Update default items with consolidated base names  
     if consolidated_list:
-        # Join the consolidated screening base names with newlines
-        settings.default_items = '\n'.join(consolidated_list)
-        print(f"DEBUG: Updated default_items to consolidated: '{settings.default_items}'")
+        # Filter out inactive screening types during update (maintenance)
+        active_consolidated_list = [item for item in consolidated_list if item in active_screening_names]
+        if len(active_consolidated_list) != len(consolidated_list):
+            print(f"🧹 Filtered out {len(consolidated_list) - len(active_consolidated_list)} inactive screening types")
+        
+        # Join the active consolidated screening base names with newlines
+        settings.default_items = '\n'.join(active_consolidated_list)
+        print(f"DEBUG: Updated default_items to active consolidated: '{settings.default_items}'")
     else:
         # Fall back to manual default items input if no screening types selected
         default_items = request.form.get('default_items', '')
-        settings.default_items = default_items
-        print(f"DEBUG: Using manual default_items: '{default_items}'")
+        # Filter manual items too
+        if default_items:
+            manual_items = default_items.split('\n')
+            active_manual_items = [item.strip() for item in manual_items if item.strip() in active_screening_names]
+            settings.default_items = '\n'.join(active_manual_items)
+        else:
+            settings.default_items = default_items
+        print(f"DEBUG: Using filtered manual default_items: '{settings.default_items}'")
 
     try:
         db.session.commit()

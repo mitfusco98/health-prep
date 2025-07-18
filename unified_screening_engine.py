@@ -32,7 +32,7 @@ class UnifiedScreeningEngine:
     
     # Configuration
     DUE_SOON_THRESHOLD_DAYS = 30
-    MIN_KEYWORD_CONFIDENCE = 0.6
+    MIN_KEYWORD_CONFIDENCE = 0.5  # Lowered threshold for better matching sensitivity
     
     def __init__(self):
         self.debug_mode = False
@@ -233,6 +233,9 @@ class UnifiedScreeningEngine:
         due_date = self._calculate_due_date(screening_type, matching_documents)
         if due_date:
             today = date.today()
+            # Ensure both are date objects for comparison
+            if isinstance(due_date, datetime):
+                due_date = due_date.date()
             if today >= due_date:
                 return self.STATUS_DUE
             elif (due_date - today).days <= self.DUE_SOON_THRESHOLD_DAYS:
@@ -303,7 +306,7 @@ class UnifiedScreeningEngine:
         
         # Perform keyword matching
         matches = []
-        total_confidence = 0.0
+        match_types_confidence = []
         
         # Content keyword matching
         if keywords_config['content'] and document.content:
@@ -314,18 +317,19 @@ class UnifiedScreeningEngine:
             )
             if content_match['matched']:
                 matches.extend(content_match['matches'])
-                total_confidence += content_match['confidence']
+                match_types_confidence.append(content_match['confidence'])
         
-        # Filename keyword matching
-        if keywords_config['filename'] and document.filename:
+        # Filename keyword matching (also check document_name)
+        filename_text = document.filename or document.document_name or ""
+        if keywords_config['filename'] and filename_text:
             filename_match = self._match_keywords_in_text(
-                document.filename, 
+                filename_text, 
                 keywords_config['filename'], 
                 'filename'
             )
             if filename_match['matched']:
                 matches.extend(filename_match['matches'])
-                total_confidence += filename_match['confidence']
+                match_types_confidence.append(filename_match['confidence'])
         
         # Document type keyword matching
         if keywords_config['document'] and document.document_type:
@@ -336,10 +340,10 @@ class UnifiedScreeningEngine:
             )
             if doc_type_match['matched']:
                 matches.extend(doc_type_match['matches'])
-                total_confidence += doc_type_match['confidence']
+                match_types_confidence.append(doc_type_match['confidence'])
         
-        # Determine overall match
-        avg_confidence = total_confidence / len(matches) if matches else 0.0
+        # Determine overall match - use the highest confidence from any match type
+        avg_confidence = max(match_types_confidence) if match_types_confidence else 0.0
         is_match = avg_confidence >= self.MIN_KEYWORD_CONFIDENCE
         
         if is_match:
