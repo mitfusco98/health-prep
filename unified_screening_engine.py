@@ -360,7 +360,7 @@ class UnifiedScreeningEngine:
     
     def _get_configured_keywords(self, screening_type: ScreeningType) -> Dict[str, List[str]]:
         """
-        Get only explicitly configured keywords - no fallbacks or auto-generation
+        Get only explicitly configured keywords using proper model methods
         """
         keywords = {
             'content': [],
@@ -368,35 +368,22 @@ class UnifiedScreeningEngine:
             'document': []
         }
         
-        # Content keywords
-        if screening_type.content_keywords:
-            try:
-                clean_json = html.unescape(screening_type.content_keywords)
-                content_kw = json.loads(clean_json)
-                if isinstance(content_kw, list):
-                    keywords['content'] = [kw.strip() for kw in content_kw if kw.strip()]
-            except (json.JSONDecodeError, TypeError):
-                logger.warning(f"Invalid content keywords JSON for {screening_type.name}")
-        
-        # Filename keywords
-        if screening_type.filename_keywords:
-            try:
-                clean_json = html.unescape(screening_type.filename_keywords)
-                filename_kw = json.loads(clean_json)
-                if isinstance(filename_kw, list):
-                    keywords['filename'] = [kw.strip() for kw in filename_kw if kw.strip()]
-            except (json.JSONDecodeError, TypeError):
-                logger.warning(f"Invalid filename keywords JSON for {screening_type.name}")
-        
-        # Document type keywords
-        if screening_type.document_keywords:
-            try:
-                clean_json = html.unescape(screening_type.document_keywords)
-                doc_kw = json.loads(clean_json)
-                if isinstance(doc_kw, list):
-                    keywords['document'] = [kw.strip() for kw in doc_kw if kw.strip()]
-            except (json.JSONDecodeError, TypeError):
-                logger.warning(f"Invalid document keywords JSON for {screening_type.name}")
+        # Use proper getter methods that handle JSON parsing and HTML unescaping
+        try:
+            # Content keywords (unified with filename for the new system)
+            content_keywords = screening_type.get_content_keywords()
+            if content_keywords:
+                keywords['content'] = [kw.strip() for kw in content_keywords if kw.strip()]
+                # For backward compatibility, also populate filename keywords
+                keywords['filename'] = keywords['content']
+                
+            # Document type keywords
+            document_keywords = screening_type.get_document_keywords()
+            if document_keywords:
+                keywords['document'] = [kw.strip() for kw in document_keywords if kw.strip()]
+                
+        except Exception as e:
+            logger.warning(f"Error getting keywords for {screening_type.name}: {e}")
         
         return keywords
     

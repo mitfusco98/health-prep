@@ -3576,48 +3576,119 @@ def screening_list():
                     # For full refresh, use batch processing with limits
                     patients_to_refresh = Patient.query.limit(25).all()  # Process in batches
                 
-                # Process patients with timeout protection
+                # Process patients with timeout protection and save to database
                 refreshed_count = 0
                 for patient in patients_to_refresh:
                     try:
                         screenings = unified_engine.generate_patient_screenings(patient.id)
                         if screenings:
-                            refreshed_count += len(screenings)
+                            # CRITICAL: Save screenings to database and link documents
+                            for screening_data in screenings:
+                                # Create or update screening record
+                                existing_screening = Screening.query.filter_by(
+                                    patient_id=screening_data['patient_id'],
+                                    screening_type=screening_data['screening_type']
+                                ).first()
+                                
+                                if existing_screening:
+                                    # Update existing screening
+                                    existing_screening.status = screening_data['status']
+                                    existing_screening.last_completed = screening_data['last_completed']
+                                    existing_screening.frequency = screening_data['frequency']
+                                    existing_screening.due_date = screening_data['due_date']
+                                else:
+                                    # Create new screening
+                                    new_screening = Screening(
+                                        patient_id=screening_data['patient_id'],
+                                        screening_type=screening_data['screening_type'],
+                                        status=screening_data['status'],
+                                        last_completed=screening_data['last_completed'],
+                                        frequency=screening_data['frequency'],
+                                        due_date=screening_data['due_date']
+                                    )
+                                    db.session.add(new_screening)
+                                    existing_screening = new_screening
+                                
+                                # Link documents to screening
+                                if screening_data.get('matched_documents'):
+                                    # Clear existing document relationships
+                                    existing_screening.documents.clear()
+                                    
+                                    # Add new document relationships
+                                    for doc_id in screening_data['matched_documents']:
+                                        document = MedicalDocument.query.get(doc_id)
+                                        if document:
+                                            existing_screening.documents.append(document)
+                                
+                                db.session.commit()
+                                refreshed_count += 1
+                            
                     except Exception as e:
                         print(f"Error refreshing patient {patient.id}: {e}")
+                        db.session.rollback()
                         continue
                 
                 flash(f"Smart refresh completed: updated {refreshed_count} screenings for {len(patients_to_refresh)} patients", "success")
                 
             else:
-                # For other tabs, use the high-performance bulk screening engine
-                from high_performance_screening_routes import enhanced_screening_refresh
+                # For other tabs (types, checklist), use unified engine with database saving
+                # This ensures keyword changes trigger proper document matching and database updates
                 
-                # Trigger batch operation for cache consistency
-                from intelligent_cache_manager import get_cache_manager
-                cache_mgr = get_cache_manager()
-                cache_mgr.trigger_invalidation('batch_operation_start', {
-                    'operation': 'screening_refresh',
-                    'trigger_source': f"manual_refresh_tab_{tab}"
-                })
+                # Process all patients with the updated screening types
+                all_patients = Patient.query.limit(50).all()  # Process up to 50 patients for safety
+                total_refreshed = 0
                 
-                # Run enhanced high-performance refresh
-                success, message, metrics = enhanced_screening_refresh(
-                    tab=tab, 
-                    search_query=search_query, 
-                    trigger_source=f"manual_refresh_tab_{tab}"
-                )
+                for patient in all_patients:
+                    try:
+                        screenings = unified_engine.generate_patient_screenings(patient.id)
+                        if screenings:
+                            # Save each screening to database with document links
+                            for screening_data in screenings:
+                                # Create or update screening record
+                                existing_screening = Screening.query.filter_by(
+                                    patient_id=screening_data['patient_id'],
+                                    screening_type=screening_data['screening_type']
+                                ).first()
+                                
+                                if existing_screening:
+                                    # Update existing screening
+                                    existing_screening.status = screening_data['status']
+                                    existing_screening.last_completed = screening_data['last_completed']
+                                    existing_screening.frequency = screening_data['frequency']
+                                    existing_screening.due_date = screening_data['due_date']
+                                else:
+                                    # Create new screening
+                                    new_screening = Screening(
+                                        patient_id=screening_data['patient_id'],
+                                        screening_type=screening_data['screening_type'],
+                                        status=screening_data['status'],
+                                        last_completed=screening_data['last_completed'],
+                                        frequency=screening_data['frequency'],
+                                        due_date=screening_data['due_date']
+                                    )
+                                    db.session.add(new_screening)
+                                    existing_screening = new_screening
+                                
+                                # Link documents to screening
+                                if screening_data.get('matched_documents'):
+                                    # Clear existing document relationships
+                                    existing_screening.documents.clear()
+                                    
+                                    # Add new document relationships
+                                    for doc_id in screening_data['matched_documents']:
+                                        document = MedicalDocument.query.get(doc_id)
+                                        if document:
+                                            existing_screening.documents.append(document)
+                                
+                                db.session.commit()
+                                total_refreshed += 1
+                            
+                    except Exception as e:
+                        print(f"Error refreshing patient {patient.id}: {e}")
+                        db.session.rollback()
+                        continue
                 
-                # End batch operation
-                cache_mgr.trigger_invalidation('batch_operation_end', {
-                    'operation': 'screening_refresh',
-                    'trigger_source': f"manual_refresh_tab_{tab}"
-                })
-                
-                if success:
-                    flash(message, "success")
-                else:
-                    flash(message, "danger")
+                flash(f"Comprehensive refresh completed: updated {total_refreshed} screenings for {len(all_patients)} patients with document matching", "success")
             
             # Redirect back to remove the regenerate parameter from URL while preserving search
             redirect_params = {'tab': tab}
