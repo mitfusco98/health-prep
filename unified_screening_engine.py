@@ -78,7 +78,7 @@ class UnifiedScreeningEngine:
         
         return True, "Eligible"
     
-    def _get_trigger_conditions(self, screening_type: ScreeningType) -> List[str]:
+    def _get_trigger_conditions(self, screening_type: ScreeningType) -> List[Dict]:
         """Get trigger conditions from screening type"""
         if not screening_type.trigger_conditions:
             return []
@@ -92,17 +92,48 @@ class UnifiedScreeningEngine:
             logger.warning(f"Invalid trigger conditions JSON for {screening_type.name}")
             return []
     
-    def _patient_has_trigger_conditions(self, patient: Patient, trigger_conditions: List[str]) -> bool:
-        """Check if patient has any of the required trigger conditions"""
+    def _patient_has_trigger_conditions(self, patient: Patient, trigger_conditions: List[Dict]) -> bool:
+        """
+        Check if patient has any of the required trigger conditions
+        Fixed to properly handle SNOMED codes and condition matching
+        """
         if not trigger_conditions:
             return True
         
-        patient_conditions = [c.condition_name.lower() for c in patient.conditions]
+        # Get patient conditions with proper attributes
+        patient_conditions = patient.conditions
+        
+        # Debug logging
+        if self.debug_mode:
+            print(f"  Checking trigger conditions for patient {patient.id}")
+            print(f"  Patient conditions: {[c.name for c in patient_conditions]}")
+            print(f"  Required triggers: {trigger_conditions}")
         
         for trigger in trigger_conditions:
-            if trigger.lower() in patient_conditions:
-                return True
+            trigger_code = trigger.get('code', '')
+            trigger_display = trigger.get('display', '').lower()
+            
+            for patient_condition in patient_conditions:
+                # Check by SNOMED code (exact match)
+                if trigger_code and str(patient_condition.code) == str(trigger_code):
+                    if self.debug_mode:
+                        print(f"  ✅ Code match: {patient_condition.code} == {trigger_code}")
+                    return True
+                
+                # Check by condition name/display (partial match)
+                if trigger_display and trigger_display in patient_condition.name.lower():
+                    if self.debug_mode:
+                        print(f"  ✅ Name match: '{trigger_display}' in '{patient_condition.name.lower()}'")
+                    return True
+                
+                # Check for diabetes-specific matching
+                if 'diabetes' in trigger_display and 'diabetes' in patient_condition.name.lower():
+                    if self.debug_mode:
+                        print(f"  ✅ Diabetes match: '{patient_condition.name}'")
+                    return True
         
+        if self.debug_mode:
+            print(f"  ❌ No matching conditions found")
         return False
     
     # =============================================================================
