@@ -95,15 +95,19 @@ class EnhancedKeywordMatcher:
             if i < len(words) - 1:
                 pattern_parts.append(r'[\s\-_]*')  # Allow spaces, hyphens, underscores
         
-        pattern = r'\b' + ''.join(pattern_parts) + r'\b'
+        pattern = r'(?<![a-zA-Z0-9])' + ''.join(pattern_parts) + r'(?![a-zA-Z0-9])'
         
         return bool(re.search(pattern, content, re.IGNORECASE))
     
     def _match_single_word(self, content: str, word: str) -> bool:
         """
-        Match single words with word boundary enforcement
+        Match single words with flexible boundary enforcement
+        Handles underscores, hyphens, and other separators in filenames
         """
-        pattern = r'\b' + re.escape(word) + r'\b'
+        # Use flexible word boundaries that work with underscores, hyphens, dots
+        # (?<![a-zA-Z0-9]) = not preceded by alphanumeric
+        # (?![a-zA-Z0-9]) = not followed by alphanumeric
+        pattern = r'(?<![a-zA-Z0-9])' + re.escape(word) + r'(?![a-zA-Z0-9])'
         return bool(re.search(pattern, content, re.IGNORECASE))
     
     def _extract_context(self, content: str, keyword: str, context_chars: int = 100) -> str:

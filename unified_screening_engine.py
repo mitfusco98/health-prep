@@ -442,12 +442,13 @@ class UnifiedScreeningEngine:
             if i < len(words) - 1:
                 pattern_parts.append(r'[\s\-_\.]*')  # Flexible separators
         
-        pattern = r'\b' + ''.join(pattern_parts) + r'\b'
+        pattern = r'(?<![a-zA-Z0-9])' + ''.join(pattern_parts) + r'(?![a-zA-Z0-9])'
         return bool(re.search(pattern, text, re.IGNORECASE))
     
     def _match_word_in_text(self, text: str, word: str) -> bool:
-        """Match single words with word boundaries"""
-        pattern = r'\b' + re.escape(word) + r'\b'
+        """Match single words with flexible boundaries for filenames with underscores/hyphens"""
+        # Use flexible word boundaries that work with underscores, hyphens, dots in filenames
+        pattern = r'(?<![a-zA-Z0-9])' + re.escape(word) + r'(?![a-zA-Z0-9])'
         return bool(re.search(pattern, text, re.IGNORECASE))
     
     def _no_match_result(self, reason: str) -> Dict:
