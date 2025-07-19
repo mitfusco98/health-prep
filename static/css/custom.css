@@ -394,3 +394,48 @@
     color: #adb5bd;
     font-size: 0.75rem;
 }
+
+
+/* Dark theme pagination styling */
+.pagination-dark .page-link {
+    background-color: #343a40;
+    border-color: #6c757d;
+    color: #e9ecef;
+}
+
+.pagination-dark .page-link:hover {
+    background-color: #495057;
+    border-color: #6c757d;
+    color: #fff;
+}
+
+.pagination-dark .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: #fff;
+}
+
+.pagination-dark .page-item.disabled .page-link {
+    background-color: #343a40;
+    border-color: #6c757d;
+    color: #6c757d;
+}
+
+/* Dark theme form controls */
+.form-select.bg-dark {
+    background-color: #343a40 !important;
+    border-color: #6c757d;
+    color: #e9ecef;
+}
+
+.form-select.bg-dark:focus {
+    background-color: #343a40 !important;
+    border-color: #80bdff;
+    color: #e9ecef;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-select.bg-dark option {
+    background-color: #343a40;
+    color: #e9ecef;
+}
