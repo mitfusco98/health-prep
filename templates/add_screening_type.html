@@ -1,4 +1,3 @@
-
 {% extends 'base_demo.html' %}
 
 {% block title %}HealthPrep - Add Screening Type{% endblock %}
@@ -33,7 +32,7 @@
                 </div>
                 <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy'). Start typing to see existing screenings for creating variants.</small>
             </div>
-            
+
             <div class="mb-3">
                 <label class="form-label">Keywords for Document Matching</label>
                 <div class="keywords-container">
@@ -48,9 +47,9 @@
                 <small class="keywords-help-text">Keywords help identify relevant documents for this screening type. They will be used to match both document content and filenames.</small>
                 <input type="hidden" name="keywords_json" id="add-form-keywords-data">
             </div>
-            
-            
-            
+
+
+
             <div class="row mb-3">
                 <div class="col-md-12">
                     <label class="form-label">Structured Frequency <span class="text-danger">*</span></label>
@@ -73,7 +72,7 @@
                     <small class="text-muted">How often this screening should be performed (e.g., "1 year", "6 months", "3 years")</small>
                 </div>
             </div>
-            
+
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="form-group">
@@ -96,7 +95,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="form-group">
@@ -113,7 +112,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="mb-3">
                 <label class="form-label">Trigger Conditions (FHIR)</label>
                 <div class="trigger-conditions-container">
@@ -144,7 +143,7 @@
                 <small class="trigger-conditions-help-text">Medical conditions that should trigger this screening recommendation</small>
                 <input type="hidden" name="trigger_conditions" id="add-form-trigger-conditions-data">
             </div>
-            
+
             <div class="mt-4">
                 <a href="{{ url_for('screening_list', tab='types') }}" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">Save Screening Type</button>
@@ -158,7 +157,7 @@
 function addKeywordToForm(formPrefix) {
     const input = document.getElementById(`${formPrefix}-keyword-input`);
     const keyword = input.value.trim();
-    
+
     if (keyword) {
         const container = document.getElementById(`${formPrefix}-keywords-list`);
         const keywordElement = document.createElement('span');
@@ -202,11 +201,11 @@ function addTriggerConditionToForm(formPrefix) {
     const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
     const codeInput = document.getElementById(`${formPrefix}-condition-code`);
     const displayInput = document.getElementById(`${formPrefix}-condition-display`);
-    
+
     const system = systemSelect.value;
     const code = codeInput.value.trim();
     const display = displayInput.value.trim();
-    
+
     if (display) {
         // If no code provided, try to auto-assign one from autocomplete
         if (!code) {
@@ -216,15 +215,15 @@ function addTriggerConditionToForm(formPrefix) {
                 .then(data => {
                     if (data.conditions && data.conditions.length > 0) {
                         const condition = data.conditions[0];
-                        
+
                         // Try to find code for the selected system first
                         let codeForSystem = condition.codes.find(c => c.system === system);
-                        
+
                         // If no code for selected system, use primary code
                         if (!codeForSystem) {
                             codeForSystem = condition.primary_code || condition.codes[0];
                         }
-                        
+
                         if (codeForSystem) {
                             codeInput.value = codeForSystem.code;
                             systemSelect.value = codeForSystem.system;
@@ -263,13 +262,13 @@ function addTriggerConditionElement(formPrefix, system, code, display) {
                 onclick="removeFormTriggerCondition(this)" aria-label="Remove"></button>
     `;
     container.appendChild(conditionElement);
-    
+
     // Clear inputs
     const displayInput = document.getElementById(`${formPrefix}-condition-display`);
     const codeInput = document.getElementById(`${formPrefix}-condition-code`);
     if (displayInput) displayInput.value = '';
     if (codeInput) codeInput.value = '';
-    
+
     updateFormTriggerConditionsData(formPrefix);
 }
 
@@ -291,7 +290,7 @@ function updateFormTriggerConditionsData(formPrefix) {
             display: badge.getAttribute('data-display')
         };
     });
-    
+
     const hiddenInput = document.getElementById(`${formPrefix}-trigger-conditions-data`);
     if (hiddenInput) {
         hiddenInput.value = JSON.stringify(conditions);
@@ -311,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Handle Enter key in trigger condition inputs
     document.querySelectorAll('[id$="-condition-code"], [id$="-condition-display"]').forEach(input => {
         input.addEventListener('keypress', function(e) {
@@ -324,42 +323,42 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Initialize screening name autocomplete
     setupScreeningNameAutocomplete();
-    
+
     // Handle form submission to ensure keywords and trigger conditions are included
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
             // Update keywords data before submission
             updateFormKeywordsData('add-form');
-            
+
             // Update trigger conditions data before submission
             updateFormTriggerConditionsData('add-form');
-            
+
             // Ensure the trigger conditions hidden field has proper data
             const triggerConditionsField = document.getElementById('add-form-trigger-conditions-data');
             const triggerConditionsValue = triggerConditionsField ? triggerConditionsField.value : '';
-            
+
             // If no trigger conditions data, set empty array
             if (!triggerConditionsValue || triggerConditionsValue.trim() === '') {
                 if (triggerConditionsField) {
                     triggerConditionsField.value = '[]';
                 }
             }
-            
+
             // Ensure the keywords hidden field has proper data
             const keywordsField = document.getElementById('add-form-keywords-data');
             const keywordsValue = keywordsField ? keywordsField.value : '';
-            
+
             // If no keywords data, set empty array
             if (!keywordsValue || keywordsValue.trim() === '') {
                 if (keywordsField) {
                     keywordsField.value = '[]';
                 }
             }
-            
+
             console.log('Final keywords value before submit:', keywordsField ? keywordsField.value : 'no field');
             console.log('Final trigger conditions value before submit:', triggerConditionsField ? triggerConditionsField.value : 'no field');
         });
@@ -372,37 +371,37 @@ function setupConditionAutocomplete(formPrefix) {
     const codeInput = document.getElementById(`${formPrefix}-condition-code`);
     const systemSelect = document.getElementById(`${formPrefix}-condition-system`);
     const suggestionsDiv = document.getElementById(`${formPrefix}-condition-suggestions`);
-    
+
     if (!displayInput || !suggestionsDiv) return;
-    
+
     let debounceTimer;
     let currentConditionData = null; // Store the current condition data
-    
+
     displayInput.addEventListener('input', function() {
         const query = this.value.trim();
-        
+
         clearTimeout(debounceTimer);
-        
+
         if (query.length < 2) {
             suggestionsDiv.style.display = 'none';
             currentConditionData = null;
             return;
         }
-        
+
         debounceTimer = setTimeout(() => {
             fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect, (conditionData) => {
                 currentConditionData = conditionData;
             });
         }, 300);
     });
-    
+
     // Handle system selection change
     systemSelect.addEventListener('change', function() {
         if (currentConditionData && displayInput.value.trim()) {
             updateCodeForSystem(currentConditionData, this.value, codeInput, displayInput);
         }
     });
-    
+
     // Hide suggestions when clicking outside
     document.addEventListener('click', function(e) {
         if (!displayInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
@@ -429,28 +428,28 @@ function fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInpu
 
 function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, codeInput, systemSelect, onConditionSelected) {
     suggestionsDiv.innerHTML = '';
-    
+
     conditions.forEach(condition => {
         const suggestionDiv = document.createElement('div');
         suggestionDiv.className = 'condition-suggestion';
-        
+
         const nameDiv = document.createElement('div');
         nameDiv.className = 'condition-name';
         nameDiv.textContent = condition.condition_name;
-        
+
         const codesDiv = document.createElement('div');
         codesDiv.className = 'condition-codes';
-        
+
         condition.codes.slice(0, 3).forEach(code => {
             const codeSpan = document.createElement('span');
             codeSpan.className = 'condition-code';
             codeSpan.textContent = code.code;
             codesDiv.appendChild(codeSpan);
         });
-        
+
         suggestionDiv.appendChild(nameDiv);
         suggestionDiv.appendChild(codesDiv);
-        
+
         suggestionDiv.addEventListener('click', function() {
             const primaryCode = condition.primary_code || condition.codes[0];
             if (primaryCode) {
@@ -464,20 +463,20 @@ function renderConditionSuggestions(conditions, suggestionsDiv, displayInput, co
                 }
             }
         });
-        
+
         suggestionsDiv.appendChild(suggestionDiv);
     });
-    
+
     suggestionsDiv.style.display = 'block';
 }
 
 // Function to update code when system changes
 function updateCodeForSystem(conditionData, selectedSystem, codeInput, displayInput) {
     if (!conditionData || !conditionData.codes) return;
-    
+
     // Find code for the selected system
     const codeForSystem = conditionData.codes.find(code => code.system === selectedSystem);
-    
+
     if (codeForSystem) {
         codeInput.value = codeForSystem.code;
         displayInput.value = codeForSystem.display;
@@ -495,26 +494,26 @@ function updateCodeForSystem(conditionData, selectedSystem, codeInput, displayIn
 function setupScreeningNameAutocomplete() {
     const nameInput = document.getElementById('screening-name-input');
     const suggestionsDiv = document.getElementById('screening-name-suggestions');
-    
+
     if (!nameInput || !suggestionsDiv) return;
-    
+
     let debounceTimer;
-    
+
     nameInput.addEventListener('input', function() {
         const query = this.value.trim();
-        
+
         clearTimeout(debounceTimer);
-        
+
         if (query.length < 2) {
             suggestionsDiv.style.display = 'none';
             return;
         }
-        
+
         debounceTimer = setTimeout(() => {
             fetchScreeningNameSuggestions(query, suggestionsDiv, nameInput);
         }, 300);
     });
-    
+
     // Hide suggestions when clicking outside
     document.addEventListener('click', function(e) {
         if (!nameInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
@@ -541,20 +540,20 @@ function fetchScreeningNameSuggestions(query, suggestionsDiv, nameInput) {
 
 function renderScreeningNameSuggestions(screenings, suggestionsDiv, nameInput) {
     suggestionsDiv.innerHTML = '';
-    
+
     screenings.forEach(screening => {
         const suggestionDiv = document.createElement('div');
         suggestionDiv.className = 'screening-name-suggestion';
         suggestionDiv.textContent = screening;
-        
+
         suggestionDiv.addEventListener('click', function() {
             nameInput.value = screening;
             suggestionsDiv.style.display = 'none';
         });
-        
+
         suggestionsDiv.appendChild(suggestionDiv);
     });
-    
+
     suggestionsDiv.style.display = 'block';
 }
 
@@ -571,6 +570,80 @@ document.addEventListener('DOMContentLoaded', function() {
     setupScreeningNameAutocomplete();
 });
 </script>
+<!-- Screening Name with Autocomplete -->
+            <div class="mb-3">
+                <label for="name" class="form-label">Screening Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="name" name="name" required 
+                       autocomplete="off" placeholder="Enter screening name (e.g., Mammogram, Colonoscopy)">
+                <div id="autocomplete-results" class="list-group position-absolute" style="z-index: 1000; display: none; max-height: 200px; overflow-y: auto;"></div>
+                <div class="form-text">Start typing to see suggestions from existing screening types</div>
+            </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const nameInput = document.getElementById('name');
+        const autocompleteResults = document.getElementById('autocomplete-results');
+        let debounceTimer;
+
+        nameInput.addEventListener('input', function() {
+            const query = this.value.trim();
+
+            // Clear previous timer
+            clearTimeout(debounceTimer);
+
+            if (query.length < 2) {
+                autocompleteResults.style.display = 'none';
+                return;
+            }
+
+            // Debounce the API call
+            debounceTimer = setTimeout(() => {
+                fetch(`/api/screening-name-autocomplete?q=${encodeURIComponent(query)}&limit=10`)
+                    .then(response => response.json())
+                    .then(data => {
+                        autocompleteResults.innerHTML = '';
+
+                        if (data.screenings && data.screenings.length > 0) {
+                            data.screenings.forEach(screening => {
+                                const item = document.createElement('button');
+                                item.type = 'button';
+                                item.className = 'list-group-item list-group-item-action';
+                                item.textContent = screening;
+                                item.addEventListener('click', function() {
+                                    nameInput.value = screening;
+                                    autocompleteResults.style.display = 'none';
+                                });
+                                autocompleteResults.appendChild(item);
+                            });
+                            autocompleteResults.style.display = 'block';
+                        } else {
+                            autocompleteResults.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Autocomplete error:', error);
+                        autocompleteResults.style.display = 'none';
+                    });
+            }, 300);
+        });
+
+        // Hide autocomplete when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!nameInput.contains(event.target) && !autocompleteResults.contains(event.target)) {
+                autocompleteResults.style.display = 'none';
+            }
+        });
+
+        // Handle escape key
+        nameInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                autocompleteResults.style.display = 'none';
+            }
+        });
+    });
+    </script>
 
 <style>
 .keywords-container, .trigger-conditions-container {
