@@ -1148,43 +1148,7 @@ def add_screening_type_form():
                          existing_screening_names=existing_screening_names)
 
 
-@app.route("/api/screening-name-autocomplete", methods=["GET"])
-def screening_name_autocomplete():
-    """API endpoint for screening name autocomplete using existing screening types"""
-    try:
-        query = request.args.get('q', '').strip()
-        limit = min(int(request.args.get('limit', 10)), 20)
-        
-        if not query or len(query) < 2:
-            return jsonify({"screenings": []})
-        
-        # Get existing screening types from database that match the query
-        existing_screenings = ScreeningType.query.filter(
-            ScreeningType.name.ilike(f'%{query}%')
-        ).with_entities(ScreeningType.name).distinct().limit(limit).all()
-        
-        # Extract just the names
-        screening_names = [st.name for st in existing_screenings]
-        
-        # Sort by relevance: exact matches first, then starts with, then contains
-        query_lower = query.lower()
-        
-        def relevance_score(screening):
-            screening_lower = screening.lower()
-            if screening_lower == query_lower:
-                return 0  # Exact match
-            elif screening_lower.startswith(query_lower):
-                return 1  # Starts with query
-            else:
-                return 2  # Contains query
-        
-        screening_names.sort(key=relevance_score)
-        
-        return jsonify({"screenings": screening_names[:limit]})
-        
-    except Exception as e:
-        print(f"Error in screening name autocomplete: {e}")
-        return jsonify({"error": str(e)}), 500
+
 
 
 
