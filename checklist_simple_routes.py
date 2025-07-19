@@ -30,7 +30,6 @@ def screening_checklist_rebuilt():
 
 
 @app.route('/save-status-options-simple', methods=['POST'])
-@login_required  
 def save_status_options_simple():
     """Save standard status options for prep sheet checklists"""
     # Get or create settings
@@ -57,7 +56,6 @@ def save_status_options_simple():
 
 
 @app.route('/save-default-items-simple', methods=['POST'])
-@login_required
 def save_default_items_simple():
     """Save default screening items for prep sheet checklists"""
     # Get or create settings

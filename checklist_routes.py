@@ -40,7 +40,6 @@ def checklist_settings():
 
 
 @app.route("/checklist-settings/display", methods=["POST"])
-@safe_db_operation
 def update_checklist_settings():
     """Update display settings for the prep sheet quality checklist"""
     # Get or create settings
