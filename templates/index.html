@@ -45,7 +45,7 @@
             <div class="card-body text-center">
                 <h5 class="card-title">Screening List</h5>
                 <div class="display-4 mb-2">
-                    {{ patients_needing_screenings|length if patients_needing_screenings else 0 }}
+                    {{ screening_count if screening_count is defined else (patients_needing_screenings|length if patients_needing_screenings else 0) }}
                 </div>
                 <p class="card-text text-muted">Patients with screenings due</p>
             </div>
