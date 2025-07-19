@@ -1139,9 +1139,23 @@ def add_screening_type_form():
     """Display form to add a new screening type"""
     # Generate timestamp for cache busting
     cache_timestamp = int(time_module.time())
+    
+    # Get existing screening names for autocomplete
+    existing_screening_names = [st.name for st in ScreeningType.query.with_entities(ScreeningType.name).distinct().all()]
 
-    return render_template("add_screening_type.html", cache_timestamp=cache_timestamp)
+    return render_template("add_screening_type.html", 
+                         cache_timestamp=cache_timestamp,
+                         existing_screening_names=existing_screening_names)
 
+
+@app.route("/api/screening-names", methods=["GET"])
+def get_screening_names_api():
+    """API endpoint to get existing screening names for autocomplete"""
+    try:
+        existing_names = [st.name for st in ScreeningType.query.with_entities(ScreeningType.name).distinct().all()]
+        return jsonify({"screening_names": existing_names})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/screening-types/add", methods=["POST"])
 @safe_db_operation

@@ -27,8 +27,11 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
                 <label class="form-label">Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" name="name" required>
-                <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy')</small>
+                <div class="position-relative">
+                    <input type="text" class="form-control" name="name" id="screening-name-input" required autocomplete="off">
+                    <div id="screening-name-suggestions" class="autocomplete-suggestions"></div>
+                </div>
+                <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy'). Start typing to see existing screenings for creating variants.</small>
             </div>
             
             <div class="mb-3">
@@ -322,6 +325,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
+    // Initialize screening name autocomplete
+    initializeScreeningNameAutocomplete();
+    
     // Handle form submission to ensure keywords and trigger conditions are included
     const form = document.querySelector('form');
     if (form) {
@@ -557,7 +563,7 @@ function renderScreeningNameSuggestions(screenings, suggestionsDiv, nameInput) {
 // Initialize autocomplete on page load
 document.addEventListener('DOMContentLoaded', function() {
     setupConditionAutocomplete('add-form');
-    setupScreeningNameAutocomplete();
+    initializeScreeningNameAutocomplete();
 });
 </script>
 
@@ -616,6 +622,44 @@ document.addEventListener('DOMContentLoaded', function() {
     max-height: 200px;
     overflow-y: auto;
     display: none;
+}
+
+/* Screening Name Autocomplete Styles */
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: none;
+}
+
+.autocomplete-suggestion {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s;
+}
+
+.autocomplete-suggestion:hover,
+.autocomplete-suggestion.active {
+    background-color: #f8f9fa;
+}
+
+.autocomplete-suggestion:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-suggestion strong {
+    color: #0d6efd;
+    font-weight: 600;
 }
 
 .condition-suggestion {
