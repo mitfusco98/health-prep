@@ -1157,52 +1157,7 @@ def get_screening_names_api():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/screening-name-autocomplete", methods=["GET"])
-def screening_name_autocomplete():
-    """API endpoint for screening name autocomplete combining existing and common screenings"""
-    try:
-        query = request.args.get('q', '').strip()
-        limit = min(int(request.args.get('limit', 10)), 20)
-        
-        if not query or len(query) < 2:
-            return jsonify({"screenings": []})
-        
-        # Get existing screening types from database
-        existing_screenings = [st.name for st in ScreeningType.query.with_entities(ScreeningType.name).distinct().all()]
-        
-        # Get suggestions from autocomplete service
-        from screening_name_autocomplete import ScreeningNameAutocomplete
-        autocomplete_service = ScreeningNameAutocomplete()
-        common_screenings = autocomplete_service.get_suggestions(query, limit)
-        
-        # Combine and deduplicate results
-        all_suggestions = list(set(existing_screenings + common_screenings))
-        
-        # Filter by query and sort by relevance
-        filtered_suggestions = []
-        query_lower = query.lower()
-        
-        for screening in all_suggestions:
-            if query_lower in screening.lower():
-                filtered_suggestions.append(screening)
-        
-        # Sort by relevance: exact matches first, then starts with, then contains
-        def relevance_score(screening):
-            screening_lower = screening.lower()
-            if screening_lower == query_lower:
-                return 0  # Exact match
-            elif screening_lower.startswith(query_lower):
-                return 1  # Starts with query
-            else:
-                return 2  # Contains query
-        
-        filtered_suggestions.sort(key=relevance_score)
-        
-        return jsonify({"screenings": filtered_suggestions[:limit]})
-        
-    except Exception as e:
-        print(f"Error in screening name autocomplete: {e}")
-        return jsonify({"error": str(e)}), 500
+
 
 @app.route("/screening-types/add", methods=["POST"])
 @safe_db_operation
