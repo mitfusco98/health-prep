@@ -326,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Initialize screening name autocomplete
-    initializeScreeningNameAutocomplete();
+    setupScreeningNameAutocomplete();
     
     // Handle form submission to ensure keywords and trigger conditions are included
     const form = document.querySelector('form');
@@ -560,10 +560,15 @@ function renderScreeningNameSuggestions(screenings, suggestionsDiv, nameInput) {
 
 // Unified keyword management - keywords are used for both content and filename matching
 
+// Initialize screening name autocomplete - alias for setupScreeningNameAutocomplete
+function initializeScreeningNameAutocomplete() {
+    setupScreeningNameAutocomplete();
+}
+
 // Initialize autocomplete on page load
 document.addEventListener('DOMContentLoaded', function() {
     setupConditionAutocomplete('add-form');
-    initializeScreeningNameAutocomplete();
+    setupScreeningNameAutocomplete();
 });
 </script>
 

@@ -151,6 +151,41 @@ class ScreeningNameAutocomplete:
         
         return index
     
+    def get_suggestions(self, query: str, limit: int = 10) -> List[str]:
+        """Get screening name suggestions based on query"""
+        if not query or len(query.strip()) < 2:
+            return []
+        
+        query = query.lower().strip()
+        suggestions = set()
+        
+        # Exact name matches
+        for screening_name in self.screening_database:
+            if query in screening_name.lower():
+                suggestions.add(screening_name)
+        
+        # Word-based matches using search index
+        query_words = query.split()
+        for word in query_words:
+            clean_word = ''.join(c for c in word if c.isalnum())
+            if clean_word in self.search_index:
+                suggestions.update(self.search_index[clean_word])
+        
+        # Sort by relevance (exact matches first, then contains matches)
+        sorted_suggestions = []
+        
+        # Exact matches first
+        for screening in suggestions:
+            if screening.lower().startswith(query):
+                sorted_suggestions.append(screening)
+        
+        # Then other matches
+        for screening in suggestions:
+            if not screening.lower().startswith(query) and screening not in sorted_suggestions:
+                sorted_suggestions.append(screening)
+        
+        return sorted_suggestions[:limit]
+    
     def search_screenings(self, query: str, limit: int = 10) -> List[str]:
         """
         Search for screening names based on query string
