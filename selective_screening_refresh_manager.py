@@ -23,6 +23,7 @@ class ChangeType(Enum):
     ACTIVATION_STATUS = "activation_status"
     AGE_CRITERIA = "age_criteria"
     GENDER_CRITERIA = "gender_criteria"
+    NAME_CHANGE = "name_change"
 
 
 @dataclass

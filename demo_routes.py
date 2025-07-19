@@ -1685,6 +1685,28 @@ def edit_screening_type(screening_type_id):
                             screening_type.id, ChangeType.TRIGGER_CONDITIONS, old_val, new_val
                         )
                         changes_detected.append(f"trigger conditions")
+                    elif field == 'name':
+                        # Handle name changes with checklist synchronization
+                        selective_refresh_manager.mark_screening_type_dirty(
+                            screening_type.id, ChangeType.NAME_CHANGE, old_val, new_val
+                        )
+                        changes_detected.append(f"name")
+                        
+                        # Immediately update checklist default items to reflect name change
+                        try:
+                            from models import ChecklistSettings
+                            settings = ChecklistSettings.query.first()
+                            if settings and settings.default_items:
+                                # Replace old name with new name in default items
+                                default_items_list = settings.default_items_list or []
+                                if old_val in default_items_list:
+                                    # Replace old name with new name
+                                    updated_items = [new_val if item == old_val else item for item in default_items_list]
+                                    settings.default_items = '\n'.join(updated_items)
+                                    db.session.commit()
+                                    print(f"✅ Updated checklist default items: {old_val} → {new_val}")
+                        except Exception as checklist_error:
+                            print(f"⚠️ Failed to update checklist items for name change: {checklist_error}")
             
             # Process selective refresh if changes detected
             if changes_detected:
