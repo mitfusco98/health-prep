@@ -291,6 +291,16 @@ def index(date_str=None):
     recent_lab_results = (
         LabResult.query.order_by(LabResult.test_date.desc()).limit(5).all()
     )
+    
+    # Get screening statistics for "patients with screenings due" counter
+    try:
+        from screening_performance_optimizer import screening_optimizer
+        screening_stats = screening_optimizer.get_screening_stats()
+        # Count patients with Due status screenings
+        patients_with_due_screenings = screening_stats.get('by_status', {}).get('Due', 0)
+    except Exception as e:
+        print(f"Error getting screening stats for home page: {e}")
+        patients_with_due_screenings = 0
 
     # Get recent documents
     # Get recent documents and total document count with retry logic for connection issues
@@ -393,6 +403,7 @@ def index(date_str=None):
         next_date=next_date,
         today_date=today,
         timestamp=timestamp,
+        screening_count=patients_with_due_screenings,  # Add screening due count for dashboard sync
     )
 
 
