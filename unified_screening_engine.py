@@ -157,8 +157,8 @@ class UnifiedScreeningEngine:
         # Get all active screening types
         all_screening_types = ScreeningType.query.filter_by(is_active=True).all()
         
-        # Generate status for each applicable screening
-        screenings = []
+        # Generate eligible screenings with priority logic
+        eligible_screenings = []
         for screening_type in all_screening_types:
             # Check if patient is eligible for this screening type
             is_eligible, reason = self.is_patient_eligible(patient, screening_type)
@@ -167,9 +167,128 @@ class UnifiedScreeningEngine:
                 # Generate screening data
                 screening_data = self._generate_screening_data(patient, screening_type)
                 if screening_data:
-                    screenings.append(screening_data)
+                    eligible_screenings.append(screening_data)
         
-        return screenings
+        # Apply variant priority logic - trigger-conditioned screenings win over general variants
+        prioritized_screenings = self._apply_variant_priority_logic(eligible_screenings)
+        
+        return prioritized_screenings
+    
+    def _apply_variant_priority_logic(self, eligible_screenings: List[Dict]) -> List[Dict]:
+        """
+        Apply priority logic for screening variants:
+        - Trigger-conditioned screenings take precedence over general variants
+        - For variants of the same screening type, prioritize the one with trigger conditions
+        
+        Args:
+            eligible_screenings: List of eligible screening data dictionaries
+            
+        Returns:
+            List of screening data with variants prioritized correctly
+        """
+        # Import here to avoid circular import
+        from screening_variant_manager import ScreeningVariantManager
+        
+        variant_manager = ScreeningVariantManager()
+        
+        # Group screenings by base screening type
+        base_groups = {}
+        for screening_data in eligible_screenings:
+            screening_type_name = screening_data['screening_type']
+            base_name = variant_manager.extract_base_name(screening_type_name)
+            
+            if base_name not in base_groups:
+                base_groups[base_name] = []
+            
+            base_groups[base_name].append(screening_data)
+        
+        # For each base group, apply priority logic
+        final_screenings = []
+        for base_name, screenings_group in base_groups.items():
+            if len(screenings_group) == 1:
+                # Only one screening of this type - include it
+                final_screenings.extend(screenings_group)
+            else:
+                # Multiple variants - apply priority logic
+                prioritized_screening = self._select_highest_priority_variant(screenings_group)
+                if prioritized_screening:
+                    final_screenings.append(prioritized_screening)
+        
+        return final_screenings
+    
+    def _select_highest_priority_variant(self, variant_screenings: List[Dict]) -> Optional[Dict]:
+        """
+        Select the highest priority variant from a group of competing screenings
+        
+        Priority order:
+        1. Trigger-conditioned screenings (have trigger conditions)
+        2. General screenings (no trigger conditions)
+        3. Shortest frequency interval (most frequent screening)
+        
+        Args:
+            variant_screenings: List of screening data for the same base type
+            
+        Returns:
+            The highest priority screening data dictionary
+        """
+        if not variant_screenings:
+            return None
+        
+        # Get the actual ScreeningType objects to check trigger conditions
+        enriched_variants = []
+        for screening_data in variant_screenings:
+            screening_type = ScreeningType.query.filter_by(name=screening_data['screening_type']).first()
+            if screening_type:
+                trigger_conditions = self._get_trigger_conditions(screening_type)
+                has_trigger_conditions = bool(trigger_conditions)
+                
+                enriched_variants.append({
+                    'screening_data': screening_data,
+                    'screening_type': screening_type,
+                    'has_trigger_conditions': has_trigger_conditions,
+                    'frequency_days': self._convert_frequency_to_days(screening_type)
+                })
+        
+        if not enriched_variants:
+            return variant_screenings[0]  # Fallback
+        
+        # Sort by priority: trigger conditions first, then by frequency (shortest first)
+        enriched_variants.sort(key=lambda x: (
+            not x['has_trigger_conditions'],  # False sorts before True (trigger conditions first)
+            x['frequency_days']  # Shorter frequency first
+        ))
+        
+        logger.info(f"Variant priority selection for {variant_screenings[0]['screening_type']}: "
+                   f"Selected {enriched_variants[0]['screening_type'].name} "
+                   f"(trigger conditions: {enriched_variants[0]['has_trigger_conditions']}, "
+                   f"frequency: {enriched_variants[0]['frequency_days']} days)")
+        
+        return enriched_variants[0]['screening_data']
+    
+    def _convert_frequency_to_days(self, screening_type: ScreeningType) -> int:
+        """
+        Convert screening frequency to days for comparison
+        
+        Args:
+            screening_type: ScreeningType object
+            
+        Returns:
+            Frequency in days
+        """
+        if not screening_type.frequency_number or not screening_type.frequency_unit:
+            return 999999  # Very large number for undefined frequencies
+        
+        multipliers = {
+            'days': 1,
+            'weeks': 7,
+            'months': 30,
+            'years': 365
+        }
+        
+        unit = screening_type.frequency_unit.lower()
+        multiplier = multipliers.get(unit, 365)  # Default to years if unknown
+        
+        return screening_type.frequency_number * multiplier
     
     def _generate_screening_data(self, patient: Patient, screening_type: ScreeningType) -> Optional[Dict]:
         """
