@@ -64,9 +64,20 @@ def save_default_items_simple():
 
     # Get screening selections from form
     screening_selections = request.form.get('screening_selections', '')
+    
+    # Debug the received data
+    print(f"Received screening_selections: {repr(screening_selections)}")
 
-    # Update settings
-    settings.default_items = screening_selections
+    # Update settings - ensure newline format
+    if screening_selections:
+        # If it's comma-separated, convert to newline-separated
+        if ',' in screening_selections and '\n' not in screening_selections:
+            items = [item.strip() for item in screening_selections.split(',')]
+            settings.default_items = '\n'.join(items)
+        else:
+            settings.default_items = screening_selections
+    else:
+        settings.default_items = ''
 
     try:
         db.session.commit()

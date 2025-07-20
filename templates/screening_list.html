@@ -1233,6 +1233,60 @@ function updateStatusSelections() {
 
     console.log('Status selections updated:', values);
 }
+
+// Consolidated screening button functionality
+function toggleConsolidatedScreening(button) {
+    console.log('Toggle button clicked:', button.dataset.value);
+    
+    // Toggle button state
+    if (button.classList.contains('btn-success')) {
+        button.classList.remove('btn-success');
+        button.classList.add('btn-primary');
+    } else {
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-success');
+    }
+    
+    // Update selections
+    updateScreeningSelections();
+}
+
+// Update screening selections based on button states
+function updateScreeningSelections() {
+    const selectedButtons = document.querySelectorAll('#screening-buttons .btn-success');
+    const values = Array.from(selectedButtons).map(btn => btn.dataset.value);
+    
+    // Update hidden input with newline-separated values
+    document.getElementById('screening-selections').value = values.join('\n');
+    
+    // Update display with comma-separated values for readability
+    document.getElementById('screening-list-display').textContent = values.length > 0 ? values.join(', ') : 'None';
+    
+    console.log('Screening selections updated:', values);
+}
+
+// Initialize button states based on current settings
+document.addEventListener('DOMContentLoaded', function() {
+    const screeningButtons = document.querySelectorAll('#screening-buttons .screening-btn');
+    const currentSelections = document.getElementById('screening-selections').value;
+    const selectedItems = currentSelections ? currentSelections.split('\n').map(item => item.trim()) : [];
+    
+    console.log('Initializing button states with current selections:', selectedItems);
+    
+    screeningButtons.forEach(button => {
+        const buttonValue = button.dataset.value;
+        if (selectedItems.includes(buttonValue)) {
+            button.classList.remove('btn-primary');
+            button.classList.add('btn-success');
+        } else {
+            button.classList.remove('btn-success'); 
+            button.classList.add('btn-primary');
+        }
+    });
+    
+    // Initial update of the display
+    updateScreeningSelections();
+});
 </script>
 
 
