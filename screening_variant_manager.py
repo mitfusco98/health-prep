@@ -25,7 +25,35 @@ class ScreeningVariantManager:
         if not screening_name:
             return ""
 
-        # Try each variant pattern
+        # Normalize the name for comparison
+        normalized_name = screening_name.strip().lower()
+        
+        # Special handling for common medical test variations
+        # A1C/HbA1c variants - consolidate to "HbA1c Test"
+        a1c_patterns = [
+            r'^hba1c(\s+test)?$',
+            r'^a1c(\s+test)?$', 
+            r'^hemoglobin\s+a1c(\s+test)?$',
+            r'^glycated\s+hemoglobin(\s+test)?$',
+            r'^diabetes\s+a1c(\s+test)?$'
+        ]
+        
+        for pattern in a1c_patterns:
+            if re.match(pattern, normalized_name):
+                return "HbA1c Test"  # Standardize all A1C variants to this base name
+        
+        # Mammography variants - consolidate to "Mammography" 
+        mammography_patterns = [
+            r'^mammography$',
+            r'^mammogram(\s+screening)?$',
+            r'^breast\s+imaging$'
+        ]
+        
+        for pattern in mammography_patterns:
+            if re.match(pattern, normalized_name):
+                return "Mammography"
+        
+        # Try each variant pattern for other screenings
         for pattern in self.variant_patterns:
             match = re.match(pattern, screening_name, re.IGNORECASE)
             if match:
