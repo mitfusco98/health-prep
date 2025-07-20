@@ -40,18 +40,121 @@ class ScreeningVariantManager:
         
         for pattern in a1c_patterns:
             if re.match(pattern, normalized_name):
-                return "HbA1c Test"  # Standardize all A1C variants to this base name
+                return "HbA1c Test"
         
         # Mammography variants - consolidate to "Mammography" 
         mammography_patterns = [
             r'^mammography$',
             r'^mammogram(\s+screening)?$',
-            r'^breast\s+imaging$'
+            r'^breast\s+imaging$',
+            r'^breast\s+x-ray$'
         ]
         
         for pattern in mammography_patterns:
             if re.match(pattern, normalized_name):
                 return "Mammography"
+        
+        # Colonoscopy variants - consolidate to "Colonoscopy"
+        colonoscopy_patterns = [
+            r'^colonoscopy(\s+screening)?$',
+            r'^colo(\s+screening)?$',
+            r'^lower\s+endoscopy$',
+            r'^colorectal\s+screening$',
+            r'^colon\s+cancer\s+screening$'
+        ]
+        
+        for pattern in colonoscopy_patterns:
+            if re.match(pattern, normalized_name):
+                return "Colonoscopy"
+        
+        # Pap Smear variants - consolidate to "Pap Smear"
+        pap_patterns = [
+            r'^pap(\s+smear)?(\s+test)?$',
+            r'^cervical\s+cancer\s+screening$',
+            r'^pap\s+test$',
+            r'^papanicolaou(\s+test)?$',
+            r'^cervical\s+cytology$'
+        ]
+        
+        for pattern in pap_patterns:
+            if re.match(pattern, normalized_name):
+                return "Pap Smear"
+        
+        # Bone Density variants - consolidate to "Bone Density Screening"
+        bone_density_patterns = [
+            r'^bone\s+density(\s+screening)?(\s+test)?$',
+            r'^dxa(\s+scan)?$',
+            r'^dexa(\s+scan)?$',
+            r'^osteoporosis\s+screening$',
+            r'^bone\s+scan$'
+        ]
+        
+        for pattern in bone_density_patterns:
+            if re.match(pattern, normalized_name):
+                return "Bone Density Screening"
+        
+        # Eye Exam variants - consolidate to "Eye Exam"
+        eye_exam_patterns = [
+            r'^eye\s+exam(\s+screening)?$',
+            r'^vision\s+screening$',
+            r'^ophthalmology(\s+exam)?$',
+            r'^retinal\s+screening$',
+            r'^diabetic\s+eye\s+exam$',
+            r'^glaucoma\s+screening$'
+        ]
+        
+        for pattern in eye_exam_patterns:
+            if re.match(pattern, normalized_name):
+                return "Eye Exam"
+        
+        # Lipid Panel variants - consolidate to "Lipid Panel"
+        lipid_patterns = [
+            r'^lipid\s+panel(\s+test)?$',
+            r'^cholesterol(\s+test)?(\s+panel)?$',
+            r'^lipid\s+profile$',
+            r'^cholesterol\s+screening$',
+            r'^lipid\s+screening$'
+        ]
+        
+        for pattern in lipid_patterns:
+            if re.match(pattern, normalized_name):
+                return "Lipid Panel"
+        
+        # Vaccination variants - consolidate to "Vaccination History"
+        vaccination_patterns = [
+            r'^vaccination(\s+history)?(\s+review)?$',
+            r'^immunization(\s+history)?(\s+review)?$',
+            r'^vaccine(\s+status)?(\s+review)?$',
+            r'^immunizations$'
+        ]
+        
+        for pattern in vaccination_patterns:
+            if re.match(pattern, normalized_name):
+                return "Vaccination History"
+        
+        # Blood Pressure variants - consolidate to "Blood Pressure Screening"
+        bp_patterns = [
+            r'^blood\s+pressure(\s+screening)?(\s+check)?$',
+            r'^bp(\s+screening)?(\s+check)?$',
+            r'^hypertension\s+screening$',
+            r'^arterial\s+pressure$'
+        ]
+        
+        for pattern in bp_patterns:
+            if re.match(pattern, normalized_name):
+                return "Blood Pressure Screening"
+        
+        # PSA variants - consolidate to "PSA Test"
+        psa_patterns = [
+            r'^psa(\s+test)?(\s+screening)?$',
+            r'^prostate\s+specific\s+antigen(\s+test)?$',
+            r'^prostate\s+cancer\s+screening$',
+            r'^prostate\s+screening$'
+        ]
+        
+        for pattern in psa_patterns:
+            if re.match(pattern, normalized_name):
+                return "PSA Test"
         
         # Try each variant pattern for other screenings
         for pattern in self.variant_patterns:
