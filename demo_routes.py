@@ -3556,10 +3556,8 @@ def screening_list():
         # Debug: Check what settings we're sending to template
         print(f"=== CHECKLIST TAB DEBUG ===")
         print(f"Settings object: {settings}")
-        print(f"Custom status options (raw): {settings.custom_status_options}")
-        print(f"Custom status list (property): {settings.custom_status_list}")
-        print(f"Status options (raw): {settings.status_options}")
         print(f"Status options list (property): {settings.status_options_list}")
+        print(f"Default items list: {settings.default_items_list}")
         print(f"=== END DEBUG ===")
         # Get active screening types instead of default_items_list
         # Get active screening types using cache
