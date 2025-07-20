@@ -3788,7 +3788,7 @@ def screening_list():
             # Import cutoff utilities for legacy compatibility
             from cutoff_utils import get_cutoff_date_for_patient
             
-            # Get cutoff settings info for display
+            # Get cutoff settings info for display (screening-specific cutoffs removed)
             settings = get_or_create_settings()
             cutoff_info = {
                 'general_cutoff_months': settings.cutoff_months,
@@ -3796,7 +3796,6 @@ def screening_list():
                 'imaging_cutoff_months': settings.imaging_cutoff_months,
                 'consults_cutoff_months': settings.consults_cutoff_months,
                 'hospital_cutoff_months': settings.hospital_cutoff_months,
-                'screening_cutoffs': settings.screening_cutoffs,
                 'has_cutoffs': (settings.cutoff_months and settings.cutoff_months > 0) or 
                               any([settings.labs_cutoff_months, settings.imaging_cutoff_months, 
                                    settings.consults_cutoff_months, settings.hospital_cutoff_months]),
@@ -3812,7 +3811,7 @@ def screening_list():
             # Import cutoff utilities
             from cutoff_utils import get_cutoff_date_for_patient
             
-            # Get cutoff settings info for display
+            # Get cutoff settings info for display (screening-specific cutoffs removed)
             settings = get_or_create_settings()
             cutoff_info = {
                 'general_cutoff_months': settings.cutoff_months,
@@ -3820,7 +3819,6 @@ def screening_list():
                 'imaging_cutoff_months': settings.imaging_cutoff_months,
                 'consults_cutoff_months': settings.consults_cutoff_months,
                 'hospital_cutoff_months': settings.hospital_cutoff_months,
-                'screening_cutoffs': settings.screening_cutoffs,
                 'has_cutoffs': (settings.cutoff_months and settings.cutoff_months > 0) or 
                               any([settings.labs_cutoff_months, settings.imaging_cutoff_months, 
                                    settings.consults_cutoff_months, settings.hospital_cutoff_months]),
