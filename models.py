@@ -1190,12 +1190,8 @@ class ChecklistSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     layout_style = db.Column(db.String(20), default="list")  # 'list' or 'table'
     show_notes = db.Column(db.Boolean, default=True)
-    status_options = db.Column(
-        db.Text, default="due,due_soon,incomplete,completed"
-    )  # Comma-separated list
-    custom_status_options = db.Column(
-        db.Text, nullable=True
-    )  # Comma-separated list of custom status options
+    # Status options are now permanently fixed - no user customization
+    # Always use: due, due_soon, incomplete, completed
     content_sources = db.Column(
         db.Text, default="database,age_based,gender_based,condition_based"
     )  # Comma-separated list
@@ -1208,8 +1204,8 @@ class ChecklistSettings(db.Model):
     imaging_cutoff_months = db.Column(db.Integer, default=12)  # Exclude imaging older than X months  
     consults_cutoff_months = db.Column(db.Integer, default=12)  # Exclude consults older than X months
     hospital_cutoff_months = db.Column(db.Integer, default=24)  # Exclude hospital visits older than X months
-    # Screening-specific cutoffs (JSON format: {"screening_name": months})
-    screening_cutoffs = db.Column(db.Text, nullable=True)  # JSON string of screening-specific cutoffs
+    # Screening-specific cutoffs removed - conflicts with screening frequency settings
+    # Cutoffs now only apply to: labs, imaging, consults, hospital visits
 
     # General cutoff months for prep sheet items (overrides specific cutoffs if set)
     cutoff_months = db.Column(db.Integer, nullable=True)
@@ -1220,10 +1216,8 @@ class ChecklistSettings(db.Model):
 
     @property
     def status_options_list(self):
-        """Convert status_options string to list"""
-        if self.status_options:
-            return [option.strip() for option in self.status_options.split(",")]
-        return []
+        """Return permanently fixed status options"""
+        return ['due', 'due_soon', 'incomplete', 'completed']
 
     @property
     def default_items_list(self):
@@ -1240,33 +1234,10 @@ class ChecklistSettings(db.Model):
 
     @property
     def custom_status_list(self):
-        """Convert custom_status_options string to list"""
-        if self.custom_status_options:
-            return [option.strip() for option in self.custom_status_options.split(",") if option.strip()]
+        """Custom status options removed - return empty list"""
         return []
 
-    @property
-    def screening_cutoffs_dict(self):
-        """Convert screening_cutoffs JSON string to dictionary"""
-        if self.screening_cutoffs:
-            try:
-                import json
-                return json.loads(self.screening_cutoffs)
-            except (json.JSONDecodeError, TypeError):
-                return {}
-        return {}
-
-    def get_screening_cutoff(self, screening_name, default=0):
-        """Get cutoff for a specific screening type"""
-        cutoffs = self.screening_cutoffs_dict
-        return cutoffs.get(screening_name, default)  # Default to 0 months (last appointment date) if not set
-
-    def set_screening_cutoff(self, screening_name, months):
-        """Set cutoff months for a specific screening type"""
-        cutoffs = self.screening_cutoffs_dict
-        cutoffs[screening_name] = int(months)
-        import json
-        self.screening_cutoffs = json.dumps(cutoffs)
+    # Screening-specific cutoff methods removed to prevent conflicts with screening frequency settings
 
     def get_cutoff_date(self, cutoff_months, base_date=None):
         """Convert months to a cutoff date from base_date (or today)"""

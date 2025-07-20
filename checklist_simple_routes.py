@@ -38,11 +38,9 @@ def save_status_options_simple():
         settings = ChecklistSettings()
         db.session.add(settings)
 
-    # Get standard status selections from form
-    status_selections = request.form.get('status_selections', '')
-
-    # Update settings with standard options only
-    settings.status_options = status_selections
+    # Status options are now permanently fixed and cannot be modified
+    # Always use: due, due_soon, incomplete, completed
+    flash('Status options are now permanently fixed and cannot be modified.', 'info')
 
     try:
         db.session.commit()

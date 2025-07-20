@@ -753,47 +753,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h4 class="mb-0">Prep Sheet Checklist Settings</h4>
             </div>
 
-            <!-- Status Options Configuration -->
+            <!-- Status Options Display (Permanent) -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">Status Options for Prep Sheets</h5>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted mb-3">These status options will appear as autocomplete suggestions when filling out screening checklists in prep sheets.</p>
-
-                    <form id="status-form" method="POST" action="{{ url_for('save_status_options_simple') }}" onsubmit="console.log('Form submitting!'); return updateCustomStatusBeforeSubmit()">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                        <div class="mb-3">
-                            <label class="form-label">Available Status Options</label>
-                            <div id="status-buttons" class="d-flex flex-wrap gap-2 mb-3">
-                                {% set current_status_list = settings.status_options_list if settings else ['due'] %}
-
-                                <button type="button" class="btn status-btn {% if 'due' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
-                                        data-value="due" onclick="toggleStatus(this)">Due</button>
-
-                                <button type="button" class="btn status-btn {% if 'due_soon' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
-                                        data-value="due_soon" onclick="toggleStatus(this)">Due Soon</button>
-
-                                <button type="button" class="btn status-btn {% if 'incomplete' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
-                                        data-value="incomplete" onclick="toggleStatus(this)">Incomplete</button>
-
-                                <button type="button" class="btn status-btn {% if 'completed' in current_status_list %}btn-success{% else %}btn-outline-success{% endif %}" 
-                                        data-value="completed" onclick="toggleStatus(this)">Completed</button>
-                            </div>
-                        </div>
-
-                        <div id="selected-status-display" class="mb-3">
-                            <small class="text-muted">Selected: <span id="status-list-display">{{ ', '.join(current_status_list) }}</span></small>
-                        </div>
-
-
-
-                        <!-- Hidden input that will contain the final selections -->
-                        <input type="hidden" id="status-selections" name="status_selections" value="{{ ','.join(current_status_list) }}">
-
-                        <button type="submit" class="btn btn-primary">Save Status Options</button>
-                    </form>
+                    <p class="text-muted mb-3">Standard status options permanently enabled for screening checklists in prep sheets.</p>
+                    
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge bg-success fs-6 py-2 px-3">Due</span>
+                        <span class="badge bg-success fs-6 py-2 px-3">Due Soon</span>
+                        <span class="badge bg-success fs-6 py-2 px-3">Incomplete</span>
+                        <span class="badge bg-success fs-6 py-2 px-3">Completed</span>
+                    </div>
+                    
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Status options are now permanently active and cannot be modified.
+                    </small>
                 </div>
             </div>
 
@@ -892,42 +870,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
 
-                    {% if active_screening_types %}
-                    <hr class="my-4">
-                    <h6 class="mb-3">Active Screening Types Cutoffs</h6>
-                    <p class="text-muted small mb-3">These cutoffs apply to all active screening types in default checklist items</p>
-
-                    <div class="row">
-                        {% set processed_base_names = [] %}
-                        {% for screening in active_screening_types %}
-                            {% if screening.name in (settings.default_items_list if settings and settings.default_items_list else []) %}
-                                {% set base_name = variant_manager.extract_base_name(screening.name) %}
-                                {% if base_name not in processed_base_names %}
-                                    {% set _ = processed_base_names.append(base_name) %}
-                                    {% set variants = variant_manager.find_screening_variants(base_name) %}
-                                    {% set active_variants = variants|selectattr('is_active')|list %}
-                                    {% if active_variants %}
-                                        <div class="col-md-4 col-lg-3 mb-2">
-                                            <div class="text-center">
-                                                <h6 class="text-info">{{ base_name }}</h6>
-                                                
-                                                {% set cutoff_value = settings.get_screening_cutoff(base_name) if settings else 0 %}
-                                                <span class="badge bg-info">{{ cutoff_value ~ ' months' if cutoff_value > 0 else 'To Last Appointment Date' }}</span>
-                                                {% if active_variants|length > 1 %}
-                                                    <div class="mt-1">
-                                                        <small class="text-muted" style="font-size: 0.7rem;">
-                                                            Applies to: {{ active_variants|map(attribute='name')|join(', ') }}
-                                                        </small>
-                                                    </div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    {% endif %}
-                                {% endif %}
-                            {% endif %}
-                        {% endfor %}
+                    
+                    <div class="alert alert-info mt-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Data cutoff settings apply only to medical data types (labs, imaging, consults, hospital visits). 
+                        Screening frequency settings are configured in <a href="{{ url_for('screening_list', tab='types') }}" class="alert-link">Screening Types</a>.
                     </div>
-                    {% endif %}
                 </div>
             </div>
 
@@ -1039,45 +987,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
 
-                    {% if active_screening_types %}
-                    <hr class="my-4">
-                    <h6 class="mb-3">Active Screening Types Cutoffs</h6>
-                    <p class="text-muted small mb-3">Individual cutoff settings for each consolidated screening type in default checklist items</p>
-                    <div class="row">
-                        {% set current_default_list = settings.default_items_list if settings and settings.default_items_list else [] %}
-                        {% set processed_base_names = [] %}
-                        {% for screening in active_screening_types %}
-                            {% set base_name = variant_manager.extract_base_name(screening.name) %}
-                            {% if base_name in current_default_list and base_name not in processed_base_names %}
-                                {% set _ = processed_base_names.append(base_name) %}
-                                {% set variants = variant_manager.find_screening_variants(base_name) %}
-                                <div class="col-md-6 mb-3">
-                                    <label for="screening_cutoff_{{ base_name|replace(' ', '_')|lower }}" class="form-label">
-                                        <i class="fas fa-check-circle text-info me-2"></i>{{ base_name }}
-                                        
-                                    </label>
-                                    <div class="input-group">
-                                        <input type="number" class="form-control screening-cutoff" 
-                                               id="screening_cutoff_{{ base_name|replace(' ', '_')|lower }}" 
-                                               name="screening_cutoff_{{ base_name|replace(' ', '_')|lower }}"
-                                               data-screening-name="{{ base_name }}"
-                                               data-original-value="{{ settings.get_screening_cutoff(base_name) if settings else 0 }}"
-                                               data-user-modified="false"
-                                               data-preset-modified="false"
-                                               min="0" max="120" 
-                                               value="{{ settings.get_screening_cutoff(base_name) if settings else 0 }}" required>
-                                        <span class="input-group-text">months</span>
-                                    </div>
-                                    <div class="form-text">Cutoff for {{ base_name }} documents 
-                                        {% if variants|length > 1 %}
-                                        (includes: {{ variants|map(attribute='name')|join(', ') }})
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
+                    
+                    <div class="alert alert-warning mt-4">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Screening-specific cutoffs removed:</strong> To prevent conflicts with screening frequency settings, 
+                        cutoffs now only apply to medical data types. Screening timelines are managed via frequency settings in 
+                        <a href="{{ url_for('screening_list', tab='types') }}" class="alert-link">Screening Types</a>.
                     </div>
-                    {% endif %}
 
                     <div class="mt-4">
                         <h6>Quick Preset Options</h6>
@@ -1131,15 +1047,7 @@ function setPresetCutoffs(labs, imaging, consults, hospital) {
     document.getElementById('consults_cutoff_months').value = consults;
     document.getElementById('hospital_cutoff_months').value = hospital;
 
-    // Apply the same preset value to all screening-specific cutoffs
-    screeningInputs.forEach(input => {
-        // Only apply preset if user hasn't manually modified this field
-        if (input.dataset.userModified !== 'true') {
-            input.value = labs; // Use the same value for all screening cutoffs
-            input.dataset.presetModified = 'true'; // Mark as preset modified
-            input.dataset.originalValue = labs; // Update original value
-        }
-    });
+    // Screening-specific cutoffs removed - no longer needed
 }
 
 // Set all cutoffs to use each patient's last appointment date
@@ -1166,15 +1074,7 @@ function setToLastAppointmentDate() {
     document.getElementById('consults_cutoff_months').value = 0;
     document.getElementById('hospital_cutoff_months').value = 0;
 
-    // Clear all screening-specific cutoffs
-    screeningInputs.forEach(input => {
-        // Only set to 0 if user hasn't manually modified this field
-        if (input.dataset.userModified !== 'true') {
-            input.value = 0;
-            input.dataset.presetModified = 'true'; // Mark as preset modified
-            input.dataset.originalValue = '0'; // Update original value
-        }
-    });
+    // Screening-specific cutoffs removed - no longer needed
 
     // Show confirmation
     alert('Cutoffs set to use each patient\'s last appointment date (excluding today\'s appointments)');
@@ -1396,10 +1296,10 @@ document.addEventListener('DOMContentLoaded', function() {
             this.dataset.userFocused = 'true';
         });
 
-        // Track actual typing/keystrokes
+        // Track actual typing/keystrokes  
         input.addEventListener('keypress', function() {
             // Any keystroke indicates user modification
-            this.dataset.userModified = ''true';
+            this.dataset.userModified = 'true';
             this.dataset.presetModified = 'false';
             console.log(`User keystroke detected for ${this.dataset.screeningName}`);
         });
@@ -1411,97 +1311,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-    // Custom status options handler
-    document.addEventListener('DOMContentLoaded', function() {
-        // Update selections whenever checkboxes change
-        document.addEventListener('change', function(e) {
-            if (e.target.matches('#status-options-grid input[type="checkbox"]')) {
-                updateStatusSelections();
-            }
-        });
-
-        // Reset button functionality
-        document.getElementById('reset-status-options').addEventListener('click', function() {
-            // Uncheck all checkboxes
-            document.querySelectorAll('#status-options-grid input[type="checkbox"]').forEach(checkbox => {
-                checkbox.checked = false;
-            });
-            updateStatusSelections();
-        });
-
-        // Custom status options handler
-        const addCustomStatusBtn = document.getElementById('add_custom_status');
-        const customStatusInput = document.getElementById('custom_status_input');
-        const customStatusList = document.getElementById('custom_status_list');
-
-        if (addCustomStatusBtn) {
-            addCustomStatusBtn.addEventListener('click', function() {
-                addCustomStatus();
-            });
-        }
-
-        if (customStatusInput) {
-            customStatusInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    addCustomStatus();
-                }
-            });
-        }
-
-        // Add close button functionality to existing status items
-        document.querySelectorAll('.btn-close').forEach(button => {
-            button.addEventListener('click', function() {
-                const status = this.getAttribute('data-status');
-                if (status) {
-                    removeCustomStatus(status, this.closest('.custom-status-item'));
-                }
-            });
-        });
-
-        // Function to add a new custom status
-        function addCustomStatus() {
-            const status = customStatusInput.value.trim();
-            if (!status) return;
-
-            // Check if status already exists
-            const existingStatuses = Array.from(customStatusList.querySelectorAll('.custom-status-item'))
-                .map(item => item.querySelector('input').value);
-
-            if (existingStatuses.includes(status)) {
-                alert('This status option already exists');
-                return;
-            }
-
-            // Create a new status item
-            const statusItem = document.createElement('div');
-            statusItem.className = 'custom-status-item badge bg-light text-dark p-2 d-flex align-items-center';
-            statusItem.innerHTML = `
-                ${status}
-                <button type="button" class="btn-close btn-close-dark ms-2 shadow-sm" style="background-color: #f8d7da; padding: 4px; border-radius: 50%;" aria-label="Remove" data-status="${status}"></button>
-                <input type="hidden" name="custom_status_options" value="${status}">
-            `;
-
-            // Add remove functionality to the new button
-            statusItem.querySelector('.btn-close').addEventListener('click', function() {
-                removeCustomStatus(status, statusItem);
-            });
-
-            // Add to the list
-            customStatusList.appendChild(statusItem);
-
-            // Clear input
-            customStatusInput.value = '';
-            customStatusInput.focus();
-        }
-
-        // Function to remove a custom status
-        function removeCustomStatus(status, element) {
-            if (confirm(`Remove "${status}" from custom status options?`)) {
-                element.remove();
-            }
-        }
-    });
+    // Custom status options removed - functionality eliminated
 
     // Trigger Conditions Management
     window.triggerConditionsData = {

@@ -50,14 +50,12 @@ def update_checklist_settings():
     status_options = request.form.getlist("status_options")
     show_notes = "show_notes" in request.form
 
-    # Update settings - DEBUG THE WORKING STATUS OPTIONS
-    print(f"DEBUG STATUS OPTIONS: Received {len(status_options)} items: {status_options}")
+    # Update settings - status options are now permanently fixed
     settings.layout_style = layout_style
-    settings.status_options = (
-        ",".join(status_options) if status_options else "due,due_soon"
-    )
-    settings.custom_status_options = ""  # Custom status options no longer supported
     settings.show_notes = show_notes
+    
+    # Status options are permanently fixed - no longer user configurable
+    # Fixed to: due, due_soon, incomplete, completed
 
     # Save settings
     db.session.commit()
@@ -189,35 +187,8 @@ def save_cutoff_settings():
         settings.hospital_cutoff_months = int(request.form.get("hospital_cutoff_months", 0))
         
         # Handle screening-specific cutoffs (default to 0 for "last appointment" logic)
-        # Get all active screening types to match against
-        from models import ScreeningType
-        active_screening_types = ScreeningType.query.filter_by(
-            is_active=True, 
-            status='active'
-        ).all()
-        
-        for screening in active_screening_types:
-            # Convert screening name to field name format (spaces to underscores, lowercase)
-            field_name = f"screening_cutoff_{screening.name.replace(' ', '_').lower()}"
-            
-            # Get the cutoff value from form
-            cutoff_value = request.form.get(field_name)
-            
-            if cutoff_value is not None:
-                try:
-                    cutoff_months = int(cutoff_value)
-                    settings.set_screening_cutoff(screening.name, cutoff_months)
-                    print(f"Saved cutoff for '{screening.name}': {cutoff_months} months (field: {field_name})")
-                except (ValueError, TypeError):
-                    print(f"Invalid cutoff value for '{screening.name}': {cutoff_value}")
-                    # Set default to 0 if invalid
-                    settings.set_screening_cutoff(screening.name, 0)
-            else:
-                print(f"No cutoff value found for '{screening.name}' (field: {field_name})")
-                # Keep existing value or set to 0 if none exists
-                existing_cutoff = settings.get_screening_cutoff(screening.name, 0)
-                if existing_cutoff == 12:  # Default value, set to 0
-                    settings.set_screening_cutoff(screening.name, 0)
+        # Screening-specific cutoffs removed to prevent conflicts with screening frequency settings
+        # Cutoffs now only apply to medical data types: labs, imaging, consults, hospital visits
         
         db.session.commit()
         flash("Data cutoff settings updated successfully!", "success")
