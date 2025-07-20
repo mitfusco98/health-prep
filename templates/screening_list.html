@@ -356,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </p>
         </div>
         {% endif %}
-        
+
         <!-- High-Performance Pagination Component -->
         {% if pagination and pagination.total_pages > 1 %}
             {% include 'screening_pagination.html' %}
@@ -760,14 +760,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="card-body">
                     <p class="text-muted mb-3">Standard status options permanently enabled for screening checklists in prep sheets.</p>
-                    
+
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         <span class="badge bg-success fs-6 py-2 px-3">Due</span>
                         <span class="badge bg-success fs-6 py-2 px-3">Due Soon</span>
                         <span class="badge bg-success fs-6 py-2 px-3">Incomplete</span>
                         <span class="badge bg-success fs-6 py-2 px-3">Completed</span>
                     </div>
-                    
+
                     <small class="text-muted">
                         <i class="fas fa-info-circle me-1"></i>
                         Status options are now permanently active and cannot be modified.
@@ -805,7 +805,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     onclick="toggleConsolidatedScreening(this)"
                                     title="Includes: {{ variants|map(attribute='name')|join(', ') }}">
                                 {{ base_name }}
-                                
+
                                 {% if screening.formatted_frequency %}
                                 <br><small>{{ screening.formatted_frequency }}</small>
                                 {% endif %}
@@ -815,9 +815,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             </div>
 
+                            {% if settings.default_items_list %}
                             <div id="selected-screening-display" class="mb-3">
-                                <small class="text-muted">Selected: <span id="screening-list-display">{{ ', '.join(current_default_list) if current_default_list else 'None' }}</span></small>
+                                <small class="text-muted">Selected: <span id="screening-list-display">{{ ', '.join(settings.default_items_list) }}</span></small>
                             </div>
+                            {% endif %}
 
                             <!-- Hidden input for final selections -->
                             <input type="hidden" id="screening-selections" name="screening_selections" value="{% for item in current_default_list %}{{ item }}{% if not loop.last %},{% endif %}{% endfor %}">
@@ -870,7 +872,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
 
-                    
+
                     <div class="alert alert-info mt-4">
                         <i class="fas fa-info-circle me-2"></i>
                         <strong>Note:</strong> Data cutoff settings apply only to medical data types (labs, imaging, consults, hospital visits). 
@@ -987,7 +989,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
 
-                    
+
                     <div class="alert alert-warning mt-4">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         <strong>Screening-specific cutoffs removed:</strong> To prevent conflicts with screening frequency settings, 
@@ -1237,7 +1239,7 @@ function updateStatusSelections() {
 // Consolidated screening button functionality
 function toggleConsolidatedScreening(button) {
     console.log('Toggle button clicked:', button.dataset.value);
-    
+
     // Toggle button state
     if (button.classList.contains('btn-success')) {
         button.classList.remove('btn-success');
@@ -1246,7 +1248,7 @@ function toggleConsolidatedScreening(button) {
         button.classList.remove('btn-primary');
         button.classList.add('btn-success');
     }
-    
+
     // Update selections
     updateScreeningSelections();
 }
@@ -1255,13 +1257,13 @@ function toggleConsolidatedScreening(button) {
 function updateScreeningSelections() {
     const selectedButtons = document.querySelectorAll('#screening-buttons .btn-success');
     const values = Array.from(selectedButtons).map(btn => btn.dataset.value);
-    
+
     // Update hidden input with newline-separated values
     document.getElementById('screening-selections').value = values.join('\n');
-    
+
     // Update display with comma-separated values for readability
     document.getElementById('screening-list-display').textContent = values.length > 0 ? values.join(', ') : 'None';
-    
+
     console.log('Screening selections updated:', values);
 }
 
@@ -1270,9 +1272,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const screeningButtons = document.querySelectorAll('#screening-buttons .screening-btn');
     const currentSelections = document.getElementById('screening-selections').value;
     const selectedItems = currentSelections ? currentSelections.split('\n').map(item => item.trim()) : [];
-    
+
     console.log('Initializing button states with current selections:', selectedItems);
-    
+
     screeningButtons.forEach(button => {
         const buttonValue = button.dataset.value;
         if (selectedItems.includes(buttonValue)) {
@@ -1283,7 +1285,7 @@ document.addEventListener('DOMContentLoaded', function() {
             button.classList.add('btn-primary');
         }
     });
-    
+
     // Initial update of the display
     updateScreeningSelections();
 });
