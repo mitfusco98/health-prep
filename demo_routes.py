@@ -1867,7 +1867,7 @@ def delete_screening_type(screening_type_id):
         import json
 
         log_details = {
-            "action": "delete",
+            "action": "permanent_delete",
             "data_type": "screening_type",
             "screening_type_id": screening_type_id,
             "screening_type_name": name,
@@ -1905,11 +1905,10 @@ def delete_screening_type(screening_type_id):
             user_agent=request.headers.get("User-Agent", "Unknown"),
         )
 
-        # Use soft delete instead of hard delete to preserve data integrity
-        screening_type.is_active = False
-        screening_type.status = 'inactive'
+        # PERMANENT DELETE: Remove screening type from software entirely
+        db.session.delete(screening_type)
         db.session.commit()
-        flash(f'Screening type "{name}" has been deactivated successfully.', "success")
+        flash(f'Screening type "{name}" has been permanently deleted from the software.', "success")
 
     # Redirect back to screening list with 'types' tab active and timestamp for cache busting
     timestamp = int(time_module.time())
