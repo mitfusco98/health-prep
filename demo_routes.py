@@ -2636,6 +2636,9 @@ def add_document_unified():
             file = form.file.data
             filename = file.filename
 
+            # CRITICAL FIX: Ensure file stream is at beginning
+            file.seek(0)
+            
             # Check if the file is an image or binary type
             mime_type = file.content_type
             is_binary = mime_type and (
@@ -2645,6 +2648,18 @@ def add_document_unified():
             if is_binary:
                 # Store as binary for images and other binary types
                 binary_content = file.read()
+                print(f"📄 Binary file upload: {filename}, size: {len(binary_content)} bytes, type: {mime_type}")
+                
+                # VALIDATION: Ensure we actually got data
+                if len(binary_content) == 0:
+                    flash(f"⚠️ Error: File '{filename}' appears to be empty or could not be read. Please try uploading again.", "error")
+                    return render_template(
+                        "document_upload.html",
+                        form=form,
+                        title=title,
+                        unified_upload=True,
+                    )
+                
                 content = None
                 document_metadata = {"mime_type": mime_type, "filename": filename}
             else:

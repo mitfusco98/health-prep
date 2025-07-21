@@ -131,6 +131,12 @@ class TesseractOCRProcessor:
             result['original_text_length'] = len(document.content or "")
             
             # Process document with OCR
+            # Check if binary content exists and has actual data
+            if not document.binary_content or len(document.binary_content) == 0:
+                result['error'] = f"Document {document_id} has no binary content to process"
+                result['quality_flags'].append("no_binary_content")
+                return result
+            
             extracted_text, confidence, quality_flags = self._extract_text_with_ocr(
                 document.document_name,
                 document.binary_content  # Use the actual binary content field
