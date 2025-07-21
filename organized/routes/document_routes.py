@@ -166,6 +166,37 @@ def download_document(document_id):
     )
 
 
+@document_bp.route("/document/<int:document_id>/image")
+def document_image(document_id):
+    """Serve document image for preview"""
+    document = MedicalDocument.query.get_or_404(document_id)
+    
+    if not document.binary_content:
+        return jsonify({"error": "No image content available"}), 404
+    
+    # Log document preview access
+    AdminLogger.log_data_modification(
+        action="preview",
+        data_type="document",
+        record_id=document_id,
+        patient_id=document.patient_id,
+        patient_name=document.patient.full_name,
+        additional_data={"filename": document.filename},
+    )
+    
+    # Determine MIME type
+    mime_type = document.mime_type or "application/octet-stream"
+    if not mime_type.startswith(('image/', 'application/pdf')):
+        return jsonify({"error": "Document is not previewable"}), 400
+    
+    return send_file(
+        io.BytesIO(document.binary_content),
+        mimetype=mime_type,
+        as_attachment=False,
+        download_name=document.filename
+    )
+
+
 @document_bp.route("/document/<int:document_id>/delete", methods=["POST"])
 def delete_document(document_id):
     """Delete a document"""
