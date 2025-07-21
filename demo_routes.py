@@ -2694,13 +2694,64 @@ def add_document_unified():
             db.session.add(document)
             db.session.commit()
 
+            # ENHANCED: Trigger OCR processing if needed
+            try:
+                from ocr_document_processor import process_document_with_ocr
+                
+                # Check if document needs OCR and process it
+                ocr_result = process_document_with_ocr(document.id)
+                
+                if ocr_result['success'] and ocr_result['ocr_applied']:
+                    print(f"🔍 OCR processed document {document.id}: {ocr_result['extracted_text_length']} characters extracted with {ocr_result['confidence_score']}% confidence")
+                    
+                    # Trigger selective refresh for documents with new OCR content
+                    from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
+                    
+                    # Mark all screening types as potentially affected by new document content
+                    from models import ScreeningType
+                    active_screening_types = ScreeningType.query.filter_by(is_active=True).all()
+                    
+                    for screening_type in active_screening_types:
+                        selective_refresh_manager.mark_screening_type_dirty(
+                            screening_type.id, 
+                            ChangeType.KEYWORDS,  # New document content affects keyword matching
+                            "no_ocr_content", 
+                            f"new_document_{document.id}_with_ocr",
+                            affected_criteria={"patient_id": patient_id}
+                        )
+                    
+                    # Process selective refresh for affected patient
+                    refresh_stats = selective_refresh_manager.process_selective_refresh()
+                    print(f"📊 OCR triggered selective refresh: {refresh_stats.screenings_updated} screenings updated")
+                    
+                    # Enhanced success message with OCR info
+                    ocr_info = ""
+                    if ocr_result['confidence_score'] >= 80:
+                        ocr_info = " (High-quality text extraction completed)"
+                    elif ocr_result['confidence_score'] >= 60:
+                        ocr_info = " (Text extraction completed)"
+                    else:
+                        ocr_info = " (Text extraction completed with low confidence)"
+                        
+                elif ocr_result['success'] and not ocr_result['ocr_applied']:
+                    print(f"✅ Text-based document uploaded for patient {patient_id} - no OCR needed")
+                    ocr_info = ""
+                    
+                else:
+                    print(f"⚠️ OCR processing failed for document {document.id}: {ocr_result.get('error', 'Unknown error')}")
+                    ocr_info = " (Note: Text extraction failed - document uploaded successfully)"
+                    
+            except Exception as ocr_error:
+                print(f"⚠️ OCR processing error for document {document.id}: {ocr_error}")
+                ocr_info = ""
+                # Continue with successful upload even if OCR fails
+            
             # Success message and redirect
             subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
-            flash(f"{subsection_name} document '{form.document_name.data}' uploaded successfully for {patient.full_name}!", "success")
+            flash(f"{subsection_name} document '{form.document_name.data}' uploaded successfully for {patient.full_name}!{ocr_info}", "success")
             
-            # ✅ Document uploaded - unified engine will handle screening updates automatically
-            print(f"✅ Document uploaded for patient {patient_id} - unified engine will handle screening updates")
-            logger.info(f"Document uploaded for patient {patient_id} - unified engine will update screenings on demand")
+            print(f"✅ Document uploaded for patient {patient_id} with OCR processing")
+            logger.info(f"Document uploaded for patient {patient_id} with OCR integration")
             
             # Redirect to patient detail page
             return redirect(url_for("patient_detail", patient_id=patient_id))

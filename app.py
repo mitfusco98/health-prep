@@ -1499,6 +1499,7 @@ import performance_routes
 import ehr_routes
 import checklist_routes
 import checklist_simple_routes
+import ocr_management_routes
 
 # Register screening blueprint
 from organized.routes.screening_routes import screening_bp

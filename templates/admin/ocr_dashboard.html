@@ -1,0 +1,435 @@
+{% extends "base_v2.html" %}
+
+{% block title %}OCR Management Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-eye"></i> OCR Management Dashboard</h2>
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary" onclick="processAllPending()">
+                <i class="fas fa-cogs"></i> Process All Pending
+            </button>
+            <button type="button" class="btn btn-warning" onclick="reprocessLowConfidence()">
+                <i class="fas fa-redo"></i> Reprocess Low Confidence
+            </button>
+        </div>
+    </div>
+
+    <!-- OCR Statistics Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ data.total_documents }}</h4>
+                            <p class="mb-0">Total Documents</p>
+                        </div>
+                        <div>
+                            <i class="fas fa-file-alt fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ data.ocr_processed }}</h4>
+                            <p class="mb-0">OCR Processed</p>
+                        </div>
+                        <div>
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ data.needs_ocr }}</h4>
+                            <p class="mb-0">Need Processing</p>
+                        </div>
+                        <div>
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ "%.1f"|format((data.ocr_processed / data.total_documents * 100) if data.total_documents > 0 else 0) }}%</h4>
+                            <p class="mb-0">Coverage</p>
+                        </div>
+                        <div>
+                            <i class="fas fa-chart-pie fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Statistics -->
+    {% if data.processing_stats %}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar"></i> Processing Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <h6>Success Rate</h6>
+                            <p class="text-success">{{ "%.1f"|format(data.processing_stats.success_rate) }}%</p>
+                        </div>
+                        <div class="col-md-2">
+                            <h6>Avg Processing Time</h6>
+                            <p>{{ "%.2f"|format(data.processing_stats.average_processing_time) }}s</p>
+                        </div>
+                        <div class="col-md-2">
+                            <h6>Successful Extractions</h6>
+                            <p class="text-success">{{ data.processing_stats.successful_extractions }}</p>
+                        </div>
+                        <div class="col-md-2">
+                            <h6>Low Confidence Results</h6>
+                            <p class="text-warning">{{ data.processing_stats.low_confidence_results }}</p>
+                        </div>
+                        <div class="col-md-2">
+                            <h6>Failed Extractions</h6>
+                            <p class="text-danger">{{ data.processing_stats.failed_extractions }}</p>
+                        </div>
+                        <div class="col-md-2">
+                            <h6>Total Processed</h6>
+                            <p>{{ data.processing_stats.total_processed }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Documents Pending OCR Processing -->
+    {% if data.pending_processing %}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <h5><i class="fas fa-hourglass-half"></i> Documents Pending OCR Processing</h5>
+                    <button class="btn btn-sm btn-primary" onclick="bulkProcessSelected()">
+                        Process Selected
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="selectAllPending" onchange="toggleAllPending()"></th>
+                                    <th>Document</th>
+                                    <th>Patient</th>
+                                    <th>Type</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for doc in data.pending_processing %}
+                                <tr>
+                                    <td><input type="checkbox" class="pending-doc-checkbox" value="{{ doc.id }}"></td>
+                                    <td>{{ doc.document_name or doc.filename }}</td>
+                                    <td>{{ doc.patient.full_name if doc.patient else 'Unknown' }}</td>
+                                    <td>
+                                        <span class="badge badge-secondary">{{ doc.document_type }}</span>
+                                    </td>
+                                    <td>{{ doc.created_at.strftime('%Y-%m-%d') if doc.created_at else 'N/A' }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="processSingleDocument({{ doc.id }})">
+                                            <i class="fas fa-eye"></i> Process OCR
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Low Confidence Documents -->
+    {% if data.low_confidence %}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Low Confidence OCR Results</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Document</th>
+                                    <th>Patient</th>
+                                    <th>Confidence</th>
+                                    <th>Processed Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for doc in data.low_confidence %}
+                                <tr>
+                                    <td>{{ doc.document_name or doc.filename }}</td>
+                                    <td>{{ doc.patient.full_name if doc.patient else 'Unknown' }}</td>
+                                    <td>
+                                        <span class="badge badge-warning">{{ "%.1f"|format(doc.ocr_confidence) }}%</span>
+                                    </td>
+                                    <td>{{ doc.ocr_processing_date.strftime('%Y-%m-%d %H:%M') if doc.ocr_processing_date else 'N/A' }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-warning" 
+                                                onclick="processSingleDocument({{ doc.id }})">
+                                            <i class="fas fa-redo"></i> Reprocess
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent OCR Activity -->
+    {% if data.recent_activity %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-history"></i> Recent OCR Activity (Last 7 Days)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Document</th>
+                                    <th>Patient</th>
+                                    <th>Confidence</th>
+                                    <th>Text Length</th>
+                                    <th>Processed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for doc in data.recent_activity %}
+                                <tr>
+                                    <td>{{ doc.document_name or doc.filename }}</td>
+                                    <td>{{ doc.patient.full_name if doc.patient else 'Unknown' }}</td>
+                                    <td>
+                                        {% if doc.ocr_confidence >= 80 %}
+                                            <span class="badge badge-success">{{ "%.1f"|format(doc.ocr_confidence) }}%</span>
+                                        {% elif doc.ocr_confidence >= 60 %}
+                                            <span class="badge badge-warning">{{ "%.1f"|format(doc.ocr_confidence) }}%</span>
+                                        {% else %}
+                                            <span class="badge badge-danger">{{ "%.1f"|format(doc.ocr_confidence) }}%</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ doc.ocr_text_length or 0 }} characters</td>
+                                    <td>{{ doc.ocr_processing_date.strftime('%Y-%m-%d %H:%M') if doc.ocr_processing_date else 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Processing Status Modal -->
+<div class="modal fade" id="processingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Processing OCR...</h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <p class="mt-3" id="processingMessage">Processing documents...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function processSingleDocument(documentId) {
+    showProcessingModal('Processing document...');
+    
+    fetch(`/admin/ocr-process-document/${documentId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideProcessingModal();
+        if (data.success) {
+            showAlert('success', 'Document processed successfully!');
+            location.reload();
+        } else {
+            showAlert('danger', `Processing failed: ${data.error}`);
+        }
+    })
+    .catch(error => {
+        hideProcessingModal();
+        showAlert('danger', `Error: ${error.message}`);
+    });
+}
+
+function bulkProcessSelected() {
+    const checkboxes = document.querySelectorAll('.pending-doc-checkbox:checked');
+    const documentIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    
+    if (documentIds.length === 0) {
+        showAlert('warning', 'Please select documents to process.');
+        return;
+    }
+    
+    showProcessingModal(`Processing ${documentIds.length} documents...`);
+    
+    fetch('/admin/ocr-bulk-process', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            document_ids: documentIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideProcessingModal();
+        if (data.successful_ocr > 0) {
+            showAlert('success', `Successfully processed ${data.successful_ocr} documents!`);
+            location.reload();
+        } else {
+            showAlert('warning', 'No documents were successfully processed.');
+        }
+    })
+    .catch(error => {
+        hideProcessingModal();
+        showAlert('danger', `Error: ${error.message}`);
+    });
+}
+
+function processAllPending() {
+    if (!confirm('This will process all pending OCR documents. Continue?')) {
+        return;
+    }
+    
+    showProcessingModal('Processing all pending documents...');
+    
+    fetch('/admin/ocr-process-pending', {
+        method: 'POST'
+    })
+    .then(response => {
+        hideProcessingModal();
+        if (response.ok) {
+            showAlert('success', 'Processing completed!');
+            location.reload();
+        } else {
+            showAlert('danger', 'Processing failed!');
+        }
+    })
+    .catch(error => {
+        hideProcessingModal();
+        showAlert('danger', `Error: ${error.message}`);
+    });
+}
+
+function reprocessLowConfidence() {
+    if (!confirm('This will reprocess all documents with low OCR confidence. Continue?')) {
+        return;
+    }
+    
+    showProcessingModal('Reprocessing low confidence documents...');
+    
+    fetch('/admin/ocr-reprocess-low-confidence', {
+        method: 'POST',
+        body: new FormData()
+    })
+    .then(response => {
+        hideProcessingModal();
+        if (response.ok) {
+            showAlert('success', 'Reprocessing completed!');
+            location.reload();
+        } else {
+            showAlert('danger', 'Reprocessing failed!');
+        }
+    })
+    .catch(error => {
+        hideProcessingModal();
+        showAlert('danger', `Error: ${error.message}`);
+    });
+}
+
+function toggleAllPending() {
+    const selectAll = document.getElementById('selectAllPending');
+    const checkboxes = document.querySelectorAll('.pending-doc-checkbox');
+    
+    checkboxes.forEach(cb => {
+        cb.checked = selectAll.checked;
+    });
+}
+
+function showProcessingModal(message) {
+    document.getElementById('processingMessage').textContent = message;
+    $('#processingModal').modal('show');
+}
+
+function hideProcessingModal() {
+    $('#processingModal').modal('hide');
+}
+
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="close" data-dismiss="alert">
+            <span>&times;</span>
+        </button>
+    `;
+    
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

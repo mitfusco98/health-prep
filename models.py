@@ -515,6 +515,14 @@ class MedicalDocument(db.Model):
     provider = db.Column(db.String(100))
     doc_metadata = db.Column(db.Text)  # JSON string with additional metadata
     is_processed = db.Column(db.Boolean, default=False)
+    
+    # OCR processing status tracking
+    ocr_processed = db.Column(db.Boolean, default=False)
+    ocr_confidence = db.Column(db.Float)  # OCR confidence score 0-100
+    ocr_processing_date = db.Column(db.DateTime)
+    ocr_text_length = db.Column(db.Integer)
+    ocr_quality_flags = db.Column(db.Text)  # JSON array of quality flags
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

@@ -2,7 +2,7 @@ modules = ["python-3.11", "postgresql-16", "python3"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["file", "glibcLocales", "libxcrypt", "openssl", "postgresql"]
+packages = ["file", "freetype", "glibcLocales", "imagemagick", "lcms2", "libGL", "libGLU", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "poppler_utils", "postgresql", "tcl", "tesseract", "tk", "zlib"]
 
 [deployment]
 deploymentTarget = "autoscale"
