@@ -114,7 +114,7 @@ class RateLimitConfig:
 class FileUploadConfig:
     """File upload configuration"""
 
-    max_content_length_mb: int = 1
+    max_content_length_mb: int = 10
     allowed_extensions: List[str] = None
     upload_folder: str = "/tmp/uploads"
 

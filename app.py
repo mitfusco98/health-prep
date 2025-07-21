@@ -332,8 +332,8 @@ def handle_request_entity_too_large(error):
         f"Request entity too large from {get_remote_address()}: {request.path}"
     )
     if request.path.startswith("/api/"):
-        return jsonify({"error": "Request too large. Maximum size is 1MB."}), 413
-    return jsonify({"error": "File too large. Maximum size is 1MB."}), 413
+        return jsonify({"error": "Request too large. Maximum size is 10MB."}), 413
+    return jsonify({"error": "File too large. Maximum size is 10MB."}), 413
 
 
 @app.errorhandler(429)
