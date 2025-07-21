@@ -2905,12 +2905,51 @@ def delete_document_from_repository(document_id):
         
         patient_id = document.patient_id  # Store patient ID before deletion
         
+        # Check which screenings will be affected before deletion
+        affected_screenings = []
+        if hasattr(document, 'screenings') and document.screenings:
+            affected_screenings = [(s.id, s.screening_type, s.status) for s in document.screenings]
+        
         db.session.delete(document)
         db.session.commit()
         
-        # ✅ Document deleted - unified engine will handle screening updates automatically
-        print(f"✅ Document deleted for patient {patient_id} - unified engine will handle screening updates")
-        logger.info(f"Document deleted for patient {patient_id} - unified engine will update screenings on demand")
+        # ENHANCED: Trigger selective refresh for document deletion
+        try:
+            if affected_screenings:
+                print(f"🔄 Document deletion affects {len(affected_screenings)} screenings for patient {patient_id}")
+                
+                # Use selective refresh manager for document deletion impacts
+                from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
+                
+                # Mark affected screening types as needing document relationship recalculation
+                affected_types = set()
+                for screening_id, screening_type, old_status in affected_screenings:
+                    if screening_type:
+                        affected_types.add(screening_type)
+                
+                # Trigger selective refresh for each affected screening type
+                for screening_type_name in affected_types:
+                    screening_type_obj = ScreeningType.query.filter_by(name=screening_type_name).first()
+                    if screening_type_obj:
+                        selective_refresh_manager.mark_screening_type_dirty(
+                            screening_type_obj.id, 
+                            ChangeType.KEYWORDS,  # Document changes affect keyword matching
+                            f"document_{document_id}_present", 
+                            f"document_{document_id}_deleted",
+                            affected_criteria={"patient_id": patient_id}
+                        )
+                
+                # Process selective refresh for affected patients only
+                stats = selective_refresh_manager.process_selective_refresh()
+                print(f"✅ Selective refresh completed: {stats.screenings_updated} screenings updated for {stats.affected_patients} patients")
+            else:
+                print(f"✅ Document deleted for patient {patient_id} - no screening relationships affected")
+                
+        except Exception as refresh_error:
+            print(f"⚠️ Document deletion selective refresh error: {refresh_error}")
+            # Continue with successful deletion even if refresh fails
+        
+        logger.info(f"Document deleted for patient {patient_id} with selective refresh handling")
         
         return jsonify({"success": True, "message": f"Document '{document_name}' deleted successfully"})
     except Exception as e:
@@ -2937,15 +2976,25 @@ def bulk_delete_documents():
         deleted_count = len(documents)
         document_names = [doc.document_name for doc in documents]
         
-        # Collect affected patient IDs for auto-refresh
+        # Collect affected patient IDs and screening relationships for auto-refresh
         affected_patient_ids = set()
+        affected_screenings_data = {}  # patient_id -> [(screening_id, type, status)]
+        
         for document in documents:
             if document.patient_id:
                 affected_patient_ids.add(document.patient_id)
+                
+                # Track screening relationships that will be broken
+                if hasattr(document, 'screenings') and document.screenings:
+                    if document.patient_id not in affected_screenings_data:
+                        affected_screenings_data[document.patient_id] = []
+                    
+                    for screening in document.screenings:
+                        affected_screenings_data[document.patient_id].append(
+                            (screening.id, screening.screening_type, screening.status, document.id)
+                        )
         
-        # ✅ EDGE CASE HANDLER: Use batch mode for bulk operations
-        # Note: Bulk operation - no auto refresh needed with unified engine
-        print("📦 Bulk operation: Using unified engine - no auto refresh needed")
+        print(f"📦 Bulk deletion: {len(documents)} documents affecting {len(affected_patient_ids)} patients")
         
         try:
             # Delete all documents
@@ -2954,18 +3003,53 @@ def bulk_delete_documents():
                 
             db.session.commit()
             
-            # Bulk operation complete - unified engine handles updates automatically
-            print("📦 Bulk operation complete")
+            print(f"✅ Bulk document deletion successful: {deleted_count} documents deleted")
             
-            # Note: Unified engine will handle screening updates automatically
-            successful_refreshes = len(affected_patient_ids)
-            logger.info(f"Bulk deletion: affected {successful_refreshes} patients - unified engine will handle updates")
+            # ENHANCED: Trigger selective refresh for bulk document deletion
+            try:
+                if affected_screenings_data:
+                    total_affected_screenings = sum(len(screenings) for screenings in affected_screenings_data.values())
+                    print(f"🔄 Bulk deletion affects {total_affected_screenings} screenings across {len(affected_patient_ids)} patients")
+                    
+                    from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
+                    
+                    # Collect all affected screening types
+                    affected_types = set()
+                    for patient_screenings in affected_screenings_data.values():
+                        for screening_id, screening_type, old_status, doc_id in patient_screenings:
+                            if screening_type:
+                                affected_types.add(screening_type)
+                    
+                    # Mark affected screening types as needing recalculation
+                    for screening_type_name in affected_types:
+                        screening_type_obj = ScreeningType.query.filter_by(name=screening_type_name).first()
+                        if screening_type_obj:
+                            selective_refresh_manager.mark_screening_type_dirty(
+                                screening_type_obj.id, 
+                                ChangeType.KEYWORDS,  # Document changes affect matching
+                                "bulk_documents_present", 
+                                "bulk_documents_deleted",
+                                affected_criteria={"patient_ids": list(affected_patient_ids)}
+                            )
+                    
+                    # Process selective refresh for affected patients
+                    stats = selective_refresh_manager.process_selective_refresh()
+                    print(f"✅ Bulk deletion selective refresh: {stats.screenings_updated} screenings updated for {stats.affected_patients} patients")
+                    
+                    logger.info(f"Bulk deleted {deleted_count} documents with selective refresh: {stats.screenings_updated} screenings updated")
+                else:
+                    logger.info(f"Bulk deleted {deleted_count} documents from {len(affected_patient_ids)} patients - no screening relationships affected")
+                    
+            except Exception as refresh_error:
+                print(f"⚠️ Bulk deletion selective refresh error: {refresh_error}")
+                logger.error(f"Bulk deletion refresh error: {refresh_error}")
+                # Continue with successful deletion even if refresh fails
             
             return jsonify({
                 "success": True, 
-                "message": f"Successfully deleted {deleted_count} document(s)",
-                "deleted_documents": document_names,
-                "patients_refreshed": successful_refreshes
+                "message": f"Successfully deleted {deleted_count} documents: {', '.join(document_names[:3])}" + ("..." if deleted_count > 3 else ""),
+                "deleted_count": deleted_count,
+                "affected_patients": len(affected_patient_ids)
             })
             
         except Exception as e:

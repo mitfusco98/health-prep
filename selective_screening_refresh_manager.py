@@ -170,7 +170,7 @@ class SelectiveScreeningRefreshManager:
                         keyword_pattern = f'%{keyword.lower()}%'
                         documents = MedicalDocument.query.filter(
                             db.or_(
-                                MedicalDocument.extracted_text.ilike(keyword_pattern),
+                                MedicalDocument.content.ilike(keyword_pattern),
                                 MedicalDocument.document_name.ilike(keyword_pattern)
                             )
                         ).all()
@@ -268,8 +268,8 @@ class SelectiveScreeningRefreshManager:
         stats = RefreshStats()
         
         try:
-            from automated_screening_engine import ScreeningStatusEngine
-            engine = ScreeningStatusEngine()
+            from unified_screening_engine import UnifiedScreeningEngine
+            engine = UnifiedScreeningEngine()
             
             all_patients = Patient.query.all()
             stats.total_patients_checked = len(all_patients)
@@ -294,8 +294,8 @@ class SelectiveScreeningRefreshManager:
         updated_count = 0
         
         try:
-            from automated_screening_engine import ScreeningStatusEngine
-            engine = ScreeningStatusEngine()
+            from unified_screening_engine import UnifiedScreeningEngine
+            engine = UnifiedScreeningEngine()
             
             # Process in batches to avoid memory issues
             batch_size = 50
@@ -312,7 +312,8 @@ class SelectiveScreeningRefreshManager:
                             s for s in screenings 
                             if any(st_id for st_id in screening_type_ids 
                                   if ScreeningType.query.get(st_id) and 
-                                  ScreeningType.query.get(st_id).name == s['screening_type'])
+                                  ScreeningType.query.get(st_id) and
+                                  ScreeningType.query.get(st_id).name == s.get('screening_type'))
                         ]
                         
                         updated_count += len(relevant_screenings)
