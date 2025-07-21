@@ -1381,7 +1381,7 @@ def edit_screening_type(screening_type_id):
         form = ScreeningTypeForm()
 
     if request.method == "POST" and form.validate_on_submit():
-        # ENHANCED: Capture "before" state for selective refresh
+        # ENHANCED: Capture "before" state for selective refresh - ALL FIELDS
         old_state = {
             'name': screening_type.name,
             'frequency_number': screening_type.frequency_number,
@@ -1391,7 +1391,8 @@ def edit_screening_type(screening_type_id):
             'max_age': screening_type.max_age,
             'is_active': screening_type.is_active,
             'keywords': screening_type.get_all_keywords(),
-            'trigger_conditions': screening_type.get_trigger_conditions()
+            'trigger_conditions': screening_type.get_trigger_conditions(),
+            'description': screening_type.description
         }
 
         # Update the screening type with form data
@@ -1645,6 +1646,20 @@ def edit_screening_type(screening_type_id):
             
             # ENHANCED: Use selective refresh manager for intelligent updates
             changes_detected = []
+            
+            # Capture "after" state for comparison
+            new_state = {
+                'name': screening_type.name,
+                'frequency_number': screening_type.frequency_number,
+                'frequency_unit': screening_type.frequency_unit,
+                'gender_specific': screening_type.gender_specific,
+                'min_age': screening_type.min_age,
+                'max_age': screening_type.max_age,
+                'is_active': screening_type.is_active,
+                'keywords': screening_type.get_all_keywords(),
+                'trigger_conditions': screening_type.get_trigger_conditions(),
+                'description': screening_type.description
+            }
             
             # Detect specific changes for selective refresh
             from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
