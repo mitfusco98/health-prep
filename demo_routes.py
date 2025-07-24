@@ -2813,9 +2813,37 @@ def add_document(patient_id):
     return redirect(url_for("add_document_unified", **redirect_params))
 
 
+@app.route('/documents/<int:document_id>/process-ocr', methods=['POST'])
+def process_document_ocr_route(document_id):
+    """Process document with OCR via AJAX"""
+    try:
+        from universal_document_viewer import process_document_for_universal_display
+        
+        result = process_document_for_universal_display(document_id)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': 'OCR processing completed',
+                'display_info': result['display_info']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'OCR processing failed')
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"OCR processing error for document {document_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route("/documents/<int:document_id>")
 def view_document(document_id):
-    """View a document with comprehensive error handling"""
+    """View a document with comprehensive error handling and universal display protocol"""
     try:
         # Validate document ID
         if not document_id or document_id <= 0:
