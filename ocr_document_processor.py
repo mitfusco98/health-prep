@@ -18,6 +18,7 @@ from pdf2image import convert_from_path, convert_from_bytes
 
 from app import db
 from models import MedicalDocument
+from phi_filter import PHIFilter, PHIFilterConfig
 
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,10 @@ class TesseractOCRProcessor:
         
         # Medical terminology optimization
         self.medical_preprocessing_enabled = True
+        
+        # PHI filtering for HIPAA compliance
+        self.phi_filter_enabled = True
+        self.phi_filter = PHIFilter() if self.phi_filter_enabled else None
         
         # File type detection
         self.image_extensions = {'.jpg', '.jpeg', '.png', '.tiff', '.bmp', '.gif'}
@@ -356,15 +361,26 @@ class TesseractOCRProcessor:
         return flags
     
     def _combine_content(self, original_content: str, ocr_text: str) -> str:
-        """Intelligently combine original content with OCR extracted text"""
-        if not original_content or len(original_content.strip()) < 10:
-            return ocr_text
+        """Intelligently combine original content with OCR extracted text, filtering PHI"""
+        # Apply PHI filtering to OCR text if enabled
+        if self.phi_filter_enabled and self.phi_filter and ocr_text:
+            phi_result = self.phi_filter.filter_text(ocr_text)
+            filtered_ocr_text = phi_result['filtered_text']
             
-        if not ocr_text or len(ocr_text.strip()) < 10:
+            # Log PHI filtering results
+            if phi_result['phi_count'] > 0:
+                logger.info(f"🔒 PHI Filter: Redacted {phi_result['phi_count']} PHI instances from OCR text")
+        else:
+            filtered_ocr_text = ocr_text
+        
+        if not original_content or len(original_content.strip()) < 10:
+            return filtered_ocr_text
+            
+        if not filtered_ocr_text or len(filtered_ocr_text.strip()) < 10:
             return original_content
             
         # Combine with clear separation
-        combined = f"{original_content}\n\n--- OCR EXTRACTED TEXT ---\n{ocr_text}"
+        combined = f"{original_content}\n\n--- OCR EXTRACTED TEXT (PHI FILTERED) ---\n{filtered_ocr_text}"
         return combined
     
     def bulk_process_documents(self, document_ids: List[int]) -> Dict[str, Any]:

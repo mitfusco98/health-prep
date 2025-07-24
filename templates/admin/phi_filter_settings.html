@@ -1,0 +1,288 @@
+{% extends "base_v2.html" %}
+
+{% block title %}PHI Filter Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-shield-alt"></i> PHI Filter Settings</h2>
+        <div class="btn-group">
+            <button type="button" class="btn btn-info" onclick="testPHIFilter()">
+                <i class="fas fa-vial"></i> Test Filter
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="exportConfig()">
+                <i class="fas fa-download"></i> Export Config
+            </button>
+        </div>
+    </div>
+
+    <!-- PHI Filter Configuration -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cog"></i> Filter Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('update_phi_filter_settings') }}">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Identity Information</h6>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="filter_ssn" id="filter_ssn" 
+                                           {{ 'checked' if config.ssn_filtering }}>
+                                    <label class="form-check-label" for="filter_ssn">
+                                        <strong>Social Security Numbers</strong><br>
+                                        <small class="text-muted">Filters XXX-XX-XXXX patterns</small>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="filter_mrn" id="filter_mrn" 
+                                           {{ 'checked' if config.mrn_filtering }}>
+                                    <label class="form-check-label" for="filter_mrn">
+                                        <strong>Medical Record Numbers</strong><br>
+                                        <small class="text-muted">Filters MRN patterns</small>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="filter_insurance" id="filter_insurance" 
+                                           {{ 'checked' if config.insurance_filtering }}>
+                                    <label class="form-check-label" for="filter_insurance">
+                                        <strong>Insurance Information</strong><br>
+                                        <small class="text-muted">Filters policy and member IDs</small>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Contact Information</h6>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="filter_phone" id="filter_phone" 
+                                           {{ 'checked' if config.phone_filtering }}>
+                                    <label class="form-check-label" for="filter_phone">
+                                        <strong>Phone Numbers</strong><br>
+                                        <small class="text-muted">Filters (XXX) XXX-XXXX patterns</small>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="filter_addresses" id="filter_addresses" 
+                                           {{ 'checked' if config.address_filtering }}>
+                                    <label class="form-check-label" for="filter_addresses">
+                                        <strong>Street Addresses</strong><br>
+                                        <small class="text-muted">Filters street address patterns</small>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="filter_names" id="filter_names" 
+                                           {{ 'checked' if config.name_filtering }}>
+                                    <label class="form-check-label" for="filter_names">
+                                        <strong>Patient Names</strong><br>
+                                        <small class="text-muted">Filters "Patient: Name" patterns</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <h6>Temporal Information</h6>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="filter_dates" id="filter_dates" 
+                                           {{ 'checked' if config.date_filtering }}>
+                                    <label class="form-check-label" for="filter_dates">
+                                        <strong>Dates</strong><br>
+                                        <small class="text-muted">Filters dates while preserving medical values like blood pressure (120/80)</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Settings
+                            </button>
+                            <button type="button" class="btn btn-warning" onclick="resetStatistics()">
+                                <i class="fas fa-chart-line"></i> Reset Statistics
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- PHI Filter Statistics -->
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-chart-bar"></i> Filter Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Documents Processed:</strong>
+                        <span class="badge badge-info float-right">{{ stats.documents_processed }}</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>PHI Instances Found:</strong>
+                        <span class="badge badge-warning float-right">{{ stats.phi_instances_found }}</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>PHI Instances Redacted:</strong>
+                        <span class="badge badge-success float-right">{{ stats.phi_instances_redacted }}</span>
+                    </div>
+                    
+                    {% if stats.phi_types_detected %}
+                    <hr>
+                    <h6>PHI Types Detected:</h6>
+                    {% for phi_type, count in stats.phi_types_detected.items() %}
+                    <div class="d-flex justify-content-between">
+                        <span class="text-capitalize">{{ phi_type.replace('_', ' ') }}:</span>
+                        <span class="badge badge-secondary">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Medical Terms Protection -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6><i class="fas fa-medical-bag"></i> Medical Terms Protection</h6>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small">
+                        The PHI filter preserves important medical terminology while removing identifying information:
+                    </p>
+                    <ul class="list-unstyled small">
+                        <li><i class="fas fa-check text-success"></i> Lab values (glucose, A1C, cholesterol)</li>
+                        <li><i class="fas fa-check text-success"></i> Medical procedures (mammogram, colonoscopy)</li>
+                        <li><i class="fas fa-check text-success"></i> Diagnostic terms (diabetes, hypertension)</li>
+                        <li><i class="fas fa-check text-success"></i> Medical measurements (mg/dL, blood pressure)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PHI Filter Test Modal -->
+<div class="modal fade" id="phiTestModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">PHI Filter Test</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="testText">Enter test text containing PHI:</label>
+                    <textarea class="form-control" id="testText" rows="5" placeholder="Patient: John Smith&#10;DOB: 03/15/1985&#10;SSN: 123-45-6789&#10;Phone: (555) 123-4567&#10;Glucose: 120 mg/dL&#10;Blood Pressure: 120/80"></textarea>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="runPHITest()">
+                    <i class="fas fa-play"></i> Run Filter Test
+                </button>
+                
+                <div id="testResults" class="mt-3" style="display: none;">
+                    <h6>Filter Results:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Original Text:</strong>
+                            <pre id="originalText" class="bg-light p-2 small"></pre>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Filtered Text:</strong>
+                            <pre id="filteredText" class="bg-light p-2 small"></pre>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>PHI Detected:</strong> <span id="phiCount">0</span> instances
+                        <ul id="phiList" class="mt-2 mb-0"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function testPHIFilter() {
+    $('#phiTestModal').modal('show');
+}
+
+function runPHITest() {
+    const testText = document.getElementById('testText').value;
+    
+    if (!testText.trim()) {
+        alert('Please enter some test text');
+        return;
+    }
+    
+    fetch('/admin/phi-filter-test', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: testText })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('originalText').textContent = data.original_text;
+            document.getElementById('filteredText').textContent = data.filtered_text;
+            document.getElementById('phiCount').textContent = data.phi_count;
+            
+            const phiList = document.getElementById('phiList');
+            phiList.innerHTML = '';
+            
+            data.phi_detected.forEach(phi => {
+                const li = document.createElement('li');
+                li.innerHTML = `<code>${phi.type}</code>: "${phi.text}" → "${phi.replacement}"`;
+                phiList.appendChild(li);
+            });
+            
+            document.getElementById('testResults').style.display = 'block';
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error running PHI test: ' + error.message);
+    });
+}
+
+function resetStatistics() {
+    if (confirm('Are you sure you want to reset PHI filter statistics?')) {
+        fetch('/admin/phi-filter-statistics/reset', {
+            method: 'POST'
+        })
+        .then(() => {
+            location.reload();
+        })
+        .catch(error => {
+            alert('Error resetting statistics: ' + error.message);
+        });
+    }
+}
+
+function exportConfig() {
+    fetch('/admin/phi-filter-export-config')
+    .then(response => response.json())
+    .then(data => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'phi_filter_config.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        alert('Error exporting config: ' + error.message);
+    });
+}
+</script>
+{% endblock %}
