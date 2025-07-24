@@ -37,4 +37,7 @@ dependencies = [
     "pillow>=11.2.1",
     "opencv-python>=4.12.0.88",
     "pytesseract>=0.3.13",
+    "pypdf2>=3.0.1",
+    "pdfplumber>=0.11.7",
+    "numpy>=2.2.5",
 ]
