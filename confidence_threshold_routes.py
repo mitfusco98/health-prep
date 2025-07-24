@@ -6,7 +6,6 @@ Handles saving and managing confidence threshold settings
 
 from flask import request, redirect, url_for, flash
 from app import app, db
-from models import ChecklistSettings
 
 @app.route("/save-confidence-thresholds", methods=["POST"])
 def save_confidence_thresholds():
@@ -24,6 +23,9 @@ def save_confidence_thresholds():
         if not (0.1 <= high_threshold <= 1.0) or not (0.1 <= medium_threshold <= 1.0):
             flash("Confidence thresholds must be between 0.1 and 1.0", "danger")
             return redirect(url_for('screening_list', tab='checklist'))
+        
+        # Import here to avoid circular import
+        from models import ChecklistSettings
         
         # Get or create settings
         settings = ChecklistSettings.query.first()

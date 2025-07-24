@@ -11,7 +11,7 @@ import logging
 
 from app import app, db
 from models import MedicalDocument, Patient, ScreeningType
-from ocr_document_processor import ocr_processor, process_document_with_ocr, bulk_ocr_processing
+# Import moved to avoid circular imports - will import when needed
 from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
 
 logger = logging.getLogger(__name__)
@@ -21,6 +21,9 @@ logger = logging.getLogger(__name__)
 def ocr_dashboard():
     """OCR management dashboard"""
     try:
+        # Import here to avoid circular imports
+        from ocr_document_processor import ocr_processor
+        
         # Get OCR statistics
         ocr_stats = ocr_processor.get_processing_statistics()
         
@@ -84,6 +87,9 @@ def ocr_process_single_document(document_id):
     """Process a single document with OCR"""
     try:
         document = MedicalDocument.query.get_or_404(document_id)
+        
+        # Import here to avoid circular imports
+        from ocr_document_processor import process_document_with_ocr
         
         # Process document with OCR
         result = process_document_with_ocr(document_id)

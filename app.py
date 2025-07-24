@@ -1262,6 +1262,9 @@ with app.app_context():
 
     # Import API routes
     import api_routes  # noqa: F401
+    
+    # Import admin routes
+    import phi_filter_admin_routes  # noqa: F401
 
     # Initialize async database manager
     from async_db_utils import init_async_db
