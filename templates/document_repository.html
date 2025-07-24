@@ -96,6 +96,18 @@
                                             bg-secondary
                                         {% elif document.document_type == 'prep_sheet' %}
                                             bg-purple
+                                        {% elif document.document_type == 'LAB_REPORT' %}
+                                            bg-success
+                                        {% elif document.document_type == 'RADIOLOGY_REPORT' %}
+                                            bg-info
+                                        {% elif document.document_type == 'CONSULTATION' %}
+                                            bg-warning
+                                        {% elif document.document_type == 'DISCHARGE_SUMMARY' %}
+                                            bg-primary
+                                        {% elif document.document_type == 'UNKNOWN' %}
+                                            bg-secondary
+                                        {% elif document.document_type == 'CLINICAL_NOTE' %}
+                                            bg-dark
                                         {% else %}
                                             bg-secondary
                                         {% endif %}
@@ -112,8 +124,20 @@
                                             Hospital Records
                                         {% elif document.document_type == 'OTHER' %}
                                             Other
+                                        {% elif document.document_type == 'LAB_REPORT' %}
+                                            Lab Report
+                                        {% elif document.document_type == 'RADIOLOGY_REPORT' %}
+                                            Radiology Report
+                                        {% elif document.document_type == 'CONSULTATION' %}
+                                            Consultation
+                                        {% elif document.document_type == 'DISCHARGE_SUMMARY' %}
+                                            Discharge Summary
+                                        {% elif document.document_type == 'UNKNOWN' %}
+                                            Unknown
+                                        {% elif document.document_type == 'CLINICAL_NOTE' %}
+                                            Clinical Note
                                         {% else %}
-                                            Other
+                                            {{ document.document_type|title }}
                                         {% endif %}
                                     </span>
                                 </td>
