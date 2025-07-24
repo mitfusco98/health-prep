@@ -1253,6 +1253,7 @@ def detect_automated_attacks():
 with app.app_context():
     # Import models
     import models  # noqa: F401
+    import confidence_threshold_routes  # noqa: F401
     from models import ScreeningType
     from forms import ScreeningTypeForm
 

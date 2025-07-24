@@ -3729,7 +3729,7 @@ def screening_list():
 
     # Import the checklist settings model and helper function
     from models import ChecklistSettings, Patient, Screening, ScreeningType, MedicalDocument
-
+    
     # Get or create checklist settings for the checklist tab
     def get_or_create_settings():
         """Get or create checklist settings"""
@@ -3740,11 +3740,12 @@ def screening_list():
             db.session.commit()
         return settings
 
+    # Get settings for all tabs (needed for confidence thresholds)
+    settings = get_or_create_settings()
+    
     # Variables for checklist tab
-    settings = None
     active_screening_types = []
     if tab == "checklist":
-        settings = get_or_create_settings()
         # Debug: Check what settings we're sending to template
         print(f"=== CHECKLIST TAB DEBUG ===")
         print(f"Settings object: {settings}")

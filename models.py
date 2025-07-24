@@ -382,6 +382,20 @@ class Screening(db.Model):
             print(f"Error during document relationship validation: {e}")
             return 0
 
+    def get_document_confidence(self, document_id):
+        """Get confidence score for a specific document relationship"""
+        try:
+            from sqlalchemy import text
+            result = db.session.execute(
+                text("SELECT confidence_score FROM screening_documents "
+                     "WHERE screening_id = :screening_id AND document_id = :document_id"),
+                {'screening_id': self.id, 'document_id': document_id}
+            ).fetchone()
+            return result[0] if result else 0.8  # Default confidence
+        except Exception as e:
+            print(f"Error getting document confidence: {e}")
+            return 0.8  # Default confidence
+    
     def add_document(self, document, confidence_score=1.0, match_source='automated', batch_mode=False):
         """Add a document to this screening with metadata"""
         try:
@@ -1213,7 +1227,12 @@ class ChecklistSettings(db.Model):
     consults_cutoff_months = db.Column(db.Integer, default=12)  # Exclude consults older than X months
     hospital_cutoff_months = db.Column(db.Integer, default=24)  # Exclude hospital visits older than X months
     # Screening-specific cutoffs removed - conflicts with screening frequency settings
-    # Cutoffs now only apply to: labs, imaging, consults, hospital visits
+    # Cutoffs now only apply to: labs, imaging, consults, hospital
+    
+    # Confidence threshold settings for document matching
+    confidence_high_threshold = db.Column(db.Float, default=0.8)  # High confidence threshold (green)
+    confidence_medium_threshold = db.Column(db.Float, default=0.5)  # Medium confidence threshold (yellow)
+    # Low confidence is anything below medium threshold (red) visits
 
     # General cutoff months for prep sheet items (overrides specific cutoffs if set)
     cutoff_months = db.Column(db.Integer, nullable=True)

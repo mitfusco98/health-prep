@@ -2,6 +2,45 @@
 
 {% block title %}HealthPrep - Screening List{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Confidence-based color coding for document links */
+.confidence-high {
+    color: #155724 !important;
+    background-color: #d4edda !important;
+    border: 1px solid #c3e6cb !important;
+}
+
+.confidence-medium {
+    color: #856404 !important;
+    background-color: #fff3cd !important;
+    border: 1px solid #ffeaa7 !important;
+}
+
+.confidence-low {
+    color: #721c24 !important;
+    background-color: #f8d7da !important;
+    border: 1px solid #f5c6cb !important;
+}
+
+.confidence-high:hover, .confidence-medium:hover, .confidence-low:hover {
+    opacity: 0.8;
+    transform: scale(1.02);
+    transition: all 0.2s ease;
+}
+
+/* Document confidence legend */
+.confidence-legend {
+    font-size: 0.85em;
+    margin-bottom: 10px;
+}
+
+.confidence-legend .badge {
+    margin-right: 8px;
+}
+</style>
+{% endblock %}
+
 <!-- Include screening modals JavaScript -->
 <script src="{{ url_for('static', filename='js/screening_modals.js') }}"></script>
 <!-- Include performance optimization JavaScript -->
@@ -192,6 +231,23 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 
+    <!-- Confidence Legend -->
+    <div class="card-body border-bottom py-2">
+        <div class="confidence-legend text-muted">
+            <strong>Document Match Confidence:</strong>
+            {% set high_threshold = settings.confidence_high_threshold if settings else 0.8 %}
+            {% set medium_threshold = settings.confidence_medium_threshold if settings else 0.5 %}
+            <span class="badge confidence-high">High ({{ (high_threshold * 100)|round }}%+)</span>
+            <span class="badge confidence-medium">Medium ({{ (medium_threshold * 100)|round }}-{{ (high_threshold * 100)|round - 1 }}%)</span>
+            <span class="badge confidence-low">Low (<{{ (medium_threshold * 100)|round }}%)</span>
+            <small class="ms-2">
+                <i class="fas fa-info-circle"></i> 
+                Confidence thresholds can be adjusted in 
+                <a href="{{ url_for('screening_list', tab='checklist') }}" class="text-decoration-none">Checklist Settings</a>
+            </small>
+        </div>
+    </div>
+
     <!-- Filters -->
     <div class="card-body border-bottom">
         <form method="get" class="row g-3">
@@ -299,13 +355,38 @@ document.addEventListener('DOMContentLoaded', function() {
                             {% if valid_documents %}
                                 {% for document in valid_documents %}
                                     {% set document_name = document.document_name or document.filename or 'Document ' + document.id|string %}
-                                    <a href="{{ url_for('view_document', document_id=document.id, return_to=request.url) }}" 
-                                       class="badge bg-info text-decoration-none me-1" 
-                                       target="_blank"
-                                       title="View {{ document_name }}"
-                                       onerror="handleDocumentError(this, {{ document.id }})">
-                                        {{ document_name|truncate(30) }}
-                                    </a>
+                                    
+                                    {# Get confidence score from screening-document relationship #}
+                                    {% set confidence_score = screening.get_document_confidence(document.id) or 0.8 %}
+                                    
+                                    {# Determine confidence level and colors using user-configurable thresholds #}
+                                    {% set high_threshold = settings.confidence_high_threshold if settings else 0.8 %}
+                                    {% set medium_threshold = settings.confidence_medium_threshold if settings else 0.5 %}
+                                    
+                                    {% if confidence_score >= high_threshold %}
+                                        {% set confidence_class = 'confidence-high' %}
+                                        {% set confidence_bg = 'bg-success' %}
+                                        {% set confidence_level = 'High' %}
+                                    {% elif confidence_score >= medium_threshold %}
+                                        {% set confidence_class = 'confidence-medium' %}
+                                        {% set confidence_bg = 'bg-warning' %}
+                                        {% set confidence_level = 'Medium' %}
+                                    {% else %}
+                                        {% set confidence_class = 'confidence-low' %}
+                                        {% set confidence_bg = 'bg-danger' %}
+                                        {% set confidence_level = 'Low' %}
+                                    {% endif %}
+                                    
+                                    <div class="d-inline-block me-1 mb-1">
+                                        <a href="{{ url_for('view_document', document_id=document.id, return_to=request.url) }}" 
+                                           class="badge {{ confidence_bg }} text-decoration-none {{ confidence_class }}" 
+                                           target="_blank"
+                                           title="View {{ document_name }} ({{ confidence_level }} confidence: {{ (confidence_score * 100)|round(1) }}%)"
+                                           onerror="handleDocumentError(this, {{ document.id }})">
+                                            {{ document_name|truncate(25) }}
+                                            <small class="opacity-75">({{ (confidence_score * 100)|round }}%)</small>
+                                        </a>
+                                    </div>
                                 {% endfor %}
                             {% else %}
                                 <span class="text-muted">No documents</span>
@@ -834,6 +915,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
 
+            <!-- Confidence Threshold Settings -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Document Match Confidence Thresholds</h5>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#confidenceModal">
+                        <i class="fas fa-sliders-h me-1"></i>Adjust Thresholds
+                    </button>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Control how confident the system must be to classify document matches as high, medium, or low confidence.</p>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <h6 class="text-success">High Confidence</h6>
+                                <span class="badge bg-success">{{ (settings.confidence_high_threshold * 100 if settings else 80)|round }}%+</span>
+                                <div class="text-muted small mt-1">Green badges - Strong keyword matches</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <h6 class="text-warning">Medium Confidence</h6>
+                                <span class="badge bg-warning">{{ (settings.confidence_medium_threshold * 100 if settings else 50)|round }}%-{{ (settings.confidence_high_threshold * 100 if settings else 80)|round - 1 }}%</span>
+                                <div class="text-muted small mt-1">Yellow badges - Moderate keyword matches</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Tip:</strong> Lower thresholds will show more documents but may include false positives. 
+                        Higher thresholds are more selective but may miss relevant documents.
+                    </div>
+                </div>
+            </div>
+
             <!-- Data Cutoff Settings -->
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -915,6 +1032,63 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confidence Threshold Configuration Modal -->
+<div class="modal fade" id="confidenceModal" tabindex="-1" aria-labelledby="confidenceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confidenceModalLabel">Configure Confidence Thresholds</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('save_confidence_thresholds') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p class="text-muted mb-4">
+                        Adjust how the system classifies document match confidence levels. 
+                        These thresholds determine the color coding of document links.
+                    </p>
+
+                    <div class="mb-3">
+                        <label for="confidence_high_threshold" class="form-label">
+                            <i class="fas fa-check-circle text-success me-2"></i>High Confidence Threshold
+                        </label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="confidence_high_threshold" 
+                                   name="confidence_high_threshold" min="0.1" max="1.0" step="0.01"
+                                   value="{{ settings.confidence_high_threshold if settings else 0.8 }}" required>
+                            <span class="input-group-text">score</span>
+                        </div>
+                        <div class="form-text">Documents with confidence above this show as green (0.1-1.0)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confidence_medium_threshold" class="form-label">
+                            <i class="fas fa-exclamation-triangle text-warning me-2"></i>Medium Confidence Threshold
+                        </label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="confidence_medium_threshold" 
+                                   name="confidence_medium_threshold" min="0.1" max="1.0" step="0.01"
+                                   value="{{ settings.confidence_medium_threshold if settings else 0.5 }}" required>
+                            <span class="input-group-text">score</span>
+                        </div>
+                        <div class="form-text">Documents with confidence above this show as yellow (0.1-1.0)</div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Note:</strong> High threshold must be greater than medium threshold.
+                        Documents below the medium threshold will show as red (low confidence).
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Thresholds</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
