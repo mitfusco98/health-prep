@@ -15,26 +15,7 @@ def get_or_create_settings():
     return settings
 
 
-@app.route("/checklist-settings", methods=["GET"])
-def checklist_settings():
-    """Display and manage prep sheet quality checklist settings"""
-    # Generate timestamp for cache busting
-    cache_timestamp = int(time_module.time())
 
-    # Get current settings
-    settings = get_or_create_settings()
-
-    # Default items as string with newlines
-    default_items_text = (
-        "\n".join(settings.default_items_list) if settings.default_items else ""
-    )
-
-    return render_template(
-        "checklist_settings.html",
-        settings=settings,
-        default_items_text=default_items_text,
-        cache_timestamp=cache_timestamp,
-    )
 
 
 @app.route("/save-status-options-simple", methods=["POST"])
