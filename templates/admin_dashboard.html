@@ -61,6 +61,49 @@
         </div>
     </div>
 
+    <!-- Admin Tools Quick Access -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-tools"></i> Admin Tools</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('phi_filter_settings') }}" class="btn btn-outline-primary btn-lg w-100 mb-3">
+                                <i class="fas fa-shield-alt fa-2x d-block mb-2"></i>
+                                <strong>PHI Filter Settings</strong><br>
+                                <small class="text-muted">Configure HIPAA compliance filtering</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('ocr_dashboard') }}" class="btn btn-outline-success btn-lg w-100 mb-3">
+                                <i class="fas fa-eye fa-2x d-block mb-2"></i>
+                                <strong>OCR Management</strong><br>
+                                <small class="text-muted">Manage document text extraction</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin_logs') }}" class="btn btn-outline-info btn-lg w-100 mb-3">
+                                <i class="fas fa-history fa-2x d-block mb-2"></i>
+                                <strong>Admin Logs</strong><br>
+                                <small class="text-muted">View detailed system activity</small>
+                            </a>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="btn btn-outline-secondary btn-lg w-100 mb-3 disabled">
+                                <i class="fas fa-cogs fa-2x d-block mb-2"></i>
+                                <strong>System Settings</strong><br>
+                                <small class="text-muted">Coming soon...</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content: Admin Logs and User Management -->
     <div class="row">
         <div class="col-md-8">
@@ -74,6 +117,9 @@
                         <div>
                             <a href="{{ url_for('admin_logs') }}" class="btn btn-sm btn-outline-primary">
                                 <i class="fas fa-list"></i> View All Logs
+                            </a>
+                            <a href="{{ url_for('phi_filter_settings') }}" class="btn btn-sm btn-outline-info ms-2">
+                                <i class="fas fa-shield-alt"></i> PHI Filter
                             </a>
                             <small class="text-muted ms-2">Last 10 events</small>
                         </div>
