@@ -125,19 +125,19 @@
                                         {% elif document.document_type == 'OTHER' %}
                                             Other
                                         {% elif document.document_type == 'LAB_REPORT' %}
-                                            Lab Report
+                                            Laboratories
                                         {% elif document.document_type == 'RADIOLOGY_REPORT' %}
-                                            Radiology Report
+                                            Imaging
                                         {% elif document.document_type == 'CONSULTATION' %}
-                                            Consultation
+                                            Consults
                                         {% elif document.document_type == 'DISCHARGE_SUMMARY' %}
-                                            Discharge Summary
-                                        {% elif document.document_type == 'UNKNOWN' %}
-                                            Unknown
+                                            Hospital Records
                                         {% elif document.document_type == 'CLINICAL_NOTE' %}
-                                            Clinical Note
+                                            Other
+                                        {% elif document.document_type == 'UNKNOWN' %}
+                                            Other
                                         {% else %}
-                                            {{ document.document_type|title }}
+                                            Other
                                         {% endif %}
                                     </span>
                                 </td>
