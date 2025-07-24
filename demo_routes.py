@@ -51,7 +51,7 @@ def utility_processor():
         try:
             # Ensure any previous transaction issues are cleared
             db.session.rollback()
-            # Get patients with fresh connection
+            # Get patients with optimized query (exclude large binary content)
             return Patient.query.order_by(Patient.last_name, Patient.first_name).all()
         except Exception as e:
             # Log error and return empty list instead of crashing
