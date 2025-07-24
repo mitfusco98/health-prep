@@ -38,6 +38,75 @@
 .confidence-legend .badge {
     margin-right: 8px;
 }
+
+/* Override for buttons - added May 18, 2025 */
+.btn .fas, .btn .fa {
+    display: none !important;
+}
+
+/* Override any colored backgrounds for the screening table */
+.table-danger, 
+.table-warning,
+.table-info,
+.table-success,
+.table tbody tr.table-danger,
+.table tbody tr.table-warning {
+    background-color: transparent !important;
+}
+
+/* Add some extra styling to make badges stand out better */
+.badge {
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Modal styling */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1050;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    outline: 0;
+}
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1040;
+    width: 100vw;
+    height: 100vh;
+    background-color: #000;
+    background-color: #000;
+}
+
+.modal-backdrop.fade {
+    opacity: 0;
+}
+
+.modal-backdrop.show {
+    opacity: 0.5;
+}
+
+.keywords-list {
+    min-height: 60px;
+}
+.min-height-100 {
+    min-height: 100px;
+}
+.btn-close-white {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+.keywords-badges-container {
+    line-height: 1.5;
+}
+.keywords-badges-container .badge {
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+}
 </style>
 {% endblock %}
 
@@ -172,14 +241,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endblock %}
 
-{% block extra_css %}
-<style>
-/* Override for buttons - added May 18, 2025 */
-.btn .fas, .btn .fa {
-    display: none !important;
-}
-</style>
-{% endblock %}
+
 
 {% block content %}
 <div class="row mb-4">
@@ -1709,56 +1771,6 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endif %}
 {% endblock %}
 
-{% block extra_styles %}
-<style>
-    /* Override any colored backgrounds for the screening table */
-    .table-danger, 
-    .table-warning,
-    .table-info,
-    .table-success,
-    .table tbody tr.table-danger,
-    .table tbody tr.table-warning {
-        background-color: transparent !important;
-    }
-
-    /* Add some extra styling to make badges stand out better */
-    .badge {
-        font-size: 0.8rem;
-        padding: 0.25rem 0.5rem;
-    }
-
-    /* Modal styling */
-    .modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        z-index: 1050;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        outline: 0;
-    }
-
-    .modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        z-index: 1040;
-        width: 100vw;
-        height: 100vh;
-        background-color: #000;
-        background-color: #000;
-    }
-
-    .modal-backdrop.fade {
-        opacity: 0;
-    }
-
-    .modal-backdrop.show {
-        opacity: 0.5;
-    }
-</style>
-
 <!-- Keyword Management Modal -->
 <div class="modal fade" id="keywordManagerModal" tabindex="-1" aria-labelledby="keywordManagerModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -1794,17 +1806,12 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
     </div>
-
 </div>
 
 <!-- Keyword Management JavaScript -->
 <script>
 let currentScreeningTypeId = null;
 let currentKeywords = [];
-
-
-
-
 
 // Open keyword manager modal
 function openKeywordManager(screeningTypeId, screeningName) {
@@ -1894,7 +1901,8 @@ function saveKeywords() {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {            // Close modal
+        if (data.success) {
+            // Close modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('keywordManagerModal'));
             modal.hide();
 
@@ -1997,29 +2005,5 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-
-
 });
-
-
 </script>
-
-<style>
-.keywords-list {
-    min-height: 60px;
-}
-.min-height-100 {
-    min-height: 100px;
-}
-.btn-close-white {
-    filter: invert(1) grayscale(100%) brightness(200%);
-}
-.keywords-badges-container {
-    line-height: 1.5;
-}
-.keywords-badges-container .badge {
-    font-size: 0.75rem;
-    margin-bottom: 2px;
-}
-</style>
-{% endblock %}
