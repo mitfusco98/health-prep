@@ -140,17 +140,21 @@ class UnifiedScreeningEngine:
     # SCREENING GENERATION METHODS
     # =============================================================================
     
-    def generate_patient_screenings(self, patient_id: int) -> List[Dict]:
+    def generate_patient_screenings(self, patient_or_id) -> List[Dict]:
         """
         Generate automated screenings for a specific patient using unified engine
         
         Args:
-            patient_id: Patient ID to generate screenings for
+            patient_or_id: Patient object or Patient ID to generate screenings for
             
         Returns:
             List of screening dictionaries with status determinations
         """
-        patient = Patient.query.get(patient_id)
+        # Handle both patient ID and patient object
+        if isinstance(patient_or_id, Patient):
+            patient = patient_or_id
+        else:
+            patient = Patient.query.get(patient_or_id)
         if not patient:
             return []
         
