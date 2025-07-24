@@ -84,33 +84,32 @@
                                 <td>{{ document.document_name }}</td>
                                 <td>
                                     <span class="badge 
-                                        {% if document.document_type == 'LAB_REPORT' %}
-                                            bg-info
-                                        {% elif document.document_type == 'RADIOLOGY_REPORT' %}
+                                        {% if document.document_type == 'LABORATORIES' %}
                                             bg-success
-                                        {% elif document.document_type == 'CONSULTATION' %}
+                                        {% elif document.document_type == 'IMAGING' %}
+                                            bg-info
+                                        {% elif document.document_type == 'CONSULTS' %}
                                             bg-warning
-                                        {% elif document.document_type == 'DISCHARGE_SUMMARY' %}
-                                            bg-danger
+                                        {% elif document.document_type == 'HOSPITAL_RECORDS' %}
+                                            bg-primary
                                         {% elif document.document_type == 'OTHER' %}
                                             bg-secondary
                                         {% elif document.document_type == 'prep_sheet' %}
-                                            bg-info
+                                            bg-purple
                                         {% else %}
                                             bg-secondary
                                         {% endif %}
                                     ">
                                         {% if document.document_type == 'prep_sheet' %}
                                             Quality Checklist
-                                        {% elif document.document_type == 'LAB_REPORT' %}
+                                        {% elif document.document_type == 'LABORATORIES' %}
                                             Laboratories
-                                        {% elif document.document_type == 'RADIOLOGY_REPORT' %}
+                                        {% elif document.document_type == 'IMAGING' %}
                                             Imaging
-                                        {% elif document.document_type == 'CONSULTATION' %}
+                                        {% elif document.document_type == 'CONSULTS' %}
                                             Consults
-                                        {% elif document.document_type == 'DISCHARGE_SUMMARY' %}
+                                        {% elif document.document_type == 'HOSPITAL_RECORDS' %}
                                             Hospital Records
-
                                         {% elif document.document_type == 'OTHER' %}
                                             Other
                                         {% else %}
