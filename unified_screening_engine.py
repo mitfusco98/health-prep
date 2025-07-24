@@ -427,10 +427,16 @@ class UnifiedScreeningEngine:
         matches = []
         match_types_confidence = []
         
-        # Content keyword matching
-        if keywords_config['content'] and document.content:
+        # Content keyword matching (include both regular content and OCR text)
+        content_text = ""
+        if document.content:
+            content_text += document.content + " "
+        if hasattr(document, 'ocr_text') and document.ocr_text:
+            content_text += document.ocr_text
+            
+        if keywords_config['content'] and content_text.strip():
             content_match = self._match_keywords_in_text(
-                document.content, 
+                content_text, 
                 keywords_config['content'], 
                 'content'
             )
@@ -531,14 +537,13 @@ class UnifiedScreeningEngine:
                         'confidence': 0.9  # High confidence for phrase matches
                     })
             else:
-                # For medical abbreviations like "a1c", use flexible matching
-                match_confidence = self._match_word_flexible(text_lower, keyword_lower)
-                if match_confidence > 0:
+                # Single word with word boundaries - strict matching only
+                if self._match_word_in_text(text_lower, keyword_lower):
                     matches.append({
                         'keyword': keyword,
                         'type': match_type,
-                        'match_method': 'word_flexible',
-                        'confidence': match_confidence
+                        'match_method': 'word',
+                        'confidence': 0.8  # Good confidence for word matches
                     })
         
         # Calculate overall confidence
@@ -571,66 +576,7 @@ class UnifiedScreeningEngine:
         pattern = r'(?<![a-zA-Z0-9])' + re.escape(word) + r'(?![a-zA-Z0-9])'
         return bool(re.search(pattern, text, re.IGNORECASE))
     
-    def _match_word_flexible(self, text: str, word: str) -> float:
-        """
-        Flexible matching for medical abbreviations like 'a1c' 
-        Returns confidence score (0.0 = no match, 1.0 = perfect match)
-        """
-        if not text or not word:
-            return 0.0
-        
-        word_lower = word.lower().strip()
-        text_lower = text.lower()
-        
-        # First try exact match (highest confidence)
-        if self._match_word_in_text(text_lower, word_lower):
-            return 0.95
-        
-        # For medical abbreviations, try fuzzy matching
-        # This handles cases like "Alc", "alc", "ailc" matching "a1c"
-        if len(word_lower) <= 4:  # Only for short abbreviations
-            # Look for character variations
-            word_chars = list(word_lower)
-            
-            # Create regex pattern allowing single character substitutions
-            patterns = []
-            
-            # Pattern 1: Allow case variations and similar characters
-            case_pattern = re.escape(word_lower).replace('a', '[aA]').replace('1', '[1lI]').replace('c', '[cC]')
-            patterns.append(r'(?<![a-zA-Z0-9])' + case_pattern + r'(?![a-zA-Z0-9])')
-            
-            # Pattern 2: Allow single character substitutions for abbreviations
-            if len(word_lower) == 3:  # For 3-char abbreviations like "a1c"
-                char_variants = {
-                    'a': '[aA@]',
-                    '1': '[1lI]', 
-                    'c': '[cC]',
-                    'o': '[o0O]',
-                    'i': '[iI1l]',
-                    's': '[sS5]'
-                }
-                
-                pattern_chars = []
-                for char in word_lower:
-                    if char in char_variants:
-                        pattern_chars.append(char_variants[char])
-                    else:
-                        pattern_chars.append(re.escape(char))
-                
-                fuzzy_pattern = r'(?<![a-zA-Z0-9])' + ''.join(pattern_chars) + r'(?![a-zA-Z0-9])'
-                patterns.append(fuzzy_pattern)
-            
-            # Test each pattern
-            for i, pattern in enumerate(patterns):
-                if re.search(pattern, text_lower):
-                    # Return decreasing confidence for less exact matches
-                    return 0.8 - (i * 0.1)
-        
-        # Try partial matching for longer words (lower confidence)
-        if len(word_lower) > 3 and word_lower in text_lower:
-            return 0.6
-        
-        return 0.0
+
     
     def _no_match_result(self, reason: str) -> Dict:
         """Standard no-match result"""
