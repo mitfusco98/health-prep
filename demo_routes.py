@@ -2818,27 +2818,55 @@ def add_document(patient_id):
 def process_document_ocr_route(document_id):
     """Process document with OCR via AJAX"""
     try:
-        from universal_document_viewer import process_document_for_universal_display
+        logger.info(f"OCR processing request for document {document_id}")
         
-        result = process_document_for_universal_display(document_id)
+        # Validate document exists
+        document = MedicalDocument.query.get(document_id)
+        if not document:
+            return jsonify({
+                'success': False,
+                'error': f'Document {document_id} not found'
+            }), 404
         
-        if result['success']:
+        # Use OCR processor directly instead of universal display
+        from ocr_document_processor import process_document_with_ocr
+        
+        # Process OCR
+        ocr_result = process_document_with_ocr(document_id)
+        
+        if ocr_result['success']:
+            # Trigger screening refresh if OCR was applied
+            if ocr_result.get('ocr_applied'):
+                try:
+                    from unified_screening_engine import UnifiedScreeningEngine
+                    engine = UnifiedScreeningEngine()
+                    
+                    # Re-evaluate screenings for the patient
+                    screenings_updated = engine.generate_patient_screenings(document.patient_id)
+                    
+                    logger.info(f"OCR processing triggered screening refresh for patient {document.patient_id}: {len(screenings_updated)} screenings updated")
+                    
+                except Exception as refresh_error:
+                    logger.warning(f"OCR screening refresh failed: {refresh_error}")
+            
             return jsonify({
                 'success': True,
-                'message': 'OCR processing completed',
-                'display_info': result['display_info']
+                'message': f'OCR processing completed successfully',
+                'ocr_applied': ocr_result.get('ocr_applied', False),
+                'confidence': ocr_result.get('confidence_score'),
+                'text_length': ocr_result.get('extracted_text_length', 0)
             })
         else:
             return jsonify({
                 'success': False,
-                'error': result.get('error', 'OCR processing failed')
+                'error': ocr_result.get('error', 'OCR processing failed')
             }), 500
             
     except Exception as e:
         logger.error(f"OCR processing error for document {document_id}: {e}")
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': f'Processing error: {str(e)}'
         }), 500
 
 

@@ -491,6 +491,10 @@ def validate_csrf_for_state_changes():
     # Skip CSRF for demo bulk operations to prevent blocking
     if request.endpoint == "delete_appointments_bulk":
         return
+        
+    # Skip CSRF for OCR processing routes
+    if request.endpoint == "process_document_ocr_route":
+        return
 
     # Only validate CSRF for non-API endpoints
     # For AJAX requests to web endpoints, check CSRF token
