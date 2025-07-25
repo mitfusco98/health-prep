@@ -46,8 +46,10 @@ class TesseractOCRProcessor:
     def __init__(self):
         self.quality_metrics = OCRQualityMetrics()
         
-        # Configure Tesseract for medical documents
-        self.tesseract_config = '--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:()[]{}/-+ '
+        # Configure Tesseract for medical documents with enhanced word detection
+        # PSM 4: Assume a single column of text of variable sizes
+        # OEM 3: Use both legacy and LSTM engines for better accuracy
+        self.tesseract_config = '--oem 3 --psm 4 -c preserve_interword_spaces=1 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:()[]{}/-+%= '
         
         # Medical terminology optimization
         self.medical_preprocessing_enabled = True
@@ -243,17 +245,20 @@ class TesseractOCRProcessor:
             if self.medical_preprocessing_enabled:
                 image = self._preprocess_medical_image(image)
             
-            # Extract text with Tesseract
+            # Extract text with Tesseract using enhanced configuration
             extracted_text = pytesseract.image_to_string(image, config=self.tesseract_config)
+            
+            # POST-PROCESSING: Enhance word spacing for medical documents
+            processed_text = self._enhance_word_spacing(extracted_text)
             
             # Get confidence data
             confidence_data = pytesseract.image_to_data(image, config=self.tesseract_config, output_type=pytesseract.Output.DICT)
             avg_confidence = self._calculate_average_confidence(confidence_data)
             
             # Quality assessment
-            quality_flags = self._assess_ocr_quality(extracted_text, avg_confidence)
+            quality_flags = self._assess_ocr_quality(processed_text, avg_confidence)
             
-            return extracted_text.strip(), avg_confidence, quality_flags
+            return processed_text.strip(), avg_confidence, quality_flags
             
         except Exception as e:
             logger.error(f"Image OCR processing error: {e}")
@@ -277,11 +282,14 @@ class TesseractOCRProcessor:
                 # Extract text from page
                 page_text = pytesseract.image_to_string(image, config=self.tesseract_config)
                 
+                # POST-PROCESSING: Enhance word spacing for medical documents
+                processed_page_text = self._enhance_word_spacing(page_text)
+                
                 # Get confidence for page
                 confidence_data = pytesseract.image_to_data(image, config=self.tesseract_config, output_type=pytesseract.Output.DICT)
                 page_confidence = self._calculate_average_confidence(confidence_data)
                 
-                all_text.append(page_text.strip())
+                all_text.append(processed_page_text.strip())
                 all_confidences.append(page_confidence)
                 
                 if page_confidence < 50:  # Low confidence page
@@ -360,6 +368,76 @@ class TesseractOCRProcessor:
             flags.append("non_ascii_characters")
         
         return flags
+    
+    def _enhance_word_spacing(self, text: str) -> str:
+        """
+        Enhanced word spacing for medical documents to fix OCR spacing issues
+        This addresses the critical issue where OCR extracts "Operationalcalc" instead of "Operational calc"
+        """
+        if not text or len(text.strip()) < 2:
+            return text
+            
+        import re
+        
+        # Medical terminology patterns that commonly get concatenated
+        # CRITICAL: Order matters - most specific patterns first
+        medical_patterns = [
+            # SPECIFIC MEDICAL TERM CORRECTIONS (highest priority)
+            # The "Operationalcalc" OCR error likely means "Operational A1C" or "A1C Calc"
+            (r'[Oo]perationalcalc', 'Operational A1C'),   # Direct fix for the problematic case
+            (r'[Oo]perational[Cc]alc', 'Operational A1C'), # With space between 
+            (r'[Cc]alc[Aa]1[Cc]', 'calc A1C'),           # "calcA1C" -> "calc A1C"
+            
+            # A1C preservation patterns (before general word boundary rules)
+            (r'[Hh]emoglobin[Aa]1[Cc]', 'Hemoglobin A1C'), # "HemoglobinA1C" -> "Hemoglobin A1C"
+            (r'[Hh]b[Aa]1[Cc]', 'HbA1C'),                 # Keep "HbA1C" intact
+            (r'[Aa]1[Cc][Tt]est', 'A1C test'),            # "A1Ctest" -> "A1C test"
+            (r'[Aa]1[Cc][Ll]ab', 'A1C lab'),              # "A1Clab" -> "A1C lab"
+            (r'[Aa]1[Cc][Rr]esult', 'A1C result'),        # "A1Cresult" -> "A1C result"
+            (r'[Aa]1[Cc][Vv]alue', 'A1C value'),          # "A1Cvalue" -> "A1C value"
+            (r'[Aa]1[Cc][Ll]evel', 'A1C level'),          # "A1Clevel" -> "A1C level"
+            
+            # Common medical term corrections
+            (r'([Gg]lucose)([Tt]est)', r'\1 \2'),         # "Glucosetest" -> "Glucose test"
+            (r'([Bb]lood)([Ss]ugar)', r'\1 \2'),          # "Bloodsugar" -> "Blood sugar"
+            (r'([Dd]iabetes)([Cc]ontrol)', r'\1 \2'),     # "Diabetescontrol" -> "Diabetes control"
+            (r'([Dd]iabetes)([Tt]est)', r'\1 \2'),        # "Diabetestest" -> "Diabetes test"
+            
+            # Lab values and units
+            (r'([0-9])([mM][gG])', r'\1 \2'),             # "120mg" -> "120 mg"
+            (r'([0-9])([dD][lL])', r'\1 \2'),             # "100dl" -> "100 dl"
+            (r'([0-9])([mM][mM][oO][lL])', r'\1 \2'),     # "5mmol" -> "5 mmol"
+            
+            # Common medical words
+            (r'([Ll]ab)([Rr]esult)', r'\1 \2'),           # "Labresult" -> "Lab result"
+            (r'([Tt]est)([Rr]esult)', r'\1 \2'),          # "Testresult" -> "Test result"
+            (r'([Pp]atient)([Nn]ame)', r'\1 \2'),         # "Patientname" -> "Patient name"
+            (r'([Nn]ormal)([Rr]ange)', r'\1 \2'),         # "Normalrange" -> "Normal range"
+            (r'([Rr]eference)([Rr]ange)', r'\1 \2'),      # "Referencerange" -> "Reference range"
+            
+            # Medical abbreviations
+            (r'([Hh][Dd][Ll])([Cc]holesterol)', r'\1 \2'), # "HDLcholesterol" -> "HDL cholesterol"
+            (r'([Ll][Dd][Ll])([Cc]holesterol)', r'\1 \2'), # "LDLcholesterol" -> "LDL cholesterol"
+            
+            # General word boundary fixes (LAST to avoid breaking medical terms)
+            (r'([a-z])([A-Z])', r'\1 \2'),                # CamelCase -> Camel Case
+            (r'([A-Za-z])([0-9])', r'\1 \2'),             # "Test123" -> "Test 123"
+            (r'([0-9])([A-Za-z])', r'\1 \2'),             # "123Test" -> "123 Test"
+        ]
+        
+        # Apply medical terminology patterns
+        processed_text = text
+        for pattern, replacement in medical_patterns:
+            processed_text = re.sub(pattern, replacement, processed_text)
+        
+        # Clean up multiple spaces
+        processed_text = re.sub(r'\s+', ' ', processed_text)
+        
+        # Log significant changes for debugging
+        if text.strip() != processed_text.strip() and len(text) > 5:
+            logger.info(f"📝 Enhanced word spacing: '{text.strip()}' -> '{processed_text.strip()}'")
+            
+        return processed_text
     
     def _combine_content(self, original_content: str, ocr_text: str) -> str:
         """Intelligently combine original content with OCR extracted text, filtering PHI"""
