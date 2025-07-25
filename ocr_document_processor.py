@@ -123,8 +123,9 @@ class TesseractOCRProcessor:
                 result['error'] = f"Document {document_id} not found"
                 return result
             
-            # Check if document needs OCR
-            needs_ocr = self.is_image_based_document(document.document_name, None)
+            # Check if document needs OCR using filename (which has extension)
+            filename_to_check = document.filename or document.document_name or ""
+            needs_ocr = self.is_image_based_document(filename_to_check, None)
             if not needs_ocr:
                 result['success'] = True
                 result['ocr_applied'] = False
@@ -143,7 +144,7 @@ class TesseractOCRProcessor:
                 return result
             
             extracted_text, confidence, quality_flags = self._extract_text_with_ocr(
-                document.document_name,
+                filename_to_check,  # Use the same filename logic as the needs_ocr check
                 document.binary_content  # Use the actual binary content field
             )
             
