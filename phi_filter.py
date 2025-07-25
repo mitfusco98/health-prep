@@ -53,6 +53,8 @@ class PHIPatternDetector:
     def __init__(self, config: PHIFilterConfig):
         self.config = config
         self._compile_patterns()
+        self._patient_names_cache = None
+        self._cache_timestamp = None
 
     def _compile_patterns(self):
         """Compile regex patterns for efficient matching"""
@@ -121,6 +123,97 @@ class PHIPatternDetector:
             # Contextual DOB (dates appearing after potential names - using word boundaries)
             re.compile(r'(?:[A-Z][a-z]+\s+[A-Z][a-z]+)\s+(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'),
         ]
+
+    def _get_rostered_patient_names(self) -> Set[str]:
+        """Get all patient names from the database for PHI detection"""
+        from datetime import datetime, timedelta
+        import time
+        
+        # Cache patient names for 5 minutes to avoid excessive database queries
+        current_time = time.time()
+        if (self._patient_names_cache is not None and 
+            self._cache_timestamp and 
+            (current_time - self._cache_timestamp) < 300):  # 5 minutes
+            return self._patient_names_cache
+        
+        try:
+            # Import here to avoid circular imports
+            import sys
+            if 'models' in sys.modules:
+                Patient = sys.modules['models'].Patient
+                app = sys.modules['app'].app
+                db = sys.modules['app'].db
+            else:
+                from models import Patient
+                from app import app, db
+            
+            patient_names = set()
+            
+            with app.app_context():
+                patients = Patient.query.all()
+                for patient in patients:
+                    if patient.first_name:
+                        patient_names.add(patient.first_name.strip())
+                    if patient.last_name:
+                        patient_names.add(patient.last_name.strip())
+                    if patient.full_name:
+                        patient_names.add(patient.full_name.strip())
+                    
+                    # Add common combinations
+                    if patient.first_name and patient.last_name:
+                        patient_names.add(f"{patient.first_name.strip()} {patient.last_name.strip()}")
+            
+            # Cache the results
+            self._patient_names_cache = patient_names
+            self._cache_timestamp = current_time
+            
+            logger.debug(f"Cached {len(patient_names)} patient names for PHI detection")
+            return patient_names
+            
+        except Exception as e:
+            logger.warning(f"Could not load patient names for PHI detection: {e}")
+            # Return empty set if database access fails
+            return set()
+
+    def _detect_rostered_patient_names(self, text: str) -> List[Dict]:
+        """Detect names of rostered patients in text"""
+        detections = []
+        patient_names = self._get_rostered_patient_names()
+        
+        if not patient_names:
+            return detections
+        
+        # Sort by length (longest first) to avoid partial matches
+        sorted_names = sorted(patient_names, key=len, reverse=True)
+        
+        for name in sorted_names:
+            if len(name.strip()) < 3:  # Skip very short names
+                continue
+                
+            # Create a regex pattern for this name (case-insensitive, word boundaries)
+            escaped_name = re.escape(name)
+            pattern = re.compile(r'\b' + escaped_name + r'\b', re.IGNORECASE)
+            
+            for match in pattern.finditer(text):
+                # Additional context check to ensure this is actually a name reference
+                context_start = max(0, match.start() - 20)
+                context_end = min(len(text), match.end() + 20)
+                context = text[context_start:context_end].lower()
+                
+                # Skip if this appears to be part of a medical term
+                if any(med_term in context for med_term in ['panel', 'test', 'screening', 'examination']):
+                    continue
+                
+                detections.append({
+                    'type': 'rostered_patient_name',
+                    'text': match.group(),
+                    'start': match.start(),
+                    'end': match.end(),
+                    'replacement': self.config.name_token,
+                    'patient_name': name
+                })
+        
+        return detections
 
     def detect_phi_in_text(self, text: str) -> List[Dict]:
         """Detect all PHI patterns in text and return match details"""
@@ -256,6 +349,11 @@ class PHIPatternDetector:
                             'end': match.end(),
                             'replacement': replacement
                         })
+
+        # Add rostered patient name detection
+        if self.config.filter_names:
+            rostered_name_detections = self._detect_rostered_patient_names(text)
+            detections.extend(rostered_name_detections)
 
         # Sort by position to enable proper replacement
         return sorted(detections, key=lambda x: x['start'])
