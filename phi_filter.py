@@ -54,8 +54,9 @@ class PHIPatternDetector:
     def _compile_patterns(self):
         """Compile regex patterns for efficient matching"""
         
-        # Social Security Numbers (XXX-XX-XXXX, XXXXXXXXX)
-        self.ssn_pattern = re.compile(r'\b\d{3}-?\d{2}-?\d{4}\b')
+        # Social Security Numbers (flexible patterns for OCR-extracted text)
+        # Handles full SSNs, partial SSNs, and SSN labels in various formats
+        self.ssn_pattern = re.compile(r'(?:SSN|Social Security|Social Sec|SS)\s*[:#]?\s*(\d{1,3}(?:[-\s]?\d{1,2})?(?:[-\s]?\d{1,4})?)', re.IGNORECASE)
         
         # Phone numbers (various formats)
         self.phone_pattern = re.compile(r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})')
@@ -85,10 +86,12 @@ class PHIPatternDetector:
         # Address patterns (basic street addresses)
         self.address_pattern = re.compile(r'\b\d+\s+[A-Za-z\s]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Circle|Cir|Court|Ct)\b', re.IGNORECASE)
         
-        # Common name patterns (this is more complex and may need NLP)
+        # Common name patterns (flexible for OCR-extracted text with various capitalizations)
+        # Enhanced to capture complete names and handle line breaks properly
         self.name_patterns = [
-            re.compile(r'\bPatient:?\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\b'),
-            re.compile(r'\bName:?\s+([A-Z][a-z]+\s+[A-Z][a-z]+)\b'),
+            re.compile(r'\b(?:Patient|Patient Name|Full Name)\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)', re.IGNORECASE),
+            re.compile(r'\bName\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)', re.IGNORECASE),
+            re.compile(r'^Name\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)', re.IGNORECASE | re.MULTILINE),
         ]
     
     def detect_phi_in_text(self, text: str) -> List[Dict]:
@@ -97,12 +100,14 @@ class PHIPatternDetector:
         
         if self.config.filter_ssn:
             for match in self.ssn_pattern.finditer(text):
+                # For SSN patterns, we want to redact the entire line including the label
                 detections.append({
                     'type': 'ssn',
-                    'text': match.group(),
+                    'matched_text': match.group(1) if match.groups() else match.group(),
+                    'text': match.group(),  # Full match including "SSN:" label
                     'start': match.start(),
                     'end': match.end(),
-                    'replacement': self.config.id_token
+                    'replacement': f"SSN: {self.config.id_token}"
                 })
         
         if self.config.filter_phone:
@@ -167,10 +172,11 @@ class PHIPatternDetector:
                     if not self._is_likely_medical_term(match.group()):
                         detections.append({
                             'type': 'name',
-                            'text': match.group(),
+                            'matched_text': match.group(1) if match.groups() else match.group(),
+                            'text': match.group(),  # Full match including "Name:" label
                             'start': match.start(),
                             'end': match.end(),
-                            'replacement': self.config.name_token
+                            'replacement': f"Name: {self.config.name_token}"
                         })
         
         # Sort by position to enable proper replacement
