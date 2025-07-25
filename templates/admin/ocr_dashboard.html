@@ -283,6 +283,7 @@
                                     <th>Confidence</th>
                                     <th>Text Length</th>
                                     <th>Processed</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -301,6 +302,13 @@
                                     </td>
                                     <td>{{ doc.ocr_text_length or 0 }} characters</td>
                                     <td>{{ doc.ocr_processing_date.strftime('%Y-%m-%d %H:%M') if doc.ocr_processing_date else 'N/A' }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-success" 
+                                                onclick="reprocessDocument({{ doc.id }})"
+                                                title="Reprocess OCR and refresh screening matches">
+                                            <i class="fas fa-sync-alt"></i> Reprocess
+                                        </button>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -410,6 +418,37 @@ function showProcessingModal(message) {
 
 function hideProcessingModal() {
     $('#processingModal').modal('hide');
+}
+
+function reprocessDocument(docId) {
+    if (!confirm('Reprocess OCR text extraction and refresh screening matches for this document?')) {
+        return;
+    }
+    
+    showProcessingModal('Reprocessing document and updating screening matches...');
+    
+    fetch(`/admin/ocr/reprocess-document/${docId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideProcessingModal();
+        if (data.success) {
+            showAlert('success', `Document reprocessed successfully! Confidence: ${data.confidence}%. Screening matches updated.`);
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            showAlert('danger', 'Error reprocessing document: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        hideProcessingModal();
+        showAlert('danger', 'Error reprocessing document: ' + error);
+    });
 }
 
 function showAlert(type, message) {

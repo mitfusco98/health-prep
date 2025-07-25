@@ -17,6 +17,71 @@ from selective_screening_refresh_manager import selective_refresh_manager, Chang
 logger = logging.getLogger(__name__)
 
 
+@app.route('/admin/ocr/reprocess-document/<int:doc_id>', methods=['POST'])
+def reprocess_document(doc_id):
+    """Reprocess OCR for a specific document and trigger selective screening refresh"""
+    try:
+        # Import here to avoid circular imports
+        from ocr_document_processor import ocr_processor
+        
+        # Get the document
+        document = MedicalDocument.query.get_or_404(doc_id)
+        
+        if not document.binary_content:
+            return jsonify({
+                'success': False,
+                'error': 'Document has no binary content to process'
+            })
+        
+        # Reset OCR status to force reprocessing
+        document.ocr_processed = False
+        document.content = None
+        document.ocr_confidence = None
+        document.ocr_processing_date = None
+        document.ocr_text_length = None
+        db.session.commit()
+        
+        # Reprocess OCR
+        result = ocr_processor.process_document_ocr(doc_id)
+        
+        if result['success']:
+            # Trigger selective screening refresh for this document's patient
+            if document.patient_id:
+                try:
+                    # Trigger selective refresh for document changes
+                    selective_refresh_manager.add_change(
+                        change_type=ChangeType.DOCUMENT_CONTENT,
+                        target_ids=[document.patient_id],
+                        metadata={'document_id': doc_id, 'reprocessed': True}
+                    )
+                    refresh_triggered = True
+                except Exception as refresh_error:
+                    logger.warning(f"Failed to trigger selective refresh after reprocessing doc {doc_id}: {refresh_error}")
+                    refresh_triggered = False
+            else:
+                refresh_triggered = False
+            
+            return jsonify({
+                'success': True,
+                'confidence': result.get('confidence_score', 0),
+                'text_length': result.get('text_length', 0),
+                'screening_refresh_triggered': refresh_triggered,
+                'message': 'Document reprocessed successfully and screening matches updated'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'OCR processing failed')
+            })
+            
+    except Exception as e:
+        logger.error(f"Error reprocessing document {doc_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
 @app.route('/admin/ocr-dashboard')
 def ocr_dashboard():
     """OCR management dashboard"""
@@ -153,8 +218,31 @@ def ocr_bulk_process():
         if not valid_doc_ids:
             return jsonify({"success": False, "error": "No valid documents found"}), 400
         
-        # Process documents in bulk
-        result = bulk_ocr_processing(valid_doc_ids)
+        # Import here to avoid circular imports
+        from ocr_document_processor import ocr_processor
+        
+        # Process documents individually (simplified bulk processing)
+        successful_ocr = 0
+        failed_ocr = 0
+        no_ocr_needed = 0
+        
+        for doc_id in valid_doc_ids:
+            try:
+                result = ocr_processor.process_document_ocr(doc_id)
+                if result['success']:
+                    successful_ocr += 1
+                else:
+                    failed_ocr += 1
+            except Exception as e:
+                logger.error(f"Error processing document {doc_id}: {e}")
+                failed_ocr += 1
+        
+        result = {
+            'successful_ocr': successful_ocr,
+            'failed_ocr': failed_ocr,
+            'no_ocr_needed': no_ocr_needed,
+            'total_processed': len(valid_doc_ids)
+        }
         
         # Trigger selective refresh for all affected patients
         if result['successful_ocr'] > 0:
@@ -215,8 +303,36 @@ def ocr_reprocess_low_confidence():
         
         document_ids = [doc.id for doc in low_confidence_docs]
         
-        # Reprocess with improved settings
-        result = bulk_ocr_processing(document_ids)
+        # Import here to avoid circular imports  
+        from ocr_document_processor import ocr_processor
+        
+        # Reprocess documents individually
+        successful_ocr = 0
+        failed_ocr = 0
+        
+        for doc_id in document_ids:
+            try:
+                # Reset OCR status to force reprocessing
+                doc = MedicalDocument.query.get(doc_id)
+                if doc:
+                    doc.ocr_processed = False
+                    doc.content = None
+                    db.session.commit()
+                    
+                result_single = ocr_processor.process_document_ocr(doc_id)
+                if result_single['success']:
+                    successful_ocr += 1
+                else:
+                    failed_ocr += 1
+            except Exception as e:
+                logger.error(f"Error reprocessing document {doc_id}: {e}")
+                failed_ocr += 1
+        
+        result = {
+            'successful_ocr': successful_ocr,
+            'failed_ocr': failed_ocr,
+            'total_processed': len(document_ids)
+        }
         
         flash(f"Reprocessed {len(document_ids)} low-confidence documents. Success: {result['successful_ocr']}, Failed: {result['failed_ocr']}", "info")
         
@@ -250,8 +366,31 @@ def ocr_process_pending():
             flash(f"Processing first {max_batch_size} of {len(pending_doc_ids)} pending documents", "info")
             pending_doc_ids = pending_doc_ids[:max_batch_size]
         
-        # Process in bulk
-        result = bulk_ocr_processing(pending_doc_ids)
+        # Import here to avoid circular imports
+        from ocr_document_processor import ocr_processor
+        
+        # Process pending documents individually
+        successful_ocr = 0
+        failed_ocr = 0
+        no_ocr_needed = 0
+        
+        for doc_id in pending_doc_ids:
+            try:
+                result_single = ocr_processor.process_document_ocr(doc_id)
+                if result_single['success']:
+                    successful_ocr += 1
+                else:
+                    failed_ocr += 1
+            except Exception as e:
+                logger.error(f"Error processing pending document {doc_id}: {e}")
+                failed_ocr += 1
+        
+        result = {
+            'successful_ocr': successful_ocr,
+            'failed_ocr': failed_ocr,
+            'no_ocr_needed': no_ocr_needed,
+            'total_processed': len(pending_doc_ids)
+        }
         
         flash(f"Processed {result['total_processed']} pending documents. Success: {result['successful_ocr']}, No OCR needed: {result['no_ocr_needed']}, Failed: {result['failed_ocr']}", "success")
         
