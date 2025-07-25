@@ -112,8 +112,8 @@ class TimeoutSafeRefresh:
                 
                 # Handle document relationships
                 if screening_data.get('matched_documents'):
-                    # Clear existing relationships
-                    existing_screening.documents = []
+                    # Clear existing relationships safely using proper SQLAlchemy method
+                    existing_screening.documents.clear()
                     
                     # Add new relationships
                     for doc_id in screening_data['matched_documents']:

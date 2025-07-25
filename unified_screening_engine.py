@@ -428,7 +428,7 @@ class UnifiedScreeningEngine:
         sorted_docs = sorted(matching_documents, key=lambda doc: doc.document_date or doc.created_at.date(), reverse=True)
         
         # Get frequency window for this screening type
-        frequency_days = self._get_frequency_in_days(screening_type)
+        frequency_days = self._convert_frequency_to_days(screening_type)
         cutoff_date = date.today() - timedelta(days=min(frequency_days, 730))  # Max 2 years lookback
         
         # Filter documents within frequency window
