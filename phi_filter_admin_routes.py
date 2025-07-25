@@ -20,6 +20,7 @@ def phi_filter_settings():
         filter_stats = phi_filter.get_filter_statistics()
         
         return render_template('admin/phi_filter_settings.html', 
+                             phi_filter_stats=filter_stats,
                              stats=filter_stats['stats'],
                              config=filter_stats['config'])
     
