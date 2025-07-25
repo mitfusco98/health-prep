@@ -21,6 +21,53 @@
         </div>
     </div>
 
+    <!-- PHI Filtering Control Panel -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt"></i> PHI Filtering Control</h5>
+                    <a href="{{ url_for('phi_filter_settings') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-cog"></i> Advanced Settings
+                    </a>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('update_phi_filter_settings') }}" class="d-flex align-items-center">
+                        <div class="form-check form-switch me-4">
+                            <input class="form-check-input" type="checkbox" id="phi_filtering_enabled_dashboard" 
+                                   name="phi_filtering_enabled" 
+                                   {% if data.phi_filter_enabled %}checked{% endif %}
+                                   onchange="this.form.submit()">
+                            <label class="form-check-label" for="phi_filtering_enabled_dashboard">
+                                <strong>Enable PHI Filtering</strong>
+                            </label>
+                        </div>
+                        <div class="me-4">
+                            <span class="badge {% if data.phi_filter_enabled %}bg-success{% else %}bg-danger{% endif %}">
+                                {% if data.phi_filter_enabled %}ACTIVE{% else %}DISABLED{% endif %}
+                            </span>
+                        </div>
+                        <div class="text-muted small">
+                            {% if data.phi_filter_enabled %}
+                                PHI filtering is active - patient data will be automatically redacted during OCR processing
+                            {% else %}
+                                <strong class="text-danger">WARNING:</strong> PHI filtering is disabled - sensitive patient data may be exposed
+                            {% endif %}
+                        </div>
+                        <!-- Hidden fields to preserve other settings -->
+                        <input type="hidden" name="filter_ssn" value="{% if data.phi_filter_stats and data.phi_filter_stats.config.ssn_filtering %}on{% endif %}">
+                        <input type="hidden" name="filter_phone" value="{% if data.phi_filter_stats and data.phi_filter_stats.config.phone_filtering %}on{% endif %}">
+                        <input type="hidden" name="filter_dates" value="{% if data.phi_filter_stats and data.phi_filter_stats.config.date_filtering %}on{% endif %}">
+                        <input type="hidden" name="filter_addresses" value="{% if data.phi_filter_stats and data.phi_filter_stats.config.address_filtering %}on{% endif %}">
+                        <input type="hidden" name="filter_names" value="{% if data.phi_filter_stats and data.phi_filter_stats.config.name_filtering %}on{% endif %}">
+                        <input type="hidden" name="filter_mrn" value="{% if data.phi_filter_stats and data.phi_filter_stats.config.mrn_filtering %}on{% endif %}">
+                        <input type="hidden" name="filter_insurance" value="{% if data.phi_filter_stats and data.phi_filter_stats.config.insurance_filtering %}on{% endif %}">
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- OCR Statistics Overview -->
     <div class="row mb-4">
         <div class="col-md-3">

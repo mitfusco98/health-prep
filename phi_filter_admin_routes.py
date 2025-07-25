@@ -34,6 +34,7 @@ def update_phi_filter_settings():
     """Update PHI filter configuration"""
     try:
         # Get form data
+        phi_filtering_enabled = request.form.get('phi_filtering_enabled') == 'on'
         ssn_filtering = request.form.get('filter_ssn') == 'on'
         phone_filtering = request.form.get('filter_phone') == 'on'
         date_filtering = request.form.get('filter_dates') == 'on'
@@ -43,6 +44,7 @@ def update_phi_filter_settings():
         insurance_filtering = request.form.get('filter_insurance') == 'on'
         
         # Update PHI filter configuration
+        phi_filter.config.phi_filtering_enabled = phi_filtering_enabled
         phi_filter.config.filter_ssn = ssn_filtering
         phi_filter.config.filter_phone = phone_filtering
         phi_filter.config.filter_dates = date_filtering

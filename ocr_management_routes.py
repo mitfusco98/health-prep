@@ -64,6 +64,11 @@ def ocr_dashboard():
             if doc.document_name and ocr_processor.is_image_based_document(doc.document_name):
                 pending_ocr_docs.append(doc)
         
+        # Get PHI filter status
+        from phi_filter import phi_filter
+        phi_filter_stats = phi_filter.get_filter_statistics()
+        phi_filter_enabled = phi_filter_stats['config']['phi_filtering_enabled']
+        
         dashboard_data = {
             'total_documents': total_documents,
             'ocr_processed': ocr_processed,
@@ -71,7 +76,9 @@ def ocr_dashboard():
             'processing_stats': ocr_stats,
             'recent_activity': recent_ocr_docs,
             'low_confidence': low_confidence_docs,
-            'pending_processing': pending_ocr_docs
+            'pending_processing': pending_ocr_docs,
+            'phi_filter_enabled': phi_filter_enabled,
+            'phi_filter_stats': phi_filter_stats
         }
         
         return render_template('admin/ocr_dashboard.html', data=dashboard_data)

@@ -33,6 +33,9 @@ class PHIFilterConfig:
         self.filter_mrn = True
         self.filter_insurance = True
         
+        # Global PHI filtering control
+        self.phi_filtering_enabled = True
+        
         # Medical terms to preserve (never filter these)
         self.medical_terms_whitelist = {
             'glucose', 'cholesterol', 'blood pressure', 'hemoglobin', 'a1c', 'hba1c',
@@ -55,8 +58,17 @@ class PHIPatternDetector:
         """Compile regex patterns for efficient matching"""
         
         # Social Security Numbers (flexible patterns for OCR-extracted text)
-        # Handles full SSNs, partial SSNs, and SSN labels in various formats
-        self.ssn_pattern = re.compile(r'(?:SSN|Social Security|Social Sec|SS)\s*[:#]?\s*(\d{1,3}(?:[-\s]?\d{1,2})?(?:[-\s]?\d{1,4})?)', re.IGNORECASE)
+        # Handles labeled SSNs, standalone SSNs, and contextual patterns
+        self.ssn_patterns = [
+            # Labeled SSN patterns
+            re.compile(r'(?:SSN|Social Security|Social Sec|SS)\s*[:#]?\s*(\d{1,3}(?:[-\s]?\d{1,2})?(?:[-\s]?\d{1,4})?)', re.IGNORECASE),
+            # Standalone SSN patterns (9 digits with optional dashes)
+            re.compile(r'\b(\d{3}[-\s]?\d{2}[-\s]?\d{4})\b'),
+            # Partial SSN patterns in context (like "Last 4: 1234")
+            re.compile(r'(?:last\s+4|last\s+four)\s*[:#]?\s*(\d{4})', re.IGNORECASE),
+            # Be very selective with partial numeric sequences to avoid medical values
+            re.compile(r'(?:SSN|Social)\s*.*?(\d{4})', re.IGNORECASE)
+        ]
         
         # Phone numbers (various formats)
         self.phone_pattern = re.compile(r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})')
@@ -87,11 +99,24 @@ class PHIPatternDetector:
         self.address_pattern = re.compile(r'\b\d+\s+[A-Za-z\s]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Circle|Cir|Court|Ct)\b', re.IGNORECASE)
         
         # Common name patterns (flexible for OCR-extracted text with various capitalizations)
-        # Enhanced to capture complete names and handle line breaks properly
+        # Enhanced with contextual pattern matching for unlabeled names
         self.name_patterns = [
+            # Labeled name patterns
             re.compile(r'\b(?:Patient|Patient Name|Full Name)\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)', re.IGNORECASE),
             re.compile(r'\bName\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)', re.IGNORECASE),
             re.compile(r'^Name\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)', re.IGNORECASE | re.MULTILINE),
+            # Contextual name patterns (names appearing in typical PHI contexts)
+            re.compile(r'^([A-Z][a-z]+\s+[A-Z][a-z]+)(?=\s*\n|\s*$)', re.MULTILINE),  # First line capitalized names
+            re.compile(r'\b([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(?=\d{2,3}[-/]\d{2}[-/]\d{2,4})', re.IGNORECASE),  # Names before dates
+            re.compile(r'\b([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(?=\d{3}[-\s]?\d{2}[-\s]?\d{4})', re.IGNORECASE),  # Names before SSNs
+        ]
+        
+        # Date of birth patterns (contextual detection)
+        self.dob_patterns = [
+            re.compile(r'(?:DOB|Date of Birth|Born)\s*[:#]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})', re.IGNORECASE),
+            re.compile(r'(?:DOB|Date of Birth|Born)\s*[:#]?\s*([A-Za-z]+\s+\d{1,2},?\s+\d{4})', re.IGNORECASE),
+            # Contextual DOB (dates appearing after potential names - using word boundaries)
+            re.compile(r'(?:[A-Z][a-z]+\s+[A-Z][a-z]+)\s+(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})'),
         ]
     
     def detect_phi_in_text(self, text: str) -> List[Dict]:
@@ -99,16 +124,25 @@ class PHIPatternDetector:
         detections = []
         
         if self.config.filter_ssn:
-            for match in self.ssn_pattern.finditer(text):
-                # For SSN patterns, we want to redact the entire line including the label
-                detections.append({
-                    'type': 'ssn',
-                    'matched_text': match.group(1) if match.groups() else match.group(),
-                    'text': match.group(),  # Full match including "SSN:" label
-                    'start': match.start(),
-                    'end': match.end(),
-                    'replacement': f"SSN: {self.config.id_token}"
-                })
+            for pattern in self.ssn_patterns:
+                for match in pattern.finditer(text):
+                    # Skip if this looks like a medical value (blood pressure, etc.)
+                    matched_text = match.group(1) if match.groups() else match.group()
+                    if not self._is_medical_value(matched_text):
+                        # For labeled SSNs, preserve label structure
+                        if 'SSN' in match.group().upper() or 'SOCIAL' in match.group().upper():
+                            replacement = f"SSN: {self.config.id_token}"
+                        else:
+                            replacement = self.config.id_token
+                        
+                        detections.append({
+                            'type': 'ssn',
+                            'matched_text': matched_text,
+                            'text': match.group(),
+                            'start': match.start(),
+                            'end': match.end(),
+                            'replacement': replacement
+                        })
         
         if self.config.filter_phone:
             for match in self.phone_pattern.finditer(text):
@@ -170,23 +204,69 @@ class PHIPatternDetector:
                 for match in pattern.finditer(text):
                     # Check if this might be a medical term instead of a name
                     if not self._is_likely_medical_term(match.group()):
+                        matched_text = match.group(1) if match.groups() else match.group()
+                        
+                        # For labeled names, preserve label structure
+                        if 'name' in match.group().lower():
+                            replacement = f"Name: {self.config.name_token}"
+                        else:
+                            replacement = self.config.name_token
+                        
                         detections.append({
                             'type': 'name',
-                            'matched_text': match.group(1) if match.groups() else match.group(),
-                            'text': match.group(),  # Full match including "Name:" label
+                            'matched_text': matched_text,
+                            'text': match.group(),
                             'start': match.start(),
                             'end': match.end(),
-                            'replacement': f"Name: {self.config.name_token}"
+                            'replacement': replacement
+                        })
+        
+        # Add DOB detection
+        if self.config.filter_dates:
+            for pattern in self.dob_patterns:
+                for match in pattern.finditer(text):
+                    if not self._is_medical_value(match.group()):
+                        matched_text = match.group(1) if match.groups() else match.group()
+                        
+                        # For labeled DOBs, preserve label structure
+                        if any(label in match.group().lower() for label in ['dob', 'date of birth', 'born']):
+                            replacement = f"DOB: {self.config.date_token}"
+                        else:
+                            replacement = self.config.date_token
+                        
+                        detections.append({
+                            'type': 'dob',
+                            'matched_text': matched_text,
+                            'text': match.group(),
+                            'start': match.start(),
+                            'end': match.end(),
+                            'replacement': replacement
                         })
         
         # Sort by position to enable proper replacement
         return sorted(detections, key=lambda x: x['start'])
     
     def _is_medical_value(self, text: str) -> bool:
-        """Check if a date-like pattern is actually a medical value"""
-        # Blood pressure pattern (XXX/XX)
-        if re.match(r'\d{2,3}/\d{2,3}', text):
+        """Check if text appears to be a medical measurement rather than PHI"""
+        text_str = str(text).strip().lower()
+        
+        # Medical measurement patterns that should NOT be filtered as PHI
+        medical_patterns = [
+            r'\d+/\d+$',  # Blood pressure (120/80)
+            r'\d+\.\d+%?$',  # Decimal values and percentages (6.5%, 98.6)
+            r'\d+\s*mg(/dl)?$',  # Medical units (mg, mg/dl)
+            r'\d+\s*mmhg$',  # Blood pressure units
+        ]
+        
+        for pattern in medical_patterns:
+            if re.match(pattern, text_str):
+                return True
+                
+        # Avoid filtering common medical numeric ranges
+        if len(text_str) <= 3 and text_str.isdigit():
+            # Simple 1-3 digit numbers are likely medical values, not SSN fragments
             return True
+                
         return False
     
     def _is_likely_medical_term(self, text: str) -> bool:
@@ -229,6 +309,17 @@ class PHIFilter:
                 'phi_detected': [],
                 'phi_count': 0,
                 'filter_applied': False
+            }
+        
+        # Check if PHI filtering is globally disabled
+        if not self.config.phi_filtering_enabled:
+            return {
+                'filtered_text': text,
+                'original_text': text,
+                'phi_detected': [],
+                'phi_count': 0,
+                'filter_applied': False,
+                'filter_disabled': True
             }
         
         # Detect PHI patterns
@@ -278,6 +369,7 @@ class PHIFilter:
         return {
             'stats': self.filter_stats.copy(),
             'config': {
+                'phi_filtering_enabled': self.config.phi_filtering_enabled,
                 'ssn_filtering': self.config.filter_ssn,
                 'phone_filtering': self.config.filter_phone,
                 'date_filtering': self.config.filter_dates,
