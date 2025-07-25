@@ -132,9 +132,9 @@ class PHIPatternDetector:
                     # Skip if this looks like a medical value (blood pressure, etc.)
                     matched_text = match.group(1) if match.groups() else match.group()
                     if not self._is_medical_value(matched_text):
-                        # For labeled SSNs, replace the entire match including label
+                        # For labeled SSNs, preserve label structure
                         if 'SSN' in match.group().upper() or 'SOCIAL' in match.group().upper():
-                            replacement = self.config.id_token
+                            replacement = f"SSN: {self.config.id_token}"
                         else:
                             replacement = self.config.id_token
 
@@ -144,8 +144,7 @@ class PHIPatternDetector:
                             'text': match.group(),
                             'start': match.start(),
                             'end': match.end(),
-                            'replacement': replacement,
-                            'full_match': True  # Replace entire match, not just captured group
+                            'replacement': replacement
                         })
 
         if self.config.filter_phone:
@@ -318,12 +317,9 @@ class PHIPatternDetector:
 class PHIFilter:
     """Main PHI filtering class that orchestrates detection and redaction"""
 
-    def __init__(self, config: Optional[PHIFilterConfig] = None, rostered_patient_names: Optional[List[str]] = None):
+    def __init__(self, config: Optional[PHIFilterConfig] = None):
         self.config = config or PHIFilterConfig()
-        # Store rostered patient names for filtering
-        self.rostered_patient_names = rostered_patient_names if rostered_patient_names is not None else []
-        # Pass rostered names to detector
-        self.detector = PHIPatternDetector(self.config, self.rostered_patient_names)
+        self.detector = PHIPatternDetector(self.config)
         self.filter_stats = {
             'documents_processed': 0,
             'phi_instances_found': 0,
@@ -374,38 +370,20 @@ class PHIFilter:
                 'filter_applied': False
             }
 
-        # Remove overlapping detections with PHI priority (keep all PHI types, resolve conflicts intelligently)
+        # Remove overlapping detections (keep the most specific one)
         non_overlapping_detections = []
         sorted_detections = sorted(phi_detections, key=lambda x: (x['start'], -x['end']))
 
         for detection in sorted_detections:
             # Check if this detection overlaps with any existing ones
-            overlapping_existing = []
+            is_overlapping = False
             for existing in non_overlapping_detections:
                 if (detection['start'] < existing['end'] and detection['end'] > existing['start']):
-                    overlapping_existing.append(existing)
+                    is_overlapping = True
+                    break
 
-            if not overlapping_existing:
-                # No overlap, add this detection
+            if not is_overlapping:
                 non_overlapping_detections.append(detection)
-            else:
-                # Handle overlap - prioritize PHI types: SSN > Name > other types
-                phi_priority = {'ssn': 1, 'name': 2, 'phone': 3, 'dob': 4, 'mrn': 5, 'address': 6, 'insurance': 7}
-                current_priority = phi_priority.get(detection['type'], 10)
-
-                # Check if current detection has higher priority than overlapping ones
-                should_replace = True
-                for existing in overlapping_existing:
-                    existing_priority = phi_priority.get(existing['type'], 10)
-                    if existing_priority <= current_priority:
-                        should_replace = False
-                        break
-
-                if should_replace:
-                    # Remove overlapping detections and add current one
-                    for existing in overlapping_existing:
-                        non_overlapping_detections.remove(existing)
-                    non_overlapping_detections.append(detection)
 
         # Apply redactions (work backwards to maintain positions)
         filtered_text = text
@@ -463,8 +441,6 @@ class PHIFilter:
         }
 
 
-# Duplicate class definition removed - using the complete implementation above
-
 # Global PHI filter instance
 phi_filter = PHIFilter()
 
@@ -509,10 +485,7 @@ def test_phi_filter():
     Scheduled for mammogram screening on 04/20/2025.
     """
 
-    # Example usage with rostered patient names
-    rostered_names = ["John Smith", "Jane Doe"]
-    phi_filter_with_roster = PHIFilter(rostered_patient_names=rostered_names)
-    result = phi_filter_with_roster.filter_text(test_text)
+    result = phi_filter.filter_text(test_text)
 
     print("=== PHI FILTER TEST ===")
     print(f"Original text length: {len(test_text)}")

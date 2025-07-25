@@ -1034,7 +1034,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
                                 'filename': doc.filename,
                                 'document_name': doc.document_name,
                                 'confidence': 0.85  # Default confidence
-                            } for doc in matched_docs  # This already contains prioritized documents only
+                            } for doc in matched_docs
                         ]
                     }
                     
@@ -2752,48 +2752,9 @@ def add_document_unified():
                     print(f"✅ Text-based document uploaded for patient {patient_id} - no OCR needed")
                     ocr_info = ""
                     
-                    # CRITICAL FIX: Trigger selective refresh for all document uploads, not just OCR
-                    from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
-                    from models import ScreeningType
-                    
-                    active_screening_types = ScreeningType.query.filter_by(is_active=True).all()
-                    for screening_type in active_screening_types:
-                        selective_refresh_manager.mark_screening_type_dirty(
-                            screening_type.id, 
-                            ChangeType.KEYWORDS,  # New document content affects keyword matching
-                            "text_content", 
-                            f"new_document_{document.id}_text",
-                            affected_criteria={"patient_id": patient_id}
-                        )
-                    
-                    # Process selective refresh for affected patient
-                    refresh_stats = selective_refresh_manager.process_selective_refresh()
-                    print(f"📊 Text document triggered selective refresh: {refresh_stats.screenings_updated} screenings updated")
-                    
                 else:
                     print(f"⚠️ OCR processing failed for document {document.id}: {ocr_result.get('error', 'Unknown error')}")
                     ocr_info = " (Note: Text extraction failed - document uploaded successfully)"
-                    
-                    # CRITICAL FIX: Trigger selective refresh even when OCR fails (document still uploaded)
-                    try:
-                        from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
-                        from models import ScreeningType
-                        
-                        active_screening_types = ScreeningType.query.filter_by(is_active=True).all()
-                        for screening_type in active_screening_types:
-                            selective_refresh_manager.mark_screening_type_dirty(
-                                screening_type.id, 
-                                ChangeType.KEYWORDS,  # Document uploaded, may match keywords
-                                "upload_only", 
-                                f"new_document_{document.id}_no_ocr",
-                                affected_criteria={"patient_id": patient_id}
-                            )
-                        
-                        # Process selective refresh for affected patient
-                        refresh_stats = selective_refresh_manager.process_selective_refresh()
-                        print(f"📊 Non-OCR document triggered selective refresh: {refresh_stats.screenings_updated} screenings updated")
-                    except Exception as refresh_error:
-                        print(f"⚠️ Selective refresh failed after document upload: {refresh_error}")
                     
             except Exception as ocr_error:
                 print(f"⚠️ OCR processing error for document {document.id}: {ocr_error}")
