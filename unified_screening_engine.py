@@ -498,8 +498,17 @@ class UnifiedScreeningEngine:
         content_text = ""
         if document.content:
             content_text += document.content + " "
+        # Check if OCR text is available in document metadata or separate field
         if hasattr(document, 'ocr_text') and document.ocr_text:
             content_text += document.ocr_text
+        elif document.doc_metadata:
+            try:
+                import json
+                metadata = json.loads(document.doc_metadata)
+                if metadata.get('ocr_text'):
+                    content_text += metadata['ocr_text']
+            except (json.JSONDecodeError, KeyError):
+                pass
             
         if keywords_config['content'] and content_text.strip():
             content_match = self._match_keywords_in_text(

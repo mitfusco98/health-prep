@@ -132,9 +132,9 @@ class PHIPatternDetector:
                     # Skip if this looks like a medical value (blood pressure, etc.)
                     matched_text = match.group(1) if match.groups() else match.group()
                     if not self._is_medical_value(matched_text):
-                        # For labeled SSNs, preserve label structure
+                        # For labeled SSNs, replace the entire match including label
                         if 'SSN' in match.group().upper() or 'SOCIAL' in match.group().upper():
-                            replacement = f"SSN: {self.config.id_token}"
+                            replacement = self.config.id_token
                         else:
                             replacement = self.config.id_token
 
@@ -144,7 +144,8 @@ class PHIPatternDetector:
                             'text': match.group(),
                             'start': match.start(),
                             'end': match.end(),
-                            'replacement': replacement
+                            'replacement': replacement,
+                            'full_match': True  # Replace entire match, not just captured group
                         })
 
         if self.config.filter_phone:
@@ -370,20 +371,38 @@ class PHIFilter:
                 'filter_applied': False
             }
 
-        # Remove overlapping detections (keep the most specific one)
+        # Remove overlapping detections with PHI priority (keep all PHI types, resolve conflicts intelligently)
         non_overlapping_detections = []
         sorted_detections = sorted(phi_detections, key=lambda x: (x['start'], -x['end']))
 
         for detection in sorted_detections:
             # Check if this detection overlaps with any existing ones
-            is_overlapping = False
+            overlapping_existing = []
             for existing in non_overlapping_detections:
                 if (detection['start'] < existing['end'] and detection['end'] > existing['start']):
-                    is_overlapping = True
-                    break
+                    overlapping_existing.append(existing)
 
-            if not is_overlapping:
+            if not overlapping_existing:
+                # No overlap, add this detection
                 non_overlapping_detections.append(detection)
+            else:
+                # Handle overlap - prioritize PHI types: SSN > Name > other types
+                phi_priority = {'ssn': 1, 'name': 2, 'phone': 3, 'dob': 4, 'mrn': 5, 'address': 6, 'insurance': 7}
+                current_priority = phi_priority.get(detection['type'], 10)
+                
+                # Check if current detection has higher priority than overlapping ones
+                should_replace = True
+                for existing in overlapping_existing:
+                    existing_priority = phi_priority.get(existing['type'], 10)
+                    if existing_priority <= current_priority:
+                        should_replace = False
+                        break
+                
+                if should_replace:
+                    # Remove overlapping detections and add current one
+                    for existing in overlapping_existing:
+                        non_overlapping_detections.remove(existing)
+                    non_overlapping_detections.append(detection)
 
         # Apply redactions (work backwards to maintain positions)
         filtered_text = text
