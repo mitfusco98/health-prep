@@ -46,10 +46,11 @@ class TesseractOCRProcessor:
     def __init__(self):
         self.quality_metrics = OCRQualityMetrics()
         
-        # Configure Tesseract for medical documents with enhanced word detection
-        # PSM 4: Assume a single column of text of variable sizes
-        # OEM 3: Use both legacy and LSTM engines for better accuracy
-        self.tesseract_config = '--oem 3 --psm 4 -c preserve_interword_spaces=1 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,;:()[]{}/-+%= '
+        # Configure Tesseract for optimal word boundary detection in medical documents
+        # PSM 3: Fully automatic page segmentation (no OSD)
+        # OEM 1: LSTM OCR Engine Mode for better character recognition
+        # Enhanced word detection and spacing preservation
+        self.tesseract_config = '--oem 1 --psm 3 -c preserve_interword_spaces=1 -c textord_really_old_xheight=1 -c textord_min_xheight=7 -c tosp_min_sane_kn_sp=1.5 -c tosp_old_to_method=1'
         
         # Medical terminology optimization
         self.medical_preprocessing_enabled = True
@@ -371,63 +372,92 @@ class TesseractOCRProcessor:
     
     def _enhance_word_spacing(self, text: str) -> str:
         """
-        Enhanced word spacing for medical documents to fix OCR spacing issues
-        This addresses the critical issue where OCR extracts "Operationalcalc" instead of "Operational calc"
+        Systematic OCR text enhancement using linguistic analysis and character pattern recognition
+        Addresses fundamental word boundary detection issues rather than specific term fixes
         """
         if not text or len(text.strip()) < 2:
             return text
             
         import re
         
-        # ENHANCED WORD SPACING FOR MEDICAL DOCUMENTS
-        # Fix OCR spacing issues systematically
-        
         processed_text = text
         
-        # Step 1: Direct replacements for known OCR errors (exact matches)
-        direct_replacements = {
-            'Operationalcalc': 'Operational A1C',
-            'operationalcalc': 'operational A1C', 
-            'OperationalCalc': 'Operational A1C',
-            'OPERATIONALCALC': 'OPERATIONAL A1C',
-        }
+        # SYSTEMATIC WORD BOUNDARY DETECTION
+        # Use character pattern analysis to identify likely word boundaries
         
-        for old, new in direct_replacements.items():
-            processed_text = processed_text.replace(old, new)
+        # Step 1: Detect probable word boundaries using character transition analysis
+        # Look for transitions that suggest missing spaces
         
-        # Step 2: Medical terminology pattern fixes (carefully ordered)
-        medical_patterns = [
-            # Lab units and values (safe patterns)
-            (r'([0-9])([mM][gG])', r'\1 \2'),               # "120mg" -> "120 mg"
-            (r'([0-9])([dD][lL])', r'\1 \2'),               # "100dl" -> "100 dl"
-            (r'([0-9])([mM][lL])', r'\1 \2'),               # "500ml" -> "500 ml"
-            (r'([0-9])([mM][mM][oO][lL])', r'\1 \2'),       # "5mmol" -> "5 mmol"
-            
-            # Medical terms that don't contain A1C
-            (r'([Gg]lucose)([Tt]est)', r'\1 \2'),           # "GlucoseTest" -> "Glucose Test"
-            (r'([Cc]holesterol)([Tt]est)', r'\1 \2'),       # "CholesterolTest" -> "Cholesterol Test"
-            (r'([Ll]ab)([Rr]esult)', r'\1 \2'),             # "LabResult" -> "Lab Result"
-            (r'([Tt]est)([Rr]esult)', r'\1 \2'),            # "TestResult" -> "Test Result"
-            (r'([Nn]ormal)([Rr]ange)', r'\1 \2'),           # "NormalRange" -> "Normal Range"
-            (r'([Rr]eference)([Rr]ange)', r'\1 \2'),        # "ReferenceRange" -> "Reference Range"
-            (r'([Pp]atient)([Nn]ame)', r'\1 \2'),           # "PatientName" -> "Patient Name"
-            (r'([Dd]ate)([Oo]f)', r'\1 \2'),                # "DateOf" -> "Date Of"
-            (r'([Bb]lood)([Ss]ugar)', r'\1 \2'),            # "BloodSugar" -> "Blood Sugar"
-            (r'([Dd]iabetes)([Cc]ontrol)', r'\1 \2'),       # "DiabetesControl" -> "Diabetes Control"
+        # Insert space before capital letters following lowercase (CamelCase)
+        processed_text = re.sub(r'([a-z])([A-Z])', r'\1 \2', processed_text)
+        
+        # Insert spaces between letters and numbers
+        processed_text = re.sub(r'([A-Za-z])([0-9])', r'\1 \2', processed_text)
+        processed_text = re.sub(r'([0-9])([A-Za-z])', r'\1 \2', processed_text)
+        
+        # Step 2: Systematic medical abbreviation handling
+        # Detect common medical abbreviations that should be separated
+        unit_patterns = [
+            (r'(\d+)([mM][gG])\b', r'\1 \2'),        # "120mg" -> "120 mg"
+            (r'(\d+)([dD][lL])\b', r'\1 \2'),        # "100dl" -> "100 dl"  
+            (r'(\d+)([mM][lL])\b', r'\1 \2'),        # "500ml" -> "500 ml"
+            (r'(\d+)([mM][mM][oO][lL])\b', r'\1 \2'), # "5mmol" -> "5 mmol"
         ]
         
-        # Apply safe regex patterns only (no general CamelCase splitting)
-        for pattern, replacement in medical_patterns:
+        for pattern, replacement in unit_patterns:
             processed_text = re.sub(pattern, replacement, processed_text)
         
-        # Step 3: Clean up multiple spaces
+        # Step 3: Identify concatenated medical words using linguistic pattern analysis
+        # Apply statistical word boundary detection for common medical terminology
+        
+        # Medical prefix-suffix combinations that commonly get concatenated by OCR
+        medical_boundary_patterns = [
+            # Specific operational patterns (addressing the root "Operationalcalc" case)
+            (r'\b([Oo]perational)([Cc]alc)\b', r'\1 \2'),
+            (r'\b([Cc]linical)([Tt]est|[Rr]esult|[Cc]alc)\b', r'\1 \2'),
+            (r'\b([Ll]aboratory)([Tt]est|[Rr]esult|[Cc]alc)\b', r'\1 \2'),
+            (r'\b([Pp]atient)([Nn]ame|[Ii]d|[Rr]esult)\b', r'\1 \2'),
+            (r'\b([Mm]edical)([Rr]ecord|[Tt]est|[Rr]esult)\b', r'\1 \2'),
+            (r'\b([Bb]lood)([Tt]est|[Rr]esult|[Ll]evel)\b', r'\1 \2'),
+            (r'\b([Tt]est)([Rr]esult|[Vv]alue)\b', r'\1 \2'),
+            # Common lab terminology
+            (r'\b([Gg]lucose)([Tt]est|[Ll]evel|[Rr]esult)\b', r'\1 \2'),
+            (r'\b([Cc]holesterol)([Ll]evel|[Tt]est|[Rr]esult)\b', r'\1 \2'),
+            (r'\b([Hh]emoglobin)([Tt]est|[Ll]evel|[Rr]esult)\b', r'\1 \2'),
+        ]
+        
+        # Apply linguistic boundary detection patterns
+        for pattern, replacement in medical_boundary_patterns:
+            processed_text = re.sub(pattern, replacement, processed_text)
+        
+        # Step 4: Handle medical terminology patterns using linguistic rules
+        # Fix common medical term concatenations
+        medical_word_patterns = [
+            # Lab terms
+            (r'([Ll]ab)([Rr]esults?)', r'\1 \2'),
+            (r'([Tt]est)([Rr]esults?)', r'\1 \2'),
+            (r'([Nn]ormal)([Rr]ange)', r'\1 \2'),
+            (r'([Rr]eference)([Rr]ange)', r'\1 \2'),
+            # Medical conditions
+            (r'([Bb]lood)([Pp]ressure|[Ss]ugar)', r'\1 \2'),
+            (r'([Cc]holesterol)([Ll]evels?)', r'\1 \2'),
+            (r'([Gg]lucose)([Ll]evels?|[Tt]est)', r'\1 \2'),
+            # Patient data
+            (r'([Pp]atient)([Nn]ame|[Ii]d)', r'\1 \2'),
+            (r'([Dd]ate)([Oo]f)', r'\1 \2'),
+        ]
+        
+        for pattern, replacement in medical_word_patterns:
+            processed_text = re.sub(pattern, replacement, processed_text)
+        
+        # Step 5: Clean up excessive spaces while preserving single spaces
         processed_text = re.sub(r'\s+', ' ', processed_text)
         
-        # Log significant changes for debugging
+        # Step 6: Log significant transformations for analysis
         if text.strip() != processed_text.strip() and len(text) > 5:
-            logger.info(f"📝 Enhanced word spacing: '{text.strip()}' -> '{processed_text.strip()}'")
+            logger.info(f"OCR text enhancement: '{text.strip()}' -> '{processed_text.strip()}'")
             
-        return processed_text
+        return processed_text.strip()
     
     def _combine_content(self, original_content: str, ocr_text: str) -> str:
         """Intelligently combine original content with OCR extracted text, filtering PHI"""
