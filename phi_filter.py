@@ -101,14 +101,14 @@ class PHIPatternDetector:
         # Common name patterns (flexible for OCR-extracted text with various capitalizations)
         # Enhanced with contextual pattern matching for unlabeled names
         self.name_patterns = [
-            # Labeled name patterns
-            re.compile(r'\b(?:Patient|Patient Name|Full Name)\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)', re.IGNORECASE),
-            re.compile(r'\bName\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)', re.IGNORECASE),
-            re.compile(r'^Name\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)', re.IGNORECASE | re.MULTILINE),
-            # Contextual name patterns (names appearing in typical PHI contexts)
-            re.compile(r'^([A-Z][a-z]+\s+[A-Z][a-z]+)(?=\s*\n|\s*$)', re.MULTILINE),  # First line capitalized names
-            re.compile(r'\b([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(?=\d{2,3}[-/]\d{2}[-/]\d{2,4})', re.IGNORECASE),  # Names before dates
-            re.compile(r'\b([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(?=\d{3}[-\s]?\d{2}[-\s]?\d{4})', re.IGNORECASE),  # Names before SSNs
+            # Labeled name patterns - these are high confidence but must not cross lines
+            re.compile(r'\b(?:Patient|Patient Name|Full Name)\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*?)(?=\s*\n|$)', re.IGNORECASE),
+            re.compile(r'\bName\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*?)(?=\s*\n|$)', re.IGNORECASE),
+            re.compile(r'^Name\s*[:#]?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*?)(?=\s*\n|$)', re.IGNORECASE | re.MULTILINE),
+            # Contextual name patterns (be very selective to avoid medical terms)
+            re.compile(r'^([A-Z][a-z]+\s+[A-Z][a-z]+)(?=\s*\n|\s*$)', re.MULTILINE),  # First line capitalized names only
+            re.compile(r'\b([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(?=\d{2,3}[-/]\d{2}[-/]\d{2,4})', re.IGNORECASE),  # Names directly before dates
+            re.compile(r'\b([A-Z][a-z]+\s+[A-Z][a-z]+)\s*(?=\d{3}[-\s]?\d{2}[-\s]?\d{4})', re.IGNORECASE),  # Names directly before SSNs
         ]
         
         # Date of birth patterns (contextual detection)
@@ -202,12 +202,23 @@ class PHIPatternDetector:
         if self.config.filter_names:
             for pattern in self.name_patterns:
                 for match in pattern.finditer(text):
+                    full_match = match.group()
+                    
                     # Check if this might be a medical term instead of a name
-                    if not self._is_likely_medical_term(match.group()):
+                    if not self._is_likely_medical_term(full_match):
                         matched_text = match.group(1) if match.groups() else match.group()
                         
+                        # Additional check: ensure we're not partially matching medical terms
+                        context_start = max(0, match.start() - 10)
+                        context_end = min(len(text), match.end() + 10)
+                        context = text[context_start:context_end].lower()
+                        
+                        # Skip if the match appears to be part of a medical term
+                        if any(med_term in context for med_term in ['lipid panel', 'blood panel', 'test panel', 'lab panel']):
+                            continue
+                        
                         # For labeled names, preserve label structure
-                        if 'name' in match.group().lower():
+                        if 'name' in full_match.lower():
                             replacement = f"Name: {self.config.name_token}"
                         else:
                             replacement = self.config.name_token
@@ -215,7 +226,7 @@ class PHIPatternDetector:
                         detections.append({
                             'type': 'name',
                             'matched_text': matched_text,
-                            'text': match.group(),
+                            'text': full_match,
                             'start': match.start(),
                             'end': match.end(),
                             'replacement': replacement
@@ -272,9 +283,31 @@ class PHIPatternDetector:
     def _is_likely_medical_term(self, text: str) -> bool:
         """Check if a name-like pattern is actually a medical term"""
         text_lower = text.lower()
+        
+        # Check configured whitelist
         for term in self.config.medical_terms_whitelist:
             if term in text_lower:
                 return True
+        
+        # Additional medical terms that might be mistaken for names
+        medical_terms = [
+            'lipid panel', 'blood panel', 'lab panel', 'test panel',
+            'lipid p', 'blood p', 'lab p',  # Protect partial matches
+            'glucose', 'cholesterol', 'triglyceride', 
+            'mammogram', 'mammography', 'colonoscopy',
+            'panel', 'test', 'lab', 'results'
+        ]
+        
+        for term in medical_terms:
+            if term in text_lower:
+                return True
+                
+        # Check if text starts with medical terminology
+        medical_prefixes = ['lipid', 'blood', 'glucose', 'cholesterol', 'test', 'lab', 'panel']
+        for prefix in medical_prefixes:
+            if text_lower.startswith(prefix):
+                return True
+                
         return False
 
 
@@ -334,9 +367,24 @@ class PHIFilter:
                 'filter_applied': False
             }
         
+        # Remove overlapping detections (keep the most specific one)
+        non_overlapping_detections = []
+        sorted_detections = sorted(phi_detections, key=lambda x: (x['start'], -x['end']))
+        
+        for detection in sorted_detections:
+            # Check if this detection overlaps with any existing ones
+            is_overlapping = False
+            for existing in non_overlapping_detections:
+                if (detection['start'] < existing['end'] and detection['end'] > existing['start']):
+                    is_overlapping = True
+                    break
+            
+            if not is_overlapping:
+                non_overlapping_detections.append(detection)
+        
         # Apply redactions (work backwards to maintain positions)
         filtered_text = text
-        for detection in reversed(phi_detections):
+        for detection in reversed(sorted(non_overlapping_detections, key=lambda x: x['start'])):
             filtered_text = (
                 filtered_text[:detection['start']] +
                 detection['replacement'] +
