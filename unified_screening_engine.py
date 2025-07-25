@@ -406,63 +406,78 @@ class UnifiedScreeningEngine:
     
     def _prioritize_documents_for_screening(self, matching_documents: List[MedicalDocument], screening_type: ScreeningType) -> List[MedicalDocument]:
         """
-        Prioritize documents to show only the most relevant ones that contribute to current screening status.
+        Prioritize documents to show only the most relevant ones that fulfill screening frequency criteria.
+        
+        CRITICAL COMPLIANCE REQUIREMENT: Only show documents that meet screening frequency deadlines.
+        Do not show keyword-matching documents that are outdated relative to screening requirements.
         
         Priority Logic:
-        1. Most recent documents that maintain current screening status
-        2. Documents within the frequency window (not outdated)
-        3. Documents that actually contribute to "Complete" status
-        4. Limit to most recent 2-3 documents to avoid overwhelming display
+        1. FIRST: Filter out documents that don't fulfill screening frequency deadlines
+        2. SECOND: Among compliant documents, show most recent first
+        3. THIRD: Limit to 2-3 most relevant compliant documents
         
         Args:
             matching_documents: All documents that match keywords
             screening_type: ScreeningType for frequency calculations
             
         Returns:
-            Filtered list of priority documents
+            Filtered list of frequency-compliant priority documents
         """
         if not matching_documents:
             return []
         
         # Sort documents by document_date (medical event date) or created_at, newest first
-        sorted_docs = sorted(matching_documents, key=lambda doc: doc.document_date or doc.created_at.date(), reverse=True)
+        # Fix datetime comparison issue by ensuring consistent date types
+        def get_doc_date(doc):
+            if doc.document_date:
+                return doc.document_date
+            elif doc.created_at:
+                return doc.created_at.date() if hasattr(doc.created_at, 'date') else doc.created_at
+            else:
+                return date.today()
         
-        # Get frequency window for this screening type
+        sorted_docs = sorted(matching_documents, key=get_doc_date, reverse=True)
+        
+        # Calculate the frequency deadline cutoff - documents older than this are NON-COMPLIANT
         frequency_days = self._convert_frequency_to_days(screening_type)
-        cutoff_date = date.today() - timedelta(days=min(frequency_days, 730))  # Max 2 years lookback
+        compliance_cutoff_date = date.today() - timedelta(days=frequency_days)
         
-        # Filter documents within frequency window
-        relevant_docs = []
+        # CRITICAL: Only show documents that meet frequency requirements
+        compliant_docs = []
+        non_compliant_docs = []
+        
         for doc in sorted_docs:
-            doc_date = doc.document_date or doc.created_at.date()
-            if doc_date >= cutoff_date:
-                relevant_docs.append(doc)
+            # Fix datetime comparison by ensuring consistent date types
+            if doc.document_date:
+                doc_date = doc.document_date
+            elif doc.created_at:
+                doc_date = doc.created_at.date() if hasattr(doc.created_at, 'date') else doc.created_at
+            else:
+                doc_date = date.today()
+                
+            # Ensure both sides are date objects for comparison
+            if isinstance(doc_date, datetime):
+                doc_date = doc_date.date()
+            if isinstance(compliance_cutoff_date, datetime):
+                compliance_cutoff_date = compliance_cutoff_date.date()
+                
+            if doc_date >= compliance_cutoff_date:
+                compliant_docs.append(doc)
+            else:
+                non_compliant_docs.append(doc)
         
-        # If no documents in frequency window, take the most recent one
-        if not relevant_docs and sorted_docs:
-            relevant_docs = [sorted_docs[0]]
+        # If there are compliant documents, show ONLY those (sorted newest first)
+        if compliant_docs:
+            # Show maximum 3 compliant documents, newest first
+            return compliant_docs[:3]
         
-        # For screening status prioritization:
-        # - If screening is "Complete", prioritize the most recent document(s) that maintain completion
-        # - If screening is "Due" or "Incomplete", show all relevant documents
-        # - Limit to maximum 3 documents to keep interface clean
+        # If NO documents meet frequency requirements, show the most recent one with clear indication
+        # This helps users understand why screening is marked as "Due" or "Incomplete"
+        if sorted_docs:
+            # Return only the most recent document to indicate what was found but is outdated
+            return sorted_docs[:1]
         
-        if len(relevant_docs) <= 3:
-            return relevant_docs
-        
-        # Take the 2 most recent documents plus any that are particularly significant
-        priority_docs = relevant_docs[:2]
-        
-        # Add any additional high-confidence or recently uploaded documents
-        for doc in relevant_docs[2:]:
-            if len(priority_docs) >= 3:
-                break
-            # Add if it's very recent (within 30 days) or has perfect keyword match
-            doc_age_days = (date.today() - (doc.document_date or doc.created_at.date())).days
-            if doc_age_days <= 30:
-                priority_docs.append(doc)
-        
-        return priority_docs
+        return []
     
     # =============================================================================
     # UNIFIED KEYWORD MATCHING - NO FALLBACK TO SCREENING NAMES
