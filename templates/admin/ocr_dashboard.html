@@ -342,10 +342,11 @@
 function processSingleDocument(documentId) {
     showProcessingModal('Processing document...');
     
-    fetch(`/admin/ocr-process-document/${documentId}`, {
+    fetch(`/admin/ocr/reprocess-document/${documentId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
         }
     })
     .then(response => response.json())
@@ -431,6 +432,7 @@ function reprocessDocument(docId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
         }
     })
     .then(response => response.json())
