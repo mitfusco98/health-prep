@@ -2711,10 +2711,10 @@ def add_document_unified():
 
             # ENHANCED: Trigger OCR processing if needed
             try:
-                from ocr_document_processor import process_document_with_ocr
+                from ocr_document_processor import ocr_processor
                 
                 # Check if document needs OCR and process it
-                ocr_result = process_document_with_ocr(document.id)
+                ocr_result = ocr_processor.process_document_ocr(document.id)
                 
                 if ocr_result['success'] and ocr_result['ocr_applied']:
                     print(f"🔍 OCR processed document {document.id}: {ocr_result['extracted_text_length']} characters extracted with {ocr_result['confidence_score']}% confidence")

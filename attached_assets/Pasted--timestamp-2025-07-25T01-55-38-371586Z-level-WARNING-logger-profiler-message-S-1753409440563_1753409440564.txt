@@ -1,0 +1,122 @@
+{"timestamp": "2025-07-25T01:55:38.371586Z", "level": "WARNING", "logger": "profiler", "message": "Slow database query (1473.17ms): SELECT medical_document.id AS medical_document_id, medical_document.patient_id AS medical_document_p...", "module": "profiler", "function": "after_cursor_execute", "line": 276, "thread": 140221109591232, "process": 147, "request": {"method": "GET", "path": "/home", "remote_addr": "10.82.6.169", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "index"}, "session": {"session_id": "MGbW01kN_64mPIdIUbSmxpWlH69sfYgmowOLzrKKXp8", "user_id": null, "username": null}, "security": {"ip_address": "10.82.6.169", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1753408536.4486794}, "extra": {"duration_ms": 1473.1666430016048, "query": "SELECT medical_document.id AS medical_document_id, medical_document.patient_id AS medical_document_patient_id, medical_document.filename AS medical_document_filename, medical_document.document_name AS medical_document_document_name, medical_document.document_type AS medical_document_document_type, medical_document.content AS medical_document_content, medical_document.binary_content AS medical_document_binary_content, medical_document.is_binary AS medical_document_is_binary, medical_document.mime", "event_category": "performance", "table_name": "unknown", "query_type": "unknown"}}
+[2025-07-25 02:01:49 +0000] [130] [INFO] Handling signal: winch
+[2025-07-25 02:01:49 +0000] [130] [INFO] Handling signal: winch
+[2025-07-25 02:01:50 +0000] [130] [INFO] Handling signal: winch
+[2025-07-25 02:05:03 +0000] [130] [INFO] Handling signal: winch
+[2025-07-25 02:05:03 +0000] [130] [INFO] Handling signal: winch
+[2025-07-25 02:05:03 +0000] [130] [INFO] Handling signal: winch
+{"timestamp": "2025-07-25T02:05:06.846493Z", "level": "WARNING", "logger": "profiler", "message": "Slow database query (1578.22ms): SELECT medical_document.id AS medical_document_id, medical_document.patient_id AS medical_document_p...", "module": "profiler", "function": "after_cursor_execute", "line": 276, "thread": 140221109591232, "process": 147, "request": {"method": "GET", "path": "/home", "remote_addr": "10.82.3.52", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "index"}, "session": {"session_id": "ittzsxo-L8e-gufkUxUu2h9iiLbTMekrjTcTlpDocQQ", "user_id": null, "username": null}, "security": {"ip_address": "10.82.3.52", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1753409104.02232}, "extra": {"duration_ms": 1578.2195380015764, "query": "SELECT medical_document.id AS medical_document_id, medical_document.patient_id AS medical_document_patient_id, medical_document.filename AS medical_document_filename, medical_document.document_name AS medical_document_document_name, medical_document.document_type AS medical_document_document_type, medical_document.content AS medical_document_content, medical_document.binary_content AS medical_document_binary_content, medical_document.is_binary AS medical_document_is_binary, medical_document.mime", "event_category": "performance", "table_name": "unknown", "query_type": "unknown"}}
+{"timestamp": "2025-07-25T02:08:19.711434Z", "level": "WARNING", "logger": "profiler", "message": "Slow database query (1597.31ms): SELECT medical_document.id AS medical_document_id, medical_document.patient_id AS medical_document_p...", "module": "profiler", "function": "after_cursor_execute", "line": 276, "thread": 140221109591232, "process": 147, "request": {"method": "GET", "path": "/home", "remote_addr": "10.82.4.43", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "index"}, "session": {"session_id": "ittzsxo-L8e-gufkUxUu2h9iiLbTMekrjTcTlpDocQQ", "user_id": null, "username": null}, "security": {"ip_address": "10.82.4.43", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1753409296.895669}, "extra": {"duration_ms": 1597.3054459973355, "query": "SELECT medical_document.id AS medical_document_id, medical_document.patient_id AS medical_document_patient_id, medical_document.filename AS medical_document_filename, medical_document.document_name AS medical_document_document_name, medical_document.document_type AS medical_document_document_type, medical_document.content AS medical_document_content, medical_document.binary_content AS medical_document_binary_content, medical_document.is_binary AS medical_document_is_binary, medical_document.mime", "event_category": "performance", "table_name": "unknown", "query_type": "unknown"}}
+{"timestamp": "2025-07-25T02:08:23.844741Z", "level": "WARNING", "logger": "profiler", "message": "Slow database query (1607.28ms): SELECT medical_document.id AS medical_document_id, medical_document.patient_id AS medical_document_p...", "module": "profiler", "function": "after_cursor_execute", "line": 276, "thread": 140221109591232, "process": 147, "request": {"method": "GET", "path": "/documents/repository", "remote_addr": "10.82.4.43", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "document_repository"}, "session": {"session_id": "ittzsxo-L8e-gufkUxUu2h9iiLbTMekrjTcTlpDocQQ", "user_id": null, "username": null}, "security": {"ip_address": "10.82.4.43", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1753409302.1704607}, "extra": {"duration_ms": 1607.2792459963239, "query": "SELECT medical_document.id AS medical_document_id, medical_document.patient_id AS medical_document_patient_id, medical_document.filename AS medical_document_filename, medical_document.document_name AS medical_document_document_name, medical_document.document_type AS medical_document_document_type, medical_document.content AS medical_document_content, medical_document.binary_content AS medical_document_binary_content, medical_document.is_binary AS medical_document_is_binary, medical_document.mime", "event_category": "performance", "table_name": "unknown", "query_type": "unknown"}}
+{"timestamp": "2025-07-25T02:08:29.750069Z", "level": "WARNING", "logger": "profiler", "message": "Slow database query (1032.69ms): SELECT medical_document.id AS medical_document_id, medical_document.patient_id AS medical_document_p...", "module": "profiler", "function": "after_cursor_execute", "line": 276, "thread": 140221109591232, "process": 147, "request": {"method": "POST", "path": "/documents/165/delete", "remote_addr": "10.82.3.52", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "delete_document_from_repository"}, "session": {"session_id": "ittzsxo-L8e-gufkUxUu2h9iiLbTMekrjTcTlpDocQQ", "user_id": null, "username": null}, "security": {"ip_address": "10.82.3.52", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1753409308.6507978}, "extra": {"duration_ms": 1032.6913309982046, "query": "SELECT medical_document.id AS medical_document_id, medical_document.patient_id AS medical_document_patient_id, medical_document.filename AS medical_document_filename, medical_document.document_name AS medical_document_document_name, medical_document.document_type AS medical_document_document_type, medical_document.content AS medical_document_content, medical_document.binary_content AS medical_document_binary_content, medical_document.is_binary AS medical_document_is_binary, medical_document.mime", "event_category": "performance", "table_name": "unknown", "query_type": "unknown"}}
+✅ Document deleted for patient 9 - no screening relationships affected
+📄 Binary file upload: Test lab doc 2.pdf, size: 2562622 bytes, type: application/pdf
+{"timestamp": "2025-07-25T02:09:36.794639Z", "level": "WARNING", "logger": "profiler", "message": "Slow database query (1243.73ms): INSERT INTO medical_document (patient_id, filename, document_name, document_type, content, binary_co...", "module": "profiler", "function": "after_cursor_execute", "line": 276, "thread": 140221109591232, "process": 147, "request": {"method": "POST", "path": "/patients/document/add", "remote_addr": "10.82.3.52", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "add_document_unified"}, "session": {"session_id": "ittzsxo-L8e-gufkUxUu2h9iiLbTMekrjTcTlpDocQQ", "user_id": null, "username": null}, "security": {"ip_address": "10.82.3.52", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1753409375.354107}, "extra": {"duration_ms": 1243.732684000861, "query": "INSERT INTO medical_document (patient_id, filename, document_name, document_type, content, binary_content, is_binary, mime_type, source_system, document_date, provider, doc_metadata, is_processed, ocr_processed, ocr_confidence, ocr_processing_date, ocr_text_length, ocr_quality_flags, created_at, updated_at) VALUES (%(patient_id)s, %(filename)s, %(document_name)s, %(document_type)s, %(content)s, %(binary_content)s, %(is_binary)s, %(mime_type)s, %(source_system)s, %(document_date)s, %(provider)s, ", "event_category": "performance", "table_name": "unknown", "query_type": "unknown"}}
+🔍 OCR processed document 166: 18 characters extracted with 24.0% confidence
+🔄 Marked screening type Colonoscopy as dirty: keywords
+🔄 Marked screening type Mammography as dirty: keywords
+🔄 Marked screening type Eye Exam as dirty: keywords
+🔄 Marked screening type Pap Smear as dirty: keywords
+🔄 Marked screening type Lipid Panel as dirty: keywords
+🔄 Marked screening type HbA1c Test as dirty: keywords
+🔄 Marked screening type Vaccination History as dirty: keywords
+🔄 Marked screening type Vaccination History as dirty: keywords
+🔄 Marked screening type Bone Density Screening as dirty: keywords
+🔄 Marked screening type HbA1c Test as dirty: keywords
+🔄 Processing selective refresh for 10 dirty screening types...
+❌ Error determining affected patients: '>=' not supported between instances of 'property' and 'int'
+   📋 Screening type 4: 12 affected patients
+❌ Error determining affected patients: '>=' not supported between instances of 'property' and 'int'
+   📋 Screening type 6: 12 affected patients
+   📊 Found 0 patients affected by keywords change
+   📋 Screening type 10: 0 affected patients
+❌ Error determining affected patients: '>=' not supported between instances of 'property' and 'int'
+   📋 Screening type 5: 12 affected patients
+❌ Error determining affected patients: '>=' not supported between instances of 'property' and 'int'
+   📋 Screening type 2: 12 affected patients
+   📊 Found 0 patients affected by keywords change
+   📋 Screening type 19: 0 affected patients
+❌ Error determining affected patients: '<=' not supported between instances of 'property' and 'int'
+   📋 Screening type 22: 12 affected patients
+❌ Error determining affected patients: '>=' not supported between instances of 'property' and 'int'
+[2025-07-25 02:10:04 +0000] [130] [CRITICAL] WORKER TIMEOUT (pid:147)
+{"timestamp": "2025-07-25T02:10:04.162095Z", "level": "ERROR", "logger": "app", "message": "Rolling back due to exception: 1", "module": "app", "function": "teardown_request", "line": 187, "thread": 140221109591232, "process": 147, "request": {"method": "POST", "path": "/patients/document/add", "remote_addr": "10.82.3.52", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "add_document_unified"}, "session": {"session_id": "ittzsxo-L8e-gufkUxUu2h9iiLbTMekrjTcTlpDocQQ", "user_id": null, "username": null}, "security": {"ip_address": "10.82.3.52", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1753409375.354107}}
+{"timestamp": "2025-07-25T02:10:04.162344Z", "level": "ERROR", "logger": "app", "message": "Rolling back due to exception: 1", "module": "app", "function": "teardown_request", "line": 187, "thread": 140221109591232, "process": 147, "request": {"method": "POST", "path": "/patients/document/add", "remote_addr": "10.82.3.52", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "endpoint": "add_document_unified"}, "session": {"session_id": "ittzsxo-L8e-gufkUxUu2h9iiLbTMekrjTcTlpDocQQ", "user_id": null, "username": null}, "security": {"ip_address": "10.82.3.52", "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Replit/1.0.14 Chrome/124.0.6367.119 Electron/30.0.3 Safari/537.36", "timestamp": 1753409375.354107}}
+[2025-07-25 02:10:04 +0000] [147] [ERROR] Error handling request /patients/document/add?patient_id=9&subsection=LABORATORIES
+Traceback (most recent call last):
+  File "/home/runner/workspace/selective_screening_refresh_manager.py", line 106, in get_affected_patients
+    patient_query = patient_query.filter(Patient.age >= screening_type.min_age)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: '>=' not supported between instances of 'property' and 'int'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 134, in handle
+    self.handle_request(listener, req, client, addr)
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/sync.py", line 177, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/werkzeug/middleware/proxy_fix.py", line 183, in __call__
+    return self.app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/demo_routes.py", line 2739, in add_document_unified
+    refresh_stats = selective_refresh_manager.process_selective_refresh()
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/selective_screening_refresh_manager.py", line 229, in process_selective_refresh
+    affected_patients.update(self.get_affected_patients(change))
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/selective_screening_refresh_manager.py", line 154, in get_affected_patients
+    affected_patients.update([p.id for p in Patient.query.all()])
+                                            ^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2704, in all
+    return self._iter().all()  # type: ignore
+           ^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/query.py", line 2858, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2365, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2251, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1416, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1638, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1843, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1983, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1964, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 945, in do_execute
+    cursor.execute(statement, parameters)
+  File "/nix/store/7d088dip86hlzri9sk0h78b63yfmx0a0-python3-3.11.13/lib/python3.11/encodings/utf_8.py", line 15, in decode
+    def decode(input, errors='strict'):
+    
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/gunicorn/workers/base.py", line 204, in handle_abort

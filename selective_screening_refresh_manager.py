@@ -102,10 +102,19 @@ class SelectiveScreeningRefreshManager:
             patient_query = Patient.query
             
             # Apply age criteria if screening type has age restrictions
+            # Calculate age using SQL date math since age is a property, not a column
+            from sqlalchemy import extract, func
+            today = func.current_date()
+            
             if screening_type.min_age is not None:
-                patient_query = patient_query.filter(Patient.age >= screening_type.min_age)
+                # Calculate age and filter patients who are old enough
+                age_in_years = extract('year', today) - extract('year', Patient.date_of_birth)
+                patient_query = patient_query.filter(age_in_years >= screening_type.min_age)
+                
             if screening_type.max_age is not None:
-                patient_query = patient_query.filter(Patient.age <= screening_type.max_age)
+                # Calculate age and filter patients who are not too old
+                age_in_years = extract('year', today) - extract('year', Patient.date_of_birth)  
+                patient_query = patient_query.filter(age_in_years <= screening_type.max_age)
                 
             # Apply gender criteria if screening type is gender-specific
             if screening_type.gender_specific:

@@ -429,7 +429,7 @@ class DocumentUploadForm(FlaskForm):
         description="Select the patient this document belongs to",
     )
     document_name = StringField(
-        "File Name",
+        "Document Name",
         validators=[DataRequired()],
         description="Give this document a descriptive name",
     )
