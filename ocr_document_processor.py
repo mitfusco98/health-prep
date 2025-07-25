@@ -379,58 +379,48 @@ class TesseractOCRProcessor:
             
         import re
         
-        # Medical terminology patterns that commonly get concatenated
-        # CRITICAL: Order matters - most specific patterns first
+        # ENHANCED WORD SPACING FOR MEDICAL DOCUMENTS
+        # Fix OCR spacing issues systematically
+        
+        processed_text = text
+        
+        # Step 1: Direct replacements for known OCR errors (exact matches)
+        direct_replacements = {
+            'Operationalcalc': 'Operational A1C',
+            'operationalcalc': 'operational A1C', 
+            'OperationalCalc': 'Operational A1C',
+            'OPERATIONALCALC': 'OPERATIONAL A1C',
+        }
+        
+        for old, new in direct_replacements.items():
+            processed_text = processed_text.replace(old, new)
+        
+        # Step 2: Medical terminology pattern fixes (carefully ordered)
         medical_patterns = [
-            # SPECIFIC MEDICAL TERM CORRECTIONS (highest priority)
-            # The "Operationalcalc" OCR error likely means "Operational A1C" or "A1C Calc"
-            (r'[Oo]perationalcalc', 'Operational A1C'),   # Direct fix for the problematic case
-            (r'[Oo]perational[Cc]alc', 'Operational A1C'), # With space between 
-            (r'[Cc]alc[Aa]1[Cc]', 'calc A1C'),           # "calcA1C" -> "calc A1C"
+            # Lab units and values (safe patterns)
+            (r'([0-9])([mM][gG])', r'\1 \2'),               # "120mg" -> "120 mg"
+            (r'([0-9])([dD][lL])', r'\1 \2'),               # "100dl" -> "100 dl"
+            (r'([0-9])([mM][lL])', r'\1 \2'),               # "500ml" -> "500 ml"
+            (r'([0-9])([mM][mM][oO][lL])', r'\1 \2'),       # "5mmol" -> "5 mmol"
             
-            # A1C preservation patterns (before general word boundary rules)
-            (r'[Hh]emoglobin[Aa]1[Cc]', 'Hemoglobin A1C'), # "HemoglobinA1C" -> "Hemoglobin A1C"
-            (r'[Hh]b[Aa]1[Cc]', 'HbA1C'),                 # Keep "HbA1C" intact
-            (r'[Aa]1[Cc][Tt]est', 'A1C test'),            # "A1Ctest" -> "A1C test"
-            (r'[Aa]1[Cc][Ll]ab', 'A1C lab'),              # "A1Clab" -> "A1C lab"
-            (r'[Aa]1[Cc][Rr]esult', 'A1C result'),        # "A1Cresult" -> "A1C result"
-            (r'[Aa]1[Cc][Vv]alue', 'A1C value'),          # "A1Cvalue" -> "A1C value"
-            (r'[Aa]1[Cc][Ll]evel', 'A1C level'),          # "A1Clevel" -> "A1C level"
-            
-            # Common medical term corrections
-            (r'([Gg]lucose)([Tt]est)', r'\1 \2'),         # "Glucosetest" -> "Glucose test"
-            (r'([Bb]lood)([Ss]ugar)', r'\1 \2'),          # "Bloodsugar" -> "Blood sugar"
-            (r'([Dd]iabetes)([Cc]ontrol)', r'\1 \2'),     # "Diabetescontrol" -> "Diabetes control"
-            (r'([Dd]iabetes)([Tt]est)', r'\1 \2'),        # "Diabetestest" -> "Diabetes test"
-            
-            # Lab values and units
-            (r'([0-9])([mM][gG])', r'\1 \2'),             # "120mg" -> "120 mg"
-            (r'([0-9])([dD][lL])', r'\1 \2'),             # "100dl" -> "100 dl"
-            (r'([0-9])([mM][mM][oO][lL])', r'\1 \2'),     # "5mmol" -> "5 mmol"
-            
-            # Common medical words
-            (r'([Ll]ab)([Rr]esult)', r'\1 \2'),           # "Labresult" -> "Lab result"
-            (r'([Tt]est)([Rr]esult)', r'\1 \2'),          # "Testresult" -> "Test result"
-            (r'([Pp]atient)([Nn]ame)', r'\1 \2'),         # "Patientname" -> "Patient name"
-            (r'([Nn]ormal)([Rr]ange)', r'\1 \2'),         # "Normalrange" -> "Normal range"
-            (r'([Rr]eference)([Rr]ange)', r'\1 \2'),      # "Referencerange" -> "Reference range"
-            
-            # Medical abbreviations
-            (r'([Hh][Dd][Ll])([Cc]holesterol)', r'\1 \2'), # "HDLcholesterol" -> "HDL cholesterol"
-            (r'([Ll][Dd][Ll])([Cc]holesterol)', r'\1 \2'), # "LDLcholesterol" -> "LDL cholesterol"
-            
-            # General word boundary fixes (LAST to avoid breaking medical terms)
-            (r'([a-z])([A-Z])', r'\1 \2'),                # CamelCase -> Camel Case
-            (r'([A-Za-z])([0-9])', r'\1 \2'),             # "Test123" -> "Test 123"
-            (r'([0-9])([A-Za-z])', r'\1 \2'),             # "123Test" -> "123 Test"
+            # Medical terms that don't contain A1C
+            (r'([Gg]lucose)([Tt]est)', r'\1 \2'),           # "GlucoseTest" -> "Glucose Test"
+            (r'([Cc]holesterol)([Tt]est)', r'\1 \2'),       # "CholesterolTest" -> "Cholesterol Test"
+            (r'([Ll]ab)([Rr]esult)', r'\1 \2'),             # "LabResult" -> "Lab Result"
+            (r'([Tt]est)([Rr]esult)', r'\1 \2'),            # "TestResult" -> "Test Result"
+            (r'([Nn]ormal)([Rr]ange)', r'\1 \2'),           # "NormalRange" -> "Normal Range"
+            (r'([Rr]eference)([Rr]ange)', r'\1 \2'),        # "ReferenceRange" -> "Reference Range"
+            (r'([Pp]atient)([Nn]ame)', r'\1 \2'),           # "PatientName" -> "Patient Name"
+            (r'([Dd]ate)([Oo]f)', r'\1 \2'),                # "DateOf" -> "Date Of"
+            (r'([Bb]lood)([Ss]ugar)', r'\1 \2'),            # "BloodSugar" -> "Blood Sugar"
+            (r'([Dd]iabetes)([Cc]ontrol)', r'\1 \2'),       # "DiabetesControl" -> "Diabetes Control"
         ]
         
-        # Apply medical terminology patterns
-        processed_text = text
+        # Apply safe regex patterns only (no general CamelCase splitting)
         for pattern, replacement in medical_patterns:
             processed_text = re.sub(pattern, replacement, processed_text)
         
-        # Clean up multiple spaces
+        # Step 3: Clean up multiple spaces
         processed_text = re.sub(r'\s+', ' ', processed_text)
         
         # Log significant changes for debugging
