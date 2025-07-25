@@ -2814,6 +2814,7 @@ def add_document(patient_id):
 
 
 @app.route('/documents/<int:document_id>/process-ocr', methods=['POST'])
+@csrf.exempt  # OCR processing is internal and doesn't require CSRF protection
 def process_document_ocr_route(document_id):
     """Process document with OCR via AJAX"""
     try:
