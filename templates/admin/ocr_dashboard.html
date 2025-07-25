@@ -12,12 +12,7 @@
             <h2><i class="fas fa-eye"></i> OCR Management Dashboard</h2>
         </div>
         <div class="btn-group">
-            <button type="button" class="btn btn-primary" onclick="processAllPending()">
-                <i class="fas fa-cogs"></i> Process All Pending
-            </button>
-            <button type="button" class="btn btn-warning" onclick="reprocessLowConfidence()">
-                <i class="fas fa-redo"></i> Reprocess Low Confidence
-            </button>
+            <!-- Bulk processing buttons removed for performance optimization -->
         </div>
     </div>
 
@@ -397,56 +392,7 @@ function bulkProcessSelected() {
     });
 }
 
-function processAllPending() {
-    if (!confirm('This will process all pending OCR documents. Continue?')) {
-        return;
-    }
-    
-    showProcessingModal('Processing all pending documents...');
-    
-    fetch('/admin/ocr-process-pending', {
-        method: 'POST'
-    })
-    .then(response => {
-        hideProcessingModal();
-        if (response.ok) {
-            showAlert('success', 'Processing completed!');
-            location.reload();
-        } else {
-            showAlert('danger', 'Processing failed!');
-        }
-    })
-    .catch(error => {
-        hideProcessingModal();
-        showAlert('danger', `Error: ${error.message}`);
-    });
-}
-
-function reprocessLowConfidence() {
-    if (!confirm('This will reprocess all documents with low OCR confidence. Continue?')) {
-        return;
-    }
-    
-    showProcessingModal('Reprocessing low confidence documents...');
-    
-    fetch('/admin/ocr-reprocess-low-confidence', {
-        method: 'POST',
-        body: new FormData()
-    })
-    .then(response => {
-        hideProcessingModal();
-        if (response.ok) {
-            showAlert('success', 'Reprocessing completed!');
-            location.reload();
-        } else {
-            showAlert('danger', 'Reprocessing failed!');
-        }
-    })
-    .catch(error => {
-        hideProcessingModal();
-        showAlert('danger', `Error: ${error.message}`);
-    });
-}
+// Bulk processing functions removed for performance optimization
 
 function toggleAllPending() {
     const selectAll = document.getElementById('selectAllPending');
