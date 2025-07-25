@@ -14,10 +14,20 @@ from models import MedicalDocument, Patient, ScreeningType
 # Import moved to avoid circular imports - will import when needed
 from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
 
+# Import CSRF protection
+try:
+    from flask_wtf.csrf import exempt
+    csrf_exempt = exempt
+except ImportError:
+    # Fallback if flask_wtf is not available
+    def csrf_exempt(f):
+        return f
+
 logger = logging.getLogger(__name__)
 
 
 @app.route('/admin/ocr/reprocess-document/<int:doc_id>', methods=['POST'])
+@csrf_exempt
 def reprocess_document(doc_id):
     """Reprocess OCR for a specific document and trigger selective screening refresh"""
     try:
@@ -39,7 +49,10 @@ def reprocess_document(doc_id):
         document.ocr_confidence = None
         document.ocr_processing_date = None
         document.ocr_text_length = None
+        document.ocr_quality_flags = None
         db.session.commit()
+        
+        logger.info(f"Reset OCR status for document {doc_id}: {document.document_name}")
         
         # Reprocess OCR
         result = ocr_processor.process_document_ocr(doc_id)
