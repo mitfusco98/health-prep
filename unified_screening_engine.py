@@ -317,6 +317,9 @@ class UnifiedScreeningEngine:
         # Get last completed date from documents
         last_completed = self._get_last_completed_date(matching_documents)
         
+        # APPLY ENHANCED SCREENING ENGINE: Prioritize documents for relevancy filtering
+        prioritized_docs = self._prioritize_documents_for_screening(matching_documents, screening_type)
+        
         return {
             'screening_type': screening_type.name,
             'patient_id': patient.id,
@@ -324,7 +327,8 @@ class UnifiedScreeningEngine:
             'due_date': due_date,
             'last_completed': last_completed,
             'frequency': screening_type.formatted_frequency,
-            'matched_documents': [doc.id for doc in matching_documents],
+            'matched_documents': matching_documents,  # Keep all for reference
+            'prioritized_documents': prioritized_docs,  # Enhanced: Only show relevant documents
             'match_source': 'unified_screening_engine'
         }
     

@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 import json
 import logging
 
-from app import app, db
+from app import app, db, csrf
 from models import MedicalDocument, Patient, ScreeningType
 # Import moved to avoid circular imports - will import when needed
 from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 @app.route('/admin/ocr/reprocess-document/<int:doc_id>', methods=['POST'])
+@csrf.exempt
 def reprocess_document(doc_id):
     """Reprocess OCR for a specific document and trigger selective screening refresh"""
     try:
@@ -41,8 +42,8 @@ def reprocess_document(doc_id):
         document.ocr_text_length = None
         db.session.commit()
         
-        # Reprocess OCR
-        result = ocr_processor.process_document_ocr(doc_id)
+        # Reprocess OCR with updated PHI filtering
+        result = ocr_processor.process_document_ocr(doc_id, force_reprocess=True)
         
         if result['success']:
             # Trigger selective screening refresh for this document's patient

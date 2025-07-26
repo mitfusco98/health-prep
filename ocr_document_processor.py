@@ -104,7 +104,7 @@ class TesseractOCRProcessor:
         except Exception:
             return ""
     
-    def process_document_ocr(self, document_id: int) -> Dict[str, Any]:
+    def process_document_ocr(self, document_id: int, force_reprocess: bool = False) -> Dict[str, Any]:
         """Process a document with OCR if needed"""
         processing_start = datetime.now()
         result = {
@@ -152,8 +152,23 @@ class TesseractOCRProcessor:
             )
             
             if extracted_text:
-                # Combine OCR text with any existing content
-                combined_content = self._combine_content(document.content, extracted_text)
+                # APPLY PHI FILTERING for HIPAA compliance
+                if self.phi_filter_enabled and self.phi_filter:
+                    try:
+                        phi_result = self.phi_filter.filter_text(extracted_text)
+                        filtered_text = phi_result['filtered_text']
+                        logger.info(f"PHI filtering applied - detected {phi_result['phi_count']} PHI instances")
+                    except Exception as phi_error:
+                        logger.warning(f"PHI filtering failed: {phi_error}")
+                        filtered_text = extracted_text  # Fallback to unfiltered if PHI filter fails
+                else:
+                    filtered_text = extracted_text
+                
+                # Combine filtered OCR text with any existing content (for force reprocessing, replace completely)
+                if force_reprocess:
+                    combined_content = filtered_text  # Replace completely during reprocessing
+                else:
+                    combined_content = self._combine_content(document.content, filtered_text)
                 
                 # Update document with OCR results
                 document.content = combined_content
