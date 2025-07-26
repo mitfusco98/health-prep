@@ -71,10 +71,10 @@
                                             <td>{{ alert.start_date|dob }}</td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
-                                                    <button class="btn btn-outline-secondary" disabled title="Edit function temporarily unavailable">
+                                                    <a href="{{ url_for('edit_alert', patient_id=patient.id, alert_id=alert.id) }}" class="btn btn-outline-secondary">
                                                         Edit
                                                     </button>
-                                                    <button class="btn btn-outline-danger" disabled title="Delete function temporarily unavailable">
+                                                    <a href="{{ url_for('delete_alert', patient_id=patient.id, alert_id=alert.id) }}" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this alert?')">
                                                         Delete
                                                     </button>
                                                 </div>
@@ -87,7 +87,7 @@
                     </div>
                 {% else %}
                     <div class="alert alert-info m-3">
-                        <p class="mb-0">No active alerts for this patient. <button class="alert-link" disabled title="Add alert function temporarily unavailable">Add an alert</button></p>
+                        <p class="mb-0">No active alerts for this patient. <a href="{{ url_for('add_alert', patient_id=patient.id) }}" class="alert-link">Add an alert</button></p>
                     </div>
                 {% endif %}
             </div>
@@ -413,7 +413,7 @@
                                 <td>{{ vital.respiratory_rate }}</td>
                                 <td>{{ vital.oxygen_saturation }}%</td>
                                 <td>
-                                    <button class="btn btn-sm btn-danger" disabled title="Delete function temporarily unavailable">
+                                    <a href="{{ url_for('delete_alert', patient_id=patient.id, alert_id=vital.id) }}" class="btn btn-sm btn-danger">
                                         <i class="fas fa-trash me-1"></i> Delete
                                     </button>
                                 </td>
