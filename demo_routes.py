@@ -307,8 +307,18 @@ def index(date_str=None):
     recent_documents = []
     total_documents = 0
     try:
+        # Optimize query by only selecting needed fields to avoid loading large binary content
         recent_documents = (
-            MedicalDocument.query.order_by(MedicalDocument.created_at.desc())
+            MedicalDocument.query
+            .with_entities(
+                MedicalDocument.id,
+                MedicalDocument.document_name, 
+                MedicalDocument.filename,
+                MedicalDocument.document_type,
+                MedicalDocument.created_at,
+                MedicalDocument.patient_id
+            )
+            .order_by(MedicalDocument.created_at.desc())
             .limit(10)
             .all()
         )
