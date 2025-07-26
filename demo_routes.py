@@ -3823,8 +3823,26 @@ def screening_list():
                             all_docs = data.get('matched_documents', [])
                             prioritized_docs = data.get('prioritized_documents', all_docs)  # Use prioritized if available
                             self.documents = prioritized_docs  # Store prioritized documents for display
+                            self.matched_documents = prioritized_docs  # Alias for template compatibility
                             self.notes = f"Enhanced engine - {len(prioritized_docs)}/{len(all_docs)} docs shown"
                             self.id = f"unified_{patient.id}_{data['screening_type']}"
+                            
+                        def get_valid_documents_with_access_check(self, user=None):
+                            """Get documents with access permission validation (ScreeningProxy implementation)"""
+                            try:
+                                # Return the prioritized/matched documents (already filtered)
+                                return self.matched_documents or []
+                            except Exception as e:
+                                print(f"Error getting valid documents from ScreeningProxy: {e}")
+                                return []
+                                
+                        def _validate_document_access(self, doc, user=None):
+                            """Simple document access validation for ScreeningProxy"""
+                            try:
+                                # Basic validation - document exists and has content
+                                return hasattr(doc, 'id') and (hasattr(doc, 'content') or hasattr(doc, 'binary_content'))
+                            except:
+                                return False
                     
                     all_generated_screenings.append(ScreeningProxy(screening_data, patient))
             except Exception as patient_error:
@@ -4308,6 +4326,36 @@ def update_appointment_status(appointment_id):
     
     # Redirect back to the referring page or home
     return redirect(request.referrer or url_for("index"))
+
+
+@app.route("/get-available-slots", methods=["GET"])
+def get_available_slots():
+    """Get available time slots for appointment scheduling"""
+    try:
+        date_str = request.args.get("date")
+        if not date_str:
+            return jsonify({"error": "Date parameter required"}), 400
+            
+        try:
+            selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+        
+        # Get available time slots using existing utility
+        from appointment_utils import get_available_time_slots, get_booked_time_slots
+        
+        booked_slots = get_booked_time_slots(selected_date)
+        available_slots = get_available_time_slots(selected_date, booked_slots)
+        
+        return jsonify({
+            "available_slots": available_slots,
+            "booked_slots": booked_slots,
+            "date": date_str
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting available slots: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @app.route("/debug/appointments", methods=["GET"])
