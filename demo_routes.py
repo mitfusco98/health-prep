@@ -4036,6 +4036,280 @@ def internal_server_error(e):
     return render_template("500.html"), 500
 
 
+@app.route("/appointments")
+@app.route("/appointments/date/<date_str>")
+@log_page_access("appointments_page")
+def appointments(date_str=None):
+    """Display appointments page with date navigation"""
+    from db_utils import get_appointments_for_date
+    
+    # Get current date
+    today = datetime.now().date()
+    
+    # Check for date from query parameters or URL parameter
+    selected_date_param = request.args.get("selected_date")
+    
+    if selected_date_param:
+        try:
+            selected_date = datetime.strptime(selected_date_param, "%Y-%m-%d").date()
+        except ValueError:
+            selected_date = today
+            flash("Invalid date format. Showing today's appointments.", "warning")
+    elif date_str:
+        try:
+            selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            selected_date = today
+            flash("Invalid date format. Showing today's appointments.", "warning")
+    else:
+        selected_date = today
+    
+    # Get previous and next day for navigation
+    prev_date = selected_date - timedelta(days=1)
+    next_date = selected_date + timedelta(days=1)
+    
+    # Get appointments for the selected date
+    try:
+        appointments = get_appointments_for_date(selected_date)
+    except Exception as e:
+        logger.error(f"Error fetching appointments: {e}")
+        appointments = []
+        flash("Error loading appointments. Please try again.", "error")
+    
+    # Get some stats for the page
+    total_appointments = len(appointments)
+    
+    # Count appointments by status
+    status_counts = {}
+    for apt in appointments:
+        status = apt.status or 'Scheduled'
+        status_counts[status] = status_counts.get(status, 0) + 1
+    
+    return render_template(
+        "appointments.html",
+        appointments=appointments,
+        selected_date=selected_date,
+        prev_date=prev_date,
+        next_date=next_date,
+        today_date=today,
+        total_appointments=total_appointments,
+        status_counts=status_counts,
+    )
+
+
+@app.route("/appointments/add", methods=["GET", "POST"])
+@safe_db_operation
+@validate_appointment_input
+def add_appointment():
+    """Add a new appointment with conflict prevention"""
+    form = AppointmentForm()
+    
+    # Populate patient choices
+    patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
+    form.patient_id.choices = [(p.id, f"{p.last_name}, {p.first_name} (MRN: {p.mrn})") for p in patients]
+    
+    # Set default date from query parameter
+    if request.method == "GET":
+        selected_date_str = request.args.get("date")
+        if selected_date_str:
+            try:
+                selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
+                form.appointment_date.data = selected_date
+            except ValueError:
+                pass
+    
+    if form.validate_on_submit():
+        try:
+            # Parse the selected time (which comes as a string like "09:00")
+            appointment_time_obj = datetime.strptime(form.appointment_time.data, "%H:%M").time()
+            
+            # Check for conflicts using existing utility
+            from appointment_utils import detect_appointment_conflicts
+            conflicts = detect_appointment_conflicts(
+                form.appointment_date.data, appointment_time_obj, patient_id=form.patient_id.data
+            )
+            
+            if conflicts:
+                from appointment_utils import format_conflict_message
+                conflict_msg = format_conflict_message(conflicts)
+                flash(f"Scheduling conflict detected: {conflict_msg}", "warning")
+                return render_template("appointment_form.html", form=form)
+
+            # Create new appointment
+            appointment = Appointment(
+                patient_id=form.patient_id.data,
+                appointment_date=form.appointment_date.data,
+                appointment_time=appointment_time_obj,
+                appointment_type="Consultation",  # Default type
+                note=form.note.data,
+                status="Scheduled",
+            )
+
+            db.session.add(appointment)
+            db.session.commit()
+
+            patient = Patient.query.get(form.patient_id.data)
+            flash(
+                f"Appointment scheduled for {patient.full_name} on {form.appointment_date.data} at {appointment_time_obj.strftime('%H:%M')}",
+                "success",
+            )
+            
+            # Log the appointment creation  
+            log_data_modification(
+                "appointment_created",
+                f"Created appointment for {patient.full_name} on {form.appointment_date.data} at {appointment_time_obj.strftime('%H:%M')}",
+                {"appointment_id": appointment.id, "patient_id": form.patient_id.data}
+            )
+            
+            return redirect(url_for("appointments", date_str=form.appointment_date.data.strftime("%Y-%m-%d")))
+
+        except ValueError as e:
+            flash("Invalid time format. Please select a valid time.", "danger")
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error creating appointment: {str(e)}")
+            flash("Error creating appointment. Please try again.", "danger")
+
+    return render_template("appointment_form.html", form=form)
+
+
+@app.route("/appointments/<int:appointment_id>/edit", methods=["GET", "POST"])
+@safe_db_operation  
+@validate_appointment_input
+def edit_appointment(appointment_id):
+    """Edit an existing appointment"""
+    appointment = Appointment.query.get_or_404(appointment_id)
+    form = AppointmentForm(obj=appointment)
+    
+    # Populate patient choices
+    patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
+    form.patient_id.choices = [(p.id, f"{p.last_name}, {p.first_name} (MRN: {p.mrn})") for p in patients]
+    
+    # Set current values on GET request
+    if request.method == "GET":
+        form.patient_id.data = appointment.patient_id
+        form.appointment_date.data = appointment.appointment_date
+        form.appointment_time.data = appointment.appointment_time.strftime("%H:%M")
+        form.note.data = appointment.note
+
+    if form.validate_on_submit():
+        try:
+            # Parse the selected time
+            appointment_time_obj = datetime.strptime(form.appointment_time.data, "%H:%M").time()
+            
+            # Check for conflicts (excluding current appointment)
+            from appointment_utils import detect_appointment_conflicts
+            conflicts = detect_appointment_conflicts(
+                form.appointment_date.data, appointment_time_obj, 
+                patient_id=form.patient_id.data, exclude_appointment_id=appointment_id
+            )
+            
+            if conflicts:
+                from appointment_utils import format_conflict_message
+                conflict_msg = format_conflict_message(conflicts)
+                flash(f"Scheduling conflict detected: {conflict_msg}", "warning")
+                return render_template("appointment_form.html", form=form, appointment=appointment)
+
+            # Update appointment
+            appointment.patient_id = form.patient_id.data
+            appointment.appointment_date = form.appointment_date.data
+            appointment.appointment_time = appointment_time_obj
+            appointment.note = form.note.data
+
+            db.session.commit()
+
+            patient = Patient.query.get(form.patient_id.data)
+            flash(
+                f"Appointment updated for {patient.full_name} on {form.appointment_date.data} at {appointment_time_obj.strftime('%H:%M')}",
+                "success",
+            )
+            
+            # Log the appointment update
+            log_data_modification(
+                "appointment_updated",
+                f"Updated appointment for {patient.full_name} on {form.appointment_date.data} at {appointment_time_obj.strftime('%H:%M')}",
+                {"appointment_id": appointment.id, "patient_id": form.patient_id.data}
+            )
+            
+            return redirect(url_for("appointments", date_str=form.appointment_date.data.strftime("%Y-%m-%d")))
+
+        except ValueError as e:
+            flash("Invalid time format. Please select a valid time.", "danger")
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error updating appointment: {str(e)}")
+            flash("Error updating appointment. Please try again.", "danger")
+
+    return render_template("appointment_form.html", form=form, appointment=appointment)
+
+
+@app.route("/appointments/<int:appointment_id>/delete", methods=["POST", "GET"])  
+@safe_db_operation
+def delete_appointment(appointment_id):
+    """Delete an appointment"""
+    appointment = Appointment.query.get_or_404(appointment_id) 
+    
+    if request.method == "POST":
+        try:
+            patient_name = appointment.patient.full_name
+            appointment_date = appointment.appointment_date
+            appointment_time = appointment.appointment_time
+            
+            db.session.delete(appointment)
+            db.session.commit()
+            
+            flash(f"Appointment for {patient_name} on {appointment_date} at {appointment_time.strftime('%H:%M')} has been deleted.", "success")
+            
+            # Log the appointment deletion
+            log_data_modification(
+                "appointment_deleted",
+                f"Deleted appointment for {patient_name} on {appointment_date} at {appointment_time.strftime('%H:%M')}",
+                {"appointment_id": appointment_id, "patient_id": appointment.patient_id}
+            )
+            
+            return redirect(url_for("appointments", date_str=appointment_date.strftime("%Y-%m-%d")))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error deleting appointment: {str(e)}")
+            flash("Error deleting appointment. Please try again.", "danger")
+            return redirect(url_for("edit_appointment", appointment_id=appointment_id))
+    
+    # GET request - show confirmation (optional, could redirect to edit)
+    return redirect(url_for("edit_appointment", appointment_id=appointment_id))
+
+
+@app.route("/appointments/<int:appointment_id>/status", methods=["POST"])
+@safe_db_operation
+def update_appointment_status(appointment_id):
+    """Update appointment status (for quick status changes from dashboard)"""
+    appointment = Appointment.query.get_or_404(appointment_id)
+    
+    try:
+        new_status = request.form.get("status", "Scheduled")
+        old_status = appointment.status
+        
+        appointment.status = new_status
+        db.session.commit()
+        
+        flash(f"Appointment status updated from {old_status} to {new_status}.", "success")
+        
+        # Log the status change
+        log_data_modification(
+            "appointment_status_updated",
+            f"Updated appointment status for {appointment.patient.full_name} from {old_status} to {new_status}",
+            {"appointment_id": appointment_id, "old_status": old_status, "new_status": new_status}
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error updating appointment status: {str(e)}")
+        flash("Error updating appointment status. Please try again.", "danger")
+    
+    # Redirect back to the referring page or home
+    return redirect(request.referrer or url_for("index"))
+
+
 @app.route("/debug/appointments", methods=["GET"])
 def debug_appointments():
     """Debug endpoint to inspect appointments"""
