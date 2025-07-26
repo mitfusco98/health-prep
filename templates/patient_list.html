@@ -52,7 +52,7 @@
 {% if patients %}
 <div class="card border-0">
     <div class="card-body p-0">
-        <form method="POST" action="{{ url_for('delete_patient', patient_id=0) }}" id="deleteForm">
+        <form method="POST" action="/patients/delete/0" id="deleteForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
             <div class="mb-3 p-3 border-bottom">
@@ -163,7 +163,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ url_for('delete_patient', patient_id=patient.id) }}" method="POST">
+                <form action="/patients/delete/{{ patient.id }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <button type="submit" class="btn btn-danger">
                         <i class="fas fa-trash me-2"></i>Delete Patient
