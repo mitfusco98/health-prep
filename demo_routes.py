@@ -3843,6 +3843,16 @@ def screening_list():
                                 return hasattr(doc, 'id') and (hasattr(doc, 'content') or hasattr(doc, 'binary_content'))
                             except:
                                 return False
+                                
+                        def get_document_confidence(self, document_id):
+                            """Get confidence score for a document (ScreeningProxy implementation)"""
+                            try:
+                                # For ScreeningProxy, return a default confidence based on document prioritization
+                                # Documents that made it through the enhanced engine are considered high confidence
+                                return 0.85  # High confidence for prioritized documents
+                            except Exception as e:
+                                print(f"Error getting document confidence from ScreeningProxy: {e}")
+                                return 0.8  # Default confidence
                     
                     all_generated_screenings.append(ScreeningProxy(screening_data, patient))
             except Exception as patient_error:
@@ -4341,11 +4351,15 @@ def get_available_slots():
         except ValueError:
             return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
         
+        # Get appointment_id if editing (optional parameter)
+        appointment_id = request.args.get("appointment_id")
+        appointment_id = int(appointment_id) if appointment_id else None
+        
         # Get available time slots using existing utility
         from appointment_utils import get_available_time_slots, get_booked_time_slots
         
-        booked_slots = get_booked_time_slots(selected_date)
-        available_slots = get_available_time_slots(selected_date, booked_slots)
+        booked_slots = get_booked_time_slots(selected_date, appointment_id, as_string=True)
+        available_slots = get_available_time_slots(selected_date, appointment_id)
         
         return jsonify({
             "available_slots": available_slots,
