@@ -40,7 +40,7 @@ class OCRQualityMetrics:
         }
 
 
-class TesseractOCRProcessor:
+class OCRDocumentProcessor:
     """Enhanced OCR processor using Tesseract for medical document text extraction"""
     
     def __init__(self):
@@ -66,7 +66,7 @@ class TesseractOCRProcessor:
         
         logger.info("✅ Tesseract OCR Processor initialized with medical document optimization")
     
-    def is_image_based_document(self, filename: str, content_bytes: bytes = None) -> bool:
+    def is_image_based_document(self, filename: str, content_bytes: Optional[bytes] = None) -> bool:
         """Check if document requires OCR processing"""
         if not filename:
             return False
@@ -104,6 +104,10 @@ class TesseractOCRProcessor:
         except Exception:
             return ""
     
+    def process_document(self, document_id: int, force_reprocess: bool = False) -> Dict[str, Any]:
+        """Process document with OCR - main interface method"""
+        return self.process_document_ocr(document_id, force_reprocess)
+    
     def process_document_ocr(self, document_id: int, force_reprocess: bool = False) -> Dict[str, Any]:
         """Process a document with OCR if needed"""
         processing_start = datetime.now()
@@ -128,7 +132,7 @@ class TesseractOCRProcessor:
             
             # Check if document needs OCR using filename (which has extension)
             filename_to_check = document.filename or document.document_name or ""
-            needs_ocr = self.is_image_based_document(filename_to_check, None)
+            needs_ocr = self.is_image_based_document(filename_to_check, document.binary_content)
             if not needs_ocr:
                 result['success'] = True
                 result['ocr_applied'] = False
@@ -546,7 +550,7 @@ class TesseractOCRProcessor:
 
 
 # Global OCR processor instance
-ocr_processor = TesseractOCRProcessor()
+ocr_processor = OCRDocumentProcessor()
 
 
 def process_document_with_ocr(document_id: int) -> Dict[str, Any]:
