@@ -42,8 +42,8 @@ def reprocess_document(doc_id):
         document.ocr_text_length = None
         db.session.commit()
         
-        # Reprocess OCR with updated PHI filtering
-        result = ocr_processor.process_document_ocr(doc_id, force_reprocess=True)
+        # Reprocess OCR with updated PHI filtering using the fixed method
+        result = ocr_processor.process_document(document, force_reprocess=True)
         
         if result['success']:
             # Trigger selective screening refresh for this document's patient

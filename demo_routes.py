@@ -2841,9 +2841,9 @@ def process_document_ocr_route(document_id):
         # Use OCR processor directly instead of universal display
         from ocr_document_processor import OCRDocumentProcessor
         
-        # Process OCR using force_reprocess parameter
-        processor = OCRDocumentProcessor()
-        ocr_result = processor.process_document(document, force_reprocess=True)
+        # Process OCR using force_reprocess parameter through the wrapper function
+        from ocr_document_processor import process_document_with_ocr
+        ocr_result = process_document_with_ocr(document_id, force_reprocess=True)
         
         if ocr_result['success']:
             # Trigger screening refresh if OCR was applied
@@ -3870,6 +3870,17 @@ def screening_list():
                                 return 0.8  # Default confidence for matched documents
                             except:
                                 return 0.8
+                        
+                        @property
+                        def frequency(self):
+                            """Get screening frequency from screening type - CRITICAL for status determination"""
+                            try:
+                                if hasattr(self.screening_type, 'frequency_number') and hasattr(self.screening_type, 'frequency_unit'):
+                                    if self.screening_type.frequency_number and self.screening_type.frequency_unit:
+                                        return f"{self.screening_type.frequency_number} {self.screening_type.frequency_unit.lower()}{'s' if self.screening_type.frequency_number > 1 else ''}"
+                                return "Not specified"
+                            except:
+                                return "Not specified"
                     
                     all_generated_screenings.append(ScreeningProxy(screening_data, patient))
             except Exception as patient_error:
