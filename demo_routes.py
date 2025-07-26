@@ -3873,13 +3873,27 @@ def screening_list():
                         
                         @property
                         def frequency(self):
-                            """Get screening frequency from screening type - CRITICAL for status determination"""
+                            """Get screening frequency from screening type configuration - Sources from /screenings?tab=types"""
                             try:
-                                if hasattr(self.screening_type, 'frequency_number') and hasattr(self.screening_type, 'frequency_unit'):
-                                    if self.screening_type.frequency_number and self.screening_type.frequency_unit:
-                                        return f"{self.screening_type.frequency_number} {self.screening_type.frequency_unit.lower()}{'s' if self.screening_type.frequency_number > 1 else ''}"
+                                # Get the actual ScreeningType from database to access frequency configuration
+                                from models import ScreeningType
+                                screening_type_obj = ScreeningType.query.filter_by(name=self.screening_type).first()
+                                
+                                if screening_type_obj and screening_type_obj.frequency_number and screening_type_obj.frequency_unit:
+                                    # Format frequency display: "1 year", "6 months", etc.
+                                    unit = screening_type_obj.frequency_unit.lower()
+                                    # Handle pluralization properly
+                                    if screening_type_obj.frequency_number == 1:
+                                        # Singular: remove 's' if present (e.g., "years" -> "year")
+                                        if unit.endswith('s'):
+                                            unit = unit[:-1]
+                                    elif not unit.endswith('s'):
+                                        # Plural: add 's' if not already plural
+                                        unit = unit + 's'
+                                    return f"{screening_type_obj.frequency_number} {unit}"
                                 return "Not specified"
-                            except:
+                            except Exception as e:
+                                print(f"Error getting frequency for {self.screening_type}: {e}")
                                 return "Not specified"
                     
                     all_generated_screenings.append(ScreeningProxy(screening_data, patient))
