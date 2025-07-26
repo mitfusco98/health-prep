@@ -413,7 +413,7 @@
                                 <td>{{ vital.respiratory_rate }}</td>
                                 <td>{{ vital.oxygen_saturation }}%</td>
                                 <td>
-                                    <a href="{{ url_for('delete_vital', patient_id=patient.id, vital_id=vital.id) }}" class="btn btn-sm btn-danger">
+                                    <a href="{{ url_for('delete_alert', patient_id=patient.id, alert_id=vital.id) }}" class="btn btn-sm btn-danger">
                                         <i class="fas fa-trash me-1"></i> Delete
                                     </a>
                                 </td>
