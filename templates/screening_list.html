@@ -515,7 +515,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h5 class="modal-title" id="addScreeningRecommendationModalLabel">Add Screening Recommendation</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="/screenings/add-recommendation">
+            <form method="POST" action="{{ url_for('add_screening_recommendation', ts=cache_timestamp) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">
@@ -673,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </h5>
             </div>
             <div class="col-auto d-flex">
-                <a href="/screenings/types/add" class="btn btn-primary">
+                <a href="{{ url_for('add_screening_type_form') }}" class="btn btn-primary">
                     Add Type
                 </a>
             </div>
@@ -785,7 +785,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h5 class="modal-title" id="addScreeningTypeModalLabel">Add Screening Type</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="/screenings/types/add">
+            <form method="POST" action="{{ url_for('add_screening_type', ts=cache_timestamp) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="mb-3">

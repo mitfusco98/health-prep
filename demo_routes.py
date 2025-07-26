@@ -307,18 +307,8 @@ def index(date_str=None):
     recent_documents = []
     total_documents = 0
     try:
-        # Optimize query by only selecting needed fields to avoid loading large binary content
         recent_documents = (
-            MedicalDocument.query
-            .with_entities(
-                MedicalDocument.id,
-                MedicalDocument.document_name, 
-                MedicalDocument.filename,
-                MedicalDocument.document_type,
-                MedicalDocument.created_at,
-                MedicalDocument.patient_id
-            )
-            .order_by(MedicalDocument.created_at.desc())
+            MedicalDocument.query.order_by(MedicalDocument.created_at.desc())
             .limit(10)
             .all()
         )
@@ -2839,11 +2829,10 @@ def process_document_ocr_route(document_id):
             }), 404
         
         # Use OCR processor directly instead of universal display
-        from ocr_document_processor import OCRDocumentProcessor
+        from ocr_document_processor import process_document_with_ocr
         
-        # Process OCR using force_reprocess parameter
-        processor = OCRDocumentProcessor()
-        ocr_result = processor.process_document(document, force_reprocess=True)
+        # Process OCR
+        ocr_result = process_document_with_ocr(document_id)
         
         if ocr_result['success']:
             # Trigger screening refresh if OCR was applied
@@ -3836,40 +3825,6 @@ def screening_list():
                             self.documents = prioritized_docs  # Store prioritized documents for display
                             self.notes = f"Enhanced engine - {len(prioritized_docs)}/{len(all_docs)} docs shown"
                             self.id = f"unified_{patient.id}_{data['screening_type']}"
-                        
-                        def get_valid_documents_with_access_check(self, user=None):
-                            """Get documents with access permission validation - Template compatibility method"""
-                            try:
-                                # Return the prioritized documents stored during initialization
-                                # These have already been filtered for relevancy by the enhanced engine
-                                return self.documents if self.documents else []
-                            except Exception as e:
-                                print(f"Error in ScreeningProxy.get_valid_documents_with_access_check: {e}")
-                                return []
-                        
-                        @property
-                        def matched_documents(self):
-                            """Property for template compatibility"""
-                            return self.documents if self.documents else []
-                        
-                        @property 
-                        def document_count(self):
-                            """Property for template compatibility"""
-                            return len(self.documents) if self.documents else 0
-                        
-                        def get_document_confidence(self, document_id):
-                            """Get confidence score for a specific document - Template compatibility method"""
-                            try:
-                                # Since these are prioritized documents from enhanced engine, 
-                                # they already have high relevance confidence
-                                if self.documents:
-                                    for doc in self.documents:
-                                        if hasattr(doc, 'id') and doc.id == document_id:
-                                            # Return high confidence for prioritized documents
-                                            return 0.9
-                                return 0.8  # Default confidence for matched documents
-                            except:
-                                return 0.8
                     
                     all_generated_screenings.append(ScreeningProxy(screening_data, patient))
             except Exception as patient_error:
