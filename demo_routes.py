@@ -4372,6 +4372,37 @@ def get_available_slots():
         return jsonify({"error": "Internal server error"}), 500
 
 
+@app.route("/add-screening-recommendation", methods=["POST"])
+def add_screening_recommendation():
+    """Add a screening recommendation (simplified implementation)"""
+    try:
+        # Get cache timestamp for proper redirection
+        ts = request.args.get('ts', '')
+        
+        # Extract form data
+        screening_type = request.form.get('screening_type', '').strip()
+        patient_id = request.form.get('patient_id')
+        notes = request.form.get('notes', '').strip()
+        
+        if not screening_type:
+            flash("Screening type is required", "danger")
+            return redirect(url_for('screening_list', tab='screenings', ts=ts))
+        
+        # For now, just log the recommendation (could be enhanced to save to database)
+        app.logger.info(f"Screening recommendation added: {screening_type} for patient {patient_id}")
+        
+        if notes:
+            app.logger.info(f"Recommendation notes: {notes}")
+        
+        flash(f"Screening recommendation for '{screening_type}' has been recorded", "success")
+        return redirect(url_for('screening_list', tab='screenings', ts=ts))
+        
+    except Exception as e:
+        app.logger.error(f"Error adding screening recommendation: {str(e)}")
+        flash("Error adding screening recommendation", "danger")
+        return redirect(url_for('screening_list', tab='screenings'))
+
+
 @app.route("/debug/appointments", methods=["GET"])
 def debug_appointments():
     """Debug endpoint to inspect appointments"""
