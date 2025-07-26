@@ -553,20 +553,9 @@ class OCRDocumentProcessor:
 ocr_processor = OCRDocumentProcessor()
 
 
-def process_document_with_ocr(document_id: int, force_reprocess: bool = False) -> Dict[str, Any]:
-    """Convenience function to process a single document with OCR with force reprocess option"""
-    from models import MedicalDocument
-    
-    # Get document from database
-    document = MedicalDocument.query.get(document_id)
-    if not document:
-        return {
-            'success': False,
-            'error': f'Document {document_id} not found'
-        }
-    
-    # Process with OCR using force_reprocess parameter
-    return ocr_processor.process_document(document, force_reprocess=force_reprocess)
+def process_document_with_ocr(document_id: int) -> Dict[str, Any]:
+    """Convenience function to process a single document with OCR"""
+    return ocr_processor.process_document_ocr(document_id)
 
 
 def bulk_ocr_processing(document_ids: List[int]) -> Dict[str, Any]:

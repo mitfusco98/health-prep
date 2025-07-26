@@ -2841,9 +2841,9 @@ def process_document_ocr_route(document_id):
         # Use OCR processor directly instead of universal display
         from ocr_document_processor import OCRDocumentProcessor
         
-        # Process OCR using force_reprocess parameter through the wrapper function
-        from ocr_document_processor import process_document_with_ocr
-        ocr_result = process_document_with_ocr(document_id, force_reprocess=True)
+        # Process OCR using force_reprocess parameter
+        processor = OCRDocumentProcessor()
+        ocr_result = processor.process_document(document, force_reprocess=True)
         
         if ocr_result['success']:
             # Trigger screening refresh if OCR was applied
@@ -3870,31 +3870,6 @@ def screening_list():
                                 return 0.8  # Default confidence for matched documents
                             except:
                                 return 0.8
-                        
-                        @property
-                        def frequency(self):
-                            """Get screening frequency from screening type configuration - Sources from /screenings?tab=types"""
-                            try:
-                                # Get the actual ScreeningType from database to access frequency configuration
-                                from models import ScreeningType
-                                screening_type_obj = ScreeningType.query.filter_by(name=self.screening_type).first()
-                                
-                                if screening_type_obj and screening_type_obj.frequency_number and screening_type_obj.frequency_unit:
-                                    # Format frequency display: "1 year", "6 months", etc.
-                                    unit = screening_type_obj.frequency_unit.lower()
-                                    # Handle pluralization properly
-                                    if screening_type_obj.frequency_number == 1:
-                                        # Singular: remove 's' if present (e.g., "years" -> "year")
-                                        if unit.endswith('s'):
-                                            unit = unit[:-1]
-                                    elif not unit.endswith('s'):
-                                        # Plural: add 's' if not already plural
-                                        unit = unit + 's'
-                                    return f"{screening_type_obj.frequency_number} {unit}"
-                                return "Not specified"
-                            except Exception as e:
-                                print(f"Error getting frequency for {self.screening_type}: {e}")
-                                return "Not specified"
                     
                     all_generated_screenings.append(ScreeningProxy(screening_data, patient))
             except Exception as patient_error:
