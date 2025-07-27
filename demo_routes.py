@@ -3798,159 +3798,231 @@ def screening_list():
     screenings_hidden_by_cutoff = 0
     
     if tab == "screenings":
-        # ✅ USE ENHANCED SCREENING ENGINE WITH DOCUMENT PRIORITIZATION
-        print("🚀 Using enhanced screening engine for /screenings page")
-        from unified_screening_engine import unified_engine
-        
-        # Get all patients and generate screenings using unified engine
-        all_patients = Patient.query.all()
-        all_generated_screenings = []
-        
-        for patient in all_patients:
+        # ✅ USE HIGH-PERFORMANCE OPTIMIZATION FOR SCREENINGS TAB
+        try:
+            from screening_performance_optimizer import screening_optimizer
+            
+            # Get pagination parameters - use smaller default to show pagination
+            page = int(request.args.get('page', 1))
+            page_size = min(int(request.args.get('page_size', 25)), 100)
+            status_filter = request.args.get('status', '')
+            screening_type_filter = request.args.get('screening_type', '')
+            
+            # Use optimized query with caching and pagination
+            query_result = screening_optimizer.get_optimized_screenings(
+                page=page,
+                page_size=page_size,
+                status_filter=status_filter,
+                screening_type_filter=screening_type_filter,
+                search_query=search_query
+            )
+            
+            screenings = query_result['screenings']
+            pagination_info = query_result['pagination']
+            filters_info = query_result['filters']
+            metadata = query_result['metadata']
+            
+            # Get screening statistics for dashboard
             try:
-                patient_screenings = unified_engine.generate_patient_screenings(patient.id)
-                for screening_data in patient_screenings:
-                    # Convert to Screening-like object for compatibility
-                    class ScreeningProxy:
-                        def __init__(self, data, patient):
-                            self.patient_id = patient.id
-                            self.patient = patient
-                            self.screening_type = data['screening_type']
-                            self.status = data['status']
-                            self.due_date = data.get('due_date')
-                            self.last_completed = data.get('last_completed')
-                            # APPLY ENHANCED SCREENING ENGINE: Use prioritized documents instead of all matches
-                            all_docs = data.get('matched_documents', [])
-                            prioritized_docs = data.get('prioritized_documents', all_docs)  # Use prioritized if available
-                            self.documents = prioritized_docs  # Store prioritized documents for display
-                            self.matched_documents = prioritized_docs  # Alias for template compatibility
-                            self.notes = f"Enhanced engine - {len(prioritized_docs)}/{len(all_docs)} docs shown"
-                            self.id = f"unified_{patient.id}_{data['screening_type']}"
-                            
-                        def get_valid_documents_with_access_check(self, user=None):
-                            """Get documents with access permission validation (ScreeningProxy implementation)"""
-                            try:
-                                # Return the prioritized/matched documents (already filtered)
-                                return self.matched_documents or []
-                            except Exception as e:
-                                print(f"Error getting valid documents from ScreeningProxy: {e}")
-                                return []
-                                
-                        def _validate_document_access(self, doc, user=None):
-                            """Simple document access validation for ScreeningProxy"""
-                            try:
-                                # Basic validation - document exists and has content
-                                return hasattr(doc, 'id') and (hasattr(doc, 'content') or hasattr(doc, 'binary_content'))
-                            except:
-                                return False
-                                
-                        def get_document_confidence(self, document_id):
-                            """Get confidence score for a document (ScreeningProxy implementation)"""
-                            try:
-                                # For ScreeningProxy, return a default confidence based on document prioritization
-                                # Documents that made it through the enhanced engine are considered high confidence
-                                return 0.85  # High confidence for prioritized documents
-                            except Exception as e:
-                                print(f"Error getting document confidence from ScreeningProxy: {e}")
-                                return 0.8  # Default confidence
+                stats = screening_optimizer.get_screening_stats()
+            except Exception:
+                stats = {'by_status': {}, 'by_type': {}, 'total_count': len(screenings)}
+            
+            # Set variables for template compatibility
+            total_screenings_before_cutoff = pagination_info['total_count']
+            screenings_hidden_by_cutoff = 0
+            
+            # Import cutoff utilities for legacy compatibility
+            from cutoff_utils import get_cutoff_date_for_patient
+            
+            # Get cutoff settings info for display (screening-specific cutoffs removed)
+            settings = get_or_create_settings()
+            cutoff_info = {
+                'general_cutoff_months': settings.cutoff_months,
+                'labs_cutoff_months': settings.labs_cutoff_months,
+                'imaging_cutoff_months': settings.imaging_cutoff_months,
+                'consults_cutoff_months': settings.consults_cutoff_months,
+                'hospital_cutoff_months': settings.hospital_cutoff_months,
+                'has_cutoffs': (settings.cutoff_months and settings.cutoff_months > 0) or 
+                              any([settings.labs_cutoff_months, settings.imaging_cutoff_months, 
+                                   settings.consults_cutoff_months, settings.hospital_cutoff_months]),
+            }
+            
+        except Exception as e:
+            # Fallback to original logic if performance optimization fails
+            print(f"Performance optimization failed: {e}")
+            import traceback
+            traceback.print_exc()
+            flash("Using fallback view due to performance optimization issue", "warning")
+            
+            # Import cutoff utilities
+            from cutoff_utils import get_cutoff_date_for_patient
+            
+            # Get cutoff settings info for display (screening-specific cutoffs removed)
+            settings = get_or_create_settings()
+            cutoff_info = {
+                'general_cutoff_months': settings.cutoff_months,
+                'labs_cutoff_months': settings.labs_cutoff_months,
+                'imaging_cutoff_months': settings.imaging_cutoff_months,
+                'consults_cutoff_months': settings.consults_cutoff_months,
+                'hospital_cutoff_months': settings.hospital_cutoff_months,
+                'has_cutoffs': (settings.cutoff_months and settings.cutoff_months > 0) or 
+                              any([settings.labs_cutoff_months, settings.imaging_cutoff_months, 
+                                   settings.consults_cutoff_months, settings.hospital_cutoff_months]),
+            }
+            
+            # Check if admin override is requested to show all screenings
+            show_all = request.args.get('show_all') == 'true'
+            admin_override = show_all and session.get('is_admin', False)
+            
+            # FALLBACK: Use unified engine to regenerate screenings if needed
+            print("🔄 Using unified engine for screening data...")
+            from unified_screening_engine import unified_engine
+            
+            # Get all patients and generate screenings using unified engine
+            all_patients = Patient.query.all()
+            all_generated_screenings = []
+            
+            for patient in all_patients:
+                try:
+                    patient_screenings = unified_engine.generate_patient_screenings(patient.id)
+                    for screening_data in patient_screenings:
+                        # Convert to Screening-like object for compatibility
+                        class ScreeningProxy:
+                            def __init__(self, data, patient):
+                                self.patient_id = patient.id
+                                self.patient = patient
+                                self.screening_type = data['screening_type']
+                                self.status = data['status']
+                                self.due_date = data.get('due_date')
+                                self.last_completed = data.get('last_completed')
+                                self.notes = f"Generated by unified engine - {len(data.get('matched_documents', []))} docs matched"
+                                self.id = f"unified_{patient.id}_{data['screening_type']}"
+                        
+                        all_generated_screenings.append(ScreeningProxy(screening_data, patient))
+                except Exception as patient_error:
+                    print(f"Error generating screenings for patient {patient.id}: {patient_error}")
+                    continue
+            
+            # Use generated screenings instead of database query
+            print(f"✅ Generated {len(all_generated_screenings)} screenings using unified engine")
+            all_screenings_raw = all_generated_screenings
+
+            # Apply filters to generated screenings
+            status_filter = request.args.get('status')
+            screening_type_filter = request.args.get('screening_type')
+            
+            if status_filter:
+                all_screenings_raw = [s for s in all_screenings_raw if s.status == status_filter]
+                
+            if screening_type_filter:
+                # Check if this is a consolidated screening type - if so, show all variants
+                from screening_variant_manager import variant_manager
+                variants = variant_manager.find_screening_variants(screening_type_filter)
+                
+                if variants and len(variants) > 1:
+                    # This is a consolidated type with multiple variants - show all variants
+                    variant_names = [v.name for v in variants]
+                    all_screenings_raw = [s for s in all_screenings_raw if s.screening_type in variant_names]
+                else:
+                    # Regular single screening type filtering
+                    all_screenings_raw = [s for s in all_screenings_raw if s.screening_type == screening_type_filter]
+
+            # Apply search filter if provided (exact patient name match for dropdown)
+            if search_query:
+                # Check if it's a patient name (contains space) or screening type
+                if ' ' in search_query:
+                    # Exact patient name match for dropdown selection
+                    all_screenings_raw = [s for s in all_screenings_raw 
+                                        if f"{s.patient.first_name} {s.patient.last_name}" == search_query]
+                else:
+                    # Fallback to partial matching for screening types and patient names
+                    all_screenings_raw = [s for s in all_screenings_raw 
+                                        if (search_query.lower() in s.patient.first_name.lower() or
+                                            search_query.lower() in s.patient.last_name.lower() or
+                                            search_query.lower() in s.screening_type.lower())]
+
+            # Sort screenings by priority
+            all_screenings_raw.sort(key=lambda s: (
+                0 if s.status == "Due" else
+                1 if s.status == "Due Soon" else
+                2 if s.status == "Incomplete" else 3,
+                s.patient.last_name,
+                s.patient.first_name
+            ))
+            
+            # Unified engine already handles trigger condition validation, so use all screenings
+            all_screenings = all_screenings_raw
+            
+            # Count total before cutoff
+            total_screenings_before_cutoff = len(all_screenings)
+            
+            # Apply cutoff filtering unless admin override is active
+            if not admin_override and cutoff_info['has_cutoffs']:
+                screenings_after_cutoff = []
+                
+                for screening in all_screenings:
+                    patient = screening.patient
                     
-                    all_generated_screenings.append(ScreeningProxy(screening_data, patient))
-            except Exception as patient_error:
-                print(f"Error generating screenings for patient {patient.id}: {patient_error}")
-                continue
-        
-        print(f"✅ Generated {len(all_generated_screenings)} screenings using enhanced engine")
-        
-        # Get pagination parameters
-        page = int(request.args.get('page', 1))
-        page_size = min(int(request.args.get('page_size', 25)), 100)
-        status_filter = request.args.get('status', '')
-        screening_type_filter = request.args.get('screening_type', '')
-        
-        # Apply filters to generated screenings
-        screenings_filtered = all_generated_screenings
-        
-        if status_filter:
-            screenings_filtered = [s for s in screenings_filtered if s.status == status_filter]
-            
-        if screening_type_filter:
-            # Check if this is a consolidated screening type - if so, show all variants
-            from screening_variant_manager import variant_manager
-            variants = variant_manager.find_screening_variants(screening_type_filter)
-            
-            if variants and len(variants) > 1:
-                # This is a consolidated type with multiple variants - show all variants
-                variant_names = [v.name for v in variants]
-                screenings_filtered = [s for s in screenings_filtered if s.screening_type in variant_names]
+                    # Always show screenings without completion dates (they're pending)
+                    if not screening.last_completed:
+                        screenings_after_cutoff.append(screening)
+                        continue
+                    
+                    # Get cutoff date for this specific screening and patient
+                    try:
+                        cutoff_date = get_cutoff_date_for_patient(
+                            patient.id, 
+                            data_type=None, 
+                            screening_name=screening.screening_type
+                        )
+                        
+                        # Convert last_completed to datetime for comparison
+                        if hasattr(screening.last_completed, 'date'):
+                            screening_datetime = screening.last_completed
+                        else:
+                            screening_datetime = datetime.combine(screening.last_completed, datetime.min.time())
+                        
+                        # Include screening if it's within the cutoff window
+                        if screening_datetime >= cutoff_date:
+                            screenings_after_cutoff.append(screening)
+                        
+                    except Exception as e:
+                        # If there's an error with cutoff calculation, include the screening
+                        print(f"Error calculating cutoff for screening {screening.id}: {e}")
+                        screenings_after_cutoff.append(screening)
+                
+                screenings = screenings_after_cutoff
+                screenings_hidden_by_cutoff = len(all_screenings) - len(screenings)
             else:
-                # Regular single screening type filtering
-                screenings_filtered = [s for s in screenings_filtered if s.screening_type == screening_type_filter]
-
-        # Apply search filter if provided
-        if search_query:
-            if ' ' in search_query:
-                # Exact patient name match for dropdown selection
-                screenings_filtered = [s for s in screenings_filtered 
-                                    if f"{s.patient.first_name} {s.patient.last_name}" == search_query]
-            else:
-                # Fallback to partial matching for screening types and patient names
-                screenings_filtered = [s for s in screenings_filtered 
-                                    if (search_query.lower() in s.patient.first_name.lower() or
-                                        search_query.lower() in s.patient.last_name.lower() or
-                                        search_query.lower() in s.screening_type.lower())]
-
-        # Sort screenings by priority
-        screenings_filtered.sort(key=lambda s: (
-            0 if s.status == "Due" else
-            1 if s.status == "Due Soon" else
-            2 if s.status == "Incomplete" else 3,
-            s.patient.last_name,
-            s.patient.first_name
-        ))
-        
-        # Apply pagination
-        total_count = len(screenings_filtered)
-        start_idx = (page - 1) * page_size
-        end_idx = start_idx + page_size
-        screenings = screenings_filtered[start_idx:end_idx]
-        
-        # Create pagination info for template
-        pagination_info = {
-            'current_page': page,
-            'total_pages': (total_count + page_size - 1) // page_size,
-            'total_count': total_count,
-            'page_size': page_size,
-            'has_prev': page > 1,
-            'has_next': end_idx < total_count,
-            'prev_page': page - 1 if page > 1 else None,
-            'next_page': page + 1 if end_idx < total_count else None
-        }
-        
-        filters_info = {}
-        metadata = {'source': 'enhanced_screening_engine'}
-        
-        # Get screening statistics for enhanced mode
-        stats = {'by_status': {}, 'by_type': {}, 'total_count': total_count}
-        
-        # Set variables for template compatibility
-        total_screenings_before_cutoff = total_count
-        screenings_hidden_by_cutoff = 0
-        
-        # Import cutoff utilities for legacy compatibility
-        from cutoff_utils import get_cutoff_date_for_patient
-        
-        # Get cutoff settings info for display (screening-specific cutoffs removed)
-        settings = get_or_create_settings()
-        cutoff_info = {
-            'general_cutoff_months': settings.cutoff_months,
-            'labs_cutoff_months': settings.labs_cutoff_months,
-            'imaging_cutoff_months': settings.imaging_cutoff_months,
-            'consults_cutoff_months': settings.consults_cutoff_months,
-            'hospital_cutoff_months': settings.hospital_cutoff_months,
-            'has_cutoffs': (settings.cutoff_months and settings.cutoff_months > 0) or 
-                          any([settings.labs_cutoff_months, settings.imaging_cutoff_months, 
-                               settings.consults_cutoff_months, settings.hospital_cutoff_months]),
-        }
+                # No cutoff filtering or admin override - show all screenings
+                screenings = all_screenings
+                screenings_hidden_by_cutoff = 0
+                
+            # Add simple pagination for fallback mode
+            page = int(request.args.get('page', 1))
+            page_size = min(int(request.args.get('page_size', 25)), 100)
+            start_idx = (page - 1) * page_size
+            end_idx = start_idx + page_size
+            
+            total_count = len(screenings)
+            screenings = screenings[start_idx:end_idx]
+            
+            # Create pagination info for template
+            pagination_info = {
+                'current_page': page,
+                'total_pages': (total_count + page_size - 1) // page_size,
+                'total_count': total_count,
+                'page_size': page_size,
+                'has_prev': page > 1,
+                'has_next': end_idx < total_count,
+                'prev_page': page - 1 if page > 1 else None,
+                'next_page': page + 1 if end_idx < total_count else None
+            }
+            
+            filters_info = {}
+            metadata = {'source': 'unified_engine_fallback'}
+            stats = {'by_status': {}, 'by_type': {}, 'total_count': total_count}
     else:
         # For other tabs, don't process screenings
         screenings = []
@@ -4064,345 +4136,6 @@ def internal_server_error(e):
     return render_template("500.html"), 500
 
 
-@app.route("/appointments")
-@app.route("/appointments/date/<date_str>")
-@log_page_access("appointments_page")
-def appointments(date_str=None):
-    """Display appointments page with date navigation"""
-    from db_utils import get_appointments_for_date
-    
-    # Get current date
-    today = datetime.now().date()
-    
-    # Check for date from query parameters or URL parameter
-    selected_date_param = request.args.get("selected_date")
-    
-    if selected_date_param:
-        try:
-            selected_date = datetime.strptime(selected_date_param, "%Y-%m-%d").date()
-        except ValueError:
-            selected_date = today
-            flash("Invalid date format. Showing today's appointments.", "warning")
-    elif date_str:
-        try:
-            selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        except ValueError:
-            selected_date = today
-            flash("Invalid date format. Showing today's appointments.", "warning")
-    else:
-        selected_date = today
-    
-    # Get previous and next day for navigation
-    prev_date = selected_date - timedelta(days=1)
-    next_date = selected_date + timedelta(days=1)
-    
-    # Get appointments for the selected date
-    try:
-        appointments = get_appointments_for_date(selected_date)
-    except Exception as e:
-        logger.error(f"Error fetching appointments: {e}")
-        appointments = []
-        flash("Error loading appointments. Please try again.", "error")
-    
-    # Get some stats for the page
-    total_appointments = len(appointments)
-    
-    # Count appointments by status
-    status_counts = {}
-    for apt in appointments:
-        status = apt.status or 'Scheduled'
-        status_counts[status] = status_counts.get(status, 0) + 1
-    
-    return render_template(
-        "appointments.html",
-        appointments=appointments,
-        selected_date=selected_date,
-        prev_date=prev_date,
-        next_date=next_date,
-        today_date=today,
-        total_appointments=total_appointments,
-        status_counts=status_counts,
-    )
-
-
-@app.route("/appointments/add", methods=["GET", "POST"])
-@safe_db_operation
-@validate_appointment_input
-def add_appointment():
-    """Add a new appointment with conflict prevention"""
-    form = AppointmentForm()
-    
-    # Populate patient choices
-    patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
-    form.patient_id.choices = [(p.id, f"{p.last_name}, {p.first_name} (MRN: {p.mrn})") for p in patients]
-    
-    # Set default date from query parameter
-    if request.method == "GET":
-        selected_date_str = request.args.get("date")
-        if selected_date_str:
-            try:
-                selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
-                form.appointment_date.data = selected_date
-            except ValueError:
-                pass
-    
-    if form.validate_on_submit():
-        try:
-            # Parse the selected time (which comes as a string like "09:00")
-            appointment_time_obj = datetime.strptime(form.appointment_time.data, "%H:%M").time()
-            
-            # Check for conflicts using existing utility
-            from appointment_utils import detect_appointment_conflicts
-            conflicts = detect_appointment_conflicts(
-                form.appointment_date.data, appointment_time_obj, patient_id=form.patient_id.data
-            )
-            
-            if conflicts:
-                from appointment_utils import format_conflict_message
-                conflict_msg = format_conflict_message(conflicts)
-                flash(f"Scheduling conflict detected: {conflict_msg}", "warning")
-                return render_template("appointment_form.html", form=form)
-
-            # Create new appointment
-            appointment = Appointment(
-                patient_id=form.patient_id.data,
-                appointment_date=form.appointment_date.data,
-                appointment_time=appointment_time_obj,
-                appointment_type="Consultation",  # Default type
-                note=form.note.data,
-                status="Scheduled",
-            )
-
-            db.session.add(appointment)
-            db.session.commit()
-
-            patient = Patient.query.get(form.patient_id.data)
-            flash(
-                f"Appointment scheduled for {patient.full_name} on {form.appointment_date.data} at {appointment_time_obj.strftime('%H:%M')}",
-                "success",
-            )
-            
-            # Log the appointment creation  
-            log_data_modification(
-                "appointment_created",
-                f"Created appointment for {patient.full_name} on {form.appointment_date.data} at {appointment_time_obj.strftime('%H:%M')}",
-                {"appointment_id": appointment.id, "patient_id": form.patient_id.data}
-            )
-            
-            return redirect(url_for("appointments", date_str=form.appointment_date.data.strftime("%Y-%m-%d")))
-
-        except ValueError as e:
-            flash("Invalid time format. Please select a valid time.", "danger")
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error creating appointment: {str(e)}")
-            flash("Error creating appointment. Please try again.", "danger")
-
-    return render_template("appointment_form.html", form=form)
-
-
-@app.route("/appointments/<int:appointment_id>/edit", methods=["GET", "POST"])
-@safe_db_operation  
-@validate_appointment_input
-def edit_appointment(appointment_id):
-    """Edit an existing appointment"""
-    appointment = Appointment.query.get_or_404(appointment_id)
-    form = AppointmentForm(obj=appointment)
-    
-    # Populate patient choices
-    patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
-    form.patient_id.choices = [(p.id, f"{p.last_name}, {p.first_name} (MRN: {p.mrn})") for p in patients]
-    
-    # Set current values on GET request
-    if request.method == "GET":
-        form.patient_id.data = appointment.patient_id
-        form.appointment_date.data = appointment.appointment_date
-        form.appointment_time.data = appointment.appointment_time.strftime("%H:%M")
-        form.note.data = appointment.note
-
-    if form.validate_on_submit():
-        try:
-            # Parse the selected time
-            appointment_time_obj = datetime.strptime(form.appointment_time.data, "%H:%M").time()
-            
-            # Check for conflicts (excluding current appointment)
-            from appointment_utils import detect_appointment_conflicts
-            conflicts = detect_appointment_conflicts(
-                form.appointment_date.data, appointment_time_obj, 
-                patient_id=form.patient_id.data, exclude_appointment_id=appointment_id
-            )
-            
-            if conflicts:
-                from appointment_utils import format_conflict_message
-                conflict_msg = format_conflict_message(conflicts)
-                flash(f"Scheduling conflict detected: {conflict_msg}", "warning")
-                return render_template("appointment_form.html", form=form, appointment=appointment)
-
-            # Update appointment
-            appointment.patient_id = form.patient_id.data
-            appointment.appointment_date = form.appointment_date.data
-            appointment.appointment_time = appointment_time_obj
-            appointment.note = form.note.data
-
-            db.session.commit()
-
-            patient = Patient.query.get(form.patient_id.data)
-            flash(
-                f"Appointment updated for {patient.full_name} on {form.appointment_date.data} at {appointment_time_obj.strftime('%H:%M')}",
-                "success",
-            )
-            
-            # Log the appointment update
-            log_data_modification(
-                "appointment_updated",
-                f"Updated appointment for {patient.full_name} on {form.appointment_date.data} at {appointment_time_obj.strftime('%H:%M')}",
-                {"appointment_id": appointment.id, "patient_id": form.patient_id.data}
-            )
-            
-            return redirect(url_for("appointments", date_str=form.appointment_date.data.strftime("%Y-%m-%d")))
-
-        except ValueError as e:
-            flash("Invalid time format. Please select a valid time.", "danger")
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error updating appointment: {str(e)}")
-            flash("Error updating appointment. Please try again.", "danger")
-
-    return render_template("appointment_form.html", form=form, appointment=appointment)
-
-
-@app.route("/appointments/<int:appointment_id>/delete", methods=["POST", "GET"])  
-@safe_db_operation
-def delete_appointment(appointment_id):
-    """Delete an appointment"""
-    appointment = Appointment.query.get_or_404(appointment_id) 
-    
-    if request.method == "POST":
-        try:
-            patient_name = appointment.patient.full_name
-            appointment_date = appointment.appointment_date
-            appointment_time = appointment.appointment_time
-            
-            db.session.delete(appointment)
-            db.session.commit()
-            
-            flash(f"Appointment for {patient_name} on {appointment_date} at {appointment_time.strftime('%H:%M')} has been deleted.", "success")
-            
-            # Log the appointment deletion
-            log_data_modification(
-                "appointment_deleted",
-                f"Deleted appointment for {patient_name} on {appointment_date} at {appointment_time.strftime('%H:%M')}",
-                {"appointment_id": appointment_id, "patient_id": appointment.patient_id}
-            )
-            
-            return redirect(url_for("appointments", date_str=appointment_date.strftime("%Y-%m-%d")))
-            
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error deleting appointment: {str(e)}")
-            flash("Error deleting appointment. Please try again.", "danger")
-            return redirect(url_for("edit_appointment", appointment_id=appointment_id))
-    
-    # GET request - show confirmation (optional, could redirect to edit)
-    return redirect(url_for("edit_appointment", appointment_id=appointment_id))
-
-
-@app.route("/appointments/<int:appointment_id>/status", methods=["POST"])
-@safe_db_operation
-def update_appointment_status(appointment_id):
-    """Update appointment status (for quick status changes from dashboard)"""
-    appointment = Appointment.query.get_or_404(appointment_id)
-    
-    try:
-        new_status = request.form.get("status", "Scheduled")
-        old_status = appointment.status
-        
-        appointment.status = new_status
-        db.session.commit()
-        
-        flash(f"Appointment status updated from {old_status} to {new_status}.", "success")
-        
-        # Log the status change
-        log_data_modification(
-            "appointment_status_updated",
-            f"Updated appointment status for {appointment.patient.full_name} from {old_status} to {new_status}",
-            {"appointment_id": appointment_id, "old_status": old_status, "new_status": new_status}
-        )
-        
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error updating appointment status: {str(e)}")
-        flash("Error updating appointment status. Please try again.", "danger")
-    
-    # Redirect back to the referring page or home
-    return redirect(request.referrer or url_for("index"))
-
-
-@app.route("/get-available-slots", methods=["GET"])
-def get_available_slots():
-    """Get available time slots for appointment scheduling"""
-    try:
-        date_str = request.args.get("date")
-        if not date_str:
-            return jsonify({"error": "Date parameter required"}), 400
-            
-        try:
-            selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        except ValueError:
-            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
-        
-        # Get appointment_id if editing (optional parameter)
-        appointment_id = request.args.get("appointment_id")
-        appointment_id = int(appointment_id) if appointment_id else None
-        
-        # Get available time slots using existing utility
-        from appointment_utils import get_available_time_slots, get_booked_time_slots
-        
-        booked_slots = get_booked_time_slots(selected_date, appointment_id, as_string=True)
-        available_slots = get_available_time_slots(selected_date, appointment_id)
-        
-        return jsonify({
-            "available_slots": available_slots,
-            "booked_slots": booked_slots,
-            "date": date_str
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting available slots: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
-
-
-@app.route("/add-screening-recommendation", methods=["POST"])
-def add_screening_recommendation():
-    """Add a screening recommendation (simplified implementation)"""
-    try:
-        # Get cache timestamp for proper redirection
-        ts = request.args.get('ts', '')
-        
-        # Extract form data
-        screening_type = request.form.get('screening_type', '').strip()
-        patient_id = request.form.get('patient_id')
-        notes = request.form.get('notes', '').strip()
-        
-        if not screening_type:
-            flash("Screening type is required", "danger")
-            return redirect(url_for('screening_list', tab='screenings', ts=ts))
-        
-        # For now, just log the recommendation (could be enhanced to save to database)
-        app.logger.info(f"Screening recommendation added: {screening_type} for patient {patient_id}")
-        
-        if notes:
-            app.logger.info(f"Recommendation notes: {notes}")
-        
-        flash(f"Screening recommendation for '{screening_type}' has been recorded", "success")
-        return redirect(url_for('screening_list', tab='screenings', ts=ts))
-        
-    except Exception as e:
-        app.logger.error(f"Error adding screening recommendation: {str(e)}")
-        flash("Error adding screening recommendation", "danger")
-        return redirect(url_for('screening_list', tab='screenings'))
-
-
 @app.route("/debug/appointments", methods=["GET"])
 def debug_appointments():
     """Debug endpoint to inspect appointments"""
@@ -4412,7 +4145,7 @@ def debug_appointments():
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Appointments Debugging</title>
+            <title>Appointment Debugging</title>
             <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
             <style>
                 body { padding: 20px; }
@@ -4436,13 +4169,2300 @@ def debug_appointments():
         # Get dates of appointments
         dates = {}
         for appt in all_appointments:
-            date_key = appt.appointment_date.strftime('%Y-%m-%d')
-            if date_key not in dates:
-                dates[date_key] = 0
-            dates[date_key] += 1
-            
-        response_html += "</div></body></html>"
+            date_str = appt.appointment_date.strftime("%Y-%m-%d")
+            if date_str in dates:
+                dates[date_str] += 1
+            else:
+                dates[date_str] = 1
+
+        response_html += "<h3>Appointments by date:</h3><ul>"
+        for date_str, count in sorted(dates.items()):
+            response_html += f"<li>{date_str}: {count} appointment(s)</li>"
+        response_html += "</ul>"
+
+        # Get today's appointments
+        today = datetime.now().date()
+        today_str = today.strftime("%Y-%m-%d")
+
+        response_html += f"<h3>Today's appointments ({today_str}):</h3>"
+        today_appointments = (
+            Appointment.query.filter(Appointment.appointment_date == today)
+            .order_by(Appointment.appointment_time)
+            .all()
+        )
+
+        if today_appointments:
+            response_html += "<table class='table table-striped'>"
+            response_html += "<thead><tr><th>ID</th><th>Patient</th><th>Time</th><th>Note</th></tr></thead><tbody>"
+            for appt in today_appointments:
+                time_str = (
+                    appt.appointment_time.strftime("%H:%M")
+                    if appt.appointment_time
+                    else "N/A"
+                )
+                response_html += f"<tr><td>{appt.id}</td><td>{appt.patient.full_name}</td><td>{time_str}</td><td>{appt.note or ''}</td></tr>"
+            response_html += "</tbody></table>"
+        else:
+            response_html += "<p>No appointments for today.</p>"
+
+        # Test appointment creation section
+        response_html += """
+            <h2>Test Appointment Creation</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title">Creating Test Appointment</h3>
+        """
+
+        try:
+            # Create test appointment
+            from datetime import time
+
+            test_patient = Patient.query.first()
+            if test_patient:
+                test_appointment = Appointment(
+                    patient_id=test_patient.id,
+                    appointment_date=today,
+                    appointment_time=time(hour=14, minute=30),
+                    note="Test appointment created via debug endpoint",
+                )
+                db.session.add(test_appointment)
+                db.session.commit()
+
+                response_html += f"""
+                    <div class="alert alert-success">
+                        <p>Created test appointment:</p>
+                        <ul>
+                            <li>ID: {test_appointment.id}</li>
+                            <li>Patient: {test_patient.full_name}</li>
+                            <li>Date: {today_str}</li>
+                            <li>Time: 14:30</li>
+                        </ul>
+                    </div>
+                """
+
+                # Verify it was created
+                verify = Appointment.query.get(test_appointment.id)
+                if verify:
+                    response_html += f"""
+                        <div class="alert alert-success">
+                            Successfully verified appointment exists in database
+                        </div>
+                    """
+                else:
+                    response_html += f"""
+                        <div class="alert alert-danger">
+                            ERROR: Could not verify appointment in database
+                        </div>
+                    """
+
+                # Refresh to see the new appointment
+                response_html += f"""
+                    <h3>All appointments after test creation</h3>
+                    <p>There should now be {appointment_count + 1} total appointments</p>
+                """
+
+                # Show appointments again after creation
+                updated_appointments = Appointment.query.all()
+                response_html += f"<p>Actual count after creation: <strong>{len(updated_appointments)}</strong></p>"
+
+                # New today's appointments
+                updated_today = (
+                    Appointment.query.filter(Appointment.appointment_date == today)
+                    .order_by(Appointment.appointment_time)
+                    .all()
+                )
+
+                response_html += f"<h4>Updated today's appointments ({today_str}):</h4>"
+                if updated_today:
+                    response_html += "<table class='table table-striped'>"
+                    response_html += "<thead><tr><th>ID</th><th>Patient</th><th>Time</th><th>Note</th></tr></thead><tbody>"
+                    for appt in updated_today:
+                        time_str = (
+                            appt.appointment_time.strftime("%H:%M")
+                            if appt.appointment_time
+                            else "N/A"
+                        )
+                        row_class = (
+                            " class='table-success'"
+                            if appt.id == test_appointment.id
+                            else ""
+                        )
+                        response_html += f"<tr{row_class}><td>{appt.id}</td><td>{appt.patient.full_name}</td><td>{time_str}</td><td>{appt.note or ''}</td></tr>"
+                    response_html += "</tbody></table>"
+                else:
+                    response_html += (
+                        "<p>No appointments for today (this is unexpected!).</p>"
+                    )
+            else:
+                response_html += """
+                    <div class="alert alert-warning">
+                        No patients available for test appointment creation
+                    </div>
+                """
+        except Exception as e:
+            response_html += f"""
+                <div class="alert alert-danger">
+                    Error creating test appointment: {str(e)}
+                </div>
+            """
+
+        # Close the HTML
+        response_html += """
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="/" class="btn btn-primary">Return to Home</a>
+            </div>
+        </div>
+        </body>
+        </html>
+        """
+
         return response_html
-        
     except Exception as e:
-        return f"Error: {str(e)}"
+        error_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Error</title>
+            <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+        </head>
+        <body>
+            <div class="container mt-5">
+                <div class="alert alert-danger">
+                    <h3>Error occurred in debug endpoint</h3>
+                    <p>{str(e)}</p>
+                </div>
+                <a href="/" class="btn btn-primary">Return to Home</a>
+            </div>
+        </body>
+        </html>
+        """
+        return error_html
+
+
+@app.route("/appointments/debug_add", methods=["GET", "POST"])
+@fresh_session_operation
+def debug_add_appointment():
+    """Debug version of add_appointment - simplified for testing"""
+    print("=" * 50)
+    print("STARTING DEBUG_ADD_APPOINTMENT...")
+
+    if request.method == "GET":
+        # Just show the form
+        form = AppointmentForm()
+        patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
+        form.patient_id.choices = [
+            (p.id, f"{p.full_name} (MRN: {p.mrn})") for p in patients
+        ]
+
+        # Pre-populate today's date
+        today = datetime.now().date()
+        form.appointment_date.data = today
+
+        return render_template(
+            "appointment_form.html",
+            form=form,
+            patients=patients,
+            editing=False,
+            debug_mode=True,
+        )
+
+    elif request.method == "POST":
+        print(f"DEBUG POST DATA: {request.form}")
+
+        # Extract form data directly
+        try:
+            # Get form data
+            patient_id = request.form.get("patient_id")
+            date_str = request.form.get("appointment_date")
+            time_str = request.form.get("appointment_time")
+            note = request.form.get("note", "")
+
+            # Basic validation
+            if not patient_id or not date_str or not time_str:
+                flash("Missing required appointment data.", "danger")
+                patients = Patient.query.order_by(
+                    Patient.last_name, Patient.first_name
+                ).all()
+                form = AppointmentForm(request.form)
+                form.patient_id.choices = [
+                    (p.id, f"{p.full_name} (MRN: {p.mrn})") for p in patients
+                ]
+                return render_template(
+                    "appointment_form.html",
+                    form=form,
+                    patients=patients,
+                    editing=False,
+                    debug_mode=True,
+                )
+
+            # Convert strings to appropriate data types
+            appointment_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            time_parts = time_str.split(":")
+            hour = int(time_parts[0])
+            minute = int(time_parts[1])
+            from datetime import time
+
+            appointment_time = time(hour=hour, minute=minute)
+
+            # Try with SQLAlchemy
+            appointment = Appointment(
+                patient_id=int(patient_id),
+                appointment_date=appointment_date,
+                appointment_time=appointment_time,
+                note=note,
+            )
+
+            db.session.add(appointment)
+            db.session.commit()
+
+            # Log details
+            print(f"DEBUG: Successfully created appointment with ID: {appointment.id}")
+            print(f"DEBUG: Patient ID: {appointment.patient_id}")
+            print(f"DEBUG: Date: {appointment.appointment_date}")
+            print(f"DEBUG: Time: {appointment.appointment_time}")
+
+            flash(
+                f"DEBUG MODE: Appointment added successfully with ID {appointment.id}!",
+                "success",
+            )
+
+            # Also check if we can query it back
+            verify = Appointment.query.get(appointment.id)
+            if verify:
+                print(f"DEBUG: Verified appointment exists with ID: {verify.id}")
+            else:
+                print("DEBUG: WARNING - Could not verify appointment after creation!")
+
+            # Force redirect using absolute URL
+            date_str_redirect = appointment_date.strftime("%Y-%m-%d")
+            return redirect("/home/date/" + date_str_redirect)
+
+        except Exception as e:
+            db.session.rollback()
+            error_msg = f"DEBUG ERROR: {str(e)}"
+            flash(error_msg, "danger")
+            print(error_msg)
+            patients = Patient.query.order_by(
+                Patient.last_name, Patient.first_name
+            ).all()
+            form = AppointmentForm(request.form)
+            form.patient_id.choices = [
+                (p.id, f"{p.full_name} (MRN: {p.mrn})") for p in patients
+            ]
+            return render_template(
+                "appointment_form.html",
+                form=form,
+                patients=patients,
+                editing=False,
+                debug_mode=True,
+            )
+
+    # Should never get here
+    return redirect("/home")
+
+
+# The simple_add_appointment function has been consolidated into the main add_appointment function
+
+
+@app.route("/get-available-slots", methods=["GET"])
+def get_available_slots():
+    """API endpoint to get available appointment time slots for a specific date"""
+    try:
+        # Get the date from the query parameters
+        date_str = request.args.get("date")
+        if not date_str:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Date parameter is required",
+                        "available_slots": [],
+                        "booked_slots": [],
+                    }
+                ),
+                400,
+            )
+
+        # Get optional appointment ID (for editing scenarios)
+        appointment_id = request.args.get("appointment_id")
+        appointment_id = int(appointment_id) if appointment_id else None
+
+        # Check if we're editing an appointment (stored in session)
+        if not appointment_id and "editing_appointment_id" in session:
+            appointment_id = session["editing_appointment_id"]
+            print(f"Using appointment ID from session: {appointment_id}")
+
+        print(
+            f"Get available slots - Date: {date_str}, Appointment ID: {appointment_id}"
+        )
+
+        # Parse the date
+        try:
+            appointment_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Invalid date format. Please use YYYY-MM-DD",
+                        "available_slots": [],
+                        "booked_slots": [],
+                    }
+                ),
+                400,
+            )
+
+        # Get all available slots (excluding current appointment if editing)
+        available_slots = get_available_time_slots(appointment_date, appointment_id)
+
+        # Get all booked slots (excluding current appointment if editing)
+        booked_slots = get_booked_time_slots(
+            appointment_date, appointment_id, as_string=True
+        )
+
+        # Format available slots for the dropdown
+        formatted_available_slots = []
+        for slot in available_slots:
+            # Convert from 24-hour to 12-hour format for display
+            hour, minute = map(int, slot.split(":"))
+            if hour < 12:
+                label = f"{hour}:{minute:02d} AM" if hour > 0 else f"12:{minute:02d} AM"
+            elif hour == 12:
+                label = f"12:{minute:02d} PM"
+            else:
+                label = f"{hour-12}:{minute:02d} PM"
+
+            formatted_available_slots.append({"value": slot, "label": label})
+
+        return jsonify(
+            {
+                "success": True,
+                "available_slots": formatted_available_slots,
+                "booked_slots": booked_slots,
+            }
+        )
+    except Exception as e:
+        print(f"Error getting available slots: {str(e)}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": f"Error: {str(e)}",
+                    "available_slots": [],
+                    "booked_slots": [],
+                }
+            ),
+            500,
+        )
+
+
+@app.route("/add-appointment", methods=["GET", "POST"], endpoint="add_appointment")
+@fresh_session_operation
+@validate_appointment_input
+@log_patient_operation("add_appointment")
+def add_appointment():
+    """Add a new appointment - Enhanced version with 15-minute time slots and conflict prevention"""
+    print("=" * 50)
+    print("Starting add_appointment function...")
+    print(f"Request method: {request.method}")
+    print(f"Request headers: {dict(request.headers)}")
+    print(
+        f"Request is AJAX: {request.headers.get('X-Requested-With') == 'XMLHttpRequest'}"
+    )
+    print(f"Request form data: {request.form}")
+    print(f"Request args: {request.args}")
+    print(f"Request files: {request.files}")
+    print("=" * 50)
+
+    # Always create a fresh form
+    form = AppointmentForm()
+
+    # Get pre-selected date from query parameters if available
+    selected_date = request.args.get("date")
+    print(f"Selected date from URL: {selected_date}")
+
+    # Get the current date for debugging
+    current_date = datetime.now().date()
+    print(f"Current date for reference: {current_date}")
+
+    # This is crucial - explicitly set appointment_date to None to prevent default values
+    form.appointment_date.data = None
+    print(f"Initial form appointment_date.data: {form.appointment_date.data}")
+
+    # Check if we have a fallback date from form submission
+    fallback_date = None
+    if request.method == "POST" and "fallback_date" in request.form:
+        fallback_date = request.form["fallback_date"]
+        print(f"Fallback date from form: {fallback_date}")
+
+    # Check if user wants to force save despite conflicts
+    force_save = request.args.get("force_save") == "1"
+    print(f"Force save flag: {force_save}")
+
+    # Check if this is an AJAX request
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    print(f"Is AJAX request: {is_ajax}")
+
+    # Populate the patient select field with all patients
+    patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
+    print(f"Found {len(patients)} patients for dropdown")
+    form.patient_id.choices = [
+        (p.id, f"{p.full_name} (MRN: {p.mrn})") for p in patients
+    ]
+
+    # Initialize form with pre-selected date for GET requests
+    if selected_date and request.method == "GET":
+        try:
+            # Parse and set the appointment date
+            parsed_date = datetime.strptime(selected_date, "%Y-%m-%d").date()
+            form.appointment_date.data = parsed_date
+            print(f"Set form appointment_date to: {form.appointment_date.data}")
+            print(
+                f"Date format check - Selected date: {selected_date}, Parsed as: {parsed_date}, Form value: {form.appointment_date.data}"
+            )
+        except ValueError:
+            # If invalid, set to today's date and show warning
+            form.appointment_date.data = datetime.now().date()
+            print(
+                f"Invalid date format. Using today's date: {form.appointment_date.data}"
+            )
+            flash(
+                "Invalid date format in URL. Date should be in YYYY-MM-DD format. Using today's date instead.",
+                "warning",
+            )
+
+    # Handle direct test appointment creation
+    if request.args.get("test_create") == "1":
+        try:
+            # Get first patient for test
+            test_patient = patients[0] if patients else None
+            if test_patient:
+                print(
+                    f"TEST MODE: Creating test appointment for patient: {test_patient.full_name}"
+                )
+                from datetime import time
+
+                # Create test appointment
+                test_appointment = Appointment(
+                    patient_id=test_patient.id,
+                    appointment_date=datetime.now().date(),
+                    appointment_time=time(hour=10, minute=30),
+                    note="Test appointment",
+                )
+                db.session.add(test_appointment)
+                db.session.commit()
+                print(f"TEST MODE: Created appointment with ID: {test_appointment.id}")
+
+                # Verify it was created
+                verify = Appointment.query.filter_by(id=test_appointment.id).first()
+                if verify:
+                    print(
+                        f"TEST MODE: Successfully verified appointment exists in database"
+                    )
+                    flash(
+                        f"Test appointment created successfully with ID: {test_appointment.id}",
+                        "success",
+                    )
+                else:
+                    print(f"TEST MODE: Failed to verify appointment in database")
+                    flash(
+                        "Test appointment failed - could not verify creation", "danger"
+                    )
+
+                # List all appointments for today
+                today_appts = Appointment.query.filter(
+                    Appointment.appointment_date == datetime.now().date()
+                ).all()
+                print(f"TEST MODE: Found {len(today_appts)} appointments for today")
+                for appt in today_appts:
+                    print(
+                        f"TEST MODE: Appointment ID: {appt.id}, Patient: {appt.patient.full_name}, Time: {appt.appointment_time}"
+                    )
+
+                timestamp = int(time_module.time())
+                return redirect(url_for("index", refresh=timestamp))
+            else:
+                flash("No patients available for test appointment creation", "danger")
+        except Exception as e:
+            db.session.rollback()
+            print(f"TEST MODE ERROR: {str(e)}")
+            flash(f"Error in test appointment creation: {str(e)}", "danger")
+            return redirect(url_for("index"))
+
+    # Debug form submission
+    print(f"Form submitted: {request.method == 'POST'}")
+    if request.method == "POST":
+        print(f"Form data: {request.form}")
+        print(
+            f"Debug info: {request.form.get('_form_debug', 'none')} - Has errors: {request.form.get('_form_has_errors', 'false')}"
+        )
+
+        # Create a new form with the POST data but make sure we set the patient choices first
+        print(
+            f"POST data before creating form: appointment_date={request.form.get('appointment_date')}"
+        )
+        form = AppointmentForm(request.form)
+        print(f"Form after creation: appointment_date={form.appointment_date.data}")
+
+        # Need to set choices before validation
+        form.patient_id.choices = [
+            (p.id, f"{p.full_name} (MRN: {p.mrn})") for p in patients
+        ]
+
+        # Save the appointment date before validation for debugging
+        pre_validate_date = form.appointment_date.data
+        print(
+            f"Appointment date before validation: {pre_validate_date}, type: {type(pre_validate_date)}"
+        )
+
+        # Run validation
+        validation_result = form.validate()
+        print(f"Form validation: {validation_result}")
+
+        # Check if the date changed during validation
+        post_validate_date = form.appointment_date.data
+        print(
+            f"Appointment date after validation: {post_validate_date}, type: {type(post_validate_date)}"
+        )
+        if not form.validate():
+            print(f"Form validation errors: {form.errors}")
+            # If in a force save scenario but there's CSRF error, handle special case
+            # Modified to handle CSRF errors more gracefully for appointment creation
+            # This helps when tokens expire during form interactions
+            if "csrf_token" in form.errors:
+                # Recreate the appointment manually instead of relying on form validation
+                try:
+                    patient_id = request.form.get("patient_id")
+                    appointment_date_str = request.form.get("appointment_date")
+                    appointment_time_str = request.form.get("appointment_time")
+                    note = request.form.get("note", "")
+
+                    # Validate and convert
+                    if (
+                        not patient_id
+                        or not appointment_date_str
+                        or not appointment_time_str
+                    ):
+                        error_msg = "Missing required appointment data."
+                        if is_ajax:
+                            response = jsonify({"success": False, "message": error_msg})
+                            response.headers["Content-Type"] = "application/json"
+                            return response
+                        flash(error_msg, "danger")
+                        return render_template(
+                            "appointment_form.html",
+                            form=form,
+                            patients=patients,
+                            editing=False,
+                        )
+
+                    appointment_date = datetime.strptime(
+                        appointment_date_str, "%Y-%m-%d"
+                    ).date()
+                    time_parts = appointment_time_str.split(":")
+                    hour = int(time_parts[0])
+                    minute = int(time_parts[1])
+                    from datetime import time
+
+                    appointment_time = time(hour=hour, minute=minute)
+
+                    # Create appointment with force save
+                    appointment = Appointment(
+                        patient_id=int(patient_id),
+                        appointment_date=appointment_date,
+                        appointment_time=appointment_time,
+                        note=note,
+                    )
+
+                    db.session.add(appointment)
+                    db.session.commit()
+
+                    success_msg = "Appointment added with scheduling conflicts."
+                    timestamp = int(time_module.time())
+
+                    if is_ajax:
+                        return jsonify(
+                            {
+                                "success": True,
+                                "message": success_msg,
+                                "redirect": f"/date/{appointment_date_str}?refresh={timestamp}",
+                            }
+                        )
+
+                    flash(success_msg, "warning")
+                    return redirect(f"/date/{appointment_date_str}?refresh={timestamp}")
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"Force save error: {str(e)}")
+                    error_msg = f"Error creating appointment: {str(e)}"
+
+                    if is_ajax:
+                        return jsonify({"success": False, "message": error_msg})
+
+                    flash(error_msg, "danger")
+
+    # Use a more reliable approach that works with or without form validation
+    if request.method == "POST":
+        # Try to create an appointment either way - with form validation or direct data parsing
+        print("Processing POST request for appointment creation")
+
+        # First, try to get data directly from the form data (more reliable)
+        patient_id = request.form.get("patient_id")
+        appointment_date_str = request.form.get("appointment_date")
+        appointment_time_str = request.form.get("appointment_time")
+        note = request.form.get("note", "")
+
+        # Debug info
+        print(
+            f"Direct form data: patient_id={patient_id}, date={appointment_date_str}, time={appointment_time_str}"
+        )
+        print(f"Form validated: {form.validate()}")
+
+        # Validate the essential data is present
+        if not patient_id or not appointment_date_str or not appointment_time_str:
+            error_msg = "Missing required appointment data."
+            if is_ajax:
+                return jsonify({"success": False, "message": error_msg})
+            flash(error_msg, "danger")
+            return render_template(
+                "appointment_form.html", form=form, patients=patients, editing=False
+            )
+
+        # Convert date and time strings to appropriate objects
+        try:
+            # Parse the date and time
+            appointment_date = datetime.strptime(
+                appointment_date_str, "%Y-%m-%d"
+            ).date()
+
+            # Parse the time string
+            time_parts = appointment_time_str.split(":")
+            hour = int(time_parts[0])
+            minute = int(time_parts[1])
+            from datetime import time
+
+            appointment_time = time(hour=hour, minute=minute)
+
+            print(
+                f"Successfully parsed date: {appointment_date} and time: {appointment_time}"
+            )
+        except (ValueError, IndexError) as e:
+            print(f"Error parsing date or time: {e}")
+            error_msg = "Invalid date or time format. Please use YYYY-MM-DD for date and HH:MM for time."
+
+            if is_ajax:
+                return jsonify({"success": False, "message": error_msg})
+
+            flash(error_msg, "danger")
+            return render_template(
+                "appointment_form.html", form=form, patients=patients, editing=False
+            )
+
+        print(
+            f"Proceeding without conflict check for date: {appointment_date}, time: {appointment_time}"
+        )
+        # Conflict detection removed - appointments can be scheduled at any time
+
+        # Create a new appointment
+        try:
+            # Get date directly from request.form to avoid WTForms processing
+            raw_appointment_date = request.form.get("appointment_date")
+            print(f"Raw appointment date: {raw_appointment_date}")
+
+            # Use the raw date if possible, or fall back to form data
+            if raw_appointment_date:
+                try:
+                    # Parse the raw date string
+                    appointment_date = datetime.strptime(
+                        raw_appointment_date, "%Y-%m-%d"
+                    ).date()
+                    print(f"Using parsed date: {appointment_date}")
+                except ValueError:
+                    # Fall back to processed form data
+                    appointment_date = form.appointment_date.data
+                    print(f"Invalid raw date, using form data: {appointment_date}")
+            else:
+                # No raw date in form, use processed form data
+                appointment_date = form.appointment_date.data
+                print(f"No raw date, using form data: {appointment_date}")
+
+            # Create the appointment using our directly parsed data
+            # Use integer conversion for patient_id to ensure it's the right type
+            patient_id_int = int(patient_id)
+            print(
+                f"Creating appointment for patient ID: {patient_id_int}, date: {appointment_date}"
+            )
+            appointment = Appointment(
+                patient_id=patient_id_int,
+                appointment_date=appointment_date,
+                appointment_time=appointment_time,
+                note=note,
+            )
+
+            db.session.add(appointment)
+            db.session.commit()
+            print(f"Appointment created successfully with ID: {appointment.id}")
+
+            # Log the appointment addition to admin dashboard with detailed information
+            try:
+                import uuid
+                from models import AdminLog
+
+                request_id = str(uuid.uuid4())
+
+                # Get patient name for logging
+                patient = Patient.query.get(patient_id_int)
+                patient_name = patient.full_name if patient else "Unknown"
+
+                AdminLog.log_event(
+                    event_type="appointment_addition",
+                    user_id=session.get("user_id"),
+                    event_details={
+                        "action": "add",
+                        "appointment_id": appointment.id,
+                        "patient_id": patient_id_int,
+                        "patient_name": patient_name,
+                        "appointment_date": appointment_date.strftime("%Y-%m-%d"),
+                        "appointment_time": appointment_time.strftime("%H:%M"),
+                        "note": note or "",
+                        "admin_user": session.get("username"),
+                        "timestamp": datetime.now().isoformat(),
+                    },
+                    request_id=request_id,
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get("User-Agent", ""),
+                )
+                db.session.commit()
+            except Exception as log_error:
+                logger.error(f"Error logging appointment addition: {str(log_error)}")
+                # Don't let logging errors break the appointment creation
+                pass
+
+            # Double-check the appointment was actually created and log the result
+            verify = Appointment.query.get(appointment.id)
+            if verify:
+                print(f"Verified appointment exists in database with ID {verify.id}")
+                today_count = Appointment.query.filter(
+                    Appointment.appointment_date == form.appointment_date.data
+                ).count()
+                print(
+                    f"Total appointments for {form.appointment_date.data}: {today_count}"
+                )
+            else:
+                print(
+                    "WARNING: Could not verify appointment in database after creation!"
+                )
+
+            success_msg = "Appointment added successfully."
+
+            # Use our original unparsed date string for the redirect - it's already in the correct format
+            appointment_date_str = appointment_date_str  # This is from the form input and is already in 'YYYY-MM-DD' format
+
+            # If we have a fallback date from the form, use that instead
+            if fallback_date:
+                print(f"Using fallback date for redirect: {fallback_date}")
+                appointment_date_str = fallback_date
+            elif not appointment_date_str:
+                # Default to today if still no date
+                today = datetime.now().date()
+                appointment_date_str = today.strftime("%Y-%m-%d")
+                print(
+                    f"No appointment date found, defaulting to today: {appointment_date_str}"
+                )
+
+            # Use a cache-busting parameter to ensure fresh page load
+            timestamp = int(time_module.time())
+            print(
+                f"Redirecting to index with date_str: {appointment_date_str} and refresh: {timestamp}"
+            )
+
+            # Construct an absolute URL to ensure proper redirect
+            redirect_url = f"/home/date/{appointment_date_str}?refresh={timestamp}"
+            print(f"FINAL REDIRECT URL: {redirect_url}")
+
+            # Update flash message to confirm the redirect path for debugging
+            success_msg += f" Redirecting to date: {appointment_date_str}"
+
+            if is_ajax:
+                # Use direct URL path for consistency
+                redirect_url = f"/home/date/{appointment_date_str}?refresh={timestamp}"
+                print(f"AJAX Redirect URL: {redirect_url}")
+                return jsonify(
+                    {"success": True, "message": success_msg, "redirect": redirect_url}
+                )
+
+            flash(success_msg, "success")
+
+            print(
+                f"Form date: {form.appointment_date.data}, type: {type(form.appointment_date.data)}"
+            )
+
+            # Use Flask's url_for with external=True to get an absolute URL
+            try:
+                # First try using url_for with the 'index' route and date parameter
+                redirect_url = url_for(
+                    "index", date=appointment_date_str, refresh=timestamp
+                )
+                print(f"URL generated via url_for: {redirect_url}")
+            except Exception as url_err:
+                print(f"Error with url_for: {str(url_err)}")
+                # Fallback to direct URL construction
+                redirect_url = f"/home/date/{appointment_date_str}?refresh={timestamp}"
+                print(f"Fallback direct URL: {redirect_url}")
+
+            print(f"FINAL REDIRECT: {redirect_url}")
+            # Redirect to the date page
+            response = redirect(redirect_url)
+            print(f"Prepared redirect response: {response}")
+            return response
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error saving appointment: {str(e)}")
+            error_msg = f"Error saving appointment: {str(e)}"
+
+            if is_ajax:
+                return jsonify({"success": False, "message": error_msg})
+
+            flash(error_msg, "danger")
+            return render_template(
+                "appointment_form.html", form=form, patients=patients, editing=False
+            )
+
+    print("-" * 50)
+    print(f"FINAL DEBUG - Request method: {request.method}")
+    print(
+        f"FINAL DEBUG - Form validation status: {form.validate() if request.method == 'POST' else 'GET request'}"
+    )
+    print(f"FINAL DEBUG - Selected date: {selected_date}")
+    print(f"FINAL DEBUG - Fallback date: {fallback_date}")
+    print("-" * 50)
+    return render_template(
+        "appointment_form.html", form=form, patients=patients, editing=False
+    )
+
+
+@app.route("/appointments/<int:appointment_id>/edit", methods=["GET", "POST"])
+@fresh_session_operation
+@log_patient_operation("edit_appointment")
+@with_db_retry(max_retries=2)
+def edit_appointment(appointment_id):
+    """Edit an existing appointment - Enhanced version with improved data handling"""
+    print("=" * 50)
+    print(f"Starting edit_appointment function for ID: {appointment_id}")
+    print(f"Request method: {request.method}")
+
+    # Get the appointment by ID with database connection recovery
+    try:
+        appointment = Appointment.query.get_or_404(appointment_id)
+        print(
+            f"Found appointment: ID={appointment.id}, Patient={appointment.patient.full_name}, Date={appointment.appointment_date}"
+        )
+    except Exception as db_error:
+        print(f"Database error in edit_appointment: {str(db_error)}")
+        # Try to recover from database connection issues
+        try:
+            db.session.rollback()
+            db.session.remove()
+            # Force a new connection by disposing the engine
+            db.engine.dispose()
+            # Retry the query with a fresh connection
+            appointment = Appointment.query.get_or_404(appointment_id)
+            print(
+                f"Database connection recovered - Found appointment: ID={appointment.id}"
+            )
+        except Exception as retry_error:
+            print(f"Database connection recovery failed: {str(retry_error)}")
+            flash("Database connection error. Please try again.", "danger")
+            return redirect(url_for("index"))
+
+    # Create form with standard handling
+    if request.method == "GET":
+        form = AppointmentForm(obj=appointment)
+    else:
+        # For POST requests, create form with request data
+        form = AppointmentForm(request.form)
+
+    # Populate the patient select field with all patients
+    patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
+    form.patient_id.choices = [
+        (p.id, f"{p.full_name} (MRN: {p.mrn})") for p in patients
+    ]
+
+    # Check if user wants to force save despite conflicts
+    force_save = request.args.get("force_save") == "1"
+    print(f"Edit appointment - force save: {force_save}")
+
+    # Check if this is an AJAX request
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    print(f"Edit is AJAX request: {is_ajax}")
+
+    # Set the time field for GET request
+    if request.method == "GET":
+        form.appointment_time.data = appointment.appointment_time.strftime("%H:%M")
+        print(f"Set initial time to: {form.appointment_time.data}")
+
+        # Store appointment ID in session for API exclusion during editing
+        session["editing_appointment_id"] = appointment_id
+        print(f"Stored editing appointment ID in session: {appointment_id}")
+
+    # Handle POST request (form submission)
+    if request.method == "POST":
+        print(f"Edit form data: {request.form}")
+
+        # Use direct data parsing approach - get data directly from form data
+        patient_id = request.form.get("patient_id")
+        appointment_date_str = request.form.get("appointment_date")
+        appointment_time_str = request.form.get("appointment_time")
+        note = request.form.get("note", "")
+
+        print(
+            f"Direct form data: patient_id={patient_id}, date={appointment_date_str}, time={appointment_time_str}"
+        )
+
+        # Validate essential data is present
+        if not patient_id or not appointment_date_str or not appointment_time_str:
+            error_msg = "Missing required appointment data."
+            if is_ajax:
+                return jsonify({"success": False, "message": error_msg})
+            flash(error_msg, "danger")
+            return render_template(
+                "appointment_form.html",
+                form=form,
+                patients=patients,
+                editing=True,
+                appointment=appointment,
+            )
+
+        # Parse date and time
+        try:
+            # Parse the date
+            appointment_date = datetime.strptime(
+                appointment_date_str, "%Y-%m-%d"
+            ).date()
+
+            # Parse the time
+            time_parts = appointment_time_str.split(":")
+            hour = int(time_parts[0])
+            minute = int(time_parts[1])
+            from datetime import time
+
+            appointment_time = time(hour=hour, minute=minute)
+
+            print(
+                f"Successfully parsed date: {appointment_date} and time: {appointment_time}"
+            )
+        except (ValueError, IndexError) as e:
+            print(f"Error parsing date or time: {e}")
+            error_msg = "Invalid date or time format. Please use YYYY-MM-DD for date and HH:MM for time."
+
+            if is_ajax:
+                return jsonify({"success": False, "message": error_msg})
+
+            flash(error_msg, "danger")
+            return render_template(
+                "appointment_form.html",
+                form=form,
+                patients=patients,
+                editing=True,
+                appointment=appointment,
+            )
+
+        print(
+            f"Proceeding without conflict check for edit - date: {appointment_date}, time: {appointment_time}"
+        )
+        # Conflict detection removed - appointments can be scheduled at any time
+
+        # Update the appointment with our parsed data
+        try:
+            # Convert patient_id to integer
+            patient_id_int = int(patient_id)
+
+            # Update appointment data
+            print(
+                f"Updating appointment ID {appointment.id} for patient_id: {patient_id_int}"
+            )
+            appointment.patient_id = patient_id_int
+            appointment.appointment_date = appointment_date
+            appointment.appointment_time = appointment_time
+            appointment.note = note
+
+            # Save changes
+            db.session.commit()
+            print(f"Appointment updated successfully")
+
+            # Set success message
+            success_msg = "Appointment updated successfully."
+
+            # Use a cache-busting timestamp
+            timestamp = int(time_module.time())
+
+            # Use our parsed date string for the redirect
+            appointment_date_str = appointment_date.strftime("%Y-%m-%d")
+
+            # Construct redirect URL to home page with date parameter
+            redirect_url = f"/home/date/{appointment_date_str}?refresh={timestamp}"
+            print(f"FINAL EDIT REDIRECT URL: {redirect_url}")
+
+            # For AJAX requests
+            if is_ajax:
+                return jsonify(
+                    {"success": True, "message": success_msg, "redirect": redirect_url}
+                )
+
+            # Set flash message
+            flash(success_msg, "success")
+
+            # Clear the editing appointment ID from session
+            session.pop("editing_appointment_id", None)
+
+            # Redirect to the date page
+            return redirect(redirect_url)
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error updating appointment: {str(e)}")
+            error_msg = f"Error updating appointment: {str(e)}"
+
+            if is_ajax:
+                return jsonify({"success": False, "message": error_msg})
+
+            flash(error_msg, "danger")
+            return render_template(
+                "appointment_form.html",
+                form=form,
+                patients=patients,
+                editing=True,
+                appointment=appointment,
+            )
+
+    # For GET requests, just show the form
+    return render_template(
+        "appointment_form.html",
+        form=form,
+        patients=patients,
+        editing=True,
+        appointment=appointment,
+    )
+
+
+@app.route("/appointments/<int:appointment_id>/update-status", methods=["POST"])
+@fresh_session_operation
+@log_patient_operation("update_appointment_status")
+def update_appointment_status(appointment_id):
+    """Update the status of an appointment"""
+    # Check if this is an AJAX request
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+    try:
+        appointment = Appointment.query.get_or_404(appointment_id)
+
+        # Get the new status from the form
+        new_status = request.form.get("status")
+        if new_status in ["OOO", "waiting", "provider", "seen"]:
+            appointment.status = new_status
+            db.session.commit()
+
+            # If this is an AJAX request, return JSON
+            if is_ajax:
+                return jsonify(
+                    {
+                        "success": True,
+                        "message": f"Appointment status updated to {new_status}",
+                        "status": new_status,
+                    }
+                )
+
+            # No flash message to keep the UI clean
+        else:
+            if is_ajax:
+                return (
+                    jsonify({"success": False, "message": "Invalid status value"}),
+                    400,
+                )
+
+            flash("Invalid status value", "danger")
+
+        # Determine where to redirect back to
+        referrer = request.referrer
+        if referrer and "/patients/" in referrer:
+            # If coming from patient detail page, go back there
+            patient_id = appointment.patient_id
+            return redirect(url_for("patient_detail", patient_id=patient_id))
+        else:
+            # Otherwise go back to the schedule for that day
+            redirect_date = appointment.appointment_date
+            return redirect(
+                url_for("index", date_str=redirect_date.strftime("%Y-%m-%d"))
+            )
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error updating appointment status: {str(e)}")
+        if is_ajax:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": f"Error updating appointment status: {str(e)}",
+                    }
+                ),
+                500,
+            )
+        flash(f"Error updating appointment status: {str(e)}", "danger")
+        return redirect(url_for("index"))
+
+
+@app.route("/appointments/<int:appointment_id>/delete", methods=["GET", "POST"])
+@fresh_session_operation
+@log_patient_operation("delete_appointment")
+def delete_appointment(appointment_id):
+    """Delete an appointment and redirect to the home page"""
+    print(f"Attempting to delete appointment {appointment_id}")
+
+    # Check if this is an AJAX request
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    print(f"Delete is AJAX request: {is_ajax}")
+
+    try:
+        appointment = Appointment.query.get_or_404(appointment_id)
+        print(
+            f"Found appointment: {appointment.id} for patient {appointment.patient.full_name}"
+        )
+
+        # Store the date for redirection
+        appointment_date = (
+            appointment.appointment_date.strftime("%Y-%m-%d")
+            if appointment.appointment_date
+            else None
+        )
+        print(f"Appointment date for redirect: {appointment_date}")
+
+        # Log the deletion to admin dashboard before deleting
+        try:
+            import uuid
+            from models import AdminLog
+
+            request_id = str(uuid.uuid4())
+
+            AdminLog.log_event(
+                event_type="appointment_deletion",
+                user_id=session.get("user_id"),
+                event_details={
+                    "action": "delete",
+                    "appointment_id": appointment.id,
+                    "patient_id": appointment.patient_id,
+                    "patient_name": appointment.patient.full_name,
+                    "appointment_date": appointment.appointment_date.strftime(
+                        "%Y-%m-%d"
+                    ),
+                    "appointment_time": (
+                        appointment.appointment_time.strftime("%H:%M")
+                        if appointment.appointment_time
+                        else "N/A"
+                    ),
+                    "note": appointment.note or "",
+                    "deletion_location": "individual_appointment",
+                    "admin_user": session.get("username"),
+                    "timestamp": datetime.now().isoformat(),
+                },
+                request_id=request_id,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get("User-Agent", ""),
+            )
+            db.session.commit()
+        except Exception as log_error:
+            logger.error(f"Error logging appointment deletion: {str(log_error)}")
+            # Don't let logging errors break the deletion
+            pass
+
+        # Delete the appointment
+        db.session.delete(appointment)
+        db.session.commit()
+
+        success_msg = "Appointment deleted successfully."
+        if not is_ajax:
+            flash(success_msg, "success")
+
+        # Redirect to the home page, showing the same date with cache-busting
+        timestamp = int(time_module.time())
+
+        if is_ajax:
+            if appointment_date:
+                return jsonify(
+                    {
+                        "success": True,
+                        "message": success_msg,
+                        "redirect": f"/home/date/{appointment_date}?refresh={timestamp}",
+                    }
+                )
+            else:
+                return jsonify(
+                    {
+                        "success": True,
+                        "message": success_msg,
+                        "redirect": f"/home?refresh={timestamp}",
+                    }
+                )
+
+        # Use Flask's url_for for consistency
+        try:
+            if appointment_date:
+                redirect_url = url_for(
+                    "index", date_str=appointment_date, refresh=timestamp
+                )
+                print(f"Delete redirect URL via url_for: {redirect_url}")
+            else:
+                redirect_url = url_for("index", refresh=timestamp)
+                print(f"Delete redirect URL via url_for (no date): {redirect_url}")
+        except Exception as url_err:
+            print(f"Error with url_for in delete: {str(url_err)}")
+            # Fallback to direct URL construction
+            if appointment_date:
+                redirect_url = f"/home/date/{appointment_date}?refresh={timestamp}"
+            else:
+                redirect_url = f"/home?refresh={timestamp}"
+
+        print(f"FINAL DELETE REDIRECT: {redirect_url}")
+        return redirect(redirect_url)
+
+    except Exception as e:
+        db.session.rollback()
+        error_msg = f"Error deleting appointment: {str(e)}"
+
+        if is_ajax:
+            return jsonify({"success": False, "message": error_msg})
+
+        flash(error_msg, "danger")
+
+        # Try to redirect to the same date if we have it in the session
+        selected_date = request.args.get("date_str")
+        timestamp = int(time_module.time())
+
+        # Use Flask's url_for for consistency in error case too
+        try:
+            if selected_date:
+                redirect_url = url_for("index", date=selected_date, refresh=timestamp)
+            else:
+                redirect_url = url_for("index", refresh=timestamp)
+        except Exception as url_err:
+            print(f"Error with url_for in delete error case: {str(url_err)}")
+            # Fallback to direct URL construction
+            if selected_date:
+                redirect_url = f"/home/date/{selected_date}?refresh={timestamp}"
+            else:
+                redirect_url = f"/home?refresh={timestamp}"
+
+        print(f"FINAL ERROR REDIRECT: {redirect_url}")
+        return redirect(redirect_url)
+
+
+@app.route("/delete_appointments_bulk", methods=["POST"])
+@csrf.exempt
+@fresh_session_operation
+def delete_appointments_bulk():
+    """Delete multiple selected appointments"""
+    try:
+        # Debug all incoming data
+        print(f"DEBUG: Request method: {request.method}")
+        print(f"DEBUG: Form data keys: {list(request.form.keys())}")
+        print(f"DEBUG: All form data: {dict(request.form)}")
+
+        # Get all selected appointment IDs - handle comma-separated values
+        if "appointment_ids" in request.form:
+            # Handle comma-separated appointment IDs
+            appointment_ids_str = request.form.get("appointment_ids", "")
+            selected_appointments = [
+                id.strip() for id in appointment_ids_str.split(",") if id.strip()
+            ]
+        else:
+            # Fallback for original format
+            try:
+                selected_appointments = request.form.getlist("selected_appointments[]")
+            except AttributeError:
+                form_data = dict(request.form)
+                if "selected_appointments[]" in form_data:
+                    selected_appointments = (
+                        [form_data["selected_appointments[]"]]
+                        if isinstance(form_data["selected_appointments[]"], str)
+                        else form_data["selected_appointments[]"]
+                    )
+                else:
+                    selected_appointments = []
+
+        print(f"DEBUG: Received appointments for deletion: {selected_appointments}")
+
+        if not selected_appointments:
+            flash("No appointments were selected for deletion.", "warning")
+            return redirect(url_for("all_visits"))
+
+        deleted_count = 0
+        # Convert appointment IDs to integers and validate them
+        valid_appointment_ids = []
+        for appt_id in selected_appointments:
+            try:
+                appointment_id_int = int(appt_id.strip())
+                if appointment_id_int > 0:
+                    valid_appointment_ids.append(appointment_id_int)
+                    print(f"DEBUG: Added valid appointment ID: {appointment_id_int}")
+                else:
+                    print(f"DEBUG: Skipping invalid appointment ID: {appt_id}")
+            except (ValueError, TypeError) as e:
+                print(f"DEBUG: Error processing appointment ID {appt_id}: {e}")
+                continue
+
+        print(f"DEBUG: Valid appointment IDs to delete: {valid_appointment_ids}")
+
+        if not valid_appointment_ids:
+            flash("No valid appointments were selected for deletion.", "warning")
+            return redirect(url_for("all_visits"))
+
+        # Delete appointments in bulk using a single query for efficiency
+        appointments_to_delete = Appointment.query.filter(
+            Appointment.id.in_(valid_appointment_ids)
+        ).all()
+
+        print(f"DEBUG: Found {len(appointments_to_delete)} appointments to delete")
+
+        for appointment in appointments_to_delete:
+            print(
+                f"DEBUG: Deleting appointment {appointment.id} for patient {appointment.patient.full_name}"
+            )
+
+            # Log each deletion to admin dashboard
+            try:
+                import uuid
+                from models import AdminLog
+
+                request_id = str(uuid.uuid4())
+
+                AdminLog.log_event(
+                    event_type="appointment_deletion",
+                    user_id=session.get("user_id"),
+                    event_details={
+                        "action": "delete",
+                        "appointment_id": appointment.id,
+                        "patient_id": appointment.patient_id,
+                        "patient_name": appointment.patient.full_name,
+                        "appointment_date": appointment.appointment_date.strftime(
+                            "%Y-%m-%d"
+                        ),
+                        "appointment_time": (
+                            appointment.appointment_time.strftime("%H:%M")
+                            if appointment.appointment_time
+                            else "N/A"
+                        ),
+                        "note": appointment.note or "",
+                        "deletion_location": "bulk_visits_page",
+                        "admin_user": session.get("username"),
+                        "timestamp": datetime.now().isoformat(),
+                    },
+                    request_id=request_id,
+                    ip_address=request.remote_addr,
+                    user_agent=request.headers.get("User-Agent", ""),
+                )
+            except Exception as log_error:
+                logger.error(f"Error logging appointment deletion: {str(log_error)}")
+                # Don't let logging errors break the deletion
+                pass
+
+            db.session.delete(appointment)
+            deleted_count += 1
+
+        db.session.commit()
+        print(f"DEBUG: Successfully committed deletion of {deleted_count} appointments")
+
+        if deleted_count == 1:
+            flash(f"Successfully deleted 1 appointment.", "success")
+        else:
+            flash(f"Successfully deleted {deleted_count} appointments.", "success")
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting appointments: {str(e)}", "error")
+
+    return redirect(url_for("all_visits"))
+
+
+@app.route(
+    "/patients/<int:patient_id>/conditions/<int:condition_id>/delete",
+    methods=["GET", "POST"],
+)
+def delete_condition(patient_id, condition_id):
+    """Delete a medical condition and redirect to the patient detail page"""
+    try:
+        condition = Condition.query.get_or_404(condition_id)
+
+        # Verify this condition belongs to the patient
+        if condition.patient_id != patient_id:
+            flash(
+                "Invalid request: condition does not belong to this patient.", "danger"
+            )
+            return redirect(url_for("patient_detail", patient_id=patient_id))
+
+        # Delete the condition
+        db.session.delete(condition)
+        db.session.commit()
+
+        flash("Medical condition deleted successfully.", "success")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting condition: {str(e)}", "danger")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+
+@app.route(
+    "/patients/<int:patient_id>/vitals/<int:vital_id>/delete", methods=["GET", "POST"]
+)
+def delete_vital(patient_id, vital_id):
+    """Delete a vital signs record and redirect to the patient detail page"""
+    try:
+        vital = Vital.query.get_or_404(vital_id)
+
+        # Verify this vital belongs to the patient
+        if vital.patient_id != patient_id:
+            flash("Invalid request: vital does not belong to this patient.", "danger")
+            return redirect(url_for("patient_detail", patient_id=patient_id))
+
+        # Delete the vital
+        db.session.delete(vital)
+        db.session.commit()
+
+        flash("Vital signs record deleted successfully.", "success")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting vital signs: {str(e)}", "danger")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+
+@app.route(
+    "/patients/<int:patient_id>/documents/<int:document_id>/delete",
+    methods=["GET", "POST"],
+)
+def delete_document(patient_id, document_id):
+    """Delete a medical document and redirect to the patient detail page"""
+    try:
+        document = MedicalDocument.query.get_or_404(document_id)
+
+        # Verify this document belongs to the patient
+        if document.patient_id != patient_id:
+            flash(
+                "Invalid request: document does not belong to this patient.", "danger"
+            )
+            return redirect(url_for("patient_detail", patient_id=patient_id))
+
+        # Use the new document deletion handler to maintain screening integrity
+        from document_deletion_handler import document_deletion_handler
+        
+        deletion_result = document_deletion_handler.handle_document_deletion(document_id)
+        
+        if deletion_result.get('success'):
+            updated_screenings = deletion_result.get('updated_screenings', [])
+            flash("Document deleted successfully.", "success")
+            
+            if updated_screenings:
+                flash(f"Updated {len(updated_screenings)} dependent screenings to reflect document removal.", "info")
+                logger.info(f"Document deletion cascade: {deletion_result.get('message', '')}")
+        else:
+            flash(f"Error deleting document: {deletion_result.get('error', 'Unknown error')}", "danger")
+            logger.error(f"Document deletion failed: {deletion_result}")
+            return redirect(url_for("patient_detail", patient_id=patient_id))
+        
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting document: {str(e)}", "danger")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+
+@app.route(
+    "/patients/<int:patient_id>/labs/<int:lab_id>/delete", methods=["GET", "POST"]
+)
+def delete_lab(patient_id, lab_id):
+    """Delete a lab result and redirect to the patient detail page"""
+    try:
+        lab = LabResult.query.get_or_404(lab_id)
+
+        # Verify this lab belongs to the patient
+        if lab.patient_id != patient_id:
+            flash(
+                "Invalid request: lab result does not belong to this patient.", "danger"
+            )
+            return redirect(url_for("patient_detail", patient_id=patient_id))
+
+        # Delete the lab
+        db.session.delete(lab)
+        db.session.commit()
+
+        flash("Lab result deleted successfully.", "success")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting lab result: {str(e)}", "danger")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+
+@app.route(
+    "/patients/<int:patient_id>/imaging/<int:imaging_id>/delete",
+    methods=["GET", "POST"],
+)
+def delete_imaging(patient_id, imaging_id):
+    """Delete an imaging study and redirect to the patient detail page"""
+    try:
+        imaging = ImagingStudy.query.get_or_404(imaging_id)
+
+        # Verify this imaging belongs to the patient
+        if imaging.patient_id != patient_id:
+            flash(
+                "Invalid request: imaging study does not belong to this patient.",
+                "danger",
+            )
+            return redirect(url_for("patient_detail", patient_id=patient_id))
+
+        # Delete the imaging
+        db.session.delete(imaging)
+        db.session.commit()
+
+        flash("Imaging study deleted successfully.", "success")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting imaging study: {str(e)}", "danger")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+
+@app.route(
+    "/patients/<int:patient_id>/consults/<int:consult_id>/delete",
+    methods=["GET", "POST"],
+)
+def delete_consult(patient_id, consult_id):
+    """Delete a consult report and redirect to the patient detail page"""
+    try:
+        consult = ConsultReport.query.get_or_404(consult_id)
+
+        # Verify this consult belongs to the patient
+        if consult.patient_id != patient_id:
+            flash(
+                "Invalid request: consult report does not belong to this patient.",
+                "danger",
+            )
+            return redirect(url_for("patient_detail", patient_id=patient_id))
+
+        # Delete the consult
+        db.session.delete(consult)
+        db.session.commit()
+
+        flash("Consult report deleted successfully.", "success")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting consult report: {str(e)}", "danger")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+
+@app.route(
+    "/patients/<int:patient_id>/hospital/<int:hospital_id>/delete",
+    methods=["GET", "POST"],
+)
+def delete_hospital(patient_id, hospital_id):
+    """Delete a hospital summary and redirect to the patient detail page"""
+    try:
+        hospital = HospitalSummary.query.get_or_404(hospital_id)
+
+        # Verify this hospital summary belongs to the patient
+        if hospital.patient_id != patient_id:
+            flash(
+                "Invalid request: hospital summary does not belong to this patient.",
+                "danger",
+            )
+            return redirect(url_for("patient_detail", patient_id=patient_id))
+
+        # Delete the hospital summary
+        db.session.delete(hospital)
+        db.session.commit()
+
+        flash("Hospital summary deleted successfully.", "success")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting hospital summary: {str(e)}", "danger")
+        return redirect(url_for("patient_detail", patient_id=patient_id))
+
+
+@app.route("/screenings/add", methods=["GET"])
+def add_screening_form():
+    """Display form to add a new screening recommendation"""
+    # Get all patients for the dropdown
+    patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
+
+    # Get all active screening types for the datalist
+    all_screening_types = (
+        ScreeningType.query.filter_by(is_active=True).order_by(ScreeningType.name).all()
+    )
+
+    # Generate timestamp for cache busting
+    cache_timestamp = int(time_module.time())
+
+    return render_template(
+        "add_screening.html",
+        patients=patients,
+        all_screening_types=all_screening_types,
+        cache_timestamp=cache_timestamp,
+    )
+
+
+@app.route("/screenings/add", methods=["POST"])
+@safe_db_operation
+def add_screening_recommendation():
+    """Add a new screening recommendation"""
+    # Get form data
+    patient_id = request.form.get("patient_id")
+    screening_type = request.form.get("screening_type")
+    due_date_str = request.form.get("due_date")
+    last_completed_str = request.form.get("last_completed")
+    status = request.form.get("status", "Incomplete")
+    notes = request.form.get("notes", "")
+
+    # Validate required fields
+    if not patient_id or not screening_type:
+        flash("Patient and screening type are required.", "danger")
+        return redirect(url_for("screening_list"))
+
+    # Convert dates from string to date objects
+    due_date = (
+        datetime.strptime(due_date_str, "%Y-%m-%d").date() if due_date_str else None
+    )
+    last_completed = (
+        datetime.strptime(last_completed_str, "%Y-%m-%d").date()
+        if last_completed_str
+        else None
+    )
+
+    # Create new screening record
+    screening = Screening(
+        patient_id=patient_id,
+        screening_type=screening_type,
+        due_date=due_date,
+        last_completed=last_completed,
+        status=status,
+        notes=notes,
+    )
+
+    # Add to database
+    db.session.add(screening)
+    db.session.commit()
+
+    # Enhanced admin logging for screening addition
+    from models import AdminLog
+    import json
+
+    # Get patient information for logging
+    patient = Patient.query.get(patient_id)
+    patient_name = patient.full_name if patient else "Unknown Patient"
+
+    log_details = {
+        "action": "add",
+        "data_type": "screening",
+        "screening_id": screening.id,
+        "patient_id": int(patient_id),
+        "patient_name": patient_name,
+        "screening_type": screening_type,
+        "due_date": due_date.strftime("%Y-%m-%d") if due_date else "None",
+        "last_completed": (
+            last_completed.strftime("%Y-%m-%d") if last_completed else "None"
+        ),
+        "priority": priority,
+        "frequency": screening.frequency or "None",
+        "notes": notes[:100] + "..." if notes and len(notes) > 100 else notes or "",
+        "created_date": (
+            screening.created_at.strftime("%Y-%m-%d")
+            if screening.created_at
+            else str(date.today())
+        ),
+        "created_time": (
+            screening.created_at.strftime("%H:%M:%S")
+            if screening.created_at
+            else datetime.now().strftime("%H:%M:%S")
+        ),
+        "endpoint": "add_screening_recommendation",
+        "method": "POST",
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    try:
+        from flask_login import current_user
+
+        user_id = current_user.id if current_user.is_authenticated else None
+    except:
+        user_id = None
+
+    AdminLog.log_event(
+        event_type="data_modification",
+        user_id=user_id,
+        event_details=json.dumps(log_details),
+        request_id=f"screening_add_{screening.id}",
+        ip_address=request.remote_addr or "127.0.0.1",
+        user_agent=request.headers.get("User-Agent", "Unknown"),
+    )
+
+    flash("Screening recommendation added successfully.", "success")
+    # Add timestamp parameter to force a fresh query (avoid caching)
+    timestamp = int(time_module.time())
+    return redirect(url_for("screening_list", _t=timestamp))
+
+
+@app.route('/api/condition-autocomplete')
+def condition_autocomplete():
+    """
+    API endpoint for FHIR condition code autocomplete
+    
+    Query parameters:
+    - q: Search query string
+    - limit: Maximum number of results (default: 10)
+    """
+    from fhir_condition_autocomplete import autocomplete_service
+    
+    query = request.args.get('q', '').strip()
+    limit = int(request.args.get('limit', 10))
+    
+    if not query or len(query) < 2:
+        return jsonify({"conditions": []})
+    
+    try:
+        conditions = autocomplete_service.search_conditions(query, limit)
+        return jsonify({"conditions": conditions})
+    except Exception as e:
+        return jsonify({"conditions": [], "error": str(e)})
+
+
+@app.route('/api/screening-name-autocomplete')
+def screening_name_autocomplete():
+    """
+    API endpoint for screening name autocomplete
+    
+    Query parameters:
+    - q: Search query string
+    - limit: Maximum number of results (default: 10)
+    """
+    from screening_name_autocomplete import screening_autocomplete_service
+    
+    query = request.args.get('q', '').strip()
+    limit = int(request.args.get('limit', 10))
+    
+    if not query or len(query) < 2:
+        return jsonify({"screenings": []})
+    
+    try:
+        screenings = screening_autocomplete_service.search_screenings(query, limit)
+        return jsonify({"screenings": screenings})
+    except Exception as e:
+        return jsonify({"screenings": [], "error": str(e)})
+
+
+@app.route(
+    "/patients/<int:patient_id>/screenings/<int:screening_id>/edit", methods=["POST"]
+)
+@safe_db_operation
+def edit_screening(patient_id, screening_id):
+    """Edit a screening record"""
+    screening = Screening.query.get_or_404(screening_id)
+
+    # Ensure the screening belongs to the specified patient
+    if screening.patient_id != patient_id:
+        flash("Invalid request: Screening does not belong to this patient.", "danger")
+        return redirect(url_for("screening_list"))
+
+    # Update screening details
+    screening.screening_type = request.form.get(
+        "screening_type", screening.screening_type
+    )
+
+    # Handle date inputs
+    due_date = request.form.get("due_date")
+    if due_date:
+        screening.due_date = datetime.strptime(due_date, "%Y-%m-%d").date()
+
+    last_completed = request.form.get("last_completed")
+    if last_completed:
+        screening.last_completed = datetime.strptime(last_completed, "%Y-%m-%d").date()
+    else:
+        screening.last_completed = None
+
+    # Store original values for change tracking
+    original_data = {
+        "screening_type": screening.screening_type,
+        "due_date": screening.due_date,
+        "last_completed": screening.last_completed,
+        "priority": screening.priority,
+        "notes": screening.notes,
+    }
+
+    screening.priority = request.form.get("priority", screening.priority)
+    screening.notes = request.form.get("notes", "")
+
+    db.session.commit()
+
+    # Enhanced admin logging for screening edit
+    from models import AdminLog
+    import json
+
+    # Track what changed
+    form_changes = {}
+    if original_data["screening_type"] != screening.screening_type:
+        form_changes["screening_type"] = (
+            f"{original_data['screening_type']} → {screening.screening_type}"
+        )
+    if original_data["due_date"] != screening.due_date:
+        old_date = (
+            original_data["due_date"].strftime("%Y-%m-%d")
+            if original_data["due_date"]
+            else "None"
+        )
+        new_date = (
+            screening.due_date.strftime("%Y-%m-%d") if screening.due_date else "None"
+        )
+        form_changes["due_date"] = f"{old_date} → {new_date}"
+    if original_data["last_completed"] != screening.last_completed:
+        old_completed = (
+            original_data["last_completed"].strftime("%Y-%m-%d")
+            if original_data["last_completed"]
+            else "None"
+        )
+        new_completed = (
+            screening.last_completed.strftime("%Y-%m-%d")
+            if screening.last_completed
+            else "None"
+        )
+        form_changes["last_completed"] = f"{old_completed} → {new_completed}"
+    if original_data["priority"] != screening.priority:
+        form_changes["priority"] = f"{original_data['priority']} → {screening.priority}"
+    if original_data["notes"] != screening.notes:
+        old_notes = (
+            original_data["notes"][:50] + "..."
+            if original_data["notes"] and len(original_data["notes"]) > 50
+            else original_data["notes"] or "None"
+        )
+        new_notes = (
+            screening.notes[:50] + "..."
+            if screening.notes and len(screening.notes) > 50
+            else screening.notes or "None"
+        )
+        form_changes["notes"] = f"{old_notes} → {new_notes}"
+
+    # Get patient information for logging
+    patient = Patient.query.get(patient_id)
+    patient_name = patient.full_name if patient else "Unknown Patient"
+
+    log_details = {
+        "action": "edit",
+        "data_type": "screening",
+        "screening_id": screening.id,
+        "patient_id": patient_id,
+        "patient_name": patient_name,
+        "screening_type": screening.screening_type,
+        "due_date": (
+            screening.due_date.strftime("%Y-%m-%d") if screening.due_date else "None"
+        ),
+        "last_completed": (
+            screening.last_completed.strftime("%Y-%m-%d")
+            if screening.last_completed
+            else "None"
+        ),
+        "priority": screening.priority or "None",
+        "frequency": screening.frequency or "None",
+        "notes": (
+            screening.notes[:100] + "..."
+            if screening.notes and len(screening.notes) > 100
+            else screening.notes or ""
+        ),
+        "updated_date": (
+            screening.updated_at.strftime("%Y-%m-%d")
+            if screening.updated_at
+            else str(date.today())
+        ),
+        "updated_time": (
+            screening.updated_at.strftime("%H:%M:%S")
+            if screening.updated_at
+            else datetime.now().strftime("%H:%M:%S")
+        ),
+        "form_changes": form_changes,
+        "endpoint": "edit_screening",
+        "method": "POST",
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    try:
+        from flask_login import current_user
+
+        user_id = current_user.id if current_user.is_authenticated else None
+    except:
+        user_id = None
+
+    AdminLog.log_event(
+        event_type="data_modification",
+        user_id=user_id,
+        event_details=json.dumps(log_details),
+        request_id=f"screening_edit_{screening.id}",
+        ip_address=request.remote_addr or "127.0.0.1",
+        user_agent=request.headers.get("User-Agent", "Unknown"),
+    )
+
+    flash("Screening record updated successfully.", "success")
+
+    # Redirect back to screening list with timestamp to force refresh
+    timestamp = int(time_module.time())
+    return redirect(url_for("screening_list", _t=timestamp))
+
+
+@app.route(
+    "/patients/<int:patient_id>/screenings/<int:screening_id>/delete",
+    methods=["GET", "POST"],
+)
+def delete_screening(patient_id, screening_id):
+    """Delete a screening record and redirect to the screening list page"""
+    try:
+        screening = Screening.query.get_or_404(screening_id)
+
+        # Verify this screening belongs to the patient
+        if screening.patient_id != patient_id:
+            flash(
+                "Invalid request: screening does not belong to this patient.", "danger"
+            )
+            timestamp = int(time_module.time())
+            return redirect(url_for("screening_list", _t=timestamp))
+
+        # Enhanced admin logging for screening deletion
+        from models import AdminLog
+        import json
+
+        # Get patient information for logging
+        patient = Patient.query.get(patient_id)
+        patient_name = patient.full_name if patient else "Unknown Patient"
+
+        # Store screening details before deletion
+        log_details = {
+            "action": "delete",
+            "data_type": "screening",
+            "screening_id": screening.id,
+            "patient_id": patient_id,
+            "patient_name": patient_name,
+            "screening_type": screening.screening_type,
+            "due_date": (
+                screening.due_date.strftime("%Y-%m-%d")
+                if screening.due_date
+                else "None"
+            ),
+            "last_completed": (
+                screening.last_completed.strftime("%Y-%m-%d")
+                if screening.last_completed
+                else "None"
+            ),
+            "priority": screening.priority or "None",
+            "frequency": screening.frequency or "None",
+            "notes": (
+                screening.notes[:100] + "..."
+                if screening.notes and len(screening.notes) > 100
+                else screening.notes or ""
+            ),
+            "created_date": (
+                screening.created_at.strftime("%Y-%m-%d")
+                if screening.created_at
+                else "None"
+            ),
+            "created_time": (
+                screening.created_at.strftime("%H:%M:%S")
+                if screening.created_at
+                else "None"
+            ),
+            "deleted_date": str(date.today()),
+            "deleted_time": datetime.now().strftime("%H:%M:%S"),
+            "endpoint": "delete_screening",
+            "method": "GET" if request.method == "GET" else "POST",
+            "timestamp": datetime.now().isoformat(),
+        }
+
+        try:
+            from flask_login import current_user
+
+            user_id = current_user.id if current_user.is_authenticated else None
+        except:
+            user_id = None
+
+        AdminLog.log_event(
+            event_type="data_modification",
+            user_id=user_id,
+            event_details=json.dumps(log_details),
+            request_id=f"screening_delete_{screening.id}",
+            ip_address=request.remote_addr or "127.0.0.1",
+            user_agent=request.headers.get("User-Agent", "Unknown"),
+        )
+
+        # Delete the screening
+        db.session.delete(screening)
+        db.session.commit()
+
+        flash("Screening record deleted successfully.", "success")
+        # Redirect to screening list instead of patient detail
+        # Add timestamp parameter to force a fresh query (avoid caching)
+        timestamp = int(time_module.time())
+        return redirect(url_for("screening_list", _t=timestamp))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting screening record: {str(e)}", "danger")
+        timestamp = int(time_module.time())
+        return redirect(url_for("screening_list", _t=timestamp))
+
+
+@app.route("/patients/<int:patient_id>/delete", methods=["POST"])
+@csrf.exempt  # Exempt this route from CSRF protection for bulk operations
+@safe_db_operation
+def delete_patient(patient_id):
+    """Delete a patient and all their associated records
+
+    This route can handle both single patient deletion and bulk deletion.
+    For bulk deletion, pass patient IDs in selected_patients[] array
+    or as a comma-separated list in patient_ids field.
+    """
+    # Get all form data for debugging
+    all_form_data = dict(request.form)
+    app.logger.warning(f"DELETE PATIENT DEBUG - All form data: {all_form_data}")
+
+    # First check if this is an array-style submission (selected_patients[])
+    selected_patients = request.form.getlist("selected_patients[]")
+
+    # If not, check for comma-separated list in patient_ids
+    patient_ids_str = request.form.get("patient_ids")
+
+    app.logger.warning(f"DELETE PATIENT DEBUG - patient_id={patient_id}")
+    app.logger.warning(
+        f"DELETE PATIENT DEBUG - Selected patients (array): {selected_patients}"
+    )
+    app.logger.warning(
+        f"DELETE PATIENT DEBUG - Patient IDs (string): {patient_ids_str}"
+    )
+    app.logger.warning(f"DELETE PATIENT DEBUG - Request method: {request.method}")
+    app.logger.warning(f"DELETE PATIENT DEBUG - Request endpoint: {request.endpoint}")
+
+    # Check if this is a bulk deletion (patient_id=0 indicates bulk operation)
+    is_bulk_operation = (patient_id == 0) or selected_patients or patient_ids_str
+
+    def delete_patient_with_records(pid):
+        """Helper function to delete a patient and all associated records"""
+        patient = Patient.query.get(pid)
+        if patient:
+            app.logger.debug(f"Deleting patient ID {pid}: {patient.full_name}")
+            # Delete all related records first to avoid foreign key constraint errors
+            # The cascade delete should handle most of these, but we'll be explicit
+            Vital.query.filter_by(patient_id=pid).delete()
+            Condition.query.filter_by(patient_id=pid).delete()
+            Screening.query.filter_by(patient_id=pid).delete()
+            Appointment.query.filter_by(patient_id=pid).delete()
+            Visit.query.filter_by(patient_id=pid).delete()
+            LabResult.query.filter_by(patient_id=pid).delete()
+            ImagingStudy.query.filter_by(patient_id=pid).delete()
+            ConsultReport.query.filter_by(patient_id=pid).delete()
+            HospitalSummary.query.filter_by(patient_id=pid).delete()
+            MedicalDocument.query.filter_by(patient_id=pid).delete()
+
+            # Delete the patient
+            db.session.delete(patient)
+            return True
+        return False
+
+    # Handle bulk deletion - prioritize comma-separated string format over array format
+    if is_bulk_operation and (selected_patients or patient_ids_str):
+        app.logger.debug(f"Bulk deletion requested")
+        try:
+            patient_ids = []
+
+            # Prioritize patient_ids_str (comma-separated) over selected_patients array
+            if patient_ids_str:
+                # Convert and validate patient IDs from comma-separated string
+                for id_str in patient_ids_str.split(","):
+                    try:
+                        if id_str.strip():  # Skip empty strings
+                            patient_id_int = int(id_str.strip())
+                            if patient_id_int > 0:  # Only positive IDs
+                                patient_ids.append(patient_id_int)
+                    except (ValueError, TypeError) as e:
+                        app.logger.warning(
+                            f"Invalid patient ID in string: {id_str}, error: {e}"
+                        )
+                        continue
+                app.logger.debug(
+                    f"Using comma-separated format - parsed patient IDs: {patient_ids}"
+                )
+            elif selected_patients:
+                # Fallback to array format if no comma-separated string
+                for pid in selected_patients:
+                    try:
+                        if pid.strip():  # Skip empty strings
+                            patient_id_int = int(pid.strip())
+                            if patient_id_int > 0:  # Only positive IDs
+                                patient_ids.append(patient_id_int)
+                    except (ValueError, TypeError) as e:
+                        app.logger.warning(
+                            f"Invalid patient ID in array: {pid}, error: {e}"
+                        )
+                        continue
+                app.logger.debug(
+                    f"Using array format - parsed patient IDs: {patient_ids}"
+                )
+
+            if not patient_ids:
+                flash("No valid patients were selected for deletion.", "warning")
+                return redirect(url_for("patient_list"))
+
+            deleted_count = 0
+            failed_deletions = []
+
+            # Delete each patient with individual transaction handling
+            for pid in patient_ids:
+                try:
+                    app.logger.debug(f"Attempting to delete patient ID: {pid}")
+                    if delete_patient_with_records(pid):
+                        # Commit each deletion individually to avoid rollback issues
+                        db.session.commit()
+                        deleted_count += 1
+                        app.logger.debug(f"Successfully deleted patient ID: {pid}")
+                    else:
+                        failed_deletions.append(pid)
+                        app.logger.warning(
+                            f"Failed to delete patient ID: {pid} (not found)"
+                        )
+                except Exception as e:
+                    # Rollback this specific deletion and continue with others
+                    db.session.rollback()
+                    failed_deletions.append(pid)
+                    app.logger.error(f"Error deleting patient ID {pid}: {str(e)}")
+
+            app.logger.debug(
+                f"Bulk deletion completed: {deleted_count} patients deleted, {len(failed_deletions)} failed"
+            )
+
+            # Provide feedback
+            if deleted_count > 0:
+                if deleted_count == 1:
+                    flash(
+                        f"1 patient and all associated records have been deleted.",
+                        "success",
+                    )
+                else:
+                    flash(
+                        f"{deleted_count} patients and all associated records have been deleted.",
+                        "success",
+                    )
+
+            if failed_deletions:
+                flash(
+                    f"Failed to delete {len(failed_deletions)} patient(s). They may not exist.",
+                    "warning",
+                )
+
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error in bulk patient deletion: {str(e)}")
+            flash(f"Error deleting patients: {str(e)}", "danger")
+
+    elif patient_id == 0:
+        # Bulk operation requested but no patients selected
+        flash("No patients were selected for deletion.", "warning")
+    else:
+        app.logger.debug(f"Single patient deletion requested for ID: {patient_id}")
+        # Single patient deletion
+        patient = Patient.query.get_or_404(patient_id)
+        patient_name = patient.full_name
+
+        try:
+            if delete_patient_with_records(patient_id):
+                db.session.commit()
+                app.logger.debug(
+                    f"Successfully deleted patient {patient_id}: {patient_name}"
+                )
+                flash(
+                    f"Patient {patient_name} and all associated records have been deleted.",
+                    "success",
+                )
+            else:
+                flash(f"Patient not found.", "warning")
+
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error deleting patient: {str(e)}")
+            flash(f"Error deleting patient: {str(e)}", "danger")
+
+    return redirect(url_for("patient_list"))
+
+
+@app.route("/visits")
+def all_visits():
+    """Display all appointments (past and future) with ability to delete"""
+    # Get filter parameters
+    status_filter = request.args.get("status", "all")
+    patient_filter = request.args.get("patient", "")
+    date_from = request.args.get("date_from", "")
+    date_to = request.args.get("date_to", "")
+
+    # Base query for all appointments
+    query = Appointment.query.join(Patient)
+
+    # Apply filters
+    if status_filter != "all":
+        query = query.filter(Appointment.status == status_filter)
+
+    if patient_filter:
+        query = query.filter(
+            db.or_(
+                Patient.first_name.ilike(f"%{patient_filter}%"),
+                Patient.last_name.ilike(f"%{patient_filter}%"),
+            )
+        )
+
+    if date_from:
+        try:
+            from_date = datetime.strptime(date_from, "%Y-%m-%d").date()
+            query = query.filter(Appointment.appointment_date >= from_date)
+        except ValueError:
+            pass
+
+    if date_to:
+        try:
+            to_date = datetime.strptime(date_to, "%Y-%m-%d").date()
+            query = query.filter(Appointment.appointment_date <= to_date)
+        except ValueError:
+            pass
+
+    # Order by date and time (most recent first)
+    appointments = query.order_by(
+        Appointment.appointment_date.desc(), Appointment.appointment_time.desc()
+    ).all()
+
+    # Get all patients for filter dropdown
+    patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
+
+    # Get today's date for comparison
+    today = datetime.now().date()
+
+    # Generate timestamp for cache busting
+    cache_timestamp = int(time_module.time())
+
+    return render_template(
+        "all_visits.html",
+        appointments=appointments,
+        patients=patients,
+        status_filter=status_filter,
+        patient_filter=patient_filter,
+        date_from=date_from,
+        date_to=date_to,
+        today=today,
+        cache_timestamp=cache_timestamp,
+    )

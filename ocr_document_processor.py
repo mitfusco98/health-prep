@@ -40,7 +40,7 @@ class OCRQualityMetrics:
         }
 
 
-class OCRDocumentProcessor:
+class TesseractOCRProcessor:
     """Enhanced OCR processor using Tesseract for medical document text extraction"""
     
     def __init__(self):
@@ -66,7 +66,7 @@ class OCRDocumentProcessor:
         
         logger.info("✅ Tesseract OCR Processor initialized with medical document optimization")
     
-    def is_image_based_document(self, filename: str, content_bytes: Optional[bytes] = None) -> bool:
+    def is_image_based_document(self, filename: str, content_bytes: bytes = None) -> bool:
         """Check if document requires OCR processing"""
         if not filename:
             return False
@@ -104,11 +104,7 @@ class OCRDocumentProcessor:
         except Exception:
             return ""
     
-    def process_document(self, document_id: int, force_reprocess: bool = False) -> Dict[str, Any]:
-        """Process document with OCR - main interface method"""
-        return self.process_document_ocr(document_id, force_reprocess)
-    
-    def process_document_ocr(self, document_id: int, force_reprocess: bool = False) -> Dict[str, Any]:
+    def process_document_ocr(self, document_id: int) -> Dict[str, Any]:
         """Process a document with OCR if needed"""
         processing_start = datetime.now()
         result = {
@@ -132,7 +128,7 @@ class OCRDocumentProcessor:
             
             # Check if document needs OCR using filename (which has extension)
             filename_to_check = document.filename or document.document_name or ""
-            needs_ocr = self.is_image_based_document(filename_to_check, document.binary_content)
+            needs_ocr = self.is_image_based_document(filename_to_check, None)
             if not needs_ocr:
                 result['success'] = True
                 result['ocr_applied'] = False
@@ -156,23 +152,8 @@ class OCRDocumentProcessor:
             )
             
             if extracted_text:
-                # APPLY PHI FILTERING for HIPAA compliance
-                if self.phi_filter_enabled and self.phi_filter:
-                    try:
-                        phi_result = self.phi_filter.filter_text(extracted_text)
-                        filtered_text = phi_result['filtered_text']
-                        logger.info(f"PHI filtering applied - detected {phi_result['phi_count']} PHI instances")
-                    except Exception as phi_error:
-                        logger.warning(f"PHI filtering failed: {phi_error}")
-                        filtered_text = extracted_text  # Fallback to unfiltered if PHI filter fails
-                else:
-                    filtered_text = extracted_text
-                
-                # Combine filtered OCR text with any existing content (for force reprocessing, replace completely)
-                if force_reprocess:
-                    combined_content = filtered_text  # Replace completely during reprocessing
-                else:
-                    combined_content = self._combine_content(document.content, filtered_text)
+                # Combine OCR text with any existing content
+                combined_content = self._combine_content(document.content, extracted_text)
                 
                 # Update document with OCR results
                 document.content = combined_content
@@ -550,7 +531,7 @@ class OCRDocumentProcessor:
 
 
 # Global OCR processor instance
-ocr_processor = OCRDocumentProcessor()
+ocr_processor = TesseractOCRProcessor()
 
 
 def process_document_with_ocr(document_id: int) -> Dict[str, Any]:
