@@ -53,7 +53,11 @@ def reprocess_document(doc_id):
         result = ocr_processor.process_document_ocr(doc_id)
         
         if result['success']:
+            # Get updated document data
+            document = MedicalDocument.query.get(doc_id)
+            
             # Trigger selective screening refresh for this document's patient
+            refresh_triggered = False
             if document.patient_id:
                 try:
                     # Trigger screening refresh for this patient after document reprocessing
@@ -61,6 +65,27 @@ def reprocess_document(doc_id):
                     refresh_success = timeout_safe_refresh._refresh_single_patient(document.patient_id)
                     refresh_triggered = refresh_success
                 except Exception as refresh_error:
+                    logger.warning(f"Screening refresh failed for patient {document.patient_id}: {refresh_error}")
+                    refresh_triggered = False
+            
+            return jsonify({
+                'success': True,
+                'confidence': document.ocr_confidence,
+                'message': f'Document reprocessed successfully. Confidence: {document.ocr_confidence}%',
+                'refresh_triggered': refresh_triggered
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'OCR processing failed')
+            })
+            
+    except Exception as e:
+        logger.error(f"Error reprocessing document {doc_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
                     logger.warning(f"Failed to trigger screening refresh after reprocessing doc {doc_id}: {refresh_error}")
                     refresh_triggered = False
             else:

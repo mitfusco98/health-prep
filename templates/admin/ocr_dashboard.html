@@ -431,13 +431,21 @@ function reprocessDocument(docId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
     .then(data => {
         hideProcessingModal();
         if (data.success) {
-            showAlert('success', `Document reprocessed successfully! Confidence: ${data.confidence}%. Screening matches updated.`);
+            const confidenceText = data.confidence ? `${data.confidence}%` : 'N/A';
+            const refreshText = data.refresh_triggered ? 'Screening matches updated.' : 'Screening refresh may have failed.';
+            showAlert('success', `Document reprocessed successfully! Confidence: ${confidenceText}. ${refreshText}`);
             setTimeout(() => {
                 location.reload();
             }, 2000);
@@ -447,7 +455,8 @@ function reprocessDocument(docId) {
     })
     .catch(error => {
         hideProcessingModal();
-        showAlert('danger', 'Error reprocessing document: ' + error);
+        console.error('Reprocess error:', error);
+        showAlert('danger', 'Error reprocessing document: ' + error.message);
     });
 }
 
