@@ -960,22 +960,29 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
 
     # Use automated screenings for display instead of just existing database screenings
     # This ensures ALL applicable screenings are shown, not just ones already in database
+    # Import variant manager for proper deduplication
+    from screening_variant_manager import ScreeningVariantManager
+    variant_manager = ScreeningVariantManager()
+    
     display_screenings = []
-    screening_types_added = set()  # Track screening types to prevent duplicates
+    base_screening_types_added = set()  # Track base screening types to prevent duplicates
     
     # First, add all automated screenings with their status/document data
     for auto_screening in automated_screenings:
         screening_type_name = auto_screening['screening_type']
+        base_name = variant_manager.extract_base_name(screening_type_name)
         
-        # Skip if we've already added this screening type
-        if screening_type_name in screening_types_added:
+        # Skip if we've already added this base screening type
+        if base_name in base_screening_types_added:
             continue
             
-        # Find matching database screening if it exists
-        existing_screening = next(
-            (s for s in screenings if s.screening_type == screening_type_name), 
-            None
-        )
+        # Find matching database screening (check for exact match or variants)
+        existing_screening = None
+        for s in screenings:
+            if (s.screening_type == screening_type_name or 
+                variant_manager.extract_base_name(s.screening_type) == base_name):
+                existing_screening = s
+                break
         
         if existing_screening:
             # Use existing screening with database relationships
@@ -1003,26 +1010,20 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             
             display_screenings.append(virtual_screening)
         
-        # Mark this screening type as added
-        screening_types_added.add(screening_type_name)
+        # Mark this base screening type as added
+        base_screening_types_added.add(base_name)
     
     # Add any existing screenings that weren't covered by automated engine
     for screening in screenings:
-        if screening.screening_type not in screening_types_added:
+        base_name = variant_manager.extract_base_name(screening.screening_type)
+        if base_name not in base_screening_types_added:
             display_screenings.append(screening)
-            screening_types_added.add(screening.screening_type)
+            base_screening_types_added.add(base_name)
     
     # Update screenings variable to use comprehensive display list
     screenings = display_screenings
     
-    # Debug logging to identify duplication source
-    print(f"🔧 DEBUGGING DUPLICATION:")
-    print(f"   - Automated screenings count: {len(automated_screenings)}")
-    print(f"   - Final display screenings count: {len(display_screenings)}")
-    print(f"   - Screening types added set: {screening_types_added}")
-    print(f"   - Final screening types: {[s.screening_type for s in display_screenings]}")
-    if len(display_screenings) != len(screening_types_added):
-        print(f"   ⚠️  MISMATCH: {len(display_screenings)} screenings vs {len(screening_types_added)} unique types")
+    print(f"✅ Deduplication fix applied: {len(display_screenings)} unique screenings generated for {patient.first_name} {patient.last_name}")
 
     # Generate a prep sheet summary with decoupled filtering
     prep_sheet_data = generate_prep_sheet(
