@@ -308,6 +308,11 @@
                                                 title="Reprocess OCR and refresh screening matches">
                                             <i class="fas fa-sync-alt"></i> Reprocess
                                         </button>
+                                        <button class="btn btn-sm btn-outline-info" 
+                                                onclick="debugDocument({{ doc.id }})"
+                                                title="Debug document OCR processing">
+                                            <i class="fas fa-bug"></i> Debug
+                                        </button>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -320,6 +325,34 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Processing Status Modal -->
+
+<script>
+function debugDocument(docId) {
+    fetch(`/admin/ocr/debug-document/${docId}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Debug info for document', docId, data);
+            alert(`Debug Info for Document ${docId}:\n\n` +
+                  `Filename: ${data.filename || 'N/A'}\n` +
+                  `File Extension: ${data.file_extension || 'N/A'}\n` +
+                  `Needs OCR: ${data.needs_ocr}\n` +
+                  `Has Binary Content: ${data.has_binary_content}\n` +
+                  `Binary Size: ${data.binary_content_size} bytes\n` +
+                  `Has File Data: ${data.has_file_data}\n` +
+                  `File Data Size: ${data.file_data_size} bytes\n` +
+                  `OCR Processed: ${data.ocr_processed}\n` +
+                  `OCR Confidence: ${data.ocr_confidence || 'N/A'}%\n` +
+                  `OCR Processor Available: ${data.ocr_processor_available}\n` +
+                  `Current Content Length: ${data.content_length} chars`);
+        })
+        .catch(error => {
+            console.error('Debug error:', error);
+            alert('Debug failed: ' + error.message);
+        });
+}
+</script>
 
 <!-- Processing Status Modal -->
 <div class="modal fade" id="processingModal" tabindex="-1">

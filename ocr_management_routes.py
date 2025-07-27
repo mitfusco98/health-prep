@@ -32,14 +32,19 @@ def reprocess_document(doc_id):
         # Get the document
         document = MedicalDocument.query.get_or_404(doc_id)
         
-        if not document.binary_content:
+        # Check for binary content in either field
+        binary_data = document.binary_content or document.file_data
+        if not binary_data:
             return jsonify({
                 'success': False,
                 'error': 'Document has no binary content to process'
             })
         
+        logger.info(f"Starting OCR reprocessing for document {doc_id} ({document.filename})")
+        
         # Reset OCR status to force reprocessing
         document.ocr_processed = False
+        original_content = document.content  # Keep backup
         document.content = None
         document.ocr_confidence = None
         document.ocr_processing_date = None
@@ -47,15 +52,22 @@ def reprocess_document(doc_id):
         document.ocr_quality_flags = None
         db.session.commit()
         
-        # Import and use the OCR processor function directly
-        from ocr_document_processor import process_document_with_ocr
+        # Use the global OCR processor directly to avoid import issues
+        if not ocr_processor:
+            logger.error("OCR processor not available")
+            return jsonify({
+                'success': False,
+                'error': 'OCR processor not available'
+            })
         
-        # Reprocess OCR using the unified function
-        result = process_document_with_ocr(doc_id)
+        # Process document with OCR using the global processor
+        result = ocr_processor.process_document_ocr(doc_id)
         
         if result['success']:
             # Get updated document data
             document = MedicalDocument.query.get(doc_id)
+            
+            logger.info(f"OCR reprocessing successful for document {doc_id}: confidence={document.ocr_confidence}%, text_length={document.ocr_text_length}")
             
             # Trigger selective screening refresh for this document's patient
             refresh_triggered = False
@@ -74,22 +86,28 @@ def reprocess_document(doc_id):
             return jsonify({
                 'success': True,
                 'confidence': document.ocr_confidence or 0,
-                'text_length': result.get('extracted_text_length', 0),
+                'text_length': document.ocr_text_length or 0,
                 'ocr_applied': result.get('ocr_applied', False),
                 'message': f'Document reprocessed successfully. Confidence: {document.ocr_confidence or 0}%',
                 'refresh_triggered': refresh_triggered
             })
         else:
+            # Restore original content if OCR failed
+            document.content = original_content
+            document.ocr_processed = True  # Keep original state
+            db.session.commit()
+            
+            logger.error(f"OCR reprocessing failed for document {doc_id}: {result.get('error', 'Unknown error')}")
             return jsonify({
                 'success': False,
                 'error': result.get('error', 'OCR processing failed')
             })
             
     except Exception as e:
-        logger.error(f"Error reprocessing document {doc_id}: {e}")
+        logger.error(f"Error reprocessing document {doc_id}: {e}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': f'Reprocessing error: {str(e)}'
         })
 
 
@@ -472,4 +490,43 @@ def get_ocr_statistics():
         
     except Exception as e:
         logger.error(f"OCR statistics error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/admin/ocr/debug-document/<int:doc_id>')
+def debug_document_ocr(doc_id):
+    """Debug OCR processing for a specific document"""
+    try:
+        document = MedicalDocument.query.get_or_404(doc_id)
+        
+        debug_info = {
+            'document_id': doc_id,
+            'filename': document.filename,
+            'document_name': document.document_name,
+            'document_type': document.document_type,
+            'has_binary_content': bool(document.binary_content),
+            'has_file_data': bool(document.file_data),
+            'binary_content_size': len(document.binary_content) if document.binary_content else 0,
+            'file_data_size': len(document.file_data) if document.file_data else 0,
+            'mime_type': document.mime_type,
+            'is_binary': document.is_binary,
+            'ocr_processed': document.ocr_processed,
+            'ocr_confidence': document.ocr_confidence,
+            'ocr_text_length': document.ocr_text_length,
+            'content_length': len(document.content) if document.content else 0,
+            'ocr_processor_available': ocr_processor is not None,
+            'needs_ocr': False,
+            'file_extension': None
+        }
+        
+        # Check if file needs OCR
+        if document.filename:
+            debug_info['file_extension'] = os.path.splitext(document.filename.lower())[1]
+            if ocr_processor:
+                debug_info['needs_ocr'] = ocr_processor.is_image_based_document(document.filename)
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        logger.error(f"OCR debug error for document {doc_id}: {e}")
         return jsonify({"error": str(e)}), 500
