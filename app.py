@@ -1270,6 +1270,10 @@ with app.app_context():
     # Import admin routes
     import phi_filter_admin_routes  # noqa: F401
 
+    # Register medical terminology API routes
+    from medical_terminology_api_routes import terminology_api
+    app.register_blueprint(terminology_api)
+
     # Initialize async database manager
     from async_db_utils import init_async_db
 

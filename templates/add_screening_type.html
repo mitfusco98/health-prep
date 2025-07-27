@@ -22,7 +22,7 @@
         </h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('add_screening_type', ts=cache_timestamp) }}">
+        <form method="POST" action="{{ url_for('add_screening_type', ts=cache_timestamp) }}" data-validate-terminology>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
                 <label class="form-label">Name <span class="text-danger">*</span></label>
@@ -30,7 +30,7 @@
                     <input type="text" class="form-control" name="name" id="screening-name-input" required autocomplete="off">
                     <div id="screening-name-suggestions" class="autocomplete-suggestions"></div>
                 </div>
-                <small class="text-muted">Name of the screening (e.g., 'Mammogram', 'Colonoscopy'). Start typing to see existing screenings for creating variants.</small>
+                <small class="text-muted">Use standardized medical terminology. Start typing to see suggestions (e.g., 'Mammography', 'Colonoscopy', 'HbA1c Test').</small>
             </div>
 
             <div class="mb-3">
@@ -130,8 +130,8 @@
                                 <input type="text" class="form-control" id="add-form-condition-code" placeholder="Condition code">
                             </div>
                             <div class="col-md-4" style="position: relative;">
-                                <input type="text" class="form-control" id="add-form-condition-display" placeholder="Display name" autocomplete="off">
-                                <div id="add-form-condition-suggestions" class="condition-suggestions"></div>
+                                <input type="text" class="form-control" id="add-form-condition-display" placeholder="Display name (e.g., 'Diabetes mellitus')" autocomplete="off">
+                                <div id="add-form-condition-suggestions" class="condition-name-suggestions"></div>
                             </div>
                             <div class="col-md-2">
                                 <button type="button" class="btn btn-outline-primary w-100" onclick="addTriggerConditionToForm('add-form')">Add</button>

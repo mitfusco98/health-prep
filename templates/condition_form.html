@@ -36,7 +36,10 @@
                     
                     <div class="col-md-6">
                         <label for="name" class="form-label">Condition Name</label>
-                        {{ form.name(class="form-control", id="conditionName", list="commonConditions", placeholder="Type or select a condition") }}
+                        <div class="position-relative">
+                            {{ form.name(class="form-control", id="conditionName", placeholder="Type condition name (e.g., 'Diabetes mellitus')", autocomplete="off") }}
+                            <div id="condition-name-suggestions" class="condition-name-suggestions"></div>
+                        </div>
                         <datalist id="commonConditions">
                             <option value="Hypertension (High Blood Pressure)">
                             <option value="Hyperlipidemia (High Cholesterol)">
@@ -64,7 +67,7 @@
                             <div class="text-danger mt-1">{{ error }}</div>
                             {% endfor %}
                         {% endif %}
-                        <small class="form-text text-muted">Start typing to see suggestions or enter a custom condition</small>
+                        <small class="form-text text-muted">Use standardized medical terminology. Start typing to see suggestions.</small>
                     </div>
                     
                     <div class="col-md-6">

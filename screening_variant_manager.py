@@ -10,7 +10,7 @@ from app import db
 
 
 class ScreeningVariantManager:
-    """Manages screening type variants and their consolidation"""
+    """Manages screening type variants and their consolidation using standardized medical terminology"""
 
     def __init__(self):
         self.variant_patterns = [
@@ -19,11 +19,21 @@ class ScreeningVariantManager:
             r'^(.+?)\s*for\s*(.+)$',  # "A1c for Diabetes"
             r'^(.+?)\s*:\s*(.+)$',   # "A1c: Diabetes"
         ]
+        
+        # Initialize medical terminology standardizer
+        from medical_terminology_standardizer import medical_standardizer
+        self.medical_standardizer = medical_standardizer
 
     def extract_base_name(self, screening_name: str) -> str:
-        """Extract base screening name from variant name"""
+        """Extract base screening name from variant name using standardized terminology"""
         if not screening_name:
             return ""
+            
+        # First, try to normalize the name using medical terminology
+        normalized_name, confidence = self.medical_standardizer.normalize_screening_name(screening_name)
+        if confidence >= 0.8:
+            # High confidence match - use the standardized name as base
+            return normalized_name
 
         # Normalize the name for comparison
         normalized_name = screening_name.strip().lower()
@@ -250,7 +260,7 @@ class ScreeningVariantManager:
             self._trigger_deactivation_cascade(base_name)
 
     def find_all_related_screening_types(self, screening_type_id: int) -> List[ScreeningType]:
-        """Find all screening types related to the given one (variants + exact duplicates)"""
+        """Find all screening types related to the given one using standardized terminology matching"""
         screening_type = ScreeningType.query.get(screening_type_id)
         if not screening_type:
             return []
@@ -258,12 +268,22 @@ class ScreeningVariantManager:
         related_screenings = []
         all_screenings = ScreeningType.query.all()
         
+        # Get normalized base name using medical terminology
         base_name = self.extract_base_name(screening_type.name)
         original_name = screening_type.name
         
+        # Normalize the original name for fuzzy matching
+        normalized_original, _ = self.medical_standardizer.normalize_screening_name(original_name)
+        
         for screening in all_screenings:
+            # Get normalized name for this screening
+            normalized_screening, confidence = self.medical_standardizer.normalize_screening_name(screening.name)
+            
+            # Include if normalized names match (handles "mammogram" vs "mammography")
+            if normalized_screening and normalized_original and normalized_screening.lower() == normalized_original.lower():
+                related_screenings.append(screening)
             # Include if it's a pattern-based variant
-            if self.extract_base_name(screening.name).lower() == base_name.lower():
+            elif self.extract_base_name(screening.name).lower() == base_name.lower():
                 related_screenings.append(screening)
             # Include if it's an exact name duplicate
             elif screening.name.lower() == original_name.lower():
