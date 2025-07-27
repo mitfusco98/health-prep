@@ -340,10 +340,84 @@ class UnifiedScreeningEngine:
             if match_result['is_match']:
                 matching_documents.append(document)
         
+        # Apply frequency-based filtering for completed screenings
+        frequency_filtered_documents = self._filter_documents_by_frequency_cycle(matching_documents, screening_type)
+        
         # Apply document prioritization to show only most relevant/recent documents
-        prioritized_documents = self._prioritize_documents_for_screening(matching_documents, screening_type)
+        prioritized_documents = self._prioritize_documents_for_screening(frequency_filtered_documents, screening_type)
         
         return prioritized_documents
+    
+    def _filter_documents_by_frequency_cycle(self, matching_documents: List[MedicalDocument], screening_type: ScreeningType) -> List[MedicalDocument]:
+        """
+        Filter documents to ensure matched documents for completed screenings fall within one frequency cycle
+        of the last completed date. This prevents old documents from inappropriately maintaining completed status.
+        
+        For example, if a Pap Smear was completed in 2024 with 1-year frequency, only documents from 2023 onwards
+        should be matched to that screening. Documents from 2022 or earlier should be filtered out.
+        
+        Args:
+            matching_documents: All documents that match keywords for this screening type
+            screening_type: ScreeningType with frequency settings
+            
+        Returns:
+            Filtered list of documents within valid frequency cycle
+        """
+        if not matching_documents or not screening_type.frequency_number or not screening_type.frequency_unit:
+            return matching_documents
+        
+        # Get the most recent completion date from all matched documents
+        last_completed = self._get_last_completed_date(matching_documents)
+        if not last_completed:
+            return matching_documents
+        
+        # Calculate one frequency cycle backwards from the last completed date
+        frequency_cutoff_date = self._calculate_frequency_cutoff_date(last_completed, screening_type)
+        if not frequency_cutoff_date:
+            return matching_documents
+        
+        # Filter documents: only include those that fall within one frequency cycle
+        valid_documents = []
+        for document in matching_documents:
+            doc_date = document.document_date or document.created_at.date()
+            if isinstance(doc_date, datetime):
+                doc_date = doc_date.date()
+            
+            # Include document if it's within the frequency cycle (on or after cutoff date)
+            if doc_date >= frequency_cutoff_date:
+                valid_documents.append(document)
+        
+        return valid_documents
+    
+    def _calculate_frequency_cutoff_date(self, last_completed_date: date, screening_type: ScreeningType) -> Optional[date]:
+        """
+        Calculate the cutoff date - one frequency cycle backwards from the last completed date.
+        Documents older than this cutoff should not be matched to completed screenings.
+        
+        Args:
+            last_completed_date: The most recent completion date
+            screening_type: ScreeningType with frequency settings
+            
+        Returns:
+            Cutoff date or None if frequency cannot be calculated
+        """
+        if not screening_type.frequency_number or not screening_type.frequency_unit:
+            return None
+        
+        frequency_num = int(screening_type.frequency_number)
+        frequency_unit = screening_type.frequency_unit.lower()
+        
+        if frequency_unit in ['year', 'years', 'annually']:
+            from dateutil.relativedelta import relativedelta
+            return last_completed_date - relativedelta(years=frequency_num)
+        elif frequency_unit in ['month', 'months', 'monthly']:
+            from dateutil.relativedelta import relativedelta
+            return last_completed_date - relativedelta(months=frequency_num)
+        elif frequency_unit in ['day', 'days', 'daily']:
+            return last_completed_date - timedelta(days=frequency_num)
+        else:
+            logger.warning(f"Unknown frequency unit for cutoff calculation: {frequency_unit}")
+            return None
     
     def _determine_status_from_documents(self, matching_documents: List[MedicalDocument], screening_type: ScreeningType) -> str:
         """Determine screening status based on matched documents"""
@@ -353,7 +427,7 @@ class UnifiedScreeningEngine:
         # If we have documents, check timing
         last_completed = self._get_last_completed_date(matching_documents)
         if not last_completed:
-            return self.STATUS_INCOMPLETE
+            return self.STATUS_DUE
         
         # Check if screening is due based on frequency
         due_date = self._calculate_due_date(screening_type, matching_documents)
@@ -779,10 +853,10 @@ class UnifiedScreeningEngine:
             else:
                 status = self.STATUS_COMPLETE
         else:
-            # No matching documents - incomplete
+            # No matching documents - due now
             last_completed = None
             next_due = date.today()  # Due now
-            status = self.STATUS_INCOMPLETE
+            status = self.STATUS_DUE
         
         return {
             'status': status,
@@ -803,7 +877,10 @@ class UnifiedScreeningEngine:
             if match_result['is_match']:
                 matching_docs.append(document)
         
-        return matching_docs
+        # Apply frequency-based filtering for completed screenings
+        frequency_filtered_docs = self._filter_documents_by_frequency_cycle(matching_docs, screening_type)
+        
+        return frequency_filtered_docs
     
     def _calculate_next_due_date(self, last_completed: datetime, screening_type: ScreeningType) -> Optional[date]:
         """Calculate next due date based on frequency"""

@@ -1244,7 +1244,7 @@ class ChecklistSettings(db.Model):
     @property
     def status_options_list(self):
         """Return permanently fixed status options"""
-        return ['due', 'due_soon', 'incomplete', 'completed']
+        return ['due', 'due_soon', 'completed']
 
     @property
     def default_items_list(self):
