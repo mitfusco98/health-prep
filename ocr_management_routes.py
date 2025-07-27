@@ -16,6 +16,14 @@ from selective_screening_refresh_manager import selective_refresh_manager, Chang
 
 logger = logging.getLogger(__name__)
 
+# Initialize OCR processor at module level
+try:
+    from ocr_document_processor import TesseractOCRProcessor
+    ocr_processor = TesseractOCRProcessor()
+except ImportError as e:
+    logger.warning(f"OCR processor not available: {e}")
+    ocr_processor = None
+
 
 @app.route('/admin/ocr/reprocess-document/<int:doc_id>', methods=['POST'])
 def reprocess_document(doc_id):
@@ -48,15 +56,12 @@ def reprocess_document(doc_id):
             # Trigger selective screening refresh for this document's patient
             if document.patient_id:
                 try:
-                    # Trigger selective refresh for document changes
-                    selective_refresh_manager.add_change(
-                        change_type=ChangeType.DOCUMENT_CONTENT,
-                        target_ids=[document.patient_id],
-                        metadata={'document_id': doc_id, 'reprocessed': True}
-                    )
-                    refresh_triggered = True
+                    # Trigger screening refresh for this patient after document reprocessing
+                    from timeout_safe_refresh import timeout_safe_refresh
+                    refresh_success = timeout_safe_refresh._refresh_single_patient(document.patient_id)
+                    refresh_triggered = refresh_success
                 except Exception as refresh_error:
-                    logger.warning(f"Failed to trigger selective refresh after reprocessing doc {doc_id}: {refresh_error}")
+                    logger.warning(f"Failed to trigger screening refresh after reprocessing doc {doc_id}: {refresh_error}")
                     refresh_triggered = False
             else:
                 refresh_triggered = False
