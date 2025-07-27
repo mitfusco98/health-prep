@@ -1124,7 +1124,6 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             today=datetime.now(),
             cache_timestamp=cache_timestamp,
             checklist_settings=checklist_settings,
-            prep_sheet_filter_items=prep_sheet_filter_items,  # Decoupled filtering for prep sheet only
             # Enhanced document matching data
             document_screening_data=document_screening_data,
             screening_document_matches=screening_document_matches,
