@@ -397,11 +397,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             {% set status_class = {
                                 'Due': 'danger',
                                 'Due Soon': 'warning',
-                                'Incomplete': 'secondary', 
                                 'Complete': 'success'
                             } %}
                             <span class="badge bg-{{ status_class.get(screening.status, 'secondary') }}">
-                                {{ screening.status or 'Incomplete' }}
+                                {{ screening.status or 'Unknown' }}
                             </span>
                         </td>
                         <td>
@@ -907,7 +906,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         <span class="badge bg-success fs-6 py-2 px-3">Due</span>
                         <span class="badge bg-success fs-6 py-2 px-3">Due Soon</span>
-                        <span class="badge bg-success fs-6 py-2 px-3">Incomplete</span>
                         <span class="badge bg-success fs-6 py-2 px-3">Completed</span>
                     </div>
 
