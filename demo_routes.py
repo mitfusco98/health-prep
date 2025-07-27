@@ -904,17 +904,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         .all()
     )
     
-    # Categorize documents for "other" section (documents not in main categories)
-    categorized_types = {
-        "LAB_REPORT", "LABORATORIES",
-        "RADIOLOGY_REPORT", "IMAGING",
-        "CONSULTATION", "CONSULTS", 
-        "DISCHARGE_SUMMARY", "HOSPITAL_RECORDS"
-    }
-    other_documents = [
-        doc for doc in documents 
-        if doc.document_type not in categorized_types or doc.document_type is None
-    ]
+    # Note: No longer using "other documents" - replaced with ordered screening recommendations
 
     # Get past 3 appointments for the patient
     past_appointments = (
@@ -977,20 +967,64 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         past_appointments,
     )
     
-    # Pass default_items settings to template for prep sheet filtering (decoupled from parsing)
-    prep_sheet_filter_items = []
+    # CREATE ORDERED SCREENING RECOMMENDATIONS based on checklist default items
+    # Get default items list for ordering (this is the user's preferred screening order)
+    default_items_order = []
     if checklist_settings.default_items:
-        prep_sheet_filter_items = checklist_settings.default_items_list
+        default_items_order = checklist_settings.default_items_list
+        
+    # Get all existing screenings for this patient
+    patient_screenings = Screening.query.filter_by(patient_id=patient_id).all()
+    
+    # Create ordered screening recommendations for prep sheet display
+    ordered_screening_recommendations = []
+    
+    # First, add screenings in the order of default items list
+    for default_item in default_items_order:
+        # Find matching screening for this default item
+        matching_screening = None
+        for screening in patient_screenings:
+            if screening.screening_type == default_item:
+                matching_screening = screening
+                break
+        
+        if matching_screening:
+            # Add screening with document information
+            ordered_screening_recommendations.append({
+                'screening_name': matching_screening.screening_type,
+                'status': matching_screening.status,
+                'last_completed': matching_screening.last_completed,
+                'frequency': matching_screening.frequency,
+                'due_date': matching_screening.due_date,
+                'notes': matching_screening.notes,
+                'matched_documents': matching_screening.matched_documents,
+                'document_count': len(matching_screening.matched_documents),
+                'has_documents': len(matching_screening.matched_documents) > 0
+            })
+    
+    # Then add any remaining screenings not in default items (at the end)
+    for screening in patient_screenings:
+        if screening.screening_type not in default_items_order:
+            ordered_screening_recommendations.append({
+                'screening_name': screening.screening_type,
+                'status': screening.status,
+                'last_completed': screening.last_completed,
+                'frequency': screening.frequency,
+                'due_date': screening.due_date,
+                'notes': screening.notes,
+                'matched_documents': screening.matched_documents,
+                'document_count': len(screening.matched_documents),
+                'has_documents': len(screening.matched_documents) > 0
+            })
+
+    print(f"Found {len(ordered_screening_recommendations)} screenings ordered by checklist default items")
 
     # Get enhanced screening recommendations with document relationships using new system
     try:
-        # Get existing screenings with document relationships
-        patient_screenings = Screening.query.filter_by(patient_id=patient_id).all()
-        
-        # Create mapping of screening names to document match data for template
+        # Create mapping of screening names to document match data for template compatibility
         screening_document_matches = {}
         document_screening_data = {
-            'screening_recommendations': [],
+            'screening_recommendations': ordered_screening_recommendations,
             'summary': {
                 'total_matches': 0,
                 'unique_screenings': len(patient_screenings),
@@ -1096,8 +1130,8 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             screening_document_matches=screening_document_matches,
             # Enhanced medical data with documents and cutoff filtering
             filtered_medical_data=filtered_medical_data,
-            # Other documents for miscellaneous section
-            other_documents=other_documents,
+            # Ordered screening recommendations replacing other documents
+            ordered_screening_recommendations=ordered_screening_recommendations,
         )
     )
 
