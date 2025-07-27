@@ -513,7 +513,7 @@
         
         <!-- Screening Checklist -->
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0">Screening Recommendations</h6>
+            <h6 class="mb-0">Other Documents</h6>
             <button class="btn btn-sm btn-outline-secondary" id="reset-checkboxes">
                 Reset Checkboxes
             </button>
@@ -536,39 +536,43 @@
                         </tr>
                     </thead>
                     <tbody>
-                    {% for screening_rec in ordered_screening_recommendations %}
+                    {% for doc in other_documents %}
                         <tr>
                             <td class="text-center">
                                 <input class="form-check-input" type="checkbox" id="screening_{{ loop.index }}">
                             </td>
                             <td>
-                                <span class="badge bg-primary me-1 mb-1">{{ screening_rec.screening_name }}</span>
+                                {% set doc_screenings = [] %}
+                                {% if screening_document_matches %}
+                                    {% for screening_name, match_data in screening_document_matches.items() %}
+                                        {% if match_data.matched_documents %}
+                                            {% for matched_doc in match_data.matched_documents %}
+                                                {% if matched_doc.id == doc.id %}
+                                                    {% set _ = doc_screenings.append(screening_name) %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                
+                                {% if doc_screenings %}
+                                    {% for screening_type in doc_screenings %}
+                                        <span class="badge bg-primary me-1 mb-1">{{ screening_type }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted small">Unmatched</span>
+                                {% endif %}
                             </td>
                             <td>
                                 <label class="form-check-label" for="screening_{{ loop.index }}">
-                                    <strong>{{ screening_rec.screening_name }}</strong>
-                                    {% if screening_rec.has_documents %}
-                                        <br><small class="text-success">{{ screening_rec.document_count }} document(s) matched</small>
-                                        {% for doc in screening_rec.matched_documents[:2] %}
-                                            <br><a href="{{ url_for('view_document', document_id=doc.id) }}" target="_blank" class="text-decoration-none small">
-                                                {{ doc.document_name if doc.document_name else doc.filename }}
-                                            </a>
-                                        {% endfor %}
-                                        {% if screening_rec.document_count > 2 %}
-                                            <br><small class="text-muted">and {{ screening_rec.document_count - 2 }} more...</small>
-                                        {% endif %}
-                                    {% else %}
-                                        <br><small class="text-muted">No documents matched</small>
-                                    {% endif %}
+                                    <a href="{{ url_for('view_document', document_id=doc.id) }}" target="_blank" class="text-decoration-none">
+                                        {{ doc.document_name if doc.document_name else doc.filename }}
+                                    </a>
                                 </label>
                                 <br>
                                 <small class="text-muted">
-                                    Status: <span class="badge badge-sm bg-secondary">{{ screening_rec.status }}</span> | 
-                                    {% if screening_rec.last_completed %}
-                                        Last: {{ screening_rec.last_completed.strftime('%Y-%m-%d') }}
-                                    {% else %}
-                                        Never completed
-                                    {% endif %}
+                                    {{ doc.document_date.strftime('%Y-%m-%d') if doc.document_date else 'No date' }} | 
+                                    {{ doc.source_system if doc.source_system else 'Unknown source' }}
                                 </small>
                             </td>
                             <td>
@@ -604,38 +608,42 @@
                     <div class="screening-status-note-cell" style="width: 40%;">Status/Notes</div>
                 </div>
                     
-                {% for screening_rec in ordered_screening_recommendations %}
+                {% for doc in other_documents %}
                 <div class="screening-row">
                     <div class="screening-cell" style="width: 25%;">
-                        <span class="badge bg-primary me-1 mb-1">{{ screening_rec.screening_name }}</span>
+                        {% set doc_screenings = [] %}
+                        {% if screening_document_matches %}
+                            {% for screening_name, match_data in screening_document_matches.items() %}
+                                {% if match_data.matched_documents %}
+                                    {% for matched_doc in match_data.matched_documents %}
+                                        {% if matched_doc.id == doc.id %}
+                                            {% set _ = doc_screenings.append(screening_name) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                        
+                        {% if doc_screenings %}
+                            {% for screening_type in doc_screenings %}
+                                <span class="badge bg-primary me-1 mb-1">{{ screening_type }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted small">Unmatched</span>
+                        {% endif %}
                     </div>
                     <div class="screening-cell" style="width: 35%;">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="screening_{{ loop.index }}">
                             <label class="form-check-label" for="screening_{{ loop.index }}">
-                                <strong>{{ screening_rec.screening_name }}</strong>
-                                {% if screening_rec.has_documents %}
-                                    <br><small class="text-success">{{ screening_rec.document_count }} document(s) matched</small>
-                                    {% for doc in screening_rec.matched_documents[:2] %}
-                                        <br><a href="{{ url_for('view_document', document_id=doc.id) }}" target="_blank" class="text-decoration-none small">
-                                            {{ doc.document_name if doc.document_name else doc.filename }}
-                                        </a>
-                                    {% endfor %}
-                                    {% if screening_rec.document_count > 2 %}
-                                        <br><small class="text-muted">and {{ screening_rec.document_count - 2 }} more...</small>
-                                    {% endif %}
-                                {% else %}
-                                    <br><small class="text-muted">No documents matched</small>
-                                {% endif %}
+                                <a href="{{ url_for('view_document', document_id=doc.id) }}" target="_blank" class="text-decoration-none">
+                                    {{ doc.document_name if doc.document_name else doc.filename }}
+                                </a>
                             </label>
                             <br>
                             <small class="text-muted">
-                                Status: <span class="badge badge-sm bg-secondary">{{ screening_rec.status }}</span> | 
-                                {% if screening_rec.last_completed %}
-                                    Last: {{ screening_rec.last_completed.strftime('%Y-%m-%d') }}
-                                {% else %}
-                                    Never completed
-                                {% endif %}
+                                {{ doc.document_date.strftime('%Y-%m-%d') if doc.document_date else 'No date' }} | 
+                                {{ doc.source_system if doc.source_system else 'Unknown source' }}
                             </small>
                         </div>
                     </div>
@@ -890,15 +898,13 @@
     </div>
 </div>
 
-<!-- Screening Recommendations with Document Relationships -->
-{% if screenings %}
+<!-- Screening Recommendations Ordered by Checklist Default Items -->
+{% if ordered_screening_recommendations %}
 <div class="card border-0 mb-4">
     <div class="card-header bg-secondary bg-opacity-25">
         <h5 class="mb-0">
             <i class="fas fa-clipboard-check me-2"></i>Screening Recommendations
-            {% if document_screening_data and document_screening_data.summary.total_matches > 0 %}
-                <span class="badge bg-info ms-2">{{ document_screening_data.summary.total_matches }} document(s) matched</span>
-            {% endif %}
+            <small class="text-muted ms-2">(Ordered by checklist preferences)</small>
         </h5>
     </div>
     <div class="card-body p-0">
@@ -907,43 +913,38 @@
                 <thead>
                     <tr>
                         <th>Screening</th>
+                        <th>Status</th>
                         <th>Last Completed</th>
                         <th>Frequency</th>
-                        <th>Status</th>
                         <th>Matched Documents</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for screening in screenings %}
+                    {% for screening_rec in ordered_screening_recommendations %}
                     <tr>
-                        <td>{{ screening.screening_type }}</td>
-                        <td>{{ screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else 'Never' }}</td>
-                        <td>{{ screening.frequency or 'Not set' }}</td>
+                        <td><strong>{{ screening_rec.screening_name }}</strong></td>
                         <td>
-                            {% if screening.status == 'Complete' %}
-                            <span class="badge bg-success">{{ screening.status }}</span>
-                            {% elif screening.status == 'Due' %}
-                            <span class="badge bg-danger">{{ screening.status }}</span>
-                            {% elif screening.status == 'Due Soon' %}
-                            <span class="badge bg-warning text-dark">{{ screening.status }}</span>
-                            {% elif screening.status == 'Incomplete' %}
-                            <span class="badge bg-secondary">{{ screening.status }}</span>
+                            {% if screening_rec.status == 'completed' %}
+                            <span class="badge bg-success">Complete</span>
+                            {% elif screening_rec.status == 'due' %}
+                            <span class="badge bg-danger">Due</span>
+                            {% elif screening_rec.status == 'due_soon' %}
+                            <span class="badge bg-warning text-dark">Due Soon</span>
                             {% else %}
-                            <span class="badge bg-secondary">{{ screening.status or 'Unknown' }}</span>
+                            <span class="badge bg-secondary">{{ screening_rec.status|title or 'Unknown' }}</span>
                             {% endif %}
                         </td>
+                        <td>{{ screening_rec.last_completed.strftime('%Y-%m-%d') if screening_rec.last_completed else 'Never' }}</td>
+                        <td>{{ screening_rec.frequency or 'Not set' }}</td>
                         <td>
-                            {% set valid_documents = screening.get_valid_documents_with_access_check() %}
-                            {% if valid_documents %}
-                                {% for document in valid_documents %}
+                            {% if screening_rec.has_documents %}
+                                {% for document in screening_rec.matched_documents %}
                                     {% set doc_name = document.document_name or document.filename or 'Document ' + document.id|string %}
                                     <a href="{{ url_for('view_document', document_id=document.id, return_to=request.url) }}" 
                                        class="badge bg-info text-decoration-none me-1 mb-1" 
                                        target="_blank" 
-                                       title="View {{ doc_name }}"
-                                       onerror="handlePrepSheetDocumentError(this, {{ document.id }})">
+                                       title="View {{ doc_name }}">
                                         {{ doc_name|truncate(25) }}
-                                        <small class="ms-1">(85%)</small>
                                     </a>
                                 {% endfor %}
                             {% else %}
@@ -955,6 +956,14 @@
                 </tbody>
             </table>
         </div>
+    </div>
+</div>
+{% else %}
+<div class="card border-0 mb-4">
+    <div class="card-body text-center text-muted">
+        <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+        <p>No screening recommendations available.<br>
+        <small>Configure checklist default items to see personalized recommendations.</small></p>
     </div>
 </div>
 {% endif %}

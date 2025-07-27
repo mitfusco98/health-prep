@@ -904,7 +904,17 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         .all()
     )
     
-    # Note: No longer using "other documents" - replaced with ordered screening recommendations
+    # Categorize documents for "other" section (documents not in main categories)
+    categorized_types = {
+        "LAB_REPORT", "LABORATORIES",
+        "RADIOLOGY_REPORT", "IMAGING",
+        "CONSULTATION", "CONSULTS", 
+        "DISCHARGE_SUMMARY", "HOSPITAL_RECORDS"
+    }
+    other_documents = [
+        doc for doc in documents 
+        if doc.document_type not in categorized_types or doc.document_type is None
+    ]
 
     # Get past 3 appointments for the patient
     past_appointments = (
@@ -1129,7 +1139,9 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             screening_document_matches=screening_document_matches,
             # Enhanced medical data with documents and cutoff filtering
             filtered_medical_data=filtered_medical_data,
-            # Ordered screening recommendations replacing other documents
+            # Other documents for miscellaneous section
+            other_documents=other_documents,
+            # Ordered screening recommendations for bottom section
             ordered_screening_recommendations=ordered_screening_recommendations,
         )
     )
