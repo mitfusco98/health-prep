@@ -287,6 +287,7 @@ class Screening(db.Model):
 
     # Relationships
     patient = db.relationship("Patient", backref=db.backref("screenings", lazy=True))
+    screening_type_obj = db.relationship("ScreeningType", foreign_keys=[screening_type_id])
     documents = db.relationship("MedicalDocument", 
                                secondary=screening_documents,
                                backref=db.backref("screenings", lazy=True),

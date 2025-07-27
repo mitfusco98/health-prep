@@ -884,7 +884,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         .join(ScreeningType, Screening.screening_type_id == ScreeningType.id)
         .filter(ScreeningType.is_active == True)
         .options(
-            db.joinedload(Screening.screening_type),
+            db.joinedload(Screening.screening_type_obj),
             db.selectinload(Screening.documents)
         )
         .all()
@@ -1953,7 +1953,7 @@ def download_patient_prep_sheet(patient_id):
         .join(ScreeningType, Screening.screening_type_id == ScreeningType.id)
         .filter(ScreeningType.is_active == True)
         .options(
-            db.joinedload(Screening.screening_type),
+            db.joinedload(Screening.screening_type_obj),
             db.selectinload(Screening.documents)
         )
         .all()
