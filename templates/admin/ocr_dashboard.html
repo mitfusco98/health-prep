@@ -173,29 +173,24 @@
     <div class="row mb-4">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between">
+                <div class="card-header">
                     <h5><i class="fas fa-hourglass-half"></i> Documents Pending OCR Processing</h5>
-                    <button class="btn btn-sm btn-primary" onclick="bulkProcessSelected()">
-                        Process Selected
-                    </button>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead>
                                 <tr>
-                                    <th><input type="checkbox" id="selectAllPending" onchange="toggleAllPending()"></th>
                                     <th>Document</th>
                                     <th>Patient</th>
                                     <th>Type</th>
                                     <th>Date</th>
-                                    <th>Actions</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for doc in data.pending_processing %}
                                 <tr>
-                                    <td><input type="checkbox" class="pending-doc-checkbox" value="{{ doc.id }}"></td>
                                     <td>{{ doc.document_name or doc.filename }}</td>
                                     <td>{{ doc.patient.full_name if doc.patient else 'Unknown' }}</td>
                                     <td>
@@ -203,10 +198,9 @@
                                     </td>
                                     <td>{{ doc.created_at.strftime('%Y-%m-%d') if doc.created_at else 'N/A' }}</td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-primary" 
-                                                onclick="processSingleDocument({{ doc.id }})">
-                                            <i class="fas fa-eye"></i> Process OCR
-                                        </button>
+                                        <span class="badge badge-warning">
+                                            <i class="fas fa-clock"></i> Pending OCR
+                                        </span>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -236,7 +230,7 @@
                                     <th>Patient</th>
                                     <th>Confidence</th>
                                     <th>Processed Date</th>
-                                    <th>Actions</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -249,10 +243,10 @@
                                     </td>
                                     <td>{{ doc.ocr_processing_date.strftime('%Y-%m-%d %H:%M') if doc.ocr_processing_date else 'N/A' }}</td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-warning" 
-                                                onclick="processSingleDocument({{ doc.id }})">
-                                            <i class="fas fa-redo"></i> Reprocess
-                                        </button>
+                                        <span class="badge badge-warning">
+                                            <i class="fas fa-exclamation-triangle"></i> Low Confidence
+                                        </span>
+                                        <br><small class="text-muted">Delete and resubmit if needed</small>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -283,7 +277,7 @@
                                     <th>Confidence</th>
                                     <th>Text Length</th>
                                     <th>Processed</th>
-                                    <th>Actions</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -303,16 +297,19 @@
                                     <td>{{ doc.ocr_text_length or 0 }} characters</td>
                                     <td>{{ doc.ocr_processing_date.strftime('%Y-%m-%d %H:%M') if doc.ocr_processing_date else 'N/A' }}</td>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-success" 
-                                                onclick="reprocessDocument({{ doc.id }})"
-                                                title="Reprocess OCR and refresh screening matches">
-                                            <i class="fas fa-sync-alt"></i> Reprocess
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-info" 
-                                                onclick="debugDocument({{ doc.id }})"
-                                                title="Debug document OCR processing">
-                                            <i class="fas fa-bug"></i> Debug
-                                        </button>
+                                        {% if doc.ocr_confidence >= 80 %}
+                                            <span class="badge badge-success">
+                                                <i class="fas fa-check-circle"></i> Good Quality
+                                            </span>
+                                        {% elif doc.ocr_confidence >= 60 %}
+                                            <span class="badge badge-warning">
+                                                <i class="fas fa-exclamation-triangle"></i> Medium Quality
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-danger">
+                                                <i class="fas fa-times-circle"></i> Poor Quality
+                                            </span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -326,189 +323,33 @@
     {% endif %}
 </div>
 
-<!-- Processing Status Modal -->
+<!-- OCR Dashboard - Read-only interface -->
 
 <script>
-function debugDocument(docId) {
-    fetch(`/admin/ocr/debug-document/${docId}`)
-        .then(response => response.json())
-        .then(data => {
-            console.log('Debug info for document', docId, data);
-            alert(`Debug Info for Document ${docId}:\n\n` +
-                  `Filename: ${data.filename || 'N/A'}\n` +
-                  `File Extension: ${data.file_extension || 'N/A'}\n` +
-                  `Needs OCR: ${data.needs_ocr}\n` +
-                  `Has Binary Content: ${data.has_binary_content}\n` +
-                  `Binary Size: ${data.binary_content_size} bytes\n` +
-                  `Has File Data: ${data.has_file_data}\n` +
-                  `File Data Size: ${data.file_data_size} bytes\n` +
-                  `OCR Processed: ${data.ocr_processed}\n` +
-                  `OCR Confidence: ${data.ocr_confidence || 'N/A'}%\n` +
-                  `OCR Processor Available: ${data.ocr_processor_available}\n` +
-                  `Current Content Length: ${data.content_length} chars`);
-        })
-        .catch(error => {
-            console.error('Debug error:', error);
-            alert('Debug failed: ' + error.message);
-        });
-}
-</script>
-
-<!-- Processing Status Modal -->
-<div class="modal fade" id="processingModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Processing OCR...</h5>
-            </div>
-            <div class="modal-body text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="sr-only">Loading...</span>
-                </div>
-                <p class="mt-3" id="processingMessage">Processing documents...</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-function processSingleDocument(documentId) {
-    showProcessingModal('Processing document...');
-    
-    fetch(`/admin/ocr-process-document/${documentId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideProcessingModal();
-        if (data.success) {
-            showAlert('success', 'Document processed successfully!');
-            location.reload();
-        } else {
-            showAlert('danger', `Processing failed: ${data.error}`);
-        }
-    })
-    .catch(error => {
-        hideProcessingModal();
-        showAlert('danger', `Error: ${error.message}`);
-    });
-}
-
-function bulkProcessSelected() {
-    const checkboxes = document.querySelectorAll('.pending-doc-checkbox:checked');
-    const documentIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-    
-    if (documentIds.length === 0) {
-        showAlert('warning', 'Please select documents to process.');
-        return;
-    }
-    
-    showProcessingModal(`Processing ${documentIds.length} documents...`);
-    
-    fetch('/admin/ocr-bulk-process', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            document_ids: documentIds
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        hideProcessingModal();
-        if (data.successful_ocr > 0) {
-            showAlert('success', `Successfully processed ${data.successful_ocr} documents!`);
-            location.reload();
-        } else {
-            showAlert('warning', 'No documents were successfully processed.');
-        }
-    })
-    .catch(error => {
-        hideProcessingModal();
-        showAlert('danger', `Error: ${error.message}`);
-    });
-}
-
-// Bulk processing functions removed for performance optimization
-
-function toggleAllPending() {
-    const selectAll = document.getElementById('selectAllPending');
-    const checkboxes = document.querySelectorAll('.pending-doc-checkbox');
-    
-    checkboxes.forEach(cb => {
-        cb.checked = selectAll.checked;
-    });
-}
-
-function showProcessingModal(message) {
-    document.getElementById('processingMessage').textContent = message;
-    $('#processingModal').modal('show');
-}
-
-function hideProcessingModal() {
-    $('#processingModal').modal('hide');
-}
-
-function reprocessDocument(docId) {
-    if (!confirm('Reprocess OCR text extraction and refresh screening matches for this document?')) {
-        return;
-    }
-    
-    showProcessingModal('Reprocessing document and updating screening matches...');
-    
-    fetch(`/admin/ocr/reprocess-document/${docId}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        hideProcessingModal();
-        if (data.success) {
-            const confidenceText = data.confidence ? `${data.confidence}%` : 'N/A';
-            const refreshText = data.refresh_triggered ? 'Screening matches updated.' : 'Screening refresh may have failed.';
-            showAlert('success', `Document reprocessed successfully! Confidence: ${confidenceText}. ${refreshText}`);
-            setTimeout(() => {
-                location.reload();
-            }, 2000);
-        } else {
-            showAlert('danger', 'Error reprocessing document: ' + (data.error || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        hideProcessingModal();
-        console.error('Reprocess error:', error);
-        showAlert('danger', 'Error reprocessing document: ' + error.message);
-    });
-}
+// OCR Dashboard is now read-only
+// For poor OCR results, delete and resubit the document
 
 function showAlert(type, message) {
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
     alertDiv.innerHTML = `
         ${message}
-        <button type="button" class="close" data-dismiss="alert">
-            <span>&times;</span>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
         </button>
     `;
     
+    // Insert at the top of the container
     const container = document.querySelector('.container-fluid');
-    container.insertBefore(alertDiv, container.firstChild);
-    
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
+    if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
 }
 </script>
+
 {% endblock %}

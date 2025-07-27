@@ -27,88 +27,12 @@ except ImportError as e:
 
 @app.route('/admin/ocr/reprocess-document/<int:doc_id>', methods=['POST'])
 def reprocess_document(doc_id):
-    """Reprocess OCR for a specific document and trigger selective screening refresh"""
-    try:
-        # Get the document
-        document = MedicalDocument.query.get_or_404(doc_id)
-        
-        # Check for binary content in either field
-        binary_data = document.binary_content or document.file_data
-        if not binary_data:
-            return jsonify({
-                'success': False,
-                'error': 'Document has no binary content to process'
-            })
-        
-        logger.info(f"Starting OCR reprocessing for document {doc_id} ({document.filename})")
-        
-        # Reset OCR status to force reprocessing
-        document.ocr_processed = False
-        original_content = document.content  # Keep backup
-        document.content = None
-        document.ocr_confidence = None
-        document.ocr_processing_date = None
-        document.ocr_text_length = None
-        document.ocr_quality_flags = None
-        db.session.commit()
-        
-        # Use the global OCR processor directly to avoid import issues
-        if not ocr_processor:
-            logger.error("OCR processor not available")
-            return jsonify({
-                'success': False,
-                'error': 'OCR processor not available'
-            })
-        
-        # Process document with OCR using the global processor
-        result = ocr_processor.process_document_ocr(doc_id)
-        
-        if result['success']:
-            # Get updated document data
-            document = MedicalDocument.query.get(doc_id)
-            
-            logger.info(f"OCR reprocessing successful for document {doc_id}: confidence={document.ocr_confidence}%, text_length={document.ocr_text_length}")
-            
-            # Trigger selective screening refresh for this document's patient
-            refresh_triggered = False
-            if document.patient_id and result.get('ocr_applied'):
-                try:
-                    # Use unified screening engine for refresh
-                    from unified_screening_engine import UnifiedScreeningEngine
-                    engine = UnifiedScreeningEngine()
-                    screenings_updated = engine.generate_patient_screenings(document.patient_id)
-                    refresh_triggered = len(screenings_updated) > 0
-                    logger.info(f"OCR reprocessing triggered screening refresh for patient {document.patient_id}: {len(screenings_updated)} screenings updated")
-                except Exception as refresh_error:
-                    logger.warning(f"Screening refresh failed for patient {document.patient_id}: {refresh_error}")
-                    refresh_triggered = False
-            
-            return jsonify({
-                'success': True,
-                'confidence': document.ocr_confidence or 0,
-                'text_length': document.ocr_text_length or 0,
-                'ocr_applied': result.get('ocr_applied', False),
-                'message': f'Document reprocessed successfully. Confidence: {document.ocr_confidence or 0}%',
-                'refresh_triggered': refresh_triggered
-            })
-        else:
-            # Restore original content if OCR failed
-            document.content = original_content
-            document.ocr_processed = True  # Keep original state
-            db.session.commit()
-            
-            logger.error(f"OCR reprocessing failed for document {doc_id}: {result.get('error', 'Unknown error')}")
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'OCR processing failed')
-            })
-            
-    except Exception as e:
-        logger.error(f"Error reprocessing document {doc_id}: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': f'Reprocessing error: {str(e)}'
-        })
+    """OCR reprocessing has been disabled - delete and resubmit documents for poor OCR results"""
+    logger.info(f"OCR reprocessing request for document {doc_id} rejected - feature disabled")
+    return jsonify({
+        'success': False,
+        'error': 'OCR reprocessing has been disabled. For poor OCR results, delete and resubmit the document.'
+    }), 410  # HTTP 410 Gone - Resource no longer available
 
 
 @app.route('/admin/ocr-dashboard')
