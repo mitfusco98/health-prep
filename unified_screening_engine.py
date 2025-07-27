@@ -373,11 +373,9 @@ class UnifiedScreeningEngine:
         
         # Get the most recent completion date from all matched documents
         last_completed = self._get_last_completed_date(matching_documents)
-        logger.info(f"Filtering documents for {screening_type.name}: found {len(matching_documents)} documents, last_completed={last_completed}")
         
         if not last_completed:
             # No completion date means screening is not completed - return all documents
-            logger.info(f"No completion date found for {screening_type.name}, returning all {len(matching_documents)} documents")
             return matching_documents
         
         # Ensure last_completed is a date object
@@ -387,11 +385,9 @@ class UnifiedScreeningEngine:
         # Calculate cutoff date: last_completed_date - frequency
         # This ensures only documents within one frequency cycle of the last completion are shown
         cutoff_date = self._calculate_frequency_cutoff_date(last_completed, screening_type)
-        logger.info(f"Cutoff calculation for {screening_type.name}: last_completed={last_completed}, frequency={screening_type.frequency_number} {screening_type.frequency_unit}, cutoff={cutoff_date}")
         
         if not cutoff_date:
             # Can't calculate cutoff - return all documents (conservative approach)
-            logger.info(f"Could not calculate cutoff date for {screening_type.name}, returning all documents")
             return matching_documents
         
         # Filter documents: only include those on or after the cutoff date
@@ -408,14 +404,10 @@ class UnifiedScreeningEngine:
                 if isinstance(doc_date, datetime):
                     doc_date = doc_date.date()
             
-            # Debug logging for filtering logic
-            logger.info(f"Document {document.id} ({document.document_name}): date={doc_date}, cutoff={cutoff_date}, keep={doc_date >= cutoff_date}")
-            
             # Keep document if it's within the frequency cycle (on or after cutoff)
             if doc_date >= cutoff_date:
                 filtered_documents.append(document)
         
-        logger.info(f"Filtered {len(matching_documents)} documents to {len(filtered_documents)} for screening type {screening_type.name}")
         return filtered_documents
     
     def _filter_documents_by_frequency_cycle(self, matching_documents: List[MedicalDocument], screening_type: ScreeningType) -> List[MedicalDocument]:
