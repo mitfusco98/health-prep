@@ -927,63 +927,78 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         .all()
     )
 
-    # 🎯 SINGLE SOURCE OF TRUTH: Use the same screening engine as /screenings route
-    # This ensures complete consistency between prep sheet and /screenings page
-    from screening_performance_optimizer import screening_optimizer
-    
-    # Get screenings for this specific patient using exact same method as /screenings
-    query_result = screening_optimizer.get_optimized_screenings(
-        page=1,
-        page_size=100,  # Get all screenings for the patient
-        search_query=f"{patient.first_name} {patient.last_name}"
-    )
-    
-    # Extract screenings from the optimized result - this is the EXACT same data /screenings shows
-    raw_screenings = query_result.get('screenings', [])
-    
-    # Enhance screenings with proper frequency and last completed date calculations
+    # 🎯 INTELLIGENT VARIANT SELECTION: Use unified screening engine for proper variant selection
+    # This ensures prep sheet gets the correct variants based on patient eligibility and trigger conditions
     from unified_screening_engine import unified_engine
     
-    enhanced_screenings = []
-    for screening in raw_screenings:
-        # Get enhanced data from unified engine for each screening
-        try:
-            # Find the screening type object
-            screening_type = (
-                ScreeningType.query.filter_by(name=screening.screening_type, is_active=True).first()
-                if hasattr(screening, 'screening_type') else None
-            )
-            
-            if screening_type:
-                # Get patient object
-                patient_obj = Patient.query.get(screening.patient_id) if hasattr(screening, 'patient_id') else screening.patient
+    # Generate screenings with intelligent variant selection (same logic as screening generation)
+    print(f"🎯 Analyzing patient conditions for variant eligibility...")
+    
+    # Debug patient conditions for variant selection
+    patient_conditions = patient.conditions
+    print(f"   Patient {patient.first_name} {patient.last_name} has {len(patient_conditions)} conditions:")
+    for condition in patient_conditions:
+        print(f"     - {condition.name} ({condition.code})")
+    
+    generated_screenings = unified_engine.generate_patient_screenings(patient)
+    
+    print(f"🎯 Generated {len(generated_screenings)} eligible screenings with variant logic for {patient.first_name} {patient.last_name}")
+    
+    # Convert generated screening data to objects for template compatibility
+    screenings = []
+    for screening_data in generated_screenings:
+        # Create a pseudo-screening object for template compatibility
+        class ScreeningObject:
+            def __init__(self, data):
+                self.screening_type = data['screening_type']
+                self.status = data['status']
+                self.last_completed_date = data.get('last_completed_date')
+                self.due_date = data.get('due_date')
+                # Convert document IDs to document objects for template compatibility
+                matched_doc_data = data.get('matched_documents', [])
+                self.documents = []
+                self.matched_documents = []
                 
-                if patient_obj:
-                    # Get matched documents for this screening using correct method
-                    matched_docs = unified_engine._find_matching_documents(patient_obj, screening_type)
-                    
-                    # Calculate proper last completed date based on documents
-                    last_completed = unified_engine._get_last_completed_date(matched_docs) if matched_docs else None
-                    
-                    # Update the screening object with enhanced data
-                    if last_completed:
-                        screening.last_completed_date = last_completed
-                        print(f"📅 Enhanced {screening.screening_type}: last completed = {last_completed}")
-                        
-                # Ensure screening has screening_type_obj for frequency display
-                if not hasattr(screening, 'screening_type_obj') or not screening.screening_type_obj:
-                    screening.screening_type_obj = screening_type
-                    
-            enhanced_screenings.append(screening)
-            
-        except Exception as e:
-            # If enhancement fails, use original data
-            print(f"Warning: Could not enhance screening {screening.screening_type}: {str(e)}")
-            enhanced_screenings.append(screening)
+                if matched_doc_data:
+                    # If we have document IDs, convert them to document objects
+                    for doc_item in matched_doc_data:
+                        if isinstance(doc_item, int):
+                            # It's a document ID, fetch the object
+                            doc_obj = MedicalDocument.query.get(doc_item)
+                            if doc_obj:
+                                self.documents.append(doc_obj)
+                                self.matched_documents.append(doc_obj)
+                        elif hasattr(doc_item, 'id'):
+                            # It's already a document object
+                            self.documents.append(doc_item)
+                            self.matched_documents.append(doc_item)
+                self.patient_id = patient.id
+                self.patient = patient
+                
+                # Get screening type object for frequency display
+                self.screening_type_obj = ScreeningType.query.filter_by(
+                    name=self.screening_type, is_active=True
+                ).first()
+                
+                # Add frequency property for prep sheet compatibility
+                if self.screening_type_obj and self.screening_type_obj.frequency_number:
+                    self.frequency = f"Every {self.screening_type_obj.frequency_number} {self.screening_type_obj.frequency_unit}"
+                else:
+                    self.frequency = "Not set"
+        
+        screening_obj = ScreeningObject(screening_data)
+        screenings.append(screening_obj)
+        
+        if screening_data.get('last_completed_date'):
+            print(f"📅 Screening {screening_data['screening_type']}: last completed = {screening_data.get('last_completed_date')}")
+        
+        # Show variant selection info
+        variant_info = ""
+        if screening_obj.screening_type_obj and screening_obj.screening_type_obj.trigger_conditions:
+            variant_info = " (trigger-conditioned variant)"
+        print(f"   ✅ Selected: {screening_data['screening_type']}{variant_info} - {screening_data['status']}")
     
-    screenings = enhanced_screenings
-    
-    print(f"✅ Enhanced /screenings data: {len(screenings)} screenings with proper frequency/dates for {patient.first_name} {patient.last_name}")
+    print(f"✅ Converted to {len(screenings)} screening objects with proper variant selection for prep sheet")
     
     # Get checklist settings for filtering (if still needed for prep sheet display)
     from checklist_routes import get_or_create_settings
