@@ -445,7 +445,7 @@
                             <td>
                                 {% set valid_documents = screening.get_valid_documents_with_access_check() if screening.get_valid_documents_with_access_check is defined else screening.matched_documents %}
                                 {% if valid_documents %}
-                                    {{ screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else screening.last_completed_date.strftime('%Y-%m-%d') if screening.last_completed_date else 'Not available' }}
+                                    {{ screening.last_completed.strftime('%m/%d/%Y') if screening.last_completed else screening.last_completed_date.strftime('%m/%d/%Y') if screening.last_completed_date else 'Not available' }}
                                 {% else %}
                                     N/A
                                 {% endif %}
