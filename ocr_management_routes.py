@@ -86,30 +86,6 @@ def reprocess_document(doc_id):
             'success': False,
             'error': str(e)
         })
-                    logger.warning(f"Failed to trigger screening refresh after reprocessing doc {doc_id}: {refresh_error}")
-                    refresh_triggered = False
-            else:
-                refresh_triggered = False
-            
-            return jsonify({
-                'success': True,
-                'confidence': result.get('confidence_score', 0),
-                'text_length': result.get('text_length', 0),
-                'screening_refresh_triggered': refresh_triggered,
-                'message': 'Document reprocessed successfully and screening matches updated'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'OCR processing failed')
-            })
-            
-    except Exception as e:
-        logger.error(f"Error reprocessing document {doc_id}: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
 
 
 @app.route('/admin/ocr-dashboard')
