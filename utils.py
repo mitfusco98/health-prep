@@ -581,7 +581,7 @@ class PrepSheetGenerator:
                     {
                         "description": f"Overdue {screening.screening_type}",
                         "date": screening.due_date,
-                        "details": f"Overdue by {days_overdue} days. Priority: {screening.priority}",
+                        "details": f"Overdue by {days_overdue} days. Status: {screening.status}",
                     }
                 )
         return alerts
@@ -596,7 +596,7 @@ class PrepSheetGenerator:
                 actions.append(
                     {
                         "description": f"Schedule {screening.screening_type}",
-                        "priority": screening.priority,
+                        "priority": screening.status,
                         "details": f"Due by {screening.due_date.strftime('%Y-%m-%d')}. Frequency: {screening.frequency}",
                     }
                 )
