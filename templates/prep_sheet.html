@@ -127,15 +127,8 @@
     </div>
 </div>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>
-        Prep Sheet
-    </h1>
-    <div>
-        <button id="save-prep-sheet" class="btn btn-primary">
-            <i class="fas fa-save me-2"></i>Save
-        </button>
-    </div>
+<div class="mb-4">
+    <h1>Prep Sheet</h1>
 </div>
 
 <!-- Prep Sheet Header -->
@@ -512,9 +505,16 @@
         </div>
         
         <!-- Screening Recommendations -->
+        {% if screenings %}
         <div class="mb-4">
-            <h6 class="mb-3">Screening Recommendations</h6>
-            {% if screenings %}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">
+                    <i class="fas fa-clipboard-check me-2"></i>Screening Recommendations
+                    {% if document_screening_data and document_screening_data.summary.total_matches > 0 %}
+                        <span class="badge bg-info ms-2">{{ document_screening_data.summary.total_matches }} document(s) matched</span>
+                    {% endif %}
+                </h6>
+            </div>
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
@@ -529,12 +529,8 @@
                     <tbody>
                         {% for screening in screenings %}
                         <tr>
-                            <td>
-                                <strong>{{ screening.screening_type_obj.name if screening.screening_type_obj else screening.screening_type }}</strong>
-                            </td>
-                            <td>
-                                {{ screening.last_completed_date.strftime('%Y-%m-%d') if screening.last_completed_date else 'Never' }}
-                            </td>
+                            <td>{{ screening.screening_type_obj.name if screening.screening_type_obj else screening.screening_type }}</td>
+                            <td>{{ screening.last_completed_date.strftime('%Y-%m-%d') if screening.last_completed_date else 'Never' }}</td>
                             <td>
                                 {% if screening.screening_type_obj and screening.screening_type_obj.frequency_number %}
                                     Every {{ screening.screening_type_obj.frequency_number }} {{ screening.screening_type_obj.frequency_unit }}
@@ -544,23 +540,27 @@
                             </td>
                             <td>
                                 {% if screening.status == 'completed' %}
-                                    <span class="badge bg-success">Completed</span>
-                                {% elif screening.status == 'due_soon' %}
-                                    <span class="badge bg-warning text-dark">Due Soon</span>
+                                <span class="badge bg-success">Completed</span>
                                 {% elif screening.status == 'due' %}
-                                    <span class="badge bg-danger">Due</span>
+                                <span class="badge bg-danger">Due</span>
+                                {% elif screening.status == 'due_soon' %}
+                                <span class="badge bg-warning text-dark">Due Soon</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">{{ screening.status|title }}</span>
+                                <span class="badge bg-secondary">{{ screening.status or 'Unknown' }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if screening.matched_documents %}
-                                    {% for doc in screening.matched_documents %}
-                                        <a href="{{ url_for('view_document', document_id=doc.id) }}" 
+                                {% set valid_documents = screening.get_valid_documents_with_access_check() if screening.get_valid_documents_with_access_check is defined else screening.matched_documents %}
+                                {% if valid_documents %}
+                                    {% for document in valid_documents %}
+                                        {% set doc_name = document.document_name or document.filename or 'Document ' + document.id|string %}
+                                        <a href="{{ url_for('view_document', document_id=document.id, return_to=request.url) }}" 
                                            class="badge bg-info text-decoration-none me-1 mb-1" 
                                            target="_blank" 
-                                           title="View {{ doc.document_name or doc.filename or 'Document' }}">
-                                            {{ (doc.document_name or doc.filename or 'Document')|truncate(25) }}
+                                           title="View {{ doc_name }}"
+                                           onerror="handlePrepSheetDocumentError(this, {{ document.id }})">
+                                            {{ doc_name|truncate(25) }}
+                                            <small class="ms-1">(85%)</small>
                                         </a>
                                     {% endfor %}
                                 {% else %}
@@ -572,12 +572,8 @@
                     </tbody>
                 </table>
             </div>
-            {% else %}
-            <div class="alert alert-info">
-                <p class="mb-0">No screening recommendations available for this patient.</p>
-            </div>
-            {% endif %}
         </div>
+        {% endif %}
         
         <!-- Enhanced Medical Data Sections with Document Parsing -->
         {% if filtered_medical_data %}
@@ -805,74 +801,7 @@
     </div>
 </div>
 
-<!-- Screening Recommendations with Document Relationships -->
-{% if screenings %}
-<div class="card border-0 mb-4">
-    <div class="card-header bg-secondary bg-opacity-25">
-        <h5 class="mb-0">
-            <i class="fas fa-clipboard-check me-2"></i>Screening Recommendations
-            {% if document_screening_data and document_screening_data.summary.total_matches > 0 %}
-                <span class="badge bg-info ms-2">{{ document_screening_data.summary.total_matches }} document(s) matched</span>
-            {% endif %}
-        </h5>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Screening</th>
-                        <th>Last Completed</th>
-                        <th>Frequency</th>
-                        <th>Status</th>
-                        <th>Matched Documents</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for screening in screenings %}
-                    <tr>
-                        <td>{{ screening.screening_type }}</td>
-                        <td>{{ screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else 'Never' }}</td>
-                        <td>{{ screening.frequency or 'Not set' }}</td>
-                        <td>
-                            {% if screening.status == 'Complete' %}
-                            <span class="badge bg-success">{{ screening.status }}</span>
-                            {% elif screening.status == 'Due' %}
-                            <span class="badge bg-danger">{{ screening.status }}</span>
-                            {% elif screening.status == 'Due Soon' %}
-                            <span class="badge bg-warning text-dark">{{ screening.status }}</span>
-                            {% elif screening.status == 'Incomplete' %}
-                            <span class="badge bg-secondary">{{ screening.status }}</span>
-                            {% else %}
-                            <span class="badge bg-secondary">{{ screening.status or 'Unknown' }}</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% set valid_documents = screening.get_valid_documents_with_access_check() %}
-                            {% if valid_documents %}
-                                {% for document in valid_documents %}
-                                    {% set doc_name = document.document_name or document.filename or 'Document ' + document.id|string %}
-                                    <a href="{{ url_for('view_document', document_id=document.id, return_to=request.url) }}" 
-                                       class="badge bg-info text-decoration-none me-1 mb-1" 
-                                       target="_blank" 
-                                       title="View {{ doc_name }}"
-                                       onerror="handlePrepSheetDocumentError(this, {{ document.id }})">
-                                        {{ doc_name|truncate(25) }}
-                                        <small class="ms-1">(85%)</small>
-                                    </a>
-                                {% endfor %}
-                            {% else %}
-                                <span class="text-muted small">No documents</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-{% endif %}
+
 
 <!-- Print styles - only apply when printing -->
 <style>
@@ -903,15 +832,9 @@
 </style>
 
 <script>
-// Handle checkboxes, reset, and save functionality
+// Handle weight unit conversion and document error handling
 document.addEventListener('DOMContentLoaded', function() {
-    // Load saved checkbox states and screening statuses
-    const checkboxes = document.querySelectorAll('.form-check-input');
-    const statusSelects = document.querySelectorAll('.screening-status-select');
-    const screeningNotes = document.querySelectorAll('.screening-note');
     const patientId = '{{ patient.id }}';
-    const resetButton = document.getElementById('reset-checkboxes');
-    const saveButton = document.getElementById('save-prep-sheet');
     
     // Weight unit conversion functionality
     const toggleWeightButtons = document.querySelectorAll('.toggle-weight-unit');
@@ -941,154 +864,6 @@ document.addEventListener('DOMContentLoaded', function() {
         button.textContent = 'Show lbs';
         const weightInfo = button.closest('.card-body').querySelector('.weight-info');
         weightInfo.textContent = '(Metric)';
-    });
-    
-    // Function to get storage key for form elements
-    function getStorageKey(elementId, type = 'checkbox') {
-        return `patient_${patientId}_${elementId}_${type}`;
-    }
-    
-    // Load saved states for checkboxes
-    checkboxes.forEach(function(checkbox) {
-        const checkboxId = checkbox.id;
-        const storageKey = getStorageKey(checkboxId);
-        const savedState = localStorage.getItem(storageKey);
-        
-        if (savedState === 'true') {
-            checkbox.checked = true;
-        }
-        
-        // Add event listener to save state on change
-        checkbox.addEventListener('change', function() {
-            localStorage.setItem(storageKey, this.checked);
-        });
-    });
-    
-    // Load saved states for status selects
-    statusSelects.forEach(function(select) {
-        const selectId = select.id;
-        const storageKey = getStorageKey(selectId, 'status');
-        const savedStatus = localStorage.getItem(storageKey);
-        
-        if (savedStatus) {
-            select.value = savedStatus;
-        }
-        
-        // Add event listener to save state on change
-        select.addEventListener('change', function() {
-            localStorage.setItem(storageKey, this.value);
-        });
-    });
-    
-    // Load saved states for screening notes
-    screeningNotes.forEach(function(note) {
-        const noteId = note.id;
-        const storageKey = getStorageKey(noteId, 'note');
-        const savedNote = localStorage.getItem(storageKey);
-        
-        if (savedNote) {
-            note.value = savedNote;
-        }
-        
-        // Add event listener to save state on change
-        note.addEventListener('input', function() {
-            localStorage.setItem(storageKey, this.value);
-        });
-    });
-    
-    // Reset button functionality
-    resetButton.addEventListener('click', function() {
-        if (confirm('Are you sure you want to reset all screening data (checkboxes, statuses, and notes)?')) {
-            // Reset checkboxes
-            checkboxes.forEach(function(checkbox) {
-                const checkboxId = checkbox.id;
-                const storageKey = getStorageKey(checkboxId);
-                
-                // Clear localStorage and uncheck the box
-                localStorage.removeItem(storageKey);
-                checkbox.checked = false;
-            });
-            
-            // Reset status selects
-            statusSelects.forEach(function(select) {
-                const selectId = select.id;
-                const storageKey = getStorageKey(selectId, 'status');
-                
-                // Clear localStorage and reset select
-                localStorage.removeItem(storageKey);
-                select.value = '';
-            });
-            
-            // Reset notes
-            screeningNotes.forEach(function(note) {
-                const noteId = note.id;
-                const storageKey = getStorageKey(noteId, 'note');
-                
-                // Clear localStorage and empty note
-                localStorage.removeItem(storageKey);
-                note.value = '';
-            });
-        }
-    });
-    
-    // Save button functionality
-    saveButton.addEventListener('click', function() {
-        // Gather checked screening items and their statuses/notes
-        const screeningData = [];
-        
-        checkboxes.forEach(function(checkbox, index) {
-            // Get the label text for this screening item
-            const screeningName = checkbox.nextElementSibling.textContent.trim();
-            
-            // Get the corresponding status and note elements
-            const statusSelect = statusSelects[index];
-            const noteInput = screeningNotes[index];
-            
-            // Create data object for this screening item
-            const screeningItem = {
-                name: screeningName,
-                checked: checkbox.checked,
-                status: statusSelect.value,
-                note: noteInput.value
-            };
-            
-            // Add to the collection
-            screeningData.push(screeningItem);
-        });
-        
-        // Get just the checked screening names for backward compatibility
-        const checkedScreenings = screeningData
-            .filter(item => item.checked)
-            .map(item => item.name);
-        
-        // Send data to backend to save as document
-        fetch(`/patients/${patientId}/save_prep_sheet`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-                patient_id: patientId,
-                date: '{{ today.strftime("%Y-%m-%d") }}',
-                checked_screenings: checkedScreenings,
-                screening_data: screeningData
-            })
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            }
-            throw new Error('Failed to save prep sheet');
-        })
-        .then(data => {
-            alert('Prep sheet saved successfully!');
-            window.location.href = `/patients/${patientId}`;
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error saving prep sheet. Please try again.');
-        });
     });
     
     // Handle document access errors in prep sheet
