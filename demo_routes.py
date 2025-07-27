@@ -1014,6 +1014,15 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     
     # Update screenings variable to use comprehensive display list
     screenings = display_screenings
+    
+    # Debug logging to identify duplication source
+    print(f"🔧 DEBUGGING DUPLICATION:")
+    print(f"   - Automated screenings count: {len(automated_screenings)}")
+    print(f"   - Final display screenings count: {len(display_screenings)}")
+    print(f"   - Screening types added set: {screening_types_added}")
+    print(f"   - Final screening types: {[s.screening_type for s in display_screenings]}")
+    if len(display_screenings) != len(screening_types_added):
+        print(f"   ⚠️  MISMATCH: {len(display_screenings)} screenings vs {len(screening_types_added)} unique types")
 
     # Generate a prep sheet summary with decoupled filtering
     prep_sheet_data = generate_prep_sheet(
