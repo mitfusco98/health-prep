@@ -961,12 +961,19 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     # Use automated screenings for display instead of just existing database screenings
     # This ensures ALL applicable screenings are shown, not just ones already in database
     display_screenings = []
+    screening_types_added = set()  # Track screening types to prevent duplicates
     
     # First, add all automated screenings with their status/document data
     for auto_screening in automated_screenings:
+        screening_type_name = auto_screening['screening_type']
+        
+        # Skip if we've already added this screening type
+        if screening_type_name in screening_types_added:
+            continue
+            
         # Find matching database screening if it exists
         existing_screening = next(
-            (s for s in screenings if s.screening_type == auto_screening['screening_type']), 
+            (s for s in screenings if s.screening_type == screening_type_name), 
             None
         )
         
@@ -977,7 +984,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             # Create a virtual screening object for display with automated data
             from types import SimpleNamespace
             virtual_screening = SimpleNamespace()
-            virtual_screening.screening_type = auto_screening['screening_type']
+            virtual_screening.screening_type = screening_type_name
             virtual_screening.screening_type_obj = None  # Will be populated if needed
             virtual_screening.status = auto_screening.get('status', 'due')
             virtual_screening.last_completed_date = auto_screening.get('last_completed')
@@ -989,17 +996,21 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             # Find and attach screening type object
             screening_type_obj = next(
                 (st for st in ScreeningType.query.filter_by(is_active=True).all() 
-                 if st.name == auto_screening['screening_type']), 
+                 if st.name == screening_type_name), 
                 None
             )
             virtual_screening.screening_type_obj = screening_type_obj
             
             display_screenings.append(virtual_screening)
+        
+        # Mark this screening type as added
+        screening_types_added.add(screening_type_name)
     
     # Add any existing screenings that weren't covered by automated engine
     for screening in screenings:
-        if not any(ds.screening_type == screening.screening_type for ds in display_screenings):
+        if screening.screening_type not in screening_types_added:
             display_screenings.append(screening)
+            screening_types_added.add(screening.screening_type)
     
     # Update screenings variable to use comprehensive display list
     screenings = display_screenings
