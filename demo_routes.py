@@ -927,78 +927,21 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         .all()
     )
 
-    # 🎯 INTELLIGENT VARIANT SELECTION: Use unified screening engine for proper variant selection
-    # This ensures prep sheet gets the correct variants based on patient eligibility and trigger conditions
-    from unified_screening_engine import unified_engine
+    # 🎯 SINGLE SOURCE OF TRUTH: Use the EXACT same screening data as /screenings route
+    # This ensures complete consistency between prep sheet and /screenings page
+    from screening_performance_optimizer import screening_optimizer
     
-    # Generate screenings with intelligent variant selection (same logic as screening generation)
-    print(f"🎯 Analyzing patient conditions for variant eligibility...")
+    # Get screenings using the same method as /screenings route
+    query_result = screening_optimizer.get_optimized_screenings(
+        page=1,
+        page_size=100,  # Get all screenings for the patient
+        search_query=f"{patient.first_name} {patient.last_name}"
+    )
     
-    # Debug patient conditions for variant selection
-    patient_conditions = patient.conditions
-    print(f"   Patient {patient.first_name} {patient.last_name} has {len(patient_conditions)} conditions:")
-    for condition in patient_conditions:
-        print(f"     - {condition.name} ({condition.code})")
+    # Extract screenings from the optimized result - this is the EXACT same data /screenings shows
+    screenings = query_result.get('screenings', [])
     
-    generated_screenings = unified_engine.generate_patient_screenings(patient)
-    
-    print(f"🎯 Generated {len(generated_screenings)} eligible screenings with variant logic for {patient.first_name} {patient.last_name}")
-    
-    # Convert generated screening data to objects for template compatibility
-    screenings = []
-    for screening_data in generated_screenings:
-        # Create a pseudo-screening object for template compatibility
-        class ScreeningObject:
-            def __init__(self, data):
-                self.screening_type = data['screening_type']
-                self.status = data['status']
-                self.last_completed_date = data.get('last_completed_date')
-                self.due_date = data.get('due_date')
-                # Convert document IDs to document objects for template compatibility
-                matched_doc_data = data.get('matched_documents', [])
-                self.documents = []
-                self.matched_documents = []
-                
-                if matched_doc_data:
-                    # If we have document IDs, convert them to document objects
-                    for doc_item in matched_doc_data:
-                        if isinstance(doc_item, int):
-                            # It's a document ID, fetch the object
-                            doc_obj = MedicalDocument.query.get(doc_item)
-                            if doc_obj:
-                                self.documents.append(doc_obj)
-                                self.matched_documents.append(doc_obj)
-                        elif hasattr(doc_item, 'id'):
-                            # It's already a document object
-                            self.documents.append(doc_item)
-                            self.matched_documents.append(doc_item)
-                self.patient_id = patient.id
-                self.patient = patient
-                
-                # Get screening type object for frequency display
-                self.screening_type_obj = ScreeningType.query.filter_by(
-                    name=self.screening_type, is_active=True
-                ).first()
-                
-                # Add frequency property for prep sheet compatibility
-                if self.screening_type_obj and self.screening_type_obj.frequency_number:
-                    self.frequency = f"Every {self.screening_type_obj.frequency_number} {self.screening_type_obj.frequency_unit}"
-                else:
-                    self.frequency = "Not set"
-        
-        screening_obj = ScreeningObject(screening_data)
-        screenings.append(screening_obj)
-        
-        if screening_data.get('last_completed_date'):
-            print(f"📅 Screening {screening_data['screening_type']}: last completed = {screening_data.get('last_completed_date')}")
-        
-        # Show variant selection info
-        variant_info = ""
-        if screening_obj.screening_type_obj and screening_obj.screening_type_obj.trigger_conditions:
-            variant_info = " (trigger-conditioned variant)"
-        print(f"   ✅ Selected: {screening_data['screening_type']}{variant_info} - {screening_data['status']}")
-    
-    print(f"✅ Converted to {len(screenings)} screening objects with proper variant selection for prep sheet")
+    print(f"✅ Using /screenings data: {len(screenings)} screenings for {patient.first_name} {patient.last_name}")
     
     # Get checklist settings for filtering (if still needed for prep sheet display)
     from checklist_routes import get_or_create_settings
@@ -1048,7 +991,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
                 document_screening_data['screening_recommendations'].append({
                     'screening_name': screening.screening_type,
                     'status': screening.status,
-                    'last_completed': screening.last_completed,
+                    'last_completed': getattr(screening, 'last_completed_date', None) or getattr(screening, 'last_completed', None),
                     'frequency': screening.frequency,
                     'notes': screening.notes,
                     'matched_documents': matched_docs,
