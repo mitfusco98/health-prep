@@ -451,15 +451,15 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if screening.status == 'completed' %}
-                                <span class="badge bg-success">Completed</span>
-                                {% elif screening.status == 'due' %}
-                                <span class="badge bg-danger">Due</span>
-                                {% elif screening.status == 'due_soon' %}
-                                <span class="badge bg-warning text-dark">Due Soon</span>
-                                {% else %}
-                                <span class="badge bg-secondary">{{ screening.status or 'Unknown' }}</span>
-                                {% endif %}
+                                {% set status_class = {
+                                    'Due': 'danger',
+                                    'Due Soon': 'warning',
+                                    'Complete': 'success',
+                                    'Completed': 'success'
+                                } %}
+                                <span class="badge bg-{{ status_class.get(screening.status, 'secondary') }}{% if screening.status == 'Due Soon' %} text-dark{% endif %}">
+                                    {{ screening.status or 'Unknown' }}
+                                </span>
                             </td>
                             <td>
                                 {% set valid_documents = screening.get_valid_documents_with_access_check() if screening.get_valid_documents_with_access_check is defined else screening.matched_documents %}
