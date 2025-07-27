@@ -291,7 +291,7 @@ class Screening(db.Model):
     documents = db.relationship("MedicalDocument", 
                                secondary=screening_documents,
                                backref=db.backref("screenings", lazy=True),
-                               lazy="dynamic")
+                               lazy="select")
 
     @property
     def matched_documents(self):
@@ -299,7 +299,7 @@ class Screening(db.Model):
         try:
             # Get all documents and filter out any that no longer exist
             valid_documents = []
-            for doc in self.documents.all():
+            for doc in self.documents:
                 if doc and hasattr(doc, 'id') and doc.id:
                     valid_documents.append(doc)
                 else:
