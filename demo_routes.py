@@ -939,9 +939,51 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     )
     
     # Extract screenings from the optimized result - this is the EXACT same data /screenings shows
-    screenings = query_result.get('screenings', [])
+    raw_screenings = query_result.get('screenings', [])
     
-    print(f"✅ Using /screenings engine: {len(screenings)} screenings found for {patient.first_name} {patient.last_name}")
+    # Enhance screenings with proper frequency and last completed date calculations
+    from unified_screening_engine import unified_engine
+    
+    enhanced_screenings = []
+    for screening in raw_screenings:
+        # Get enhanced data from unified engine for each screening
+        try:
+            # Find the screening type object
+            screening_type = (
+                ScreeningType.query.filter_by(name=screening.screening_type, is_active=True).first()
+                if hasattr(screening, 'screening_type') else None
+            )
+            
+            if screening_type:
+                # Get patient object
+                patient_obj = Patient.query.get(screening.patient_id) if hasattr(screening, 'patient_id') else screening.patient
+                
+                if patient_obj:
+                    # Get matched documents for this screening using correct method
+                    matched_docs = unified_engine._find_matching_documents(patient_obj, screening_type)
+                    
+                    # Calculate proper last completed date based on documents
+                    last_completed = unified_engine._get_last_completed_date(matched_docs) if matched_docs else None
+                    
+                    # Update the screening object with enhanced data
+                    if last_completed:
+                        screening.last_completed_date = last_completed
+                        print(f"📅 Enhanced {screening.screening_type}: last completed = {last_completed}")
+                        
+                # Ensure screening has screening_type_obj for frequency display
+                if not hasattr(screening, 'screening_type_obj') or not screening.screening_type_obj:
+                    screening.screening_type_obj = screening_type
+                    
+            enhanced_screenings.append(screening)
+            
+        except Exception as e:
+            # If enhancement fails, use original data
+            print(f"Warning: Could not enhance screening {screening.screening_type}: {str(e)}")
+            enhanced_screenings.append(screening)
+    
+    screenings = enhanced_screenings
+    
+    print(f"✅ Enhanced /screenings data: {len(screenings)} screenings with proper frequency/dates for {patient.first_name} {patient.last_name}")
     
     # Get checklist settings for filtering (if still needed for prep sheet display)
     from checklist_routes import get_or_create_settings

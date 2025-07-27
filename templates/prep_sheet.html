@@ -442,7 +442,7 @@
                         {% for screening in screenings %}
                         <tr>
                             <td>{{ screening.screening_type_obj.name if screening.screening_type_obj else screening.screening_type }}</td>
-                            <td>{{ screening.last_completed_date.strftime('%Y-%m-%d') if screening.last_completed_date else 'Never' }}</td>
+                            <td>{{ screening.last_completed_date.strftime('%Y-%m-%d') if screening.last_completed_date else 'N/A' }}</td>
                             <td>
                                 {% if screening.screening_type_obj and screening.screening_type_obj.frequency_number %}
                                     Every {{ screening.screening_type_obj.frequency_number }} {{ screening.screening_type_obj.frequency_unit }}
