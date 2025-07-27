@@ -927,103 +927,25 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         .all()
     )
 
-    # 🚀 SEAMLESS INTEGRATION: Use automated screening engine for all applicable screening types
-    # This automatically includes ALL active screening types without manual intervention
-    # Use unified screening engine instead of old automated engine
-    from unified_screening_engine import unified_engine
+    # 🎯 SINGLE SOURCE OF TRUTH: Use the same screening engine as /screenings route
+    # This ensures complete consistency between prep sheet and /screenings page
+    from screening_performance_optimizer import screening_optimizer
     
-    # Get checklist settings for filtering and customization (not gatekeeper)
+    # Get screenings for this specific patient using exact same method as /screenings
+    query_result = screening_optimizer.get_optimized_screenings(
+        page=1,
+        page_size=100,  # Get all screenings for the patient
+        search_query=f"{patient.first_name} {patient.last_name}"
+    )
+    
+    # Extract screenings from the optimized result - this is the EXACT same data /screenings shows
+    screenings = query_result.get('screenings', [])
+    
+    print(f"✅ Using /screenings engine: {len(screenings)} screenings found for {patient.first_name} {patient.last_name}")
+    
+    # Get checklist settings for filtering (if still needed for prep sheet display)
     from checklist_routes import get_or_create_settings
     checklist_settings = get_or_create_settings()
-    
-    # Use automated engine to get all applicable screening types for this patient
-    # Use unified screening engine for refresh operations
-    screening_engine = unified_engine
-    # Generate patient screenings using unified engine
-    automated_screenings = screening_engine.generate_patient_screenings(patient.id)
-    
-    # Extract screening type names from automated engine results  
-    # DECOUPLED: No filtering by default_items here - unified engine determines eligibility only
-    recommended_screenings = [screening['screening_type'] for screening in automated_screenings]
-    
-    print(f"🔍 Automated screening engine found {len(recommended_screenings)} applicable screenings for {patient.first_name} {patient.last_name}: {recommended_screenings}")
-    print(f"📋 Default items filtering is now handled only in prep sheet template, not in parsing logic")
-    
-    # Fallback if no screenings found (edge case protection)
-    if not recommended_screenings:
-        # Basic screenings for all patients (only as fallback)
-        recommended_screenings = ["Vaccination History", "Lipid Panel", "A1c", "Colonoscopy"]
-        
-        # Add sex-specific screenings for females
-        if patient.sex and patient.sex.lower() == "female":
-            recommended_screenings.extend(["Pap Smear", "Mammogram", "DEXA Scan"])
-
-    # Use automated screenings for display instead of just existing database screenings
-    # This ensures ALL applicable screenings are shown, not just ones already in database
-    # Import variant manager for proper deduplication
-    from screening_variant_manager import ScreeningVariantManager
-    variant_manager = ScreeningVariantManager()
-    
-    display_screenings = []
-    base_screening_types_added = set()  # Track base screening types to prevent duplicates
-    
-    # First, add all automated screenings with their status/document data
-    for auto_screening in automated_screenings:
-        screening_type_name = auto_screening['screening_type']
-        base_name = variant_manager.extract_base_name(screening_type_name)
-        
-        # Skip if we've already added this base screening type
-        if base_name in base_screening_types_added:
-            continue
-            
-        # Find matching database screening (check for exact match or variants)
-        existing_screening = None
-        for s in screenings:
-            if (s.screening_type == screening_type_name or 
-                variant_manager.extract_base_name(s.screening_type) == base_name):
-                existing_screening = s
-                break
-        
-        if existing_screening:
-            # Use existing screening with database relationships
-            display_screenings.append(existing_screening)
-        else:
-            # Create a virtual screening object for display with automated data
-            from types import SimpleNamespace
-            virtual_screening = SimpleNamespace()
-            virtual_screening.screening_type = screening_type_name
-            virtual_screening.screening_type_obj = None  # Will be populated if needed
-            virtual_screening.status = auto_screening.get('status', 'due')
-            virtual_screening.last_completed_date = auto_screening.get('last_completed')
-            virtual_screening.due_date = auto_screening.get('due_date')
-            virtual_screening.matched_documents = []  # No documents for virtual screenings
-            virtual_screening.frequency = auto_screening.get('frequency')
-            virtual_screening.notes = auto_screening.get('notes', '')
-            
-            # Find and attach screening type object
-            screening_type_obj = next(
-                (st for st in ScreeningType.query.filter_by(is_active=True).all() 
-                 if st.name == screening_type_name), 
-                None
-            )
-            virtual_screening.screening_type_obj = screening_type_obj
-            
-            display_screenings.append(virtual_screening)
-        
-        # Mark this base screening type as added
-        base_screening_types_added.add(base_name)
-    
-    # Add any existing screenings that weren't covered by automated engine
-    for screening in screenings:
-        base_name = variant_manager.extract_base_name(screening.screening_type)
-        if base_name not in base_screening_types_added:
-            display_screenings.append(screening)
-            base_screening_types_added.add(base_name)
-    
-    # Update screenings variable to use comprehensive display list
-    screenings = display_screenings
-    
-    print(f"✅ Deduplication fix applied: {len(display_screenings)} unique screenings generated for {patient.first_name} {patient.last_name}")
 
     # Generate a prep sheet summary with decoupled filtering
     prep_sheet_data = generate_prep_sheet(
@@ -1046,8 +968,8 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
 
     # Get enhanced screening recommendations with document relationships using new system
     try:
-        # Get existing screenings with document relationships
-        patient_screenings = Screening.query.filter_by(patient_id=patient_id).all()
+        # Use the same screenings data from the screening optimizer for consistency
+        patient_screenings = screenings
         
         # Create mapping of screening names to document match data for template
         screening_document_matches = {}
@@ -1146,7 +1068,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             active_conditions=active_conditions,
             screenings=screenings,
             immunizations=immunizations,
-            recommended_screenings=recommended_screenings,
+
             last_visit_date=last_visit_date,
             past_appointments=past_appointments,
             today=datetime.now(),
