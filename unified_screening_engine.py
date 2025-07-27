@@ -329,7 +329,7 @@ class UnifiedScreeningEngine:
         }
     
     def _find_matching_documents(self, patient: Patient, screening_type: ScreeningType) -> List[MedicalDocument]:
-        """Find documents that match the screening type's criteria with prioritization"""
+        """Find documents that match the screening type's criteria with frequency-based filtering"""
         matching_documents = []
         
         # Get all documents for this patient
@@ -340,13 +340,58 @@ class UnifiedScreeningEngine:
             if match_result['is_match']:
                 matching_documents.append(document)
         
-        # Apply frequency-based filtering for completed screenings
-        frequency_filtered_documents = self._filter_documents_by_frequency_cycle(matching_documents, screening_type)
+        # Apply frequency-based filtering to exclude outdated documents
+        current_documents = self._filter_outdated_documents(matching_documents, screening_type)
         
         # Apply document prioritization to show only most relevant/recent documents
-        prioritized_documents = self._prioritize_documents_for_screening(frequency_filtered_documents, screening_type)
+        prioritized_documents = self._prioritize_documents_for_screening(current_documents, screening_type)
         
         return prioritized_documents
+    
+    def _filter_outdated_documents(self, matching_documents: List[MedicalDocument], screening_type: ScreeningType) -> List[MedicalDocument]:
+        """
+        Filter out documents that are too old to be considered current for the screening frequency.
+        
+        For each document, check if it would still be considered "current":
+        - If (document_date + frequency) > today: document is current, keep it
+        - If (document_date + frequency) <= today: document is outdated, filter it out
+        
+        Example: For 1-year Pap Smear frequency:
+        - 2023 document: 2023 + 1 year = 2024, 2024 < 2025 (today) → outdated, filter out
+        - 2025 document: 2025 + 1 year = 2026, 2026 > 2025 (today) → current, keep
+        
+        Args:
+            matching_documents: All documents that match keywords
+            screening_type: ScreeningType with frequency settings
+            
+        Returns:
+            List of documents that are still current based on frequency
+        """
+        if not matching_documents or not screening_type.frequency_number or not screening_type.frequency_unit:
+            return matching_documents
+        
+        current_documents = []
+        today = date.today()
+        
+        for document in matching_documents:
+            # Get document date
+            doc_date = document.document_date or document.created_at.date()
+            if isinstance(doc_date, datetime):
+                doc_date = doc_date.date()
+            
+            # Calculate when this document would expire (doc_date + frequency)
+            expiry_date = self._calculate_next_due_date_from_completion(doc_date, screening_type)
+            if not expiry_date:
+                # If we can't calculate expiry, keep the document (conservative approach)
+                current_documents.append(document)
+                continue
+            
+            # Keep document if it hasn't expired yet
+            if expiry_date > today:
+                current_documents.append(document)
+            # Filter out document if it has expired (expiry_date <= today)
+        
+        return current_documents
     
     def _filter_documents_by_frequency_cycle(self, matching_documents: List[MedicalDocument], screening_type: ScreeningType) -> List[MedicalDocument]:
         """
@@ -420,28 +465,94 @@ class UnifiedScreeningEngine:
             return None
     
     def _determine_status_from_documents(self, matching_documents: List[MedicalDocument], screening_type: ScreeningType) -> str:
-        """Determine screening status based on matched documents"""
+        """Determine screening status based on matched documents and frequency validation"""
         if not matching_documents:
             return self.STATUS_DUE
         
-        # If we have documents, check timing
+        # Get the most recent completion date from documents
         last_completed = self._get_last_completed_date(matching_documents)
         if not last_completed:
             return self.STATUS_DUE
         
-        # Check if screening is due based on frequency
+        # Ensure last_completed is a date object for comparison
+        if isinstance(last_completed, datetime):
+            last_completed = last_completed.date()
+        
+        # Check if the last completion is still valid based on frequency from TODAY
+        if not self._is_completion_still_valid(last_completed, screening_type):
+            return self.STATUS_DUE
+        
+        # If completion is still valid, check if it's due soon
         due_date = self._calculate_due_date(screening_type, matching_documents)
         if due_date:
             today = date.today()
-            # Ensure both are date objects for comparison
+            # Ensure due_date is a date object for comparison
             if isinstance(due_date, datetime):
                 due_date = due_date.date()
+            
             if today >= due_date:
                 return self.STATUS_DUE
             elif (due_date - today).days <= self.DUE_SOON_THRESHOLD_DAYS:
                 return self.STATUS_DUE_SOON
         
         return self.STATUS_COMPLETE
+    
+    def _is_completion_still_valid(self, last_completed_date: date, screening_type: ScreeningType) -> bool:
+        """
+        Check if a completion date is still valid based on the screening frequency from TODAY.
+        This prevents old documents from maintaining "completed" status when they're past due.
+        
+        Args:
+            last_completed_date: The date when screening was last completed
+            screening_type: ScreeningType with frequency settings
+            
+        Returns:
+            True if completion is still valid, False if past due
+        """
+        if not screening_type.frequency_number or not screening_type.frequency_unit:
+            return True  # No frequency defined, always valid
+        
+        # Calculate when this completion would be due next
+        next_due_date = self._calculate_next_due_date_from_completion(last_completed_date, screening_type)
+        if not next_due_date:
+            return True  # Could not calculate, assume valid
+        
+        # Check if we're past the due date
+        today = date.today()
+        return today < next_due_date  # Valid if we haven't reached the due date yet
+    
+    def _calculate_next_due_date_from_completion(self, completion_date: date, screening_type: ScreeningType) -> Optional[date]:
+        """
+        Calculate the next due date by adding frequency to a completion date.
+        
+        Args:
+            completion_date: Date when screening was completed
+            screening_type: ScreeningType with frequency settings
+            
+        Returns:
+            Next due date or None if cannot be calculated
+        """
+        if not screening_type.frequency_number or not screening_type.frequency_unit:
+            return None
+        
+        frequency_num = int(screening_type.frequency_number)
+        frequency_unit = screening_type.frequency_unit.lower()
+        
+        try:
+            if frequency_unit in ['year', 'years', 'annually']:
+                from dateutil.relativedelta import relativedelta
+                return completion_date + relativedelta(years=frequency_num)
+            elif frequency_unit in ['month', 'months', 'monthly']:
+                from dateutil.relativedelta import relativedelta
+                return completion_date + relativedelta(months=frequency_num)
+            elif frequency_unit in ['day', 'days', 'daily']:
+                return completion_date + timedelta(days=frequency_num)
+            else:
+                logger.warning(f"Unknown frequency unit: {frequency_unit}")
+                return None
+        except Exception as e:
+            logger.error(f"Error calculating next due date: {e}")
+            return None
     
     def _calculate_due_date(self, screening_type: ScreeningType, matching_documents: List[MedicalDocument]) -> Optional[date]:
         """Calculate when screening is due next"""
@@ -452,17 +563,12 @@ class UnifiedScreeningEngine:
         if not last_completed:
             return date.today()  # Due now if never completed
         
-        # Calculate next due date based on frequency
-        if screening_type.frequency_unit == 'months':
-            from dateutil.relativedelta import relativedelta
-            return last_completed + relativedelta(months=screening_type.frequency_number)
-        elif screening_type.frequency_unit == 'years':
-            from dateutil.relativedelta import relativedelta
-            return last_completed + relativedelta(years=screening_type.frequency_number)
-        elif screening_type.frequency_unit == 'days':
-            return last_completed + timedelta(days=screening_type.frequency_number)
+        # Ensure last_completed is a date object
+        if isinstance(last_completed, datetime):
+            last_completed = last_completed.date()
         
-        return None
+        # Use the new method to calculate next due date
+        return self._calculate_next_due_date_from_completion(last_completed, screening_type)
     
     def _get_last_completed_date(self, matching_documents: List[MedicalDocument]) -> Optional[date]:
         """Get the most recent completion date from matching documents"""
