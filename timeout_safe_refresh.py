@@ -95,18 +95,35 @@ class TimeoutSafeRefresh:
                 if existing_screening:
                     # Update existing
                     existing_screening.status = screening_data['status']
-                    existing_screening.last_completed = screening_data.get('last_completed')
+                    # Ensure date fields are date objects, not datetime
+                    last_completed = screening_data.get('last_completed')
+                    if last_completed and hasattr(last_completed, 'date'):
+                        last_completed = last_completed.date()
+                    existing_screening.last_completed = last_completed
+                    
                     existing_screening.frequency = screening_data.get('frequency')
-                    existing_screening.due_date = screening_data.get('due_date')
+                    
+                    due_date = screening_data.get('due_date')
+                    if due_date and hasattr(due_date, 'date'):
+                        due_date = due_date.date()
+                    existing_screening.due_date = due_date
                 else:
-                    # Create new
+                    # Create new - ensure date fields are date objects, not datetime
+                    last_completed = screening_data.get('last_completed')
+                    if last_completed and hasattr(last_completed, 'date'):
+                        last_completed = last_completed.date()
+                    
+                    due_date = screening_data.get('due_date')
+                    if due_date and hasattr(due_date, 'date'):
+                        due_date = due_date.date()
+                    
                     existing_screening = Screening(
                         patient_id=screening_data['patient_id'],
                         screening_type=screening_data['screening_type'],
                         status=screening_data['status'],
-                        last_completed=screening_data.get('last_completed'),
+                        last_completed=last_completed,
                         frequency=screening_data.get('frequency'),
-                        due_date=screening_data.get('due_date')
+                        due_date=due_date
                     )
                     db.session.add(existing_screening)
                 

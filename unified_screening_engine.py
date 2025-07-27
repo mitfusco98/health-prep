@@ -350,48 +350,57 @@ class UnifiedScreeningEngine:
     
     def _filter_outdated_documents(self, matching_documents: List[MedicalDocument], screening_type: ScreeningType) -> List[MedicalDocument]:
         """
-        Filter out documents that are too old to be considered current for the screening frequency.
+        Filter out documents that are too old for completed screenings based on frequency cycles.
+        This filtering ONLY applies to completed screenings to ensure matched documents
+        fall within one frequency cycle of the last completed date.
         
-        For each document, check if it would still be considered "current":
-        - If (document_date + frequency) > today: document is current, keep it
-        - If (document_date + frequency) <= today: document is outdated, filter it out
+        Logic: For completed screenings, only show documents from (last_completed_date - frequency) onwards
         
-        Example: For 1-year Pap Smear frequency:
-        - 2023 document: 2023 + 1 year = 2024, 2024 < 2025 (today) → outdated, filter out
-        - 2025 document: 2025 + 1 year = 2026, 2026 > 2025 (today) → current, keep
+        Example: Ava Eichel's Pap Smear completed 5/31/25 with 1-year frequency:
+        - Cutoff date: 5/31/25 - 1 year = 5/31/24
+        - 2023 document: before 5/31/24 → filter out
+        - 2025 document: after 5/31/24 → keep
         
         Args:
             matching_documents: All documents that match keywords
             screening_type: ScreeningType with frequency settings
             
         Returns:
-            List of documents that are still current based on frequency
+            List of documents filtered by frequency cycle for completed screenings
         """
         if not matching_documents or not screening_type.frequency_number or not screening_type.frequency_unit:
             return matching_documents
         
-        current_documents = []
-        today = date.today()
+        # Get the most recent completion date from all matched documents
+        last_completed = self._get_last_completed_date(matching_documents)
+        if not last_completed:
+            # No completion date means screening is not completed - return all documents
+            return matching_documents
         
+        # Ensure last_completed is a date object
+        if isinstance(last_completed, datetime):
+            last_completed = last_completed.date()
+        
+        # Calculate cutoff date: last_completed_date - frequency
+        # This ensures only documents within one frequency cycle of the last completion are shown
+        cutoff_date = self._calculate_frequency_cutoff_date(last_completed, screening_type)
+        if not cutoff_date:
+            # Can't calculate cutoff - return all documents (conservative approach)
+            return matching_documents
+        
+        # Filter documents: only include those on or after the cutoff date
+        # This prevents old documents from maintaining "completed" status inappropriately
+        filtered_documents = []
         for document in matching_documents:
-            # Get document date
             doc_date = document.document_date or document.created_at.date()
             if isinstance(doc_date, datetime):
                 doc_date = doc_date.date()
             
-            # Calculate when this document would expire (doc_date + frequency)
-            expiry_date = self._calculate_next_due_date_from_completion(doc_date, screening_type)
-            if not expiry_date:
-                # If we can't calculate expiry, keep the document (conservative approach)
-                current_documents.append(document)
-                continue
-            
-            # Keep document if it hasn't expired yet
-            if expiry_date > today:
-                current_documents.append(document)
-            # Filter out document if it has expired (expiry_date <= today)
+            # Keep document if it's within the frequency cycle (on or after cutoff)
+            if doc_date >= cutoff_date:
+                filtered_documents.append(document)
         
-        return current_documents
+        return filtered_documents
     
     def _filter_documents_by_frequency_cycle(self, matching_documents: List[MedicalDocument], screening_type: ScreeningType) -> List[MedicalDocument]:
         """
