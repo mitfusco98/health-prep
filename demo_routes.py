@@ -958,10 +958,51 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         if patient.sex and patient.sex.lower() == "female":
             recommended_screenings.extend(["Pap Smear", "Mammogram", "DEXA Scan"])
 
-    # Add existing screenings if they're not already included
+    # Use automated screenings for display instead of just existing database screenings
+    # This ensures ALL applicable screenings are shown, not just ones already in database
+    display_screenings = []
+    
+    # First, add all automated screenings with their status/document data
+    for auto_screening in automated_screenings:
+        # Find matching database screening if it exists
+        existing_screening = next(
+            (s for s in screenings if s.screening_type == auto_screening['screening_type']), 
+            None
+        )
+        
+        if existing_screening:
+            # Use existing screening with database relationships
+            display_screenings.append(existing_screening)
+        else:
+            # Create a virtual screening object for display with automated data
+            from types import SimpleNamespace
+            virtual_screening = SimpleNamespace()
+            virtual_screening.screening_type = auto_screening['screening_type']
+            virtual_screening.screening_type_obj = None  # Will be populated if needed
+            virtual_screening.status = auto_screening.get('status', 'due')
+            virtual_screening.last_completed_date = auto_screening.get('last_completed')
+            virtual_screening.due_date = auto_screening.get('due_date')
+            virtual_screening.matched_documents = []  # No documents for virtual screenings
+            virtual_screening.frequency = auto_screening.get('frequency')
+            virtual_screening.notes = auto_screening.get('notes', '')
+            
+            # Find and attach screening type object
+            screening_type_obj = next(
+                (st for st in ScreeningType.query.filter_by(is_active=True).all() 
+                 if st.name == auto_screening['screening_type']), 
+                None
+            )
+            virtual_screening.screening_type_obj = screening_type_obj
+            
+            display_screenings.append(virtual_screening)
+    
+    # Add any existing screenings that weren't covered by automated engine
     for screening in screenings:
-        if screening.screening_type not in recommended_screenings:
-            recommended_screenings.append(screening.screening_type)
+        if not any(ds.screening_type == screening.screening_type for ds in display_screenings):
+            display_screenings.append(screening)
+    
+    # Update screenings variable to use comprehensive display list
+    screenings = display_screenings
 
     # Generate a prep sheet summary with decoupled filtering
     prep_sheet_data = generate_prep_sheet(
