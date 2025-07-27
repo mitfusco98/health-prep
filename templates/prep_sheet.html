@@ -442,7 +442,14 @@
                         {% for screening in screenings %}
                         <tr>
                             <td>{{ screening.screening_type_obj.name if screening.screening_type_obj else screening.screening_type }}</td>
-                            <td>{{ screening.last_completed_date.strftime('%Y-%m-%d') if screening.last_completed_date else 'N/A' }}</td>
+                            <td>
+                                {% set valid_documents = screening.get_valid_documents_with_access_check() if screening.get_valid_documents_with_access_check is defined else screening.matched_documents %}
+                                {% if valid_documents %}
+                                    {{ screening.last_completed.strftime('%Y-%m-%d') if screening.last_completed else screening.last_completed_date.strftime('%Y-%m-%d') if screening.last_completed_date else 'Not available' }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if screening.frequency %}
                                     {{ screening.frequency }}
