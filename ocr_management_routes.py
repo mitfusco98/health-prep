@@ -29,9 +29,6 @@ except ImportError as e:
 def reprocess_document(doc_id):
     """Reprocess OCR for a specific document and trigger selective screening refresh"""
     try:
-        # Import here to avoid circular imports
-        from ocr_document_processor import ocr_processor
-        
         # Get the document
         document = MedicalDocument.query.get_or_404(doc_id)
         
@@ -47,10 +44,14 @@ def reprocess_document(doc_id):
         document.ocr_confidence = None
         document.ocr_processing_date = None
         document.ocr_text_length = None
+        document.ocr_quality_flags = None
         db.session.commit()
         
-        # Reprocess OCR
-        result = ocr_processor.process_document_ocr(doc_id)
+        # Import and use the OCR processor function directly
+        from ocr_document_processor import process_document_with_ocr
+        
+        # Reprocess OCR using the unified function
+        result = process_document_with_ocr(doc_id)
         
         if result['success']:
             # Get updated document data
@@ -58,20 +59,24 @@ def reprocess_document(doc_id):
             
             # Trigger selective screening refresh for this document's patient
             refresh_triggered = False
-            if document.patient_id:
+            if document.patient_id and result.get('ocr_applied'):
                 try:
-                    # Trigger screening refresh for this patient after document reprocessing
-                    from timeout_safe_refresh import timeout_safe_refresh
-                    refresh_success = timeout_safe_refresh._refresh_single_patient(document.patient_id)
-                    refresh_triggered = refresh_success
+                    # Use unified screening engine for refresh
+                    from unified_screening_engine import UnifiedScreeningEngine
+                    engine = UnifiedScreeningEngine()
+                    screenings_updated = engine.generate_patient_screenings(document.patient_id)
+                    refresh_triggered = len(screenings_updated) > 0
+                    logger.info(f"OCR reprocessing triggered screening refresh for patient {document.patient_id}: {len(screenings_updated)} screenings updated")
                 except Exception as refresh_error:
                     logger.warning(f"Screening refresh failed for patient {document.patient_id}: {refresh_error}")
                     refresh_triggered = False
             
             return jsonify({
                 'success': True,
-                'confidence': document.ocr_confidence,
-                'message': f'Document reprocessed successfully. Confidence: {document.ocr_confidence}%',
+                'confidence': document.ocr_confidence or 0,
+                'text_length': result.get('extracted_text_length', 0),
+                'ocr_applied': result.get('ocr_applied', False),
+                'message': f'Document reprocessed successfully. Confidence: {document.ocr_confidence or 0}%',
                 'refresh_triggered': refresh_triggered
             })
         else:
