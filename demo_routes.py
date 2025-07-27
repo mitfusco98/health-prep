@@ -977,64 +977,20 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         past_appointments,
     )
     
-    # CREATE ORDERED SCREENING RECOMMENDATIONS based on checklist default items
-    # Get default items list for ordering (this is the user's preferred screening order)
-    default_items_order = []
+    # Pass default_items settings to template for prep sheet filtering (decoupled from parsing)
+    prep_sheet_filter_items = []
     if checklist_settings.default_items:
-        default_items_order = checklist_settings.default_items_list
-        
-    # Get all existing screenings for this patient
-    patient_screenings = Screening.query.filter_by(patient_id=patient_id).all()
-    
-    # Create ordered screening recommendations for prep sheet display
-    ordered_screening_recommendations = []
-    
-    # First, add screenings in the order of default items list
-    for default_item in default_items_order:
-        # Find matching screening for this default item
-        matching_screening = None
-        for screening in patient_screenings:
-            if screening.screening_type == default_item:
-                matching_screening = screening
-                break
-        
-        if matching_screening:
-            # Add screening with document information
-            ordered_screening_recommendations.append({
-                'screening_name': matching_screening.screening_type,
-                'status': matching_screening.status,
-                'last_completed': matching_screening.last_completed,
-                'frequency': matching_screening.frequency,
-                'due_date': matching_screening.due_date,
-                'notes': matching_screening.notes,
-                'matched_documents': matching_screening.matched_documents,
-                'document_count': len(matching_screening.matched_documents),
-                'has_documents': len(matching_screening.matched_documents) > 0
-            })
-    
-    # Then add any remaining screenings not in default items (at the end)
-    for screening in patient_screenings:
-        if screening.screening_type not in default_items_order:
-            ordered_screening_recommendations.append({
-                'screening_name': screening.screening_type,
-                'status': screening.status,
-                'last_completed': screening.last_completed,
-                'frequency': screening.frequency,
-                'due_date': screening.due_date,
-                'notes': screening.notes,
-                'matched_documents': screening.matched_documents,
-                'document_count': len(screening.matched_documents),
-                'has_documents': len(screening.matched_documents) > 0
-            })
-
-    print(f"Found {len(ordered_screening_recommendations)} screenings ordered by checklist default items")
+        prep_sheet_filter_items = checklist_settings.default_items_list
 
     # Get enhanced screening recommendations with document relationships using new system
     try:
-        # Create mapping of screening names to document match data for template compatibility
+        # Get existing screenings with document relationships
+        patient_screenings = Screening.query.filter_by(patient_id=patient_id).all()
+        
+        # Create mapping of screening names to document match data for template
         screening_document_matches = {}
         document_screening_data = {
-            'screening_recommendations': ordered_screening_recommendations,
+            'screening_recommendations': [],
             'summary': {
                 'total_matches': 0,
                 'unique_screenings': len(patient_screenings),
@@ -1134,6 +1090,7 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             today=datetime.now(),
             cache_timestamp=cache_timestamp,
             checklist_settings=checklist_settings,
+            prep_sheet_filter_items=prep_sheet_filter_items,  # Decoupled filtering for prep sheet only
             # Enhanced document matching data
             document_screening_data=document_screening_data,
             screening_document_matches=screening_document_matches,
@@ -1141,8 +1098,6 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
             filtered_medical_data=filtered_medical_data,
             # Other documents for miscellaneous section
             other_documents=other_documents,
-            # Ordered screening recommendations for bottom section
-            ordered_screening_recommendations=ordered_screening_recommendations,
         )
     )
 
