@@ -405,7 +405,6 @@
                                            title="View {{ doc_name }}"
                                            onerror="handlePrepSheetDocumentError(this, {{ document.id }})">
                                             {{ doc_name|truncate(25) }}
-                                            <small class="ms-1">(85%)</small>
                                         </a>
                                     {% endfor %}
                                 {% else %}
@@ -687,7 +686,7 @@ document.addEventListener('DOMContentLoaded', function() {
         element.classList.remove('bg-info');
         element.classList.add('bg-warning');
         element.title = 'Document may be unavailable';
-        element.innerHTML = 'Document Unavailable <small class="ms-1">(Error)</small>';
+        element.innerHTML = 'Document Unavailable';
         element.onclick = function(e) {
             e.preventDefault();
             alert('This document is no longer available. It may have been deleted.');
