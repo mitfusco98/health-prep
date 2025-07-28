@@ -455,9 +455,9 @@
                         <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
                            class="text-primary text-decoration-none" 
                            target="_blank" 
-                           title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
+                           title="View {{ doc_name }}{% if doc.document_date %} - Medical Date {{ doc.document_date.strftime('%Y-%m-%d') }}{% elif doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
                            onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
-                            <i class="fas fa-file-medical me-1"></i>{{ doc_name }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
+                            <i class="fas fa-file-medical me-1"></i>{{ doc_name }}{% if doc.document_date %} ({{ doc.document_date.strftime('%m/%d/%Y') }}){% elif doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
                         </a>
                     </li>
                 {% endfor %}
@@ -503,9 +503,9 @@
                         <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
                            class="text-primary text-decoration-none" 
                            target="_blank" 
-                           title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
+                           title="View {{ doc_name }}{% if doc.document_date %} - Medical Date {{ doc.document_date.strftime('%Y-%m-%d') }}{% elif doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
                            onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
-                            <i class="fas fa-x-ray me-1"></i>{{ doc_name }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
+                            <i class="fas fa-x-ray me-1"></i>{{ doc_name }}{% if doc.document_date %} ({{ doc.document_date.strftime('%m/%d/%Y') }}){% elif doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
                         </a>
                     </li>
                 {% endfor %}
@@ -551,9 +551,9 @@
                         <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
                            class="text-primary text-decoration-none" 
                            target="_blank" 
-                           title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
+                           title="View {{ doc_name }}{% if doc.document_date %} - Medical Date {{ doc.document_date.strftime('%Y-%m-%d') }}{% elif doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
                            onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
-                            <i class="fas fa-user-md me-1"></i>{{ doc_name }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
+                            <i class="fas fa-user-md me-1"></i>{{ doc_name }}{% if doc.document_date %} ({{ doc.document_date.strftime('%m/%d/%Y') }}){% elif doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
                         </a>
                     </li>
                 {% endfor %}
@@ -599,9 +599,9 @@
                         <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
                            class="text-primary text-decoration-none" 
                            target="_blank" 
-                           title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
+                           title="View {{ doc_name }}{% if doc.document_date %} - Medical Date {{ doc.document_date.strftime('%Y-%m-%d') }}{% elif doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
                            onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
-                            <i class="fas fa-hospital me-1"></i>{{ doc_name }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
+                            <i class="fas fa-hospital me-1"></i>{{ doc_name }}{% if doc.document_date %} ({{ doc.document_date.strftime('%m/%d/%Y') }}){% elif doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
                         </a>
                     </li>
                 {% endfor %}

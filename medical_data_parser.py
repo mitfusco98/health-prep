@@ -7,6 +7,7 @@ Applies user-configurable cutoff dates to filter older data
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from sqlalchemy import and_
+from app import db
 from models import (
     MedicalDocument, LabResult, ImagingStudy, ConsultReport, 
     HospitalSummary, ChecklistSettings, Patient
@@ -50,14 +51,24 @@ class MedicalDataParser:
             )
         ).order_by(LabResult.test_date.desc()).all()
         
-        # Get associated documents
+        # Get associated documents using document_date (actual medical date) for cutoff filtering
         lab_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
                 MedicalDocument.document_type.in_(['LAB_REPORT', 'LABORATORIES', 'Lab Report', 'lab_result', 'laboratory']),
-                MedicalDocument.created_at >= cutoff_date
+                # Use document_date if available, otherwise fall back to created_at
+                db.or_(
+                    and_(MedicalDocument.document_date.isnot(None), MedicalDocument.document_date >= cutoff_date),
+                    and_(MedicalDocument.document_date.is_(None), MedicalDocument.created_at >= cutoff_date)
+                )
             )
-        ).order_by(MedicalDocument.created_at.desc()).all()
+        ).order_by(
+            # Order by document_date if available, otherwise created_at
+            db.case(
+                (MedicalDocument.document_date.isnot(None), MedicalDocument.document_date),
+                else_=MedicalDocument.created_at
+            ).desc()
+        ).all()
         
         return {
             'data': labs,
@@ -79,14 +90,24 @@ class MedicalDataParser:
             )
         ).order_by(ImagingStudy.study_date.desc()).all()
         
-        # Get associated documents
+        # Get associated documents using document_date (actual medical date) for cutoff filtering
         imaging_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
                 MedicalDocument.document_type.in_(['RADIOLOGY_REPORT', 'IMAGING', 'Radiology Report', 'imaging', 'radiology', 'xray', 'mri', 'ct_scan']),
-                MedicalDocument.created_at >= cutoff_date
+                # Use document_date if available, otherwise fall back to created_at
+                db.or_(
+                    and_(MedicalDocument.document_date.isnot(None), MedicalDocument.document_date >= cutoff_date),
+                    and_(MedicalDocument.document_date.is_(None), MedicalDocument.created_at >= cutoff_date)
+                )
             )
-        ).order_by(MedicalDocument.created_at.desc()).all()
+        ).order_by(
+            # Order by document_date if available, otherwise created_at
+            db.case(
+                (MedicalDocument.document_date.isnot(None), MedicalDocument.document_date),
+                else_=MedicalDocument.created_at
+            ).desc()
+        ).all()
         
         return {
             'data': imaging,
@@ -108,14 +129,24 @@ class MedicalDataParser:
             )
         ).order_by(ConsultReport.report_date.desc()).all()
         
-        # Get associated documents
+        # Get associated documents using document_date (actual medical date) for cutoff filtering
         consult_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
                 MedicalDocument.document_type.in_(['CONSULTATION', 'CONSULTS', 'Consultation', 'consult', 'consultation', 'specialist_report']),
-                MedicalDocument.created_at >= cutoff_date
+                # Use document_date if available, otherwise fall back to created_at
+                db.or_(
+                    and_(MedicalDocument.document_date.isnot(None), MedicalDocument.document_date >= cutoff_date),
+                    and_(MedicalDocument.document_date.is_(None), MedicalDocument.created_at >= cutoff_date)
+                )
             )
-        ).order_by(MedicalDocument.created_at.desc()).all()
+        ).order_by(
+            # Order by document_date if available, otherwise created_at
+            db.case(
+                (MedicalDocument.document_date.isnot(None), MedicalDocument.document_date),
+                else_=MedicalDocument.created_at
+            ).desc()
+        ).all()
         
         return {
             'data': consults,
@@ -137,14 +168,24 @@ class MedicalDataParser:
             )
         ).order_by(HospitalSummary.admission_date.desc()).all()
         
-        # Get associated documents
+        # Get associated documents using document_date (actual medical date) for cutoff filtering
         hospital_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
                 MedicalDocument.document_type.in_(['DISCHARGE_SUMMARY', 'HOSPITAL_RECORDS', 'Discharge Summary', 'hospital_summary', 'discharge_summary', 'admission_note']),
-                MedicalDocument.created_at >= cutoff_date
+                # Use document_date if available, otherwise fall back to created_at
+                db.or_(
+                    and_(MedicalDocument.document_date.isnot(None), MedicalDocument.document_date >= cutoff_date),
+                    and_(MedicalDocument.document_date.is_(None), MedicalDocument.created_at >= cutoff_date)
+                )
             )
-        ).order_by(MedicalDocument.created_at.desc()).all()
+        ).order_by(
+            # Order by document_date if available, otherwise created_at
+            db.case(
+                (MedicalDocument.document_date.isnot(None), MedicalDocument.document_date),
+                else_=MedicalDocument.created_at
+            ).desc()
+        ).all()
         
         return {
             'data': hospital_visits,
