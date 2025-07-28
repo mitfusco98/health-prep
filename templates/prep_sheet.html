@@ -448,7 +448,6 @@
             <!-- Lab Documents -->
             {% if filtered_medical_data.labs.documents %}
             <div class="mb-2">
-                <strong>Lab Documents:</strong>
                 <ul class="list-unstyled ms-3 mt-1">
                 {% for doc in filtered_medical_data.labs.documents %}
                     {% set doc_name = doc.document_name or doc.filename or 'Document ' + doc.id|string %}
@@ -497,7 +496,6 @@
             <!-- Imaging Documents -->
             {% if filtered_medical_data.imaging.documents %}
             <div class="mb-2">
-                <strong>Imaging Documents:</strong>
                 <ul class="list-unstyled ms-3 mt-1">
                 {% for doc in filtered_medical_data.imaging.documents %}
                     {% set doc_name = doc.document_name or doc.filename or 'Document ' + doc.id|string %}
@@ -546,7 +544,6 @@
             <!-- Consult Documents -->
             {% if filtered_medical_data.consults.documents %}
             <div class="mb-2">
-                <strong>Consult Documents:</strong>
                 <ul class="list-unstyled ms-3 mt-1">
                 {% for doc in filtered_medical_data.consults.documents %}
                     {% set doc_name = doc.document_name or doc.filename or 'Document ' + doc.id|string %}
@@ -595,7 +592,6 @@
             <!-- Hospital Documents -->
             {% if filtered_medical_data.hospital_visits.documents %}
             <div class="mb-2">
-                <strong>Hospital Documents:</strong>
                 <ul class="list-unstyled ms-3 mt-1">
                 {% for doc in filtered_medical_data.hospital_visits.documents %}
                     {% set doc_name = doc.document_name or doc.filename or 'Document ' + doc.id|string %}
