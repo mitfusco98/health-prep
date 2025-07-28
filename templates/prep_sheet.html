@@ -172,7 +172,7 @@
                 <strong>{{ appt.appointment_date.strftime('%m/%d/%Y') }} at {{ appt.appointment_time.strftime('%I:%M %p') }}</strong>
                 {% if appt.status %} - Status: {{ appt.status }}{% endif %}
                 {% if appt.notes %}
-                <br><span class="text-muted">Note: {{ appt.notes }}</span>
+                <br><span class="text-muted">Appointment Note: {{ appt.notes }}</span>
                 {% endif %}
             </li>
             {% endfor %}
@@ -184,15 +184,6 @@
         <ul class="mb-3">
             {% for condition in active_conditions %}
             <li>{{ condition.name }} {% if condition.diagnosed_date %}(diagnosed: {{ condition.diagnosed_date|datetime }}){% endif %}</li>
-            {% endfor %}
-        </ul>
-        {% endif %}
-        
-        {% if immunizations %}
-        <h6>Immunization History:</h6>
-        <ul class="mb-3">
-            {% for immunization in immunizations %}
-            <li>{{ immunization.vaccine_name }} {% if immunization.administration_date %}({{ immunization.administration_date|datetime }}){% endif %}</li>
             {% endfor %}
         </ul>
         {% endif %}
