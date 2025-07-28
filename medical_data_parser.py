@@ -54,7 +54,7 @@ class MedicalDataParser:
         lab_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
-                MedicalDocument.document_type.in_(['lab_result', 'laboratory', 'Lab Report']),
+                MedicalDocument.document_type.in_(['LAB_REPORT', 'LABORATORIES', 'Lab Report', 'lab_result', 'laboratory']),
                 MedicalDocument.created_at >= cutoff_date
             )
         ).order_by(MedicalDocument.created_at.desc()).all()
@@ -83,7 +83,7 @@ class MedicalDataParser:
         imaging_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
-                MedicalDocument.document_type.in_(['imaging', 'radiology', 'xray', 'mri', 'ct_scan', 'Radiology Report']),
+                MedicalDocument.document_type.in_(['RADIOLOGY_REPORT', 'IMAGING', 'Radiology Report', 'imaging', 'radiology', 'xray', 'mri', 'ct_scan']),
                 MedicalDocument.created_at >= cutoff_date
             )
         ).order_by(MedicalDocument.created_at.desc()).all()
@@ -112,7 +112,7 @@ class MedicalDataParser:
         consult_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
-                MedicalDocument.document_type.in_(['consult', 'consultation', 'specialist_report', 'Consultation']),
+                MedicalDocument.document_type.in_(['CONSULTATION', 'CONSULTS', 'Consultation', 'consult', 'consultation', 'specialist_report']),
                 MedicalDocument.created_at >= cutoff_date
             )
         ).order_by(MedicalDocument.created_at.desc()).all()
@@ -141,7 +141,7 @@ class MedicalDataParser:
         hospital_documents = MedicalDocument.query.filter(
             and_(
                 MedicalDocument.patient_id == self.patient_id,
-                MedicalDocument.document_type.in_(['hospital_summary', 'discharge_summary', 'admission_note', 'Discharge Summary']),
+                MedicalDocument.document_type.in_(['DISCHARGE_SUMMARY', 'HOSPITAL_RECORDS', 'Discharge Summary', 'hospital_summary', 'discharge_summary', 'admission_note']),
                 MedicalDocument.created_at >= cutoff_date
             )
         ).order_by(MedicalDocument.created_at.desc()).all()
