@@ -55,7 +55,7 @@ def demo_prep_sheet_hyperlinks():
             if documents:
                 for i, doc in enumerate(documents[:3], 1):
                     doc_name = doc.document_name or doc.filename or f'Document {doc.id}'
-                    upload_date = doc.upload_date.strftime('%Y-%m-%d') if doc.upload_date else 'Unknown'
+                    upload_date = doc.created_at.strftime('%Y-%m-%d') if doc.created_at else 'Unknown'
                     hyperlink_url = f"/documents/{doc.id}"
                     print(f"    {i}. {doc_name} ({upload_date}) → {hyperlink_url}")
                     
@@ -95,7 +95,7 @@ def demo_prep_sheet_hyperlinks():
             for doc in all_documents:
                 doc_type = doc.document_type or 'Unknown'
                 doc_name = doc.document_name or doc.filename or f'Document {doc.id}'
-                upload_date = doc.upload_date.strftime('%Y-%m-%d') if doc.upload_date else 'Unknown'
+                upload_date = doc.created_at.strftime('%Y-%m-%d') if doc.created_at else 'Unknown'
                 print(f"  • {doc_name} ({doc_type}) - {upload_date}")
         
         print("\n🎉 Prep Sheet Hyperlink System Ready!")
