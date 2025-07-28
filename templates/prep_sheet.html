@@ -449,19 +449,20 @@
             {% if filtered_medical_data.labs.documents %}
             <div class="mb-2">
                 <strong>Lab Documents:</strong>
-                {% for doc in filtered_medical_data.labs.documents[:3] %}
+                <ul class="list-unstyled ms-3 mt-1">
+                {% for doc in filtered_medical_data.labs.documents %}
                     {% set doc_name = doc.document_name or doc.filename or 'Document ' + doc.id|string %}
-                    <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
-                       class="badge bg-info text-decoration-none me-1 mb-1" 
-                       target="_blank" 
-                       title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
-                       onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
-                        {{ doc_name|truncate(25) }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
-                    </a>{% if not loop.last %} {% endif %}
+                    <li class="mb-1">
+                        <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
+                           class="text-primary text-decoration-none" 
+                           target="_blank" 
+                           title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
+                           onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
+                            <i class="fas fa-file-medical me-1"></i>{{ doc_name }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
+                        </a>
+                    </li>
                 {% endfor %}
-                {% if filtered_medical_data.labs.documents|length > 3 %}
-                    <span class="text-muted small">and {{ filtered_medical_data.labs.documents|length - 3 }} more documents</span>
-                {% endif %}
+                </ul>
             </div>
             {% endif %}
             
@@ -497,19 +498,20 @@
             {% if filtered_medical_data.imaging.documents %}
             <div class="mb-2">
                 <strong>Imaging Documents:</strong>
-                {% for doc in filtered_medical_data.imaging.documents[:3] %}
+                <ul class="list-unstyled ms-3 mt-1">
+                {% for doc in filtered_medical_data.imaging.documents %}
                     {% set doc_name = doc.document_name or doc.filename or 'Document ' + doc.id|string %}
-                    <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
-                       class="badge bg-info text-decoration-none me-1 mb-1" 
-                       target="_blank" 
-                       title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
-                       onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
-                        {{ doc_name|truncate(25) }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
-                    </a>{% if not loop.last %} {% endif %}
+                    <li class="mb-1">
+                        <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
+                           class="text-primary text-decoration-none" 
+                           target="_blank" 
+                           title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
+                           onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
+                            <i class="fas fa-x-ray me-1"></i>{{ doc_name }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
+                        </a>
+                    </li>
                 {% endfor %}
-                {% if filtered_medical_data.imaging.documents|length > 3 %}
-                    <span class="text-muted small">and {{ filtered_medical_data.imaging.documents|length - 3 }} more documents</span>
-                {% endif %}
+                </ul>
             </div>
             {% endif %}
             
@@ -545,19 +547,20 @@
             {% if filtered_medical_data.consults.documents %}
             <div class="mb-2">
                 <strong>Consult Documents:</strong>
-                {% for doc in filtered_medical_data.consults.documents[:3] %}
+                <ul class="list-unstyled ms-3 mt-1">
+                {% for doc in filtered_medical_data.consults.documents %}
                     {% set doc_name = doc.document_name or doc.filename or 'Document ' + doc.id|string %}
-                    <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
-                       class="badge bg-info text-decoration-none me-1 mb-1" 
-                       target="_blank" 
-                       title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
-                       onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
-                        {{ doc_name|truncate(25) }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
-                    </a>{% if not loop.last %} {% endif %}
+                    <li class="mb-1">
+                        <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
+                           class="text-primary text-decoration-none" 
+                           target="_blank" 
+                           title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
+                           onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
+                            <i class="fas fa-user-md me-1"></i>{{ doc_name }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
+                        </a>
+                    </li>
                 {% endfor %}
-                {% if filtered_medical_data.consults.documents|length > 3 %}
-                    <span class="text-muted small">and {{ filtered_medical_data.consults.documents|length - 3 }} more documents</span>
-                {% endif %}
+                </ul>
             </div>
             {% endif %}
             
@@ -593,19 +596,20 @@
             {% if filtered_medical_data.hospital_visits.documents %}
             <div class="mb-2">
                 <strong>Hospital Documents:</strong>
-                {% for doc in filtered_medical_data.hospital_visits.documents[:3] %}
+                <ul class="list-unstyled ms-3 mt-1">
+                {% for doc in filtered_medical_data.hospital_visits.documents %}
                     {% set doc_name = doc.document_name or doc.filename or 'Document ' + doc.id|string %}
-                    <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
-                       class="badge bg-info text-decoration-none me-1 mb-1" 
-                       target="_blank" 
-                       title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
-                       onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
-                        {{ doc_name|truncate(25) }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
-                    </a>{% if not loop.last %} {% endif %}
+                    <li class="mb-1">
+                        <a href="{{ url_for('view_document', document_id=doc.id, return_to=request.url) }}" 
+                           class="text-primary text-decoration-none" 
+                           target="_blank" 
+                           title="View {{ doc_name }}{% if doc.created_at %} - Uploaded {{ doc.created_at.strftime('%Y-%m-%d') }}{% endif %}"
+                           onerror="handlePrepSheetDocumentError(this, {{ doc.id }})">
+                            <i class="fas fa-hospital me-1"></i>{{ doc_name }}{% if doc.created_at %} ({{ doc.created_at.strftime('%m/%d/%Y') }}){% endif %}
+                        </a>
+                    </li>
                 {% endfor %}
-                {% if filtered_medical_data.hospital_visits.documents|length > 3 %}
-                    <span class="text-muted small">and {{ filtered_medical_data.hospital_visits.documents|length - 3 }} more documents</span>
-                {% endif %}
+                </ul>
             </div>
             {% endif %}
             
