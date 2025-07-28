@@ -192,64 +192,7 @@
 
 
 
-<!-- Recent Vitals Section -->
-{% if recent_vitals %}
-<div class="card border-0 mb-4">
-    <div class="card-header bg-secondary bg-opacity-25">
-        <h5 class="mb-0">
-            <i class="fas fa-heartbeat me-2"></i>Recent Vitals
-        </h5>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-3 mb-3">
-                <div class="card h-100 border-0">
-                    <div class="card-body text-center">
-                        <h6 class="card-title text-primary fw-bold">Blood Pressure</h6>
-                        <div class="display-6 text-danger">
-                            <span style="white-space: nowrap; font-weight: bold;">
-                                {{ recent_vitals.blood_pressure_systolic }}/{{ recent_vitals.blood_pressure_diastolic }}
-                            </span>
-                        </div>
-                        <p class="card-text">mmHg</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card h-100 border-0">
-                    <div class="card-body text-center">
-                        <h6 class="card-title text-primary fw-bold">Weight <button class="btn btn-sm btn-outline-secondary py-0 px-1 ms-1 toggle-weight-unit">Switch Unit</button></h6>
-                        <div class="h4">
-                            <span class="weight-kg">{{ recent_vitals.weight|round(1) }} kg</span>
-                            <span class="weight-lb" style="display: none;">{{ (recent_vitals.weight * 2.20462)|round(1) }} lbs</span>
-                        </div>
-                        <p class="card-text weight-info text-muted"></p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card h-100 border-0">
-                    <div class="card-body text-center">
-                        <h6 class="card-title text-muted">BMI</h6>
-                        <div class="h4">{{ recent_vitals.bmi|round(1) }}</div>
-                        <p class="card-text">kg/m²</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card h-100 border-0">
-                    <div class="card-body text-center">
-                        <h6 class="card-title text-muted">Pulse</h6>
-                        <div class="h4">{{ recent_vitals.pulse }}</div>
-                        <p class="card-text">bpm</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <p class="text-muted small">Vitals recorded on {{ recent_vitals.date.strftime('%Y-%m-%d') }}</p>
-    </div>
-</div>
-{% endif %}
+
 
 <!-- Recent Lab Results Section -->
 {% if recent_labs %}
@@ -742,39 +685,9 @@
 </style>
 
 <script>
-// Handle weight unit conversion and document error handling
+// Handle document access errors in prep sheet
 document.addEventListener('DOMContentLoaded', function() {
     const patientId = '{{ patient.id }}';
-    
-    // Weight unit conversion functionality
-    const toggleWeightButtons = document.querySelectorAll('.toggle-weight-unit');
-    
-    toggleWeightButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const cardBody = this.closest('.card-body');
-            const kgDisplay = cardBody.querySelector('.weight-kg');
-            const lbDisplay = cardBody.querySelector('.weight-lb');
-            const weightInfo = cardBody.querySelector('.weight-info');
-            
-            // Toggle display
-            if (kgDisplay.style.display === 'none') {
-                kgDisplay.style.display = 'inline';
-                lbDisplay.style.display = 'none';
-                button.textContent = 'Show lbs';
-                weightInfo.textContent = '(Metric)';
-            } else {
-                kgDisplay.style.display = 'none';
-                lbDisplay.style.display = 'inline';
-                button.textContent = 'Show kg';
-                weightInfo.textContent = '(Imperial)';
-            }
-        });
-        
-        // Initialize button text
-        button.textContent = 'Show lbs';
-        const weightInfo = button.closest('.card-body').querySelector('.weight-info');
-        weightInfo.textContent = '(Metric)';
-    });
     
     // Handle document access errors in prep sheet
     function handlePrepSheetDocumentError(element, documentId) {
