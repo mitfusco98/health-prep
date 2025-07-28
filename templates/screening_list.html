@@ -916,62 +916,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
 
-            <!-- Default Items Configuration -->
+            <!-- Automated Screening Control -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5 class="mb-0">Default Checklist Items</h5>
+                    <h5 class="mb-0">Prep Sheet Content Control</h5>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted mb-3">These screening types will automatically appear in every patient's prep sheet checklist.</p>
-
-                    <form id="default-items-form" method="POST" action="{{ url_for('save_default_items_simple') }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                        {% if active_screening_types %}
-                            <div class="mb-3">
-                                <label class="form-label">Available Screening Types</label>
-                                <div id="screening-buttons" class="d-flex flex-wrap gap-2 mb-3">
-                                    {% set current_default_list = settings.default_items_list if settings and settings.default_items_list else [] %}
-
-                                    {% set processed_base_names = [] %}
-                    {% for screening in active_screening_types %}
-                        {% set base_name = variant_manager.extract_base_name(screening.name) %}
-                        {% if base_name not in processed_base_names %}
-                            {% set _ = processed_base_names.append(base_name) %}
-                            {% set variants = variant_manager.find_screening_variants(base_name) %}
-                            {% set is_selected = base_name in current_default_list %}
-                            <button type="button" class="btn screening-btn {% if is_selected %}btn-primary{% else %}btn-outline-primary{% endif %}" 
-                                    data-value="{{ base_name }}" 
-                                    data-variants="{{ variants|map(attribute='name')|join(',') }}"
-                                    onclick="toggleConsolidatedScreening(this)"
-                                    title="Includes: {{ variants|map(attribute='name')|join(', ') }}">
-                                {{ base_name }}
-
-                                {% if screening.formatted_frequency %}
-                                <br><small>{{ screening.formatted_frequency }}</small>
-                                {% endif %}
-                            </button>
-                        {% endif %}
-                    {% endfor %}
-                                </div>
-                            </div>
-
-                            {% if settings.default_items_list %}
-                            <div id="selected-screening-display" class="mb-3">
-                                <small class="text-muted">Selected: <span id="screening-list-display">{{ ', '.join(settings.default_items_list) }}</span></small>
-                            </div>
-                            {% endif %}
-
-                            <!-- Hidden input for final selections -->
-                            <input type="hidden" id="screening-selections" name="screening_selections" value="{% for item in current_default_list %}{{ item }}{% if not loop.last %},{% endif %}{% endfor %}">
-
-                            <button type="submit" class="btn btn-primary">Save Default Items</button>
-                        {% else %}
-                            <div class="alert alert-warning">
-                                No active screening types found. <a href="{{ url_for('screening_list', tab='types') }}">Add screening types</a> first.
-                            </div>
-                        {% endif %}
-                    </form>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Prep sheet content is now controlled by the screening engine.</strong>
+                        <br>Use the <a href="{{ url_for('screening_list', tab='screenings') }}" class="alert-link">Screenings tab</a> to manage which screenings appear in prep sheets by setting their status (Due, Due Soon, Complete).
+                        <br><br>
+                        <small class="text-muted">
+                            Active screenings from the screening engine automatically appear in prep sheets based on patient eligibility (age, gender, medical conditions). 
+                            No manual configuration needed.
+                        </small>
+                    </div>
                 </div>
             </div>
 
@@ -1078,15 +1038,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             </ul>
                         </div>
                         <div class="col-md-6">
-                            <h6>Default Items:</h6>
+                            <h6>Prep Sheet Content:</h6>
                             <ul class="list-unstyled">
-                                {% if settings and settings.default_items_list %}
-                                    {% for item in settings.default_items_list %}
-                                    <li><span class="badge bg-primary">{{ item }}</span></li>
-                                    {% endfor %}
-                                {% else %}
-                                    <li class="text-muted">None configured</li>
-                                {% endif %}
+                                <li class="text-muted">
+                                    <i class="fas fa-cogs me-1"></i>
+                                    Controlled by screening engine
+                                </li>
+                                <li class="text-muted">
+                                    <i class="fas fa-users me-1"></i>
+                                    Based on patient eligibility
+                                </li>
+                                <li class="text-muted">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    Managed via Screenings tab
+                                </li>
                             </ul>
                         </div>
                     </div>

@@ -961,10 +961,8 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         past_appointments,
     )
     
-    # Pass default_items settings to template for prep sheet filtering (decoupled from parsing)
-    prep_sheet_filter_items = []
-    if checklist_settings.default_items:
-        prep_sheet_filter_items = checklist_settings.default_items_list
+    # Prep sheet content is now controlled by screening engine, not default items
+    # No filtering needed - all active screenings from screening engine appear in prep sheet
 
     # Get enhanced screening recommendations with document relationships using new system
     try:
@@ -1692,18 +1690,9 @@ def edit_screening_type(screening_type_id):
                         changes_detected.append(f"name")
                         
                         # Immediately update checklist default items to reflect name change
+                        # Default items list is no longer used - prep sheet controlled by screening engine
                         try:
-                            from models import ChecklistSettings
-                            settings = ChecklistSettings.query.first()
-                            if settings and settings.default_items:
-                                # Replace old name with new name in default items
-                                default_items_list = settings.default_items_list or []
-                                if old_val in default_items_list:
-                                    # Replace old name with new name
-                                    updated_items = [new_val if item == old_val else item for item in default_items_list]
-                                    settings.default_items = '\n'.join(updated_items)
-                                    db.session.commit()
-                                    print(f"✅ Updated checklist default items: {old_val} → {new_val}")
+                            pass  # No longer need to update default items during name changes
                         except Exception as checklist_error:
                             print(f"⚠️ Failed to update checklist items for name change: {checklist_error}")
             
@@ -3711,9 +3700,9 @@ def screening_list():
         print(f"=== CHECKLIST TAB DEBUG ===")
         print(f"Settings object: {settings}")
         print(f"Status options list (property): {settings.status_options_list}")
-        print(f"Default items list: {settings.default_items_list}")
+        print(f"Prep sheet content: Controlled by screening engine")
         print(f"=== END DEBUG ===")
-        # Get active screening types instead of default_items_list
+        # Get active screening types for interface display
         # Get active screening types using cache
         try:
             from intelligent_cache_manager import get_cache_manager

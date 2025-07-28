@@ -55,36 +55,6 @@ def save_status_options_simple():
 
 @app.route('/save-default-items-simple', methods=['POST'])
 def save_default_items_simple():
-    """Save default screening items for prep sheet checklists"""
-    # Get or create settings
-    settings = ChecklistSettings.query.first()
-    if not settings:
-        settings = ChecklistSettings()
-        db.session.add(settings)
-
-    # Get screening selections from form
-    screening_selections = request.form.get('screening_selections', '')
-    
-    # Debug the received data
-    print(f"Received screening_selections: {repr(screening_selections)}")
-
-    # Update settings - ensure newline format
-    if screening_selections:
-        # If it's comma-separated, convert to newline-separated
-        if ',' in screening_selections and '\n' not in screening_selections:
-            items = [item.strip() for item in screening_selections.split(',')]
-            settings.default_items = '\n'.join(items)
-        else:
-            settings.default_items = screening_selections
-    else:
-        settings.default_items = ''
-
-    try:
-        db.session.commit()
-        flash('Default checklist items updated successfully!', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error updating default items: {str(e)}', 'danger')
-
-    # Redirect back to checklist tab
+    """Legacy route - default items no longer used"""
+    flash('Prep sheet content is now controlled by the screening engine. Use the Screenings tab to manage content.', 'info')
     return redirect(url_for('screening_list', tab='checklist'))
