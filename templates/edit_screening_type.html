@@ -231,7 +231,15 @@ function loadExistingKeywords() {
     
     // Add delay to avoid rate limiting
     setTimeout(() => {
-        fetch(`/api/screening-keywords/${screeningTypeId}`)
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        
+        fetch(`/api/screening-keywords/${screeningTypeId}`, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            }
+        })
             .then(response => {
                 if (response.status === 429) {
                     console.warn('Rate limited while loading keywords');
@@ -654,7 +662,15 @@ function setupConditionAutocomplete(formPrefix) {
 }
 
 function fetchConditionSuggestions(query, suggestionsDiv, displayInput, codeInput, systemSelect, onConditionSelected) {
-    fetch(`/api/condition-autocomplete?q=${encodeURIComponent(query)}&limit=8`)
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    
+    fetch(`/api/condition-autocomplete?q=${encodeURIComponent(query)}&limit=8`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json'
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.conditions && data.conditions.length > 0) {
@@ -764,7 +780,15 @@ function setupScreeningNameAutocomplete() {
 }
 
 function fetchScreeningNameSuggestions(query, suggestionsDiv, nameInput) {
-    fetch(`/api/screening-name-autocomplete?q=${encodeURIComponent(query)}&limit=8`)
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    
+    fetch(`/api/screening-name-autocomplete?q=${encodeURIComponent(query)}&limit=8`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json'
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.screenings && data.screenings.length > 0) {
