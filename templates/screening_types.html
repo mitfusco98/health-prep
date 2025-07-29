@@ -508,7 +508,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         renderKeywords() {
             const container = document.getElementById(this.prefix + 'KeywordsList');
+            if (!container) return;
+            
             container.innerHTML = '';
+
+            if (this.keywords.length === 0) {
+                container.innerHTML = '<div class="text-muted small">No keywords defined yet. Add keywords above.</div>';
+                return;
+            }
 
             this.keywords.forEach((keyword, index) => {
                 const tag = document.createElement('span');
@@ -614,7 +621,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // but this happens in the background while user sees the preloaded data
                 loadKeywords(currentScreeningId);
             } else {
-                // No preloaded data, fall back to server loading with loading state
+                // No preloaded data, show empty state immediately then load from server
                 keywordManagers.manage.setKeywords([]);
                 loadKeywords(currentScreeningId);
             }
