@@ -8,6 +8,15 @@ from flask import Blueprint, request, jsonify
 from medical_terminology_standardizer import medical_standardizer
 import logging
 
+# Import CSRF protection for exemptions
+try:
+    from flask_wtf.csrf import CSRFProtect, exempt
+    csrf_exempt = exempt
+except ImportError:
+    # Fallback if CSRF is not available
+    def csrf_exempt(f):
+        return f
+
 # Create blueprint for medical terminology API
 terminology_api = Blueprint('terminology_api', __name__, url_prefix='/api/terminology')
 
@@ -56,6 +65,7 @@ def get_condition_suggestions():
         return jsonify({'error': 'Failed to get suggestions'}), 500
 
 @terminology_api.route('/screening/validate', methods=['POST'])
+@csrf_exempt  # Exempt from CSRF since this is an AJAX API endpoint
 def validate_screening_input():
     """Validate screening type input and provide suggestions"""
     try:

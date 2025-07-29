@@ -62,6 +62,28 @@ app.wsgi_app = ProxyFix(
 csrf = CSRFProtect(app)
 app.config["WTF_CSRF_ENABLED"] = True
 
+# Configure CSRF to exempt API routes
+@csrf.exempt
+def csrf_exempt_api_routes():
+    """Exempt API routes from CSRF protection"""
+    if request.path.startswith('/api/'):
+        return True
+    return False
+
+# Alternative approach - add before_request hook for API exemption
+@app.before_request
+def exempt_api_from_csrf():
+    """Exempt API endpoints from CSRF validation"""
+    if request.path.startswith('/api/'):
+        from flask_wtf.csrf import validate_csrf
+        # Bypass CSRF validation for API routes
+        try:
+            if hasattr(g, '_csrf_valid'):
+                return
+            g._csrf_valid = True
+        except:
+            pass
+
 # Initialize rate limiter
 limiter = Limiter(
     get_remote_address,
