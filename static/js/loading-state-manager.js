@@ -73,9 +73,8 @@ class LoadingStateManager {
             '/patients/add': 'Loading...',
             '/patients/\\d+': 'Loading...',
             '/patients/\\d+/edit': 'Loading...',
-            '/documents': 'Loading...',
+            '/documents$': 'Loading...',  // Only document list page, not individual documents
             '/documents/add': 'Loading...',
-            '/documents/\\d+': 'Loading...',
             '/admin': 'Loading...',
             '/screening-types/\\d+/edit': 'Loading...',
             '/api/': 'Loading...'
@@ -341,6 +340,16 @@ class LoadingStateManager {
             if (!link) return;
 
             const href = link.getAttribute('href');
+            
+            // Skip loading states for document view links (hyperlinked files)
+            if (href.includes('/documents/') && href.match(/\/documents\/\d+/) && !href.includes('/documents/add')) {
+                return;
+            }
+            
+            // Skip loading states for links that open in new tab/window
+            if (link.target === '_blank') {
+                return;
+            }
             
             // Mark this link as active for destination detection
             document.querySelectorAll('a[data-navigation-active]').forEach(el => {
