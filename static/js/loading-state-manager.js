@@ -103,7 +103,15 @@ class LoadingStateManager {
      * Detect navigation destination from various sources
      */
     detectNavigationDestination() {
-        // Check for form action attributes
+        // Priority 1: Check for clicked links with explicit href tracking
+        const clickedLink = document.querySelector('[data-clicked-destination]');
+        if (clickedLink) {
+            const destination = clickedLink.getAttribute('data-clicked-destination');
+            clickedLink.removeAttribute('data-clicked-destination'); // Clean up
+            return destination;
+        }
+
+        // Priority 2: Check for form action attributes
         const activeForm = document.querySelector('form[data-loading-processed="true"]');
         if (activeForm && activeForm.action) {
             try {
@@ -115,43 +123,35 @@ class LoadingStateManager {
             }
         }
 
-        // Check for clicked links
-        const activeLink = document.querySelector('a[data-navigation-active]');
-        if (activeLink && activeLink.href) {
-            try {
-                const url = new URL(activeLink.href);
-                return url.pathname;
-            } catch (e) {
-                return activeLink.href;
-            }
-        }
-
-        // Check current pathname for context
+        // Priority 3: Check current pathname and infer destination
         const currentPath = window.location.pathname;
+        const currentSearch = window.location.search;
         
         // Handle special case for /screenings route variations  
         if (currentPath === '/screenings' || currentPath.startsWith('/screenings/')) {
-            // If navigating within screening tabs, detect the target tab
+            // If we have query parameters, check them for tab info
+            if (currentSearch.includes('tab=types')) return '/screenings/types';
+            if (currentSearch.includes('tab=checklist') || currentSearch.includes('tab=settings')) return '/screenings/settings';
+            if (currentSearch.includes('tab=screenings')) return '/screenings/list';
+            
+            // If navigating within screening tabs, detect from active tab
             const activeTabLink = document.querySelector('.nav-tabs .nav-link.active');
             if (activeTabLink) {
                 const href = activeTabLink.getAttribute('href');
                 if (href) {
                     // Extract the clean URL path for consistent detection
-                    if (href.includes('/screenings/types')) return '/screenings/types';
-                    if (href.includes('/screenings/settings')) return '/screenings/settings';
+                    if (href.includes('/screenings/types') || href.includes('tab=types')) return '/screenings/types';
+                    if (href.includes('/screenings/settings') || href.includes('tab=checklist')) return '/screenings/settings';
                     if (href.includes('/screenings/list') || href === '/screenings' || href.includes('tab=screenings')) return '/screenings/list';
                 }
             }
             
-            // Check for any legacy URLs with query parameters and rewrite to clean URLs
-            if (currentPath === '/screenings' && window.location.search.includes('tab=screenings')) {
-                // Replace old URL format with new clean URL
-                const newUrl = '/screenings/list' + window.location.search.replace(/[?&]tab=screenings/, '');
-                window.history.replaceState(null, '', newUrl);
-                return '/screenings/list';
-            }
+            // Fallback based on current path
+            if (currentPath === '/screenings/types') return '/screenings/types';
+            if (currentPath === '/screenings/settings') return '/screenings/settings';  
+            if (currentPath === '/screenings/list') return '/screenings/list';
             
-            // Fallback to current path for screenings
+            // Default fallback for /screenings
             return currentPath === '/screenings' ? '/screenings/list' : currentPath;
         }
         
@@ -309,6 +309,14 @@ class LoadingStateManager {
                 el.removeAttribute('data-navigation-active');
             });
             link.setAttribute('data-navigation-active', 'true');
+            
+            // Store destination for proper message detection
+            try {
+                const url = new URL(href, window.location.origin);
+                link.setAttribute('data-clicked-destination', url.pathname);
+            } catch {
+                link.setAttribute('data-clicked-destination', href);
+            }
             
             // Check for specific slow navigation patterns (updated for clean URLs)
             const slowNavigationPatterns = [
