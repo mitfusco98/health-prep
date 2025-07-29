@@ -256,11 +256,81 @@ class LoadingStateManager {
                 id: 'navigation'
             });
             
-            // Auto-hide after reasonable timeout
-            setTimeout(() => {
-                this.hideLoading('navigation');
-            }, 5000);
+            // Special handling for screening types page - wait for keywords to load
+            if (url?.includes('/screenings/types') || url?.includes('/screenings?tab=types')) {
+                this.waitForKeywordLoading();
+            } else {
+                // Auto-hide after reasonable timeout for other pages
+                setTimeout(() => {
+                    this.hideLoading('navigation');
+                }, 5000);
+            }
         }
+    }
+
+    /**
+     * Wait for keyword loading to complete on screening types page
+     */
+    waitForKeywordLoading() {
+        let attempts = 0;
+        const maxAttempts = 50; // 10 seconds max wait
+        
+        const checkKeywordsLoaded = () => {
+            attempts++;
+            
+            // Check if keyword containers exist and have been populated
+            const keywordContainers = document.querySelectorAll('.keywords-badges-container, [id^="keywords-"]');
+            const totalContainers = keywordContainers.length;
+            
+            if (totalContainers === 0) {
+                // No keyword containers found, page might not be fully loaded yet
+                if (attempts < maxAttempts) {
+                    setTimeout(checkKeywordsLoaded, 200);
+                    return;
+                } else {
+                    // Timeout - hide loading state
+                    this.hideLoading('navigation');
+                    return;
+                }
+            }
+            
+            let loadedContainers = 0;
+            keywordContainers.forEach(container => {
+                const hasContent = container.innerHTML.trim() !== '';
+                const hasKeywords = container.querySelector('.badge, .text-muted, .text-danger');
+                const isMarkedLoaded = container.getAttribute('data-keywords-loaded') === 'true';
+                
+                if ((hasContent && hasKeywords) || isMarkedLoaded) {
+                    loadedContainers++;
+                }
+            });
+            
+            // Update loading message with progress
+            const progress = Math.round((loadedContainers / totalContainers) * 100);
+            this.updateMessage(`Loading keywords... ${loadedContainers}/${totalContainers}`, 'navigation');
+            this.updateProgress(progress, 'navigation');
+            
+            // Check if all containers have been loaded
+            if (loadedContainers >= totalContainers) {
+                // All keywords loaded
+                this.updateMessage('Keywords loaded successfully', 'navigation');
+                this.updateProgress(100, 'navigation');
+                
+                // Hide loading state after brief delay
+                setTimeout(() => {
+                    this.hideLoading('navigation');
+                }, 500);
+            } else if (attempts < maxAttempts) {
+                // Still loading, check again
+                setTimeout(checkKeywordsLoaded, 200);
+            } else {
+                // Timeout - hide loading state anyway
+                this.hideLoading('navigation');
+            }
+        };
+        
+        // Start checking after a brief delay to allow page to initialize
+        setTimeout(checkKeywordsLoaded, 500);
     }
 
     // Enhanced navigation detection for slow page transitions
@@ -281,17 +351,17 @@ class LoadingStateManager {
             // Check for specific slow navigation patterns (updated for clean URLs)
             const slowNavigationPatterns = [
                 // Home to screenings
-                { from: '/', to: '/screenings', message: 'Loading...' },
+                { from: '/', to: '/screenings', message: 'Loading page and data...' },
                 // Clean URL navigation patterns
-                { to: '/screenings/types', message: 'Loading...' },
+                { to: '/screenings/types', message: 'Loading screening types and keywords...' },
                 { to: '/screenings/settings', message: 'Loading...' },
                 { to: '/screenings/list', message: 'Loading...' },
                 // Legacy tab switching (backward compatibility)
-                { from: '/screenings', to: '/screenings?tab=types', message: 'Loading...' },
+                { from: '/screenings', to: '/screenings?tab=types', message: 'Loading screening types and keywords...' },
                 { from: '/screenings', to: '/screenings?tab=checklist', message: 'Loading...' },
                 { from: '/screenings', to: '/screenings?tab=screenings', message: 'Loading...' },
                 // Any navigation to screenings
-                { to: '/screenings', message: 'Loading...' }
+                { to: '/screenings', message: 'Loading page and data...' }
             ];
 
             for (const pattern of slowNavigationPatterns) {
