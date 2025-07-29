@@ -1370,7 +1370,33 @@ def edit_screening_type(screening_type_id):
     else:
         form = ScreeningTypeForm()
 
-    if request.method == "POST" and form.validate_on_submit():
+    if request.method == "POST":
+        print(f"🔄 Processing POST request for screening type {screening_type_id}")
+        
+        # Check form validation and provide detailed error feedback
+        if not form.validate_on_submit():
+            print(f"❌ Form validation failed for screening type {screening_type_id}")
+            print(f"Form errors: {form.errors}")
+            
+            # Flash specific validation errors to user
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f"{field}: {error}", "danger")
+            
+            # Return form with errors
+            timestamp = int(time_module.time())
+            trigger_conditions_json = screening_type.trigger_conditions or '[]'
+            return render_template(
+                "edit_screening_type.html",
+                form=form,
+                screening_type=screening_type,
+                trigger_conditions_json=trigger_conditions_json,
+                cache_timestamp=timestamp,
+            )
+        
+        print(f"✅ Form validation passed for screening type {screening_type_id}")
+        
+        # Proceed with form processing
         # ENHANCED: Capture "before" state for selective refresh - ALL FIELDS
         old_state = {
             'name': screening_type.name,
@@ -1551,7 +1577,9 @@ def edit_screening_type(screening_type_id):
                 "is_active": screening_type.is_active,
             }
 
+            # Commit changes to database
             db.session.commit()
+            print(f"✅ Successfully committed changes for screening type {screening_type.name}")
 
             # Enhanced admin logging for screening type edit
             from models import AdminLog
@@ -1755,13 +1783,20 @@ def edit_screening_type(screening_type_id):
                 flash(f'Screening type "{screening_type.name}" has been updated successfully.', "success")
         except Exception as e:
             db.session.rollback()
-            app.logger.error(f"Error updating screening type: {str(e)}")
-            flash(f"Error updating screening type: {str(e)}", "danger")
+            error_msg = f"Error updating screening type: {str(e)}"
+            print(f"❌ Database error: {error_msg}")
+            app.logger.error(error_msg)
+            import traceback
+            traceback.print_exc()  # Print full stack trace for debugging
+            
+            flash(error_msg, "danger")
             timestamp = int(time_module.time())
+            trigger_conditions_json = screening_type.trigger_conditions or '[]'
             return render_template(
                 "edit_screening_type.html",
                 form=form,
                 screening_type=screening_type,
+                trigger_conditions_json=trigger_conditions_json,
                 cache_timestamp=timestamp,
             )
 
