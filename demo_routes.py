@@ -1372,11 +1372,14 @@ def edit_screening_type(screening_type_id):
 
     if request.method == "POST":
         print(f"🔄 Processing POST request for screening type {screening_type_id}")
+        print(f"Form data received: {dict(request.form)}")
+        print(f"Form files: {dict(request.files)}")
         
         # Check form validation and provide detailed error feedback
         if not form.validate_on_submit():
             print(f"❌ Form validation failed for screening type {screening_type_id}")
             print(f"Form errors: {form.errors}")
+            print(f"Form data: {form.data}")
             
             # Flash specific validation errors to user
             for field, errors in form.errors.items():

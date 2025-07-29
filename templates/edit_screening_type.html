@@ -303,35 +303,77 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
-            // Update keywords data before submission
-            updateFormKeywordsData('edit-form');
+            console.log('Form submission event triggered');
+            console.log('Form action:', form.action);
+            console.log('Form method:', form.method);
             
-            // Ensure the hidden field has proper data
-            const keywordsField = document.getElementById('edit-form-keywords-data');
-            const keywordsValue = keywordsField ? keywordsField.value : '';
-            
-            console.log('Form submitting with keywords:', keywordsValue);
-            
-            // If no keywords data, set empty array
-            if (!keywordsValue || keywordsValue.trim() === '') {
-                if (keywordsField) {
-                    keywordsField.value = '[]';
-                }
+            // Only process if not already handled by loading manager
+            if (form.dataset.loadingProcessed === 'true') {
+                console.log('Form already processed by loading manager, allowing submission');
+                return;
             }
             
-            // Prevent HTML entity encoding by ensuring proper JSON
-            if (keywordsField && keywordsField.value) {
-                try {
-                    // Parse and re-stringify to ensure clean JSON
-                    const parsed = JSON.parse(keywordsField.value);
-                    keywordsField.value = JSON.stringify(parsed);
-                } catch (e) {
-                    console.warn('JSON validation failed, setting empty array');
-                    keywordsField.value = '[]';
+            try {
+                // Update keywords data before submission
+                updateFormKeywordsData('edit-form');
+                
+                // Ensure the hidden field has proper data
+                const keywordsField = document.getElementById('edit-form-keywords-data');
+                const keywordsValue = keywordsField ? keywordsField.value : '';
+                
+                console.log('Form submitting with keywords:', keywordsValue);
+                
+                // If no keywords data, set empty array
+                if (!keywordsValue || keywordsValue.trim() === '') {
+                    if (keywordsField) {
+                        keywordsField.value = '[]';
+                    }
                 }
+                
+                // Prevent HTML entity encoding by ensuring proper JSON
+                if (keywordsField && keywordsField.value) {
+                    try {
+                        // Parse and re-stringify to ensure clean JSON
+                        const parsed = JSON.parse(keywordsField.value);
+                        keywordsField.value = JSON.stringify(parsed);
+                    } catch (jsonError) {
+                        console.warn('JSON validation failed, setting empty array:', jsonError);
+                        keywordsField.value = '[]';
+                    }
+                }
+                
+                // Update trigger conditions data before submission
+                updateFormTriggerConditionsData('edit-form');
+                
+                // Ensure the trigger conditions hidden field has proper data
+                const triggerConditionsField = document.getElementById('edit-form-trigger-conditions-data');
+                const triggerConditionsValue = triggerConditionsField ? triggerConditionsField.value : '';
+                
+                if (!triggerConditionsValue || triggerConditionsValue.trim() === '') {
+                    if (triggerConditionsField) {
+                        triggerConditionsField.value = '[]';
+                    }
+                }
+                
+                console.log('Final keywords value before submit:', keywordsField ? keywordsField.value : 'no keywords field');
+                console.log('Final trigger conditions value before submit:', triggerConditionsField ? triggerConditionsField.value : 'no trigger conditions field');
+                
+                // Validate required fields
+                const nameField = form.querySelector('[name="name"]');
+                if (!nameField || !nameField.value.trim()) {
+                    console.error('Name field is required but empty');
+                    alert('Screening type name is required');
+                    e.preventDefault();
+                    return;
+                }
+                
+                console.log('Form validation passed, allowing submission');
+                
+            } catch (error) {
+                console.error('Error during form submission preparation:', error);
+                alert('Error preparing form data: ' + error.message);
+                e.preventDefault();
             }
-            
-            console.log('Final keywords value before submit:', keywordsField ? keywordsField.value : 'no field');
         });
     }
 });

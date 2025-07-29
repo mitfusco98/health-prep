@@ -183,9 +183,16 @@ class LoadingStateManager {
         const form = event.target;
         const currentPath = window.location.pathname;
         
+        // Check if this form has already been processed by loading manager
+        if (form.dataset.loadingProcessed === 'true') {
+            // Allow normal submission
+            return;
+        }
+        
         // Screening types edit form
         if (currentPath.includes('/screening-types/edit') || form.closest('[data-screening-type-form]')) {
             event.preventDefault();
+            form.dataset.loadingProcessed = 'true';
             this.handleScreeningTypeSubmission(form);
             return;
         }
@@ -193,6 +200,7 @@ class LoadingStateManager {
         // Document upload form
         if (currentPath.includes('/document/add') || form.querySelector('input[type="file"]')) {
             event.preventDefault();
+            form.dataset.loadingProcessed = 'true';
             this.handleDocumentUpload(form);
             return;
         }
@@ -210,31 +218,62 @@ class LoadingStateManager {
             this.updateProgress(25, 'screening-form');
             this.updateMessage('Updating keywords data...', 'screening-form');
             
-            // Ensure keywords are properly formatted
-            this.updateFormKeywordsData('edit-form');
+            // Ensure keywords are properly formatted - check if function exists
+            if (typeof this.updateFormKeywordsData === 'function') {
+                this.updateFormKeywordsData('edit-form');
+            } else if (typeof window.updateFormKeywordsData === 'function') {
+                window.updateFormKeywordsData('edit-form');
+            }
             
             this.updateProgress(50, 'screening-form');
             this.updateMessage('Updating trigger conditions...', 'screening-form');
             
-            // Ensure trigger conditions are properly formatted
-            this.updateFormTriggerConditionsData('edit-form');
+            // Ensure trigger conditions are properly formatted - check if function exists
+            if (typeof this.updateFormTriggerConditionsData === 'function') {
+                this.updateFormTriggerConditionsData('edit-form');
+            } else if (typeof window.updateFormTriggerConditionsData === 'function') {
+                window.updateFormTriggerConditionsData('edit-form');
+            }
             
             this.updateProgress(75, 'screening-form');
             this.updateMessage('Saving screening type...', 'screening-form');
             
+            // Validate form before submission
+            const formData = new FormData(form);
+            const requiredFields = ['name'];
+            let isValid = true;
+            
+            for (const field of requiredFields) {
+                if (!formData.get(field) || formData.get(field).trim() === '') {
+                    console.error(`Required field missing: ${field}`);
+                    isValid = false;
+                }
+            }
+            
+            if (!isValid) {
+                throw new Error('Required fields are missing');
+            }
+            
             // Small delay to ensure all operations complete
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 300));
             
             this.updateProgress(100, 'screening-form');
             this.updateMessage('Finalizing changes...', 'screening-form');
             
-            // Submit the form
+            // Re-enable the form temporarily for submission
+            const submitButton = form.querySelector('input[type="submit"], button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = false;
+            }
+            
+            // Submit the form naturally (don't prevent default on next submit)
+            form.removeEventListener('submit', this.handleFormSubmission);
             form.submit();
             
         } catch (error) {
             console.error('Error processing screening type form:', error);
             this.hideLoading('screening-form');
-            alert('Error processing form. Please try again.');
+            alert(`Error processing form: ${error.message}. Please try again.`);
         }
     }
 
