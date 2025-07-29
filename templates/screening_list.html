@@ -117,25 +117,12 @@
 
 {% block extra_js %}
 <script>
-// Load keywords and display as badges (only for tabs that don't have preloaded keywords)
+// Load keywords and display as badges
 function loadKeywordsAsBadges() {
-    // Skip loading keywords for types tab since they're preloaded from backend
-    const activeTab = '{{ active_tab }}';
-    if (activeTab === 'types') {
-        console.log('Skipping keyword loading for types tab - keywords are preloaded');
-        return;
-    }
-    
     const keywordContainers = document.querySelectorAll('.keywords-badges-container');
     console.log(`loadKeywordsAsBadges: Found ${keywordContainers.length} keyword containers to load`);
 
     keywordContainers.forEach(container => {
-        // Skip containers that already have preloaded content (not just "Loading keywords...")
-        if (!container.innerHTML.includes('Loading keywords...')) {
-            console.log('Skipping container with preloaded content');
-            return;
-        }
-        
         const screeningTypeId = container.id.replace('keywords-display-', '');
 
         console.log(`loadKeywordsAsBadges: Loading keywords for screening ${screeningTypeId}`);
@@ -751,13 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                                 <div class="mt-1">
                                     <div id="keywords-display-{{ screening_type.id }}" class="keywords-badges-container">
-                                        {% if screening_type._preloaded_keywords %}
-                                            {% for keyword in screening_type._preloaded_keywords %}
-                                                <span class="badge bg-secondary me-1 mb-1">{{ keyword }}</span>
-                                            {% endfor %}
-                                        {% else %}
-                                            <small class="text-muted">No keywords defined</small>
-                                        {% endif %}
+                                        <small class="text-muted">Loading keywords...</small>
                                     </div>
                                 </div>
                             </div>

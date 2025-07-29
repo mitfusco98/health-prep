@@ -45,7 +45,7 @@
                     <li class="page-item">
                         <a class="page-link bg-dark text-light border-secondary" href="{{ url_for('screenings_list', 
                             page=1, page_size=page_size, status=status_filter, 
-                            screening_type=screening_type_filter, search=search_query) }}">1</a>
+                            screening_type=screening_type_filter, search=search_query }}">1</a>
                     </li>
                     {% if start_page > 2 %}
                         <li class="page-item disabled"><span class="page-link bg-dark text-muted border-secondary">...</span></li>
@@ -56,7 +56,7 @@
                     <li class="page-item {{ 'active' if page_num == pagination.current_page else '' }}">
                         <a class="page-link {{ 'bg-primary text-white' if page_num == pagination.current_page else 'bg-dark text-light' }} border-secondary" href="{{ url_for('screenings_list', 
                             page=page_num, page_size=page_size, status=status_filter, 
-                            screening_type=screening_type_filter, search=search_query) }}">
+                            screening_type=screening_type_filter, search=search_query }}">
                             {{ page_num }}
                         </a>
                     </li>
@@ -69,7 +69,7 @@
                     <li class="page-item">
                         <a class="page-link bg-dark text-light border-secondary" href="{{ url_for('screenings_list', 
                             page=pagination.total_pages, page_size=page_size, status=status_filter, 
-                            screening_type=screening_type_filter, search=search_query) }}">
+                            screening_type=screening_type_filter, search=search_query }}">
                             {{ pagination.total_pages }}
                         </a>
                     </li>

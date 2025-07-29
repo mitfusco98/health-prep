@@ -3859,15 +3859,6 @@ def _screening_list_logic(tab="screenings", today=None, now=None):
         screening_types_query = ScreeningType.query.order_by(ScreeningType.name)
 
         screening_types = screening_types_query.all()
-        
-        # Preload keywords for each screening type to avoid AJAX loading delays
-        for screening_type in screening_types:
-            try:
-                # Use the model's get_content_keywords method for consistency
-                keywords = screening_type.get_content_keywords()
-                screening_type._preloaded_keywords = keywords
-            except Exception as e:
-                screening_type._preloaded_keywords = []
 
     # Check if this is a refresh request (can be triggered from any tab)
     refresh_requested = request.args.get('regenerate') == 'true'

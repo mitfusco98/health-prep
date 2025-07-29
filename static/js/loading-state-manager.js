@@ -123,24 +123,6 @@ class LoadingStateManager {
         // Check current pathname for context
         const currentPath = window.location.pathname;
         
-        // Handle special case for /screenings route variations
-        if (currentPath === '/screenings' || currentPath.startsWith('/screenings/')) {
-            // If navigating within screening tabs, detect the target tab
-            const activeTabLink = document.querySelector('.nav-tabs .nav-link.active');
-            if (activeTabLink) {
-                const href = activeTabLink.getAttribute('href');
-                if (href) {
-                    // Extract the clean URL path for consistent detection
-                    if (href.includes('/screenings/types')) return '/screenings/types';
-                    if (href.includes('/screenings/settings')) return '/screenings/settings';
-                    if (href.includes('/screenings/list') || href === '/screenings') return '/screenings/list';
-                }
-            }
-            
-            // Fallback to current path for screenings
-            return currentPath === '/screenings' ? '/screenings/list' : currentPath;
-        }
-        
         // If we're on a form page, assume we're staying on the same page
         if (currentPath.includes('/edit') || currentPath.includes('/add')) {
             return currentPath;
