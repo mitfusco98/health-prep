@@ -535,11 +535,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 {% if cutoff_info and cutoff_info.has_cutoffs and screenings_hidden_by_cutoff > 0 %}
                     No screenings match current filters and cutoff settings. 
                     {% if session.is_admin %}
-                        <a href="{{ url_for('screenings_list', show_all='true', search=search_query, status=status_filter, screening_type=screening_type_filter) }}">Show all screenings</a> or 
+                        <a href="{{ url_for('screening_list', tab='screenings', show_all='true', search=search_query, status=status_filter, screening_type=screening_type_filter) }}">Show all screenings</a> or 
                     {% endif %}
-                    <a href="{{ url_for('screenings_settings') }}">adjust cutoff settings</a> to view more data.
+                    <a href="{{ url_for('screening_list', tab='checklist') }}">adjust cutoff settings</a> to view more data.
                 {% elif search_query or status_filter or screening_type_filter %}
-                    No screenings found with current filters. <a href="{{ url_for('screenings_list') }}">Clear all filters</a> to view all.
+                    No screenings found with current filters. <a href="{{ url_for('screening_list', tab='screenings') }}">Clear all filters</a> to view all.
                 {% else %}
                     Click "Refresh" above to generate automated screenings for eligible patients.
                 {% endif %}
@@ -751,9 +751,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                                 <div class="mt-1">
                                     <div id="keywords-display-{{ screening_type.id }}" class="keywords-badges-container">
-                                        {% if screening_type.preloaded_keywords and screening_type.preloaded_keywords|length > 0 %}
-                                            {% for keyword in screening_type.preloaded_keywords %}
-                                                <span class="badge bg-primary me-1 mb-1">{{ keyword }}</span>
+                                        {% if screening_type._preloaded_keywords %}
+                                            {% for keyword in screening_type._preloaded_keywords %}
+                                                <span class="badge bg-secondary me-1 mb-1">{{ keyword }}</span>
                                             {% endfor %}
                                         {% else %}
                                             <small class="text-muted">No keywords defined</small>

@@ -63,27 +63,21 @@ class LoadingStateManager {
         
         if (!targetUrl) return 'Loading...';
 
-        // Define loading messages for different URL patterns (most specific first)
+        // Define loading messages for different URL patterns
         const urlPatterns = {
-            '/screenings/types': 'Loading screening type configuration...',
-            '/screenings/settings': 'Loading screening checklist settings...',
-            '/screenings/list': 'Loading patient screening data...',
-            '/screenings\\?.*tab=types': 'Loading screening type configuration...',
-            '/screenings\\?.*tab=settings': 'Loading screening checklist settings...',
-            '/screenings\\?.*tab=screenings': 'Loading patient screening data...',
-            '/screenings': 'Loading patient screening data...',
-            '/patients/\\d+/add-document': 'Loading document upload form...',
-            '/patients/\\d+/edit': 'Loading patient edit form...',
-            '/patients/\\d+': 'Loading patient details...',
-            '/patients/add': 'Loading new patient form...',
+            '/screenings/types': 'Loading screening types...',
+            '/screenings/settings': 'Loading screening settings...',
+            '/screenings/list': 'Loading screening data...',
+            '/screenings': 'Loading screening data...',
             '/patients': 'Loading patient records...',
-            '/documents/\\d+': 'Loading document details...',
-            '/documents/add': 'Loading document upload form...',
+            '/patients/add': 'Loading patient form...',
+            '/patients/\\d+': 'Loading patient details...',
+            '/patients/\\d+/edit': 'Loading patient edit form...',
             '/documents': 'Loading document repository...',
-            '/admin/ocr-dashboard': 'Loading OCR management...',
+            '/documents/add': 'Loading document upload...',
+            '/documents/\\d+': 'Loading document details...',
             '/admin': 'Loading admin dashboard...',
-            '/screening-types/\\d+/edit': 'Validating screening type settings...',
-            '/screening-types/add': 'Loading new screening type form...',
+            '/screening-types/\\d+/edit': 'Validating screening type...',
             '/api/': 'Processing API request...'
         };
 
@@ -103,15 +97,7 @@ class LoadingStateManager {
      * Detect navigation destination from various sources
      */
     detectNavigationDestination() {
-        // Priority 1: Check for clicked links with explicit href tracking
-        const clickedLink = document.querySelector('[data-clicked-destination]');
-        if (clickedLink) {
-            const destination = clickedLink.getAttribute('data-clicked-destination');
-            clickedLink.removeAttribute('data-clicked-destination'); // Clean up
-            return destination;
-        }
-
-        // Priority 2: Check for form action attributes
+        // Check for form action attributes
         const activeForm = document.querySelector('form[data-loading-processed="true"]');
         if (activeForm && activeForm.action) {
             try {
@@ -123,35 +109,35 @@ class LoadingStateManager {
             }
         }
 
-        // Priority 3: Check current pathname and infer destination
+        // Check for clicked links
+        const activeLink = document.querySelector('a[data-navigation-active]');
+        if (activeLink && activeLink.href) {
+            try {
+                const url = new URL(activeLink.href);
+                return url.pathname;
+            } catch (e) {
+                return activeLink.href;
+            }
+        }
+
+        // Check current pathname for context
         const currentPath = window.location.pathname;
-        const currentSearch = window.location.search;
         
-        // Handle special case for /screenings route variations  
+        // Handle special case for /screenings route variations
         if (currentPath === '/screenings' || currentPath.startsWith('/screenings/')) {
-            // If we have query parameters, check them for tab info
-            if (currentSearch.includes('tab=types')) return '/screenings/types';
-            if (currentSearch.includes('tab=checklist') || currentSearch.includes('tab=settings')) return '/screenings/settings';
-            if (currentSearch.includes('tab=screenings')) return '/screenings/list';
-            
-            // If navigating within screening tabs, detect from active tab
+            // If navigating within screening tabs, detect the target tab
             const activeTabLink = document.querySelector('.nav-tabs .nav-link.active');
             if (activeTabLink) {
                 const href = activeTabLink.getAttribute('href');
                 if (href) {
                     // Extract the clean URL path for consistent detection
-                    if (href.includes('/screenings/types') || href.includes('tab=types')) return '/screenings/types';
-                    if (href.includes('/screenings/settings') || href.includes('tab=checklist')) return '/screenings/settings';
-                    if (href.includes('/screenings/list') || href === '/screenings' || href.includes('tab=screenings')) return '/screenings/list';
+                    if (href.includes('/screenings/types')) return '/screenings/types';
+                    if (href.includes('/screenings/settings')) return '/screenings/settings';
+                    if (href.includes('/screenings/list') || href === '/screenings') return '/screenings/list';
                 }
             }
             
-            // Fallback based on current path
-            if (currentPath === '/screenings/types') return '/screenings/types';
-            if (currentPath === '/screenings/settings') return '/screenings/settings';  
-            if (currentPath === '/screenings/list') return '/screenings/list';
-            
-            // Default fallback for /screenings
+            // Fallback to current path for screenings
             return currentPath === '/screenings' ? '/screenings/list' : currentPath;
         }
         
@@ -309,14 +295,6 @@ class LoadingStateManager {
                 el.removeAttribute('data-navigation-active');
             });
             link.setAttribute('data-navigation-active', 'true');
-            
-            // Store destination for proper message detection
-            try {
-                const url = new URL(href, window.location.origin);
-                link.setAttribute('data-clicked-destination', url.pathname);
-            } catch {
-                link.setAttribute('data-clicked-destination', href);
-            }
             
             // Check for specific slow navigation patterns (updated for clean URLs)
             const slowNavigationPatterns = [
