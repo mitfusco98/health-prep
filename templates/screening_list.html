@@ -895,45 +895,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h4 class="mb-0">Prep Sheet Checklist Settings</h4>
             </div>
 
-            <!-- Status Options Display (Permanent) -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Status Options for Prep Sheets</h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted mb-3">Standard status options permanently enabled for screening checklists in prep sheets.</p>
+            
 
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <span class="badge bg-success fs-6 py-2 px-3">Due</span>
-                        <span class="badge bg-success fs-6 py-2 px-3">Due Soon</span>
-                        <span class="badge bg-success fs-6 py-2 px-3">Completed</span>
-                    </div>
-
-                    <small class="text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Status options are now permanently active and cannot be modified.
-                    </small>
-                </div>
-            </div>
-
-            <!-- Automated Screening Control -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Prep Sheet Content Control</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Prep sheet content is now controlled by the screening engine.</strong>
-                        <br>Use the <a href="{{ url_for('screening_list', tab='screenings') }}" class="alert-link">Screenings tab</a> to manage which screenings appear in prep sheets by setting their status (Due, Due Soon, Complete).
-                        <br><br>
-                        <small class="text-muted">
-                            Active screenings from the screening engine automatically appear in prep sheets based on patient eligibility (age, gender, medical conditions). 
-                            No manual configuration needed.
-                        </small>
-                    </div>
-                </div>
-            </div>
+            
 
             <!-- Confidence Threshold Settings -->
             <div class="card mb-4">
