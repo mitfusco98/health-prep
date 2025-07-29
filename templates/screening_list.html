@@ -751,9 +751,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                                 <div class="mt-1">
                                     <div id="keywords-display-{{ screening_type.id }}" class="keywords-badges-container">
-                                        {% if screening_type._preloaded_keywords %}
+                                        {% if screening_type._preloaded_keywords and screening_type._preloaded_keywords|length > 0 %}
                                             {% for keyword in screening_type._preloaded_keywords %}
-                                                <span class="badge bg-secondary me-1 mb-1">{{ keyword }}</span>
+                                                <span class="badge bg-primary me-1 mb-1">{{ keyword }}</span>
                                             {% endfor %}
                                         {% else %}
                                             <small class="text-muted">No keywords defined</small>
