@@ -11,7 +11,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form method="POST" data-validate-terminology data-screening-type-form>
+            <form method="POST" action="{{ url_for('edit_screening_type', screening_type_id=screening_type.id) }}" data-validate-terminology data-screening-type-form>
                 {{ form.hidden_tag() }}
                 
                 <div class="row mb-3">
