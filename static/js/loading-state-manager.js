@@ -1,3 +1,4 @@
+
 /**
  * Loading State Manager
  * Handles loading states for high-traffic, performance-sensitive pages
@@ -53,16 +54,16 @@ class LoadingStateManager {
     showGlobalLoading(message, showProgress, preventInteraction) {
         const textElement = this.loadingOverlay.querySelector('.loading-text');
         const progressElement = this.loadingOverlay.querySelector('.loading-progress');
-
+        
         textElement.textContent = message;
         progressElement.style.display = showProgress ? 'block' : 'none';
-
+        
         if (preventInteraction) {
             this.loadingOverlay.style.pointerEvents = 'all';
         } else {
             this.loadingOverlay.style.pointerEvents = 'none';
         }
-
+        
         this.loadingOverlay.style.display = 'flex';
         document.body.classList.add('loading-active');
     }
@@ -133,12 +134,12 @@ class LoadingStateManager {
         // Auto-detect navigation to high-impact pages
         const originalPushState = history.pushState;
         const originalReplaceState = history.replaceState;
-
+        
         history.pushState = (...args) => {
             this.handleNavigation(args[2]);
             return originalPushState.apply(history, args);
         };
-
+        
         history.replaceState = (...args) => {
             this.handleNavigation(args[2]);
             return originalReplaceState.apply(history, args);
@@ -163,19 +164,17 @@ class LoadingStateManager {
                 this.handleFileUpload(e);
             }
         });
-
-        this.handleNavigationLoading();
     }
 
     handleNavigation(url) {
         const problematicPaths = ['/screenings', '/patients', '/screening-types'];
-
+        
         if (problematicPaths.some(path => url?.includes(path))) {
             this.showLoading({
                 message: 'Loading page...',
                 id: 'navigation'
             });
-
+            
             // Auto-hide after reasonable timeout
             setTimeout(() => {
                 this.hideLoading('navigation');
@@ -191,7 +190,7 @@ class LoadingStateManager {
             if (!link) return;
 
             const href = link.getAttribute('href');
-
+            
             // Check for specific slow navigation patterns
             const slowNavigationPatterns = [
                 // Home to screenings
@@ -205,21 +204,21 @@ class LoadingStateManager {
 
             for (const pattern of slowNavigationPatterns) {
                 const currentPath = window.location.pathname + window.location.search;
-
+                
                 // Check if this navigation matches a slow pattern
                 if (href.includes(pattern.to)) {
                     // If there's a specific 'from' pattern, check it matches
                     if (pattern.from && !currentPath.includes(pattern.from)) {
                         continue;
                     }
-
+                    
                     // Show loading state immediately
                     this.showLoading({
                         message: pattern.message,
                         showProgress: true,
                         id: 'slow-navigation'
                     });
-
+                    
                     // Start progress simulation
                     this.simulateNavigationProgress();
                     break;
@@ -233,7 +232,7 @@ class LoadingStateManager {
         const interval = setInterval(() => {
             progress += 10;
             this.updateProgress(progress, 'slow-navigation');
-
+            
             if (progress >= 90) {
                 clearInterval(interval);
                 // Don't hide automatically, let page load complete it
@@ -250,13 +249,13 @@ class LoadingStateManager {
     handleFormSubmission(event) {
         const form = event.target;
         const currentPath = window.location.pathname;
-
+        
         // Check if this form has already been processed by loading manager
         if (form.dataset.loadingProcessed === 'true') {
             // Allow normal submission
             return;
         }
-
+        
         // Screening types edit form
         if (currentPath.includes('/screening-types/edit') || form.closest('[data-screening-type-form]')) {
             event.preventDefault();
@@ -264,7 +263,7 @@ class LoadingStateManager {
             this.handleScreeningTypeSubmission(form);
             return;
         }
-
+        
         // Document upload form
         if (currentPath.includes('/document/add') || form.querySelector('input[type="file"]')) {
             event.preventDefault();
@@ -285,56 +284,56 @@ class LoadingStateManager {
             // Update progress through validation steps
             this.updateProgress(25, 'screening-form');
             this.updateMessage('Updating keywords data...', 'screening-form');
-
+            
             // Ensure keywords are properly formatted - check if function exists
             if (typeof this.updateFormKeywordsData === 'function') {
                 this.updateFormKeywordsData('edit-form');
             } else if (typeof window.updateFormKeywordsData === 'function') {
                 window.updateFormKeywordsData('edit-form');
             }
-
+            
             this.updateProgress(50, 'screening-form');
             this.updateMessage('Updating trigger conditions...', 'screening-form');
-
+            
             // Ensure trigger conditions are properly formatted - check if function exists
             if (typeof this.updateFormTriggerConditionsData === 'function') {
                 this.updateFormTriggerConditionsData('edit-form');
             } else if (typeof window.updateFormTriggerConditionsData === 'function') {
                 window.updateFormTriggerConditionsData('edit-form');
             }
-
+            
             this.updateProgress(75, 'screening-form');
             this.updateMessage('Saving screening type...', 'screening-form');
-
+            
             // Validate form before submission
             const formData = new FormData(form);
             const requiredFields = ['name'];
             let isValid = true;
-
+            
             for (const field of requiredFields) {
                 if (!formData.get(field) || formData.get(field).trim() === '') {
                     console.error(`Required field missing: ${field}`);
                     isValid = false;
                 }
             }
-
+            
             if (!isValid) {
                 throw new Error('Required fields are missing');
             }
-
+            
             // Small delay to ensure all operations complete
             await new Promise(resolve => setTimeout(resolve, 300));
-
+            
             this.updateProgress(100, 'screening-form');
             this.updateMessage('Finalizing changes...', 'screening-form');
-
+            
             // Create a new form submission using FormData and fetch API
             const submitUrl = form.action || window.location.pathname;
             const submitMethod = form.method || 'POST';
-
+            
             console.log('Submitting form to:', submitUrl, 'via', submitMethod);
             console.log('Form data:', Object.fromEntries(formData.entries()));
-
+            
             // Submit using fetch to avoid form.submit() issues
             const response = await fetch(submitUrl, {
                 method: submitMethod,
@@ -343,7 +342,7 @@ class LoadingStateManager {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             });
-
+            
             if (response.ok) {
                 // If successful, redirect or reload
                 if (response.redirected) {
@@ -355,12 +354,12 @@ class LoadingStateManager {
                 const errorText = await response.text();
                 throw new Error(`Server error: ${response.status} - ${errorText}`);
             }
-
+            
         } catch (error) {
             console.error('Error processing screening type form:', error);
             this.hideLoading('screening-form');
             alert(`Error processing form: ${error.message}. Please try again.`);
-
+            
             // Reset the form processing flag so user can try again
             form.dataset.loadingProcessed = 'false';
         }
@@ -369,19 +368,19 @@ class LoadingStateManager {
     async handleDocumentUpload(form) {
         const fileInput = form.querySelector('input[type="file"]');
         const file = fileInput?.files[0];
-
+        
         if (file) {
             this.showLoading({
                 message: `Uploading ${file.name}...`,
                 showProgress: true,
                 id: 'document-upload'
             });
-
+            
             // Simulate upload progress
             for (let i = 0; i <= 100; i += 10) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 this.updateProgress(i, 'document-upload');
-
+                
                 if (i === 30) this.updateMessage('Processing file...', 'document-upload');
                 if (i === 70) this.updateMessage('Saving to database...', 'document-upload');
                 if (i === 90) this.updateMessage('Finalizing upload...', 'document-upload');
@@ -392,7 +391,7 @@ class LoadingStateManager {
                 id: 'document-upload'
             });
         }
-
+        
         // Submit the form
         form.submit();
     }
@@ -408,7 +407,7 @@ class LoadingStateManager {
                 target: event.target.closest('.form-group'),
                 id: 'file-selected'
             });
-
+            
             // Auto-hide after showing selection
             setTimeout(() => {
                 this.hideLoading('file-selected');
@@ -435,7 +434,7 @@ class LoadingStateManager {
             if (closeButton) closeButton.remove();
             return clone.textContent.trim();
         }).filter(keyword => keyword !== '');
-
+        
         const hiddenInput = document.getElementById(`${formPrefix}-keywords-data`);
         if (hiddenInput) {
             hiddenInput.value = JSON.stringify(keywords);
@@ -453,81 +452,11 @@ class LoadingStateManager {
                 display: badge.getAttribute('data-display')
             };
         });
-
+        
         const hiddenInput = document.getElementById(`${formPrefix}-trigger-conditions-data`);
         if (hiddenInput) {
             hiddenInput.value = JSON.stringify(conditions);
         }
-    }
-
-    // Navigation loading states with URL-specific messages
-    handleNavigationLoading() {
-        // Show loading for navigation links
-        document.addEventListener('click', (e) => {
-            const link = e.target.closest('a[href]');
-            if (link && !link.href.includes('#') && !link.hasAttribute('download')) {
-                const href = link.getAttribute('href');
-
-                // Skip external links and API calls
-                if (href.startsWith('http') || href.startsWith('/api/')) {
-                    return;
-                }
-
-                // Get URL-specific loading message
-                const loadingMessage = this.getLoadingMessageForURL(href);
-
-                // Show navigation loading with specific message
-                this.showLoading('navigation', loadingMessage);
-
-                // Hide loading after a maximum time to prevent stuck states
-                setTimeout(() => {
-                    this.hideLoading('navigation');
-                }, 5000);
-            }
-        });
-    }
-
-    // Get specific loading message based on destination URL
-    getLoadingMessageForURL(url) {
-        // Remove domain and get path
-        const path = url.replace(/^https?:\/\/[^\/]+/, '').split('?')[0];
-
-        // URL-specific messages
-        const urlMessages = {
-            '/home': 'Loading dashboard...',
-            '/screenings': 'Loading screening list...',
-            '/screenings/list': 'Loading screening list...',
-            '/screenings/types': 'Loading screening types...',
-            '/screenings/settings': 'Loading screening settings...',
-            '/patients': 'Loading patient list...',
-            '/documents/repository': 'Loading document repository...',
-            '/patients/document/add': 'Loading document upload...',
-            '/admin': 'Loading admin dashboard...',
-            '/admin_dashboard': 'Loading admin dashboard...'
-        };
-
-        // Check for patient detail pages
-        if (path.match(/^\/patients\/\d+$/)) {
-            return 'Loading patient details...';
-        }
-
-        // Check for patient prep sheets
-        if (path.match(/^\/patients\/\d+\/prep_sheet/)) {
-            return 'Loading prep sheet...';
-        }
-
-        // Check for appointment pages
-        if (path.includes('/appointment')) {
-            return 'Loading appointment...';
-        }
-
-        // Check for document pages
-        if (path.includes('/document')) {
-            return 'Loading document...';
-        }
-
-        // Return specific message or default
-        return urlMessages[path] || 'Loading page...';
     }
 }
 
