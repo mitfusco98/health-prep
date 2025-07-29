@@ -65,20 +65,20 @@ class LoadingStateManager {
 
         // Define loading messages for different URL patterns
         const urlPatterns = {
-            '/screenings/types': 'Loading screening types...',
-            '/screenings/settings': 'Loading screening settings...',
-            '/screenings/list': 'Loading screening data...',
-            '/screenings': 'Loading screening data...',
-            '/patients': 'Loading patient records...',
-            '/patients/add': 'Loading patient form...',
-            '/patients/\\d+': 'Loading patient details...',
-            '/patients/\\d+/edit': 'Loading patient edit form...',
-            '/documents': 'Loading document repository...',
-            '/documents/add': 'Loading document upload...',
-            '/documents/\\d+': 'Loading document details...',
-            '/admin': 'Loading admin dashboard...',
-            '/screening-types/\\d+/edit': 'Validating screening type...',
-            '/api/': 'Processing API request...'
+            '/screenings/types': 'Loading...',
+            '/screenings/settings': 'Loading...',
+            '/screenings/list': 'Loading...',
+            '/screenings': 'Loading...',
+            '/patients': 'Loading...',
+            '/patients/add': 'Loading...',
+            '/patients/\\d+': 'Loading...',
+            '/patients/\\d+/edit': 'Loading...',
+            '/documents': 'Loading...',
+            '/documents/add': 'Loading...',
+            '/documents/\\d+': 'Loading...',
+            '/admin': 'Loading...',
+            '/screening-types/\\d+/edit': 'Loading...',
+            '/api/': 'Loading...'
         };
 
         // Check each pattern
@@ -281,17 +281,17 @@ class LoadingStateManager {
             // Check for specific slow navigation patterns (updated for clean URLs)
             const slowNavigationPatterns = [
                 // Home to screenings
-                { from: '/', to: '/screenings', message: 'Loading screening list...' },
+                { from: '/', to: '/screenings', message: 'Loading...' },
                 // Clean URL navigation patterns
-                { to: '/screenings/types', message: 'Loading screening types...' },
-                { to: '/screenings/settings', message: 'Loading screening settings...' },
-                { to: '/screenings/list', message: 'Loading screening data...' },
+                { to: '/screenings/types', message: 'Loading...' },
+                { to: '/screenings/settings', message: 'Loading...' },
+                { to: '/screenings/list', message: 'Loading...' },
                 // Legacy tab switching (backward compatibility)
-                { from: '/screenings', to: '/screenings?tab=types', message: 'Loading screening types...' },
-                { from: '/screenings', to: '/screenings?tab=checklist', message: 'Loading screening settings...' },
-                { from: '/screenings', to: '/screenings?tab=screenings', message: 'Loading screenings...' },
+                { from: '/screenings', to: '/screenings?tab=types', message: 'Loading...' },
+                { from: '/screenings', to: '/screenings?tab=checklist', message: 'Loading...' },
+                { from: '/screenings', to: '/screenings?tab=screenings', message: 'Loading...' },
                 // Any navigation to screenings
-                { to: '/screenings', message: 'Loading screening data...' }
+                { to: '/screenings', message: 'Loading...' }
             ];
 
             for (const pattern of slowNavigationPatterns) {

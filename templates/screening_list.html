@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li class="nav-item">
         <a class="nav-link {% if active_tab == 'types' %}active{% endif %}" 
            href="{{ url_for('screening_list', tab='types', search=search_query) }}"
-           onclick="if (window.loadingManager) window.loadingManager.showLoading({message: 'Loading screening types...', showProgress: true, id: 'tab-switch'});">
+           onclick="if (window.loadingManager) window.loadingManager.showLoading({message: 'Loading...', showProgress: true, id: 'tab-switch'});">
             Manage Screening Types
         </a>
     </li>
@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <li class="nav-item">
         <a class="nav-link {% if active_tab == 'checklist' %}active{% endif %}" 
            href="{{ url_for('screening_list', tab='checklist', search=search_query) }}"
-           onclick="if (window.loadingManager) window.loadingManager.showLoading({message: 'Loading prep sheet settings...', showProgress: true, id: 'tab-switch'});">
+           onclick="if (window.loadingManager) window.loadingManager.showLoading({message: 'Loading...', showProgress: true, id: 'tab-switch'});">
             Prep Sheet Settings
         </a>
     </li>
