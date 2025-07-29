@@ -123,7 +123,7 @@
         <div class="card-body">
             <p>Screening types define the preventive health screenings that will appear on patient prep sheets. 
                You can customize which screenings appear based on patient age, gender, and other factors.</p>
-            
+
             <h6>Important Notes:</h6>
             <ul>
                 <li>Screenings will only appear for patients matching the specified criteria.</li>
@@ -145,7 +145,7 @@
             <form method="POST" action="{{ url_for('add_screening_type') }}">
                 <div class="modal-body">
                     {{ add_form.hidden_tag() }}
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <div class="form-group">
@@ -155,7 +155,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <label class="form-label">Frequency</label>
@@ -172,7 +172,7 @@
                             <small class="form-text text-muted">Set how often this screening should be performed</small>
                         </div>
                     </div>
-                    
+
                     <div class="form-group mb-3">
                         <label class="form-label">Keywords for Document Matching</label>
                         <div class="keyword-input-container">
@@ -189,7 +189,7 @@
                         </div>
                         <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used to match both document content and filenames.</small>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <div class="form-group">
@@ -213,7 +213,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="form-check mb-3">
                         {{ add_form.is_active(class="form-check-input") }}
                         {{ add_form.is_active.label(class="form-check-label") }}
@@ -240,7 +240,7 @@
             <form method="POST" action="{{ url_for('edit_screening_type', screening_type_id=0) }}" id="editScreeningForm">
                 <div class="modal-body">
                     {{ edit_form.hidden_tag() }}
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <div class="form-group">
@@ -250,7 +250,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-12">
                             <label class="form-label">Frequency</label>
@@ -267,7 +267,7 @@
                             <small class="form-text text-muted">Set how often this screening should be performed</small>
                         </div>
                     </div>
-                    
+
                     <div class="form-group mb-3">
                         <label class="form-label">Keywords for Document Matching</label>
                         <div class="keyword-input-container">
@@ -284,7 +284,7 @@
                         </div>
                         <small class="form-text text-muted">Define keywords to help identify documents related to this screening. Keywords will be used to match both document content and filenames.</small>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <div class="form-group">
@@ -308,7 +308,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="form-check mb-3">
                         {{ edit_form.is_active(class="form-check-input") }}
                         {{ edit_form.is_active.label(class="form-check-label") }}
@@ -359,7 +359,7 @@
                     <i class="fas fa-info-circle me-2"></i>
                     Keywords help identify documents related to this screening type. They're used when FHIR codes aren't available.
                 </div>
-                
+
                 <div class="keyword-input-container">
                     <div class="input-group mb-3">
                         <input type="text" class="form-control" id="manageKeywordInput" placeholder="Enter keyword (e.g., 'mammogram', 'glucose')">
@@ -367,12 +367,12 @@
                             <i class="fas fa-plus"></i> Add Keyword
                         </button>
                     </div>
-                    
+
                     <div id="manageKeywordsList" class="keywords-display">
                         <!-- Keywords will appear here as removable tags -->
                     </div>
                 </div>
-                
+
                 <div class="mt-4">
                     <h6>Common Keywords by Section:</h6>
                     <div class="row">
@@ -454,11 +454,11 @@ document.addEventListener('DOMContentLoaded', function() {
         setupEventListeners() {
             const addBtn = document.getElementById(this.prefix + 'KeywordBtn');
             const input = document.getElementById(this.prefix + 'KeywordInput');
-            
+
             if (addBtn) {
                 addBtn.addEventListener('click', () => this.addKeyword());
             }
-            
+
             if (input) {
                 input.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
@@ -471,21 +471,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
         addKeyword() {
             const input = document.getElementById(this.prefix + 'KeywordInput');
-            
+
             const keyword = input.value.trim();
-            
+
             if (!keyword) return;
-            
+
             // Check for duplicates
             const exists = this.keywords.some(k => 
                 k.keyword.toLowerCase() === keyword.toLowerCase()
             );
-            
+
             if (exists) {
                 alert('This keyword already exists');
                 return;
             }
-            
+
             // Add keyword with simplified structure
             this.keywords.push({
                 keyword: keyword,
@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 exact_match: false,
                 description: ''
             });
-            
+
             input.value = '';
             this.renderKeywords();
             this.updateHiddenField();
@@ -509,7 +509,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderKeywords() {
             const container = document.getElementById(this.prefix + 'KeywordsList');
             container.innerHTML = '';
-            
+
             this.keywords.forEach((keyword, index) => {
                 const tag = document.createElement('span');
                 tag.className = 'keyword-tag';
@@ -586,10 +586,10 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('click', function() {
             currentScreeningId = this.getAttribute('data-screening-id');
             const screeningName = this.getAttribute('data-screening-name');
-            
+
             document.getElementById('modalScreeningName').textContent = screeningName;
             loadKeywords(currentScreeningId);
-            
+
             const modal = new bootstrap.Modal(document.getElementById('keywordManagementModal'));
             modal.show();
         });
@@ -598,23 +598,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle save keywords button
     document.getElementById('saveKeywordsBtn').addEventListener('click', function() {
         if (!currentScreeningId) return;
-        
+
         const keywords = keywordManagers.manage.keywords;
-        
+
         // Extract just the keyword strings for saving
         const keywordStrings = keywords.map(k => k.keyword);
-        
+
         saveKeywords(currentScreeningId, keywordStrings)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     // Update the keywords display on the main page
                     updateKeywordsDisplay(currentScreeningId, keywords);
-                    
+
                     // Close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('keywordManagementModal'));
                     modal.hide();
-                    
+
                     // Show success message
                     showAlert('Keywords saved successfully', 'success');
                 } else {
@@ -631,14 +631,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateKeywordsDisplay(screeningId, keywords) {
         const container = document.getElementById(`keywords-${screeningId}`);
         if (!container) return;
-        
+
         container.innerHTML = '';
-        
+
         if (keywords.length === 0) {
             container.innerHTML = '<small class="text-muted">No keywords defined</small>';
             return;
         }
-        
+
         // Display keywords as simple badges
         const keywordStrings = keywords.map(k => typeof k === 'string' ? k : k.keyword);
         keywordStrings.slice(0, 5).forEach(keyword => {
@@ -647,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function() {
             badge.textContent = keyword;
             container.appendChild(badge);
         });
-        
+
         if (keywordStrings.length > 5) {
             const moreBadge = document.createElement('span');
             moreBadge.className = 'badge bg-light text-dark me-1 mb-1';
@@ -669,7 +669,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         alertContainer.insertBefore(alert, alertContainer.firstChild);
-        
+
         // Auto-dismiss after 5 seconds
         setTimeout(() => {
             if (alert.parentNode) {
@@ -689,10 +689,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const minAge = this.getAttribute('data-min-age');
             const maxAge = this.getAttribute('data-max-age');
             const active = this.getAttribute('data-active');
-            
+
             // Update form action URL
             document.getElementById('editScreeningForm').action = "{{ url_for('edit_screening_type', screening_type_id=0) }}".replace("0", id);
-            
+
             // Populate form fields
             document.querySelector('#editScreeningForm #name').value = name;
             document.querySelector('#editScreeningForm #frequency_number').value = frequencyNumber;
@@ -701,23 +701,23 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('#editScreeningForm #min_age').value = minAge;
             document.querySelector('#editScreeningForm #max_age').value = maxAge;
             document.querySelector('#editScreeningForm #is_active').checked = active === "checked";
-            
+
             // Load keywords for this screening
             loadKeywords(id).then(() => {
                 keywordManagers.edit.setKeywords(keywordManagers.manage.keywords);
             });
         });
     });
-    
+
     // Handle delete button clicks
     document.querySelectorAll('.delete-screening-btn').forEach(button => {
         button.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
             const name = this.getAttribute('data-name');
-            
+
             // Update form action URL
             document.getElementById('deleteScreeningForm').action = "{{ url_for('delete_screening_type', screening_type_id=0) }}".replace("0", id);
-            
+
             // Update modal text
             document.getElementById('deleteScreeningName').textContent = name;
         });
