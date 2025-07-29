@@ -3859,6 +3859,19 @@ def _screening_list_logic(tab="screenings", today=None, now=None):
         screening_types_query = ScreeningType.query.order_by(ScreeningType.name)
 
         screening_types = screening_types_query.all()
+        
+        # Preload keywords for each screening type to avoid AJAX loading delays
+        import json
+        for screening_type in screening_types:
+            try:
+                # Get keywords from content_keywords field
+                if hasattr(screening_type, 'content_keywords') and screening_type.content_keywords:
+                    keywords = json.loads(screening_type.content_keywords) if isinstance(screening_type.content_keywords, str) else screening_type.content_keywords
+                    screening_type._preloaded_keywords = keywords if isinstance(keywords, list) else []
+                else:
+                    screening_type._preloaded_keywords = []
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                screening_type._preloaded_keywords = []
 
     # Check if this is a refresh request (can be triggered from any tab)
     refresh_requested = request.args.get('regenerate') == 'true'
