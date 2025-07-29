@@ -62,32 +62,14 @@ app.wsgi_app = ProxyFix(
 csrf = CSRFProtect(app)
 app.config["WTF_CSRF_ENABLED"] = True
 
-# Configure CSRF exemptions
-app.config['WTF_CSRF_CHECK_DEFAULT'] = False  # Disable by default, enable selectively
-
-def is_api_request():
-    """Check if request is to an API endpoint"""
-    return request.path.startswith('/api/')
-
-@csrf.exempt
-def csrf_exempt_api_routes():
-    """Exempt API routes from CSRF protection"""
-    return is_api_request()
-
-# Properly exempt API routes from CSRF protection
-@csrf.exempt
-def exempt_api_routes():
-    """Exempt API routes from CSRF protection"""
-    return request.path.startswith('/api/')
-
-# Set the exemption function
-csrf.exempt_views.add('api')
+# Configure CSRF exemptions - disable by default for more control
+app.config['WTF_CSRF_CHECK_DEFAULT'] = False
 
 @app.before_request
 def bypass_csrf_for_api():
     """Bypass CSRF validation for API endpoints"""
     if request.path.startswith('/api/'):
-        # Set a flag to bypass CSRF validation
+        # Set a flag to bypass CSRF validation completely for API routes
         g._csrf_disabled = True
 
 # Initialize rate limiter
