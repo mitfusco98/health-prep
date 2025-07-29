@@ -1343,7 +1343,7 @@ def add_screening_type():
 
     # Redirect back to screening types page with timestamp for cache busting
     timestamp = int(time_module.time())
-    return redirect(url_for("screening.screening_list", tab="types", _t=timestamp))
+    return redirect(url_for("screenings_types", _t=timestamp))
 
 
 @app.route("/screening-types/<int:screening_type_id>/edit", methods=["GET", "POST"])
@@ -1805,7 +1805,7 @@ def edit_screening_type(screening_type_id):
 
         # Redirect back to screening list with 'types' tab active and timestamp for cache busting
         timestamp = int(time_module.time())
-        return redirect(url_for("screening.screening_list", tab="types", t=timestamp))
+        return redirect(url_for("screenings_types", t=timestamp))
 
     # For GET requests or if validation fails, render the form page
     timestamp = int(time_module.time())
@@ -1953,7 +1953,7 @@ def delete_screening_type(screening_type_id):
 
     # Redirect back to screening list with 'types' tab active and timestamp for cache busting
     timestamp = int(time_module.time())
-    return redirect(url_for("screening.screening_list", tab="types", _t=timestamp))
+    return redirect(url_for("screenings_types", _t=timestamp))
 
 
 @app.route("/patients/<int:patient_id>/download_prep_sheet")

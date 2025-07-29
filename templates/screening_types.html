@@ -142,7 +142,7 @@
                 <h5 class="modal-title" id="addScreeningTypeModalLabel">Add New Screening Type</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('screening.add_screening_type') }}">
+            <form method="POST" action="{{ url_for('add_screening_type') }}">
                 <div class="modal-body">
                     {{ add_form.hidden_tag() }}
                     
@@ -237,7 +237,7 @@
                 <h5 class="modal-title" id="editScreeningTypeModalLabel">Edit Screening Type</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('screening.edit_screening_type', screening_type_id=0) }}" id="editScreeningForm">
+            <form method="POST" action="{{ url_for('edit_screening_type', screening_type_id=0) }}" id="editScreeningForm">
                 <div class="modal-body">
                     {{ edit_form.hidden_tag() }}
                     
@@ -338,7 +338,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="POST" action="{{ url_for('screening.delete_screening_type', screening_type_id=0) }}" id="deleteScreeningForm">
+                <form method="POST" action="{{ url_for('delete_screening_type', screening_type_id=0) }}" id="deleteScreeningForm">
                     <button type="submit" class="btn btn-danger">Delete</button>
                 </form>
             </div>
@@ -691,7 +691,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const active = this.getAttribute('data-active');
             
             // Update form action URL
-            document.getElementById('editScreeningForm').action = "{{ url_for('screening.edit_screening_type', screening_type_id=0) }}".replace("0", id);
+            document.getElementById('editScreeningForm').action = "{{ url_for('edit_screening_type', screening_type_id=0) }}".replace("0", id);
             
             // Populate form fields
             document.querySelector('#editScreeningForm #name').value = name;
@@ -716,7 +716,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const name = this.getAttribute('data-name');
             
             // Update form action URL
-            document.getElementById('deleteScreeningForm').action = "{{ url_for('screening.delete_screening_type', screening_type_id=0) }}".replace("0", id);
+            document.getElementById('deleteScreeningForm').action = "{{ url_for('delete_screening_type', screening_type_id=0) }}".replace("0", id);
             
             // Update modal text
             document.getElementById('deleteScreeningName').textContent = name;
