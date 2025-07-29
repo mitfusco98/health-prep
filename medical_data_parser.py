@@ -51,24 +51,20 @@ class MedicalDataParser:
             )
         ).order_by(LabResult.test_date.desc()).all()
         
-        # Get associated documents using document_date (actual medical date) for cutoff filtering
-        lab_documents = MedicalDocument.query.filter(
-            and_(
-                MedicalDocument.patient_id == self.patient_id,
-                MedicalDocument.document_type.in_(['LAB_REPORT', 'LABORATORIES', 'Lab Report', 'lab_result', 'laboratory']),
+        # Get associated documents using optimized query with document_date filtering
+        from performance_optimizer import performance_optimizer
+        all_patient_docs = performance_optimizer.get_optimized_patient_documents(self.patient_id, limit=100)
+        
+        # Filter documents by type and cutoff date
+        lab_documents = []
+        lab_types = {'LAB_REPORT', 'LABORATORIES', 'Lab Report', 'lab_result', 'laboratory'}
+        
+        for doc in all_patient_docs:
+            if doc.document_type in lab_types:
                 # Use document_date if available, otherwise fall back to created_at
-                db.or_(
-                    and_(MedicalDocument.document_date.isnot(None), MedicalDocument.document_date >= cutoff_date),
-                    and_(MedicalDocument.document_date.is_(None), MedicalDocument.created_at >= cutoff_date)
-                )
-            )
-        ).order_by(
-            # Order by document_date if available, otherwise created_at
-            db.case(
-                (MedicalDocument.document_date.isnot(None), MedicalDocument.document_date),
-                else_=MedicalDocument.created_at
-            ).desc()
-        ).all()
+                doc_date = doc.document_date if doc.document_date else doc.created_at
+                if doc_date and doc_date >= cutoff_date:
+                    lab_documents.append(doc)
         
         return {
             'data': labs,

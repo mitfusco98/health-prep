@@ -2,12 +2,14 @@
 """
 Timeout-Safe Smart Refresh System
 Prevents worker timeouts during screening refresh operations
+Enhanced with performance optimization integration
 """
 
 import time
 from app import app, db
 from models import Patient, ScreeningType, Screening, MedicalDocument
 from unified_screening_engine import UnifiedScreeningEngine
+from performance_optimizer import performance_optimizer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,18 +24,33 @@ class TimeoutSafeRefresh:
         self.timeout_seconds = timeout_seconds
         self.unified_engine = UnifiedScreeningEngine()
         
-    def safe_smart_refresh(self):
+    def safe_smart_refresh(self, screening_type_ids=None):
         """
-        Perform smart refresh with timeout protection
+        Perform smart refresh with timeout protection and performance optimization
+        
+        Args:
+            screening_type_ids: Optional list of specific screening type IDs to refresh
         
         Returns:
             tuple: (success_count, total_patients, error_message)
         """
         start_time = time.time()
-        success_count = 0
-        error_message = None
         
         try:
+            # Use performance optimizer for targeted refresh if specific types provided
+            if screening_type_ids:
+                app.logger.info(f"Using fast selective refresh for screening types: {screening_type_ids}")
+                results = performance_optimizer.fast_selective_refresh(screening_type_ids)
+                
+                if results['success']:
+                    return results['patients_processed'], results['patients_processed'], None
+                else:
+                    return 0, 0, results['error']
+            
+            # Fallback to original method for general refresh
+            success_count = 0
+            error_message = None
+            
             # Get limited number of patients to prevent timeout
             patients = Patient.query.limit(self.max_patients).all()
             app.logger.info(f"Starting timeout-safe refresh for {len(patients)} patients")

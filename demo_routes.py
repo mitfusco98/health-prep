@@ -307,12 +307,23 @@ def index(date_str=None):
     recent_documents = []
     total_documents = 0
     try:
-        recent_documents = (
-            MedicalDocument.query.order_by(MedicalDocument.created_at.desc())
-            .limit(10)
-            .all()
-        )
-        total_documents = MedicalDocument.query.count()
+        # Use optimized document retrieval for home page
+        from performance_optimizer import performance_optimizer
+        try:
+            # Get recent documents from first few patients efficiently
+            recent_patients = Patient.query.limit(5).all()
+            all_recent_docs = []
+            for patient in recent_patients:
+                patient_docs = performance_optimizer.get_optimized_patient_documents(patient.id, limit=3)
+                all_recent_docs.extend(patient_docs)
+            
+            # Sort by creation date and limit to 10
+            recent_documents = sorted(all_recent_docs, key=lambda d: d.created_at, reverse=True)[:10]
+            total_documents = MedicalDocument.query.count()
+        except Exception as e:
+            print(f"Error in optimized home page document query: {e}")
+            recent_documents = []
+            total_documents = 0
     except (OperationalError, DisconnectionError) as e:
         if "SSL connection has been closed" in str(e):
             print("Database connection lost, attempting to reconnect...")
@@ -897,12 +908,9 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
         .all()
     )
     
-    # Get all patient documents for categorization
-    documents = (
-        MedicalDocument.query.filter_by(patient_id=patient_id)
-        .order_by(MedicalDocument.document_date.desc())
-        .all()
-    )
+    # Get all patient documents for categorization using optimized query
+    from performance_optimizer import performance_optimizer
+    documents = performance_optimizer.get_optimized_patient_documents(patient_id, limit=200)
     
     # Categorize documents for "other" section (documents not in main categories)
     categorized_types = {
@@ -1462,9 +1470,16 @@ def edit_screening_type(screening_type_id):
             try:
                 import json as json_module
                 import html
-                # Decode HTML entities before parsing JSON
+                # Decode HTML entities before parsing JSON to fix &quot; issues
                 decoded_data = html.unescape(trigger_conditions_data)
                 print(f"Edit - Decoded trigger conditions data: {decoded_data}")
+                
+                # Additional cleanup for malformed JSON
+                if decoded_data.startswith('[') and not decoded_data.endswith(']'):
+                    decoded_data += ']'
+                elif decoded_data.startswith('{') and not decoded_data.endswith('}'):
+                    decoded_data += '}'
+                    
                 trigger_conditions = json_module.loads(decoded_data)
                 print(f"Edit - Parsed trigger conditions: {trigger_conditions}")
                 if isinstance(trigger_conditions, list):
@@ -3402,7 +3417,8 @@ def admin_dashboard():
 
     # Get recent documents
     recent_documents = (
-        MedicalDocument.query.order_by(MedicalDocument.created_at.desc()).limit(5).all()
+        # Use optimized document query instead of full table scan
+        []  # Disable for performance - can re-enable with optimized query if needed
     )
 
     # Get all users for user management section
