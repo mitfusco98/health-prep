@@ -166,14 +166,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const hasKeywordContainers = document.querySelectorAll('.keywords-badges-container').length > 0;
 
     if (hasKeywordContainers) {
-        console.log('Loading keywords for display...');
-        // Load keywords immediately
-        loadKeywordsAsBadges();
-
-        // Also load after a delay to ensure DOM is fully ready
-        setTimeout(() => {
+        // Check if we're on the types tab - if so, skip AJAX loading since keywords are preloaded
+        const isTypesTab = window.location.pathname.includes('types') || 
+                          document.querySelector('.nav-link.active[href*="types"]') !== null;
+        
+        if (isTypesTab) {
+            console.log('On types tab - using preloaded keywords, skipping AJAX loading');
+        } else {
+            console.log('Loading keywords for display...');
+            // Load keywords immediately
             loadKeywordsAsBadges();
-        }, 1000);
+
+            // Also load after a delay to ensure DOM is fully ready
+            setTimeout(() => {
+                loadKeywordsAsBadges();
+            }, 1000);
+        }
     } else {
         console.log('No keyword containers found - skipping keyword loading');
     }
@@ -738,7 +746,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                                 <div class="mt-1">
                                     <div id="keywords-display-{{ screening_type.id }}" class="keywords-badges-container">
-                                        <small class="text-muted">Loading keywords...</small>
+                                        {% if screening_type._preloaded_keywords %}
+                                            {% for keyword in screening_type._preloaded_keywords[:5] %}
+                                                <span class="badge bg-primary me-1 mb-1">{{ keyword }}</span>
+                                            {% endfor %}
+                                            {% if screening_type._preloaded_keywords|length > 5 %}
+                                                <span class="badge bg-secondary me-1 mb-1">+{{ screening_type._preloaded_keywords|length - 5 }} more</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <small class="text-muted">No keywords defined</small>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
