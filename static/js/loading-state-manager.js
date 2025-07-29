@@ -272,6 +272,16 @@ class LoadingStateManager {
 
             const href = link.getAttribute('href');
             
+            // Skip loading states for document links
+            if (href.includes('/documents/') || href.includes('/view_document/')) {
+                return;
+            }
+            
+            // Skip loading states for patient detail links
+            if (href.includes('/patients/') && !href.includes('/patients/add')) {
+                return;
+            }
+            
             // Mark this link as active for destination detection
             document.querySelectorAll('a[data-navigation-active]').forEach(el => {
                 el.removeAttribute('data-navigation-active');
