@@ -955,9 +955,6 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     from checklist_routes import get_or_create_settings
     checklist_settings = get_or_create_settings()
 
-    # Define prep sheet filter items for template compatibility
-    prep_sheet_filter_items = []  # Empty for now as prep sheet is controlled by screening engine
-
     # Generate a prep sheet summary with decoupled filtering
     prep_sheet_data = generate_prep_sheet(
         patient,
@@ -1346,7 +1343,7 @@ def add_screening_type():
 
     # Redirect back to screening types page with timestamp for cache busting
     timestamp = int(time_module.time())
-    return redirect(url_for("screening.screening_list", tab="types", _t=timestamp))
+    return redirect(url_for("screenings_types", _t=timestamp))
 
 
 @app.route("/screening-types/<int:screening_type_id>/edit", methods=["GET", "POST"])
@@ -1808,7 +1805,7 @@ def edit_screening_type(screening_type_id):
 
         # Redirect back to screening list with 'types' tab active and timestamp for cache busting
         timestamp = int(time_module.time())
-        return redirect(url_for("screening.screening_list", tab="types", t=timestamp))
+        return redirect(url_for("screenings_types", t=timestamp))
 
     # For GET requests or if validation fails, render the form page
     timestamp = int(time_module.time())
@@ -1956,7 +1953,7 @@ def delete_screening_type(screening_type_id):
 
     # Redirect back to screening list with 'types' tab active and timestamp for cache busting
     timestamp = int(time_module.time())
-    return redirect(url_for("screening.screening_list", tab="types", _t=timestamp))
+    return redirect(url_for("screenings_types", _t=timestamp))
 
 
 @app.route("/patients/<int:patient_id>/download_prep_sheet")

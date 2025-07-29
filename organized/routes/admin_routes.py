@@ -148,7 +148,7 @@ def manage_screening_types():
     )
 
 
-@admin_bp.route("/screenings/types/add", methods=["GET", "POST"])
+@admin_bp.route("/screening-types/add", methods=["GET", "POST"])
 @admin_required
 def add_screening_type():
     """Add new screening type"""
@@ -185,7 +185,7 @@ def add_screening_type():
     return render_template("admin/add_screening_type.html")
 
 
-@admin_bp.route("/screenings/types/<int:type_id>/edit", methods=["GET", "POST"])
+@admin_bp.route("/screening-types/<int:type_id>/edit", methods=["GET", "POST"])
 @admin_required
 def edit_screening_type(type_id):
     """Edit screening type"""
