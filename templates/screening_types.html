@@ -508,8 +508,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         renderKeywords() {
             const container = document.getElementById(this.prefix + 'KeywordsList');
-            if (!container) return;
+            if (!container) {
+                console.warn(`Container not found: ${this.prefix}KeywordsList`);
+                return;
+            }
             
+            console.log(`Rendering ${this.keywords.length} keywords for ${this.prefix}`);
             container.innerHTML = '';
 
             if (this.keywords.length === 0) {
@@ -518,10 +522,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             this.keywords.forEach((keyword, index) => {
+                const keywordText = typeof keyword === 'string' ? keyword : keyword.keyword;
                 const tag = document.createElement('span');
                 tag.className = 'keyword-tag';
                 tag.innerHTML = `
-                    ${keyword.keyword}
+                    ${keywordText}
                     <span class="remove-btn" onclick="keywordManagers['${this.prefix}'].removeKeyword(${index})">&times;</span>
                 `;
                 container.appendChild(tag);
@@ -603,7 +608,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.getElementById('modalScreeningName').textContent = screeningName;
 
-            // First, try to get keywords from preloaded data on the page
+            // Always start with empty state - no loading messages
+            keywordManagers.manage.setKeywords([]);
+
+            // Try to get keywords from preloaded data on the page first
             const keywordsContainer = document.getElementById(`keywords-${currentScreeningId}`);
             let preloadedKeywords = [];
             
@@ -611,30 +619,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Extract keywords from the displayed badges
                 const badges = keywordsContainer.querySelectorAll('.badge.bg-secondary');
                 preloadedKeywords = Array.from(badges).map(badge => badge.textContent.trim());
-            }
-
-            // If we have preloaded keywords, use them immediately
-            if (preloadedKeywords.length > 0) {
-                const keywordObjects = preloadedKeywords.map(keyword => ({
-                    keyword: keyword,
-                    weight: 1.0,
-                    case_sensitive: false,
-                    exact_match: false,
-                    description: ''
-                }));
-                keywordManagers.manage.setKeywords(keywordObjects);
                 
-                // Still load from server to ensure we have the most up-to-date data,
-                // but this happens in the background while user sees the preloaded data
-                loadKeywords(currentScreeningId);
-            } else {
-                // No preloaded data, show empty state immediately then load from server
-                keywordManagers.manage.setKeywords([]);
-                loadKeywords(currentScreeningId);
+                // If we found preloaded keywords, use them immediately
+                if (preloadedKeywords.length > 0) {
+                    const keywordObjects = preloadedKeywords.map(keyword => ({
+                        keyword: keyword,
+                        weight: 1.0,
+                        case_sensitive: false,
+                        exact_match: false,
+                        description: ''
+                    }));
+                    keywordManagers.manage.setKeywords(keywordObjects);
+                }
             }
 
+            // Show the modal immediately with whatever we have (empty state or preloaded)
             const modal = new bootstrap.Modal(document.getElementById('keywordManagementModal'));
             modal.show();
+
+            // Then load from server in background (only if different from what we show)
+            setTimeout(() => {
+                loadKeywords(currentScreeningId);
+            }, 100);
         });
     });
 
