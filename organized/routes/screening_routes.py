@@ -40,6 +40,17 @@ def screening_list():
         # Show screening types management with variant grouping
         screening_types = ScreeningType.query.order_by(ScreeningType.name).all()
         
+        # Preload keywords for each screening type to avoid AJAX delays
+        for screening_type in screening_types:
+            try:
+                # Use the existing get_content_keywords() method to get keywords
+                keywords = screening_type.get_content_keywords()
+                # Attach preloaded keywords to the object for template access
+                screening_type._preloaded_keywords = keywords if keywords else []
+            except Exception as e:
+                print(f"Error preloading keywords for {screening_type.name}: {e}")
+                screening_type._preloaded_keywords = []
+        
         # Group by base names for variant management
         variant_groups = variant_manager.get_consolidated_screening_groups()
         
