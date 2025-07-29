@@ -955,6 +955,9 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     from checklist_routes import get_or_create_settings
     checklist_settings = get_or_create_settings()
 
+    # Define prep sheet filter items for template compatibility
+    prep_sheet_filter_items = []  # Empty for now as prep sheet is controlled by screening engine
+
     # Generate a prep sheet summary with decoupled filtering
     prep_sheet_data = generate_prep_sheet(
         patient,
