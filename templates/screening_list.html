@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <ul class="nav nav-tabs mb-3">
     <li class="nav-item">
         <a class="nav-link {% if active_tab == 'screenings' %}active{% endif %}" 
-           href="{{ url_for('screening_list', tab='screenings', search=search_query) }}"
+           href="{{ url_for('screening_list') }}/list{% if search_query %}?search={{ search_query }}{% endif %}"
            onclick="if (window.loadingManager) window.loadingManager.showLoading({message: 'Loading screening list...', showProgress: true, id: 'tab-switch'});">
             Screening List
         </a>
