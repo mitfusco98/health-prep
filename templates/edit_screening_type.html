@@ -4,14 +4,14 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Edit Screening Type</h1>
-        <a href="{{ url_for('screening_list', tab='types', t=cache_timestamp) }}" class="btn btn-outline-secondary">
+        <a href="{{ url_for('screening.screening_list', tab='types', t=cache_timestamp) }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left me-1"></i> Back to Types
         </a>
     </div>
 
     <div class="card">
         <div class="card-body">
-            <form method="POST" data-validate-terminology data-screening-type-form>
+            <form method="POST" action="{{ url_for('screening.edit_screening_type', screening_type_id=screening_type.id) }}" data-validate-terminology data-screening-type-form>
                 {{ form.hidden_tag() }}
                 
                 <div class="row mb-3">
@@ -168,7 +168,7 @@
                 </div>
                 
                 <div class="d-flex justify-content-end">
-                    <a href="{{ url_for('screening_list', tab='types', t=cache_timestamp) }}" class="btn btn-outline-secondary me-2">Cancel</a>
+                    <a href="{{ url_for('screening.screening_list', tab='types', t=cache_timestamp) }}" class="btn btn-outline-secondary me-2">Cancel</a>
                     {{ form.submit(class="btn btn-primary") }}
                 </div>
             </form>
