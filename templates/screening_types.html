@@ -552,28 +552,35 @@ document.addEventListener('DOMContentLoaded', function() {
         'manage': new KeywordManager('manage')
     };
 
-    // Load keywords for a screening type
+    // Load keywords for a screening type (background fetch only)
     function loadKeywords(screeningId) {
+        // This function now only does background updates, no loading states
         fetch(`/api/screening-keywords/${screeningId}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Convert simple keywords to objects for the manager
-                    const keywordObjects = (data.keywords || []).map(keyword => ({
-                        keyword: keyword,
-                        weight: 1.0,
-                        case_sensitive: false,
-                        exact_match: false,
-                        description: ''
-                    }));
-                    keywordManagers.manage.setKeywords(keywordObjects);
-                } else {
-                    keywordManagers.manage.setKeywords([]);
+                    // Only update if keywords are different from what's already shown
+                    const serverKeywords = data.keywords || [];
+                    const currentKeywords = keywordManagers.manage.keywords.map(k => k.keyword);
+                    
+                    // Check if server keywords are different
+                    const isDifferent = JSON.stringify(serverKeywords.sort()) !== JSON.stringify(currentKeywords.sort());
+                    
+                    if (isDifferent) {
+                        const keywordObjects = serverKeywords.map(keyword => ({
+                            keyword: keyword,
+                            weight: 1.0,
+                            case_sensitive: false,
+                            exact_match: false,
+                            description: ''
+                        }));
+                        keywordManagers.manage.setKeywords(keywordObjects);
+                    }
                 }
             })
             .catch(error => {
-                console.error('Error loading keywords:', error);
-                keywordManagers.manage.setKeywords([]);
+                console.error('Error loading keywords in background:', error);
+                // Don't clear keywords on error - keep what user sees
             });
     }
 
