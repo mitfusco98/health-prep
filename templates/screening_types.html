@@ -588,7 +588,36 @@ document.addEventListener('DOMContentLoaded', function() {
             const screeningName = this.getAttribute('data-screening-name');
 
             document.getElementById('modalScreeningName').textContent = screeningName;
-            loadKeywords(currentScreeningId);
+
+            // First, try to get keywords from preloaded data on the page
+            const keywordsContainer = document.getElementById(`keywords-${currentScreeningId}`);
+            let preloadedKeywords = [];
+            
+            if (keywordsContainer) {
+                // Extract keywords from the displayed badges
+                const badges = keywordsContainer.querySelectorAll('.badge.bg-secondary');
+                preloadedKeywords = Array.from(badges).map(badge => badge.textContent.trim());
+            }
+
+            // If we have preloaded keywords, use them immediately
+            if (preloadedKeywords.length > 0) {
+                const keywordObjects = preloadedKeywords.map(keyword => ({
+                    keyword: keyword,
+                    weight: 1.0,
+                    case_sensitive: false,
+                    exact_match: false,
+                    description: ''
+                }));
+                keywordManagers.manage.setKeywords(keywordObjects);
+                
+                // Still load from server to ensure we have the most up-to-date data,
+                // but this happens in the background while user sees the preloaded data
+                loadKeywords(currentScreeningId);
+            } else {
+                // No preloaded data, fall back to server loading with loading state
+                keywordManagers.manage.setKeywords([]);
+                loadKeywords(currentScreeningId);
+            }
 
             const modal = new bootstrap.Modal(document.getElementById('keywordManagementModal'));
             modal.show();
