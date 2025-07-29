@@ -3673,6 +3673,7 @@ def page_not_found(e):
 
 
 @app.route("/screenings")
+@app.route("/screenings/list")
 def screening_list():
     """High-performance screening list with optimized database queries and caching"""
 
@@ -3686,8 +3687,13 @@ def screening_list():
     # Define today at the start to ensure it's always available
     today = dt_module.now().date()
 
-    # Get the tab parameter (screenings or types)
-    tab = request.args.get("tab", "screenings")
+    # Get the tab parameter from URL path or query parameter
+    if request.endpoint == "screening_types_page":
+        tab = "types"
+    elif request.endpoint == "screening_settings_page":
+        tab = "checklist"
+    else:
+        tab = request.args.get("tab", "screenings")
     
     # Performance optimization: Use intelligent caching for expensive queries
     from intelligent_cache_manager import get_cache_manager
@@ -4130,6 +4136,18 @@ def screening_list():
             active_screening_types=active_screening_types,
             distinct_statuses=distinct_statuses,
             status_filter=request.args.get('status', ''),
+
+
+@app.route("/screenings/types")
+def screening_types_page():
+    """Screening types management page with new URL structure"""
+    return screening_list(tab="types")
+
+@app.route("/screenings/settings") 
+def screening_settings_page():
+    """Screening settings/checklist page with new URL structure"""
+    return screening_list(tab="checklist")
+
             screening_type_filter=request.args.get('screening_type', ''),
             cutoff_info=cutoff_info,
             total_screenings_before_cutoff=total_screenings_before_cutoff,

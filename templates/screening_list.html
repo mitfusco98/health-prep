@@ -218,9 +218,9 @@ function refreshScreenings(event, tab) {
             clearInterval(progressInterval);
             progress = 90;
         }
-        
+
         window.loadingManager.updateProgress(progress, 'screening-refresh');
-        
+
         if (progress < 30) {
             window.loadingManager.updateMessage('Analyzing patient data...', 'screening-refresh');
         } else if (progress < 60) {
@@ -284,14 +284,14 @@ document.addEventListener('DOMContentLoaded', function() {
 <ul class="nav nav-tabs mb-3">
     <li class="nav-item">
         <a class="nav-link {% if active_tab == 'screenings' %}active{% endif %}" 
-           href="{{ url_for('screening_list', tab='screenings', search=search_query) }}"
+           href="{{ url_for('screening_list', search=search_query) }}"
            onclick="if (window.loadingManager) window.loadingManager.showLoading({message: 'Loading screening list...', showProgress: true, id: 'tab-switch'});">
             Screening List
         </a>
     </li>
     <li class="nav-item">
         <a class="nav-link {% if active_tab == 'types' %}active{% endif %}" 
-           href="{{ url_for('screening_list', tab='types', search=search_query) }}"
+           href="{{ url_for('screening_types_page', search=search_query) }}"
            onclick="if (window.loadingManager) window.loadingManager.showLoading({message: 'Loading screening types...', showProgress: true, id: 'tab-switch'});">
             Manage Screening Types
         </a>
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <li class="nav-item">
         <a class="nav-link {% if active_tab == 'checklist' %}active{% endif %}" 
-           href="{{ url_for('screening_list', tab='checklist', search=search_query) }}"
+           href="{{ url_for('screening_settings_page', search=search_query) }}"
            onclick="if (window.loadingManager) window.loadingManager.showLoading({message: 'Loading prep sheet settings...', showProgress: true, id: 'tab-switch'});">
             Prep Sheet Settings
         </a>
@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </h5>
             </div>
             <div class="col-auto d-flex gap-2">
-                <a href="{{ url_for('screening_list', tab='screenings', regenerate='true') }}" 
+                <a href="{{ url_for('screening_list', regenerate='true') }}" 
                    class="btn btn-outline-success" 
                    onclick="return refreshScreenings(event, 'screenings')"
                    title="Smart refresh - applies selective updates to prevent crashes">
@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <small class="ms-2">
                 <i class="fas fa-info-circle"></i> 
                 Confidence thresholds can be adjusted in 
-                <a href="{{ url_for('screening_list', tab='checklist') }}" class="text-decoration-none">Checklist Settings</a>
+                <a href="{{ url_for('screening_settings_page') }}" class="text-decoration-none">Checklist Settings</a>
             </small>
         </div>
     </div>
@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             <div class="col-md-3 d-flex align-items-end">
                 {% if search_query or status_filter or screening_type_filter %}
-                <a href="{{ url_for('screening_list', tab='screenings') }}" class="btn btn-outline-secondary">
+                <a href="{{ url_for('screening_list') }}" class="btn btn-outline-secondary">
                     Clear Filters
                 </a>
                 {% endif %}
@@ -451,14 +451,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             {% if valid_documents %}
                                 {% for document in valid_documents %}
                                     {% set document_name = document.document_name or document.filename or 'Document ' + document.id|string %}
-                                    
+
                                     {# Get confidence score from screening-document relationship #}
                                     {% set confidence_score = screening.get_document_confidence(document.id) or 0.8 %}
-                                    
+
                                     {# Determine confidence level and colors using user-configurable thresholds #}
                                     {% set high_threshold = settings.confidence_high_threshold if settings else 0.8 %}
                                     {% set medium_threshold = settings.confidence_medium_threshold if settings else 0.5 %}
-                                    
+
                                     {% if confidence_score >= high_threshold %}
                                         {% set confidence_class = 'confidence-high' %}
                                         {% set confidence_bg = 'bg-success' %}
@@ -472,7 +472,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         {% set confidence_bg = 'bg-danger' %}
                                         {% set confidence_level = 'Low' %}
                                     {% endif %}
-                                    
+
                                     <div class="d-inline-block me-1 mb-1">
                                         <a href="{{ url_for('view_document', document_id=document.id, return_to=request.url) }}" 
                                            class="badge {{ confidence_bg }} text-decoration-none {{ confidence_class }}" 
@@ -522,11 +522,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 {% if cutoff_info and cutoff_info.has_cutoffs and screenings_hidden_by_cutoff > 0 %}
                     No screenings match current filters and cutoff settings. 
                     {% if session.is_admin %}
-                        <a href="{{ url_for('screening_list', tab='screenings', show_all='true', search=search_query, status=status_filter, screening_type=screening_type_filter) }}">Show all screenings</a> or 
+                        <a href="{{ url_for('screening_list', show_all='true', search=search_query, status=status_filter, screening_type=screening_type_filter) }}">Show all screenings</a> or 
                     {% endif %}
-                    <a href="{{ url_for('screening_list', tab='checklist') }}">adjust cutoff settings</a> to view more data.
+                    <a href="{{ url_for('screening_settings_page') }}">adjust cutoff settings</a> to view more data.
                 {% elif search_query or status_filter or screening_type_filter %}
-                    No screenings found with current filters. <a href="{{ url_for('screening_list', tab='screenings') }}">Clear all filters</a> to view all.
+                    No screenings found with current filters. <a href="{{ url_for('screening_list') }}">Clear all filters</a> to view all.
                 {% else %}
                     Click "Refresh" above to generate automated screenings for eligible patients.
                 {% endif %}
@@ -930,9 +930,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h4 class="mb-0">Prep Sheet Checklist Settings</h4>
             </div>
 
-            
 
-            
+
+
 
             <!-- Confidence Threshold Settings -->
             <div class="card mb-4">
@@ -1012,7 +1012,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="alert alert-info mt-4">
                         <i class="fas fa-info-circle me-2"></i>
                         <strong>Note:</strong> Data cutoff settings apply only to medical data types (labs, imaging, consults, hospital visits). 
-                        Screening frequency settings are configured in <a href="{{ url_for('screening_list', tab='types') }}" class="alert-link">Screening Types</a>.
+                        Screening frequency settings are configured in <a href="{{ url_for('screening_types_page') }}" class="alert-link">Screening Types</a>.
                     </div>
                 </div>
             </div>
@@ -1188,7 +1188,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
 
 
-                    
+
 
                     <div class="mt-4">
                         <h6>Quick Preset Options</h6>
