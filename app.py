@@ -62,27 +62,33 @@ app.wsgi_app = ProxyFix(
 csrf = CSRFProtect(app)
 app.config["WTF_CSRF_ENABLED"] = True
 
-# Configure CSRF to exempt API routes
+# Configure CSRF exemptions
+app.config['WTF_CSRF_CHECK_DEFAULT'] = False  # Disable by default, enable selectively
+
+def is_api_request():
+    """Check if request is to an API endpoint"""
+    return request.path.startswith('/api/')
+
 @csrf.exempt
 def csrf_exempt_api_routes():
     """Exempt API routes from CSRF protection"""
-    if request.path.startswith('/api/'):
-        return True
-    return False
+    return is_api_request()
 
-# Alternative approach - add before_request hook for API exemption
+# Properly exempt API routes from CSRF protection
+@csrf.exempt
+def exempt_api_routes():
+    """Exempt API routes from CSRF protection"""
+    return request.path.startswith('/api/')
+
+# Set the exemption function
+csrf.exempt_views.add('api')
+
 @app.before_request
-def exempt_api_from_csrf():
-    """Exempt API endpoints from CSRF validation"""
+def bypass_csrf_for_api():
+    """Bypass CSRF validation for API endpoints"""
     if request.path.startswith('/api/'):
-        from flask_wtf.csrf import validate_csrf
-        # Bypass CSRF validation for API routes
-        try:
-            if hasattr(g, '_csrf_valid'):
-                return
-            g._csrf_valid = True
-        except:
-            pass
+        # Set a flag to bypass CSRF validation
+        g._csrf_disabled = True
 
 # Initialize rate limiter
 limiter = Limiter(
@@ -498,6 +504,7 @@ def validate_csrf_for_state_changes():
     """Enhanced CSRF validation for state-changing requests"""
     # Skip CSRF for all API routes completely (they use JWT authentication instead)
     if request.path.startswith("/api/"):
+        g._csrf_disabled = True
         return
 
     # Skip CSRF for safe methods
