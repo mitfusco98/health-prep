@@ -117,66 +117,12 @@
 
 {% block extra_js %}
 <script>
-// Load keywords and display as badges
-function loadKeywordsAsBadges() {
-    const keywordContainers = document.querySelectorAll('.keywords-badges-container');
-    console.log(`loadKeywordsAsBadges: Found ${keywordContainers.length} keyword containers to load`);
+// Keywords are now preloaded server-side for optimal performance
+// No AJAX loading needed - this eliminates the lag you experienced
 
-    keywordContainers.forEach(container => {
-        const screeningTypeId = container.id.replace('keywords-display-', '');
-
-        console.log(`loadKeywordsAsBadges: Loading keywords for screening ${screeningTypeId}`);
-
-        fetch(`/api/screening-keywords/${screeningTypeId}`)
-            .then(response => {
-                console.log(`loadKeywordsAsBadges: API response status for screening ${screeningTypeId}: ${response.status}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log(`Received keywords data for screening ${screeningTypeId}:`, data);
-                if (data.success && data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
-                    // Display keywords as badges
-                    const keywordsHtml = data.keywords.map(keyword => 
-                        `<span class="badge bg-primary me-1 mb-1">${keyword}</span>`
-                    ).join('');
-                    container.innerHTML = keywordsHtml;
-
-                    console.log(`Successfully updated keywords display for screening ${screeningTypeId} with ${data.keywords.length} keywords`);
-                } else {
-                    // Show no keywords message
-                    container.innerHTML = '<small class="text-muted">No keywords defined</small>';
-                    console.log(`No keywords found for screening ${screeningTypeId}`);
-                }
-            })
-            .catch(error => {
-                console.error(`Error loading keywords for screening ${screeningTypeId}:`, error);
-                container.innerHTML = '<small class="text-danger">Error loading keywords</small>';
-            });
-    });
-}
-
-// Initialize keyword display when page loads
+// Keywords are preloaded on page load for optimal performance
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM Content Loaded - checking for keyword containers...');
-
-    // Check if keyword containers exist
-    const hasKeywordContainers = document.querySelectorAll('.keywords-badges-container').length > 0;
-
-    if (hasKeywordContainers) {
-        console.log('Loading keywords for display...');
-        // Load keywords immediately
-        loadKeywordsAsBadges();
-
-        // Also load after a delay to ensure DOM is fully ready
-        setTimeout(() => {
-            loadKeywordsAsBadges();
-        }, 1000);
-    } else {
-        console.log('No keyword containers found - skipping keyword loading');
-    }
+    console.log('DOM Content Loaded - keywords already preloaded server-side');
 });
 
 // Enhanced refresh functionality that works across all tabs
