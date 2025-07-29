@@ -50,7 +50,9 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if '/screenings' in request.path %}active{% endif %}" href="{{ url_for('screening_list') }}">
+                        <a class="nav-link {% if '/screenings' in request.path %}active{% endif %}" 
+                           href="{{ url_for('screening_list') }}"
+                           onclick="if (window.loadingManager) window.loadingManager.showLoading({message: 'Loading screening data...', showProgress: true, id: 'main-nav'});">
                             <i class="fas fa-clipboard-check me-1"></i><i class="fas fa-cog me-2"></i>Screening List
                         </a>
                     </li>

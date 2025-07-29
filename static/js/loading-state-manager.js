@@ -150,6 +150,9 @@ class LoadingStateManager {
             this.handleNavigation(location.pathname);
         });
 
+        // Enhanced navigation detection for slow page transitions
+        this.detectSlowNavigation();
+
         // Handle form submissions on problematic pages
         document.addEventListener('submit', (e) => {
             this.handleFormSubmission(e);
@@ -177,6 +180,70 @@ class LoadingStateManager {
                 this.hideLoading('navigation');
             }, 5000);
         }
+    }
+
+    // Enhanced navigation detection for slow page transitions
+    detectSlowNavigation() {
+        // Detect clicks on navigation links that lead to slow pages
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (!link) return;
+
+            const href = link.getAttribute('href');
+            
+            // Check for specific slow navigation patterns
+            const slowNavigationPatterns = [
+                // Home to screenings
+                { from: '/', to: '/screenings', message: 'Loading screening list...' },
+                // Screenings tab switching  
+                { from: '/screenings', to: '/screenings?tab=types', message: 'Loading screening types...' },
+                { from: '/screenings', to: '/screenings?tab=screenings', message: 'Loading screenings...' },
+                // Any navigation to screenings
+                { to: '/screenings', message: 'Loading screening data...' }
+            ];
+
+            for (const pattern of slowNavigationPatterns) {
+                const currentPath = window.location.pathname + window.location.search;
+                
+                // Check if this navigation matches a slow pattern
+                if (href.includes(pattern.to)) {
+                    // If there's a specific 'from' pattern, check it matches
+                    if (pattern.from && !currentPath.includes(pattern.from)) {
+                        continue;
+                    }
+                    
+                    // Show loading state immediately
+                    this.showLoading({
+                        message: pattern.message,
+                        showProgress: true,
+                        id: 'slow-navigation'
+                    });
+                    
+                    // Start progress simulation
+                    this.simulateNavigationProgress();
+                    break;
+                }
+            }
+        });
+    }
+
+    simulateNavigationProgress() {
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 10;
+            this.updateProgress(progress, 'slow-navigation');
+            
+            if (progress >= 90) {
+                clearInterval(interval);
+                // Don't hide automatically, let page load complete it
+            }
+        }, 200);
+
+        // Safety timeout to hide loading state
+        setTimeout(() => {
+            clearInterval(interval);
+            this.hideLoading('slow-navigation');
+        }, 8000);
     }
 
     handleFormSubmission(event) {
