@@ -199,12 +199,41 @@ function refreshScreenings(event, tab) {
         return false;
     }
 
-    // Show loading state
+    // Show advanced loading state with progress
+    window.loadingManager.showLoading({
+        message: 'Initializing smart refresh...',
+        showProgress: true,
+        id: 'screening-refresh'
+    });
+
+    // Update button state
     button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
     button.style.pointerEvents = 'none';
 
-    // Navigate to the refresh URL
-    window.location.href = button.href;
+    // Simulate progress updates
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += Math.random() * 20;
+        if (progress >= 90) {
+            clearInterval(progressInterval);
+            progress = 90;
+        }
+        
+        window.loadingManager.updateProgress(progress, 'screening-refresh');
+        
+        if (progress < 30) {
+            window.loadingManager.updateMessage('Analyzing patient data...', 'screening-refresh');
+        } else if (progress < 60) {
+            window.loadingManager.updateMessage('Processing document matches...', 'screening-refresh');
+        } else if (progress < 90) {
+            window.loadingManager.updateMessage('Updating screening statuses...', 'screening-refresh');
+        }
+    }, 500);
+
+    // Navigate to the refresh URL after short delay
+    setTimeout(() => {
+        window.location.href = button.href;
+    }, 1000);
 
     return false;
 }

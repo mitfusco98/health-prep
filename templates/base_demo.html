@@ -19,6 +19,7 @@
     <!-- Custom CSS -->
     <link href="{{ url_for('static', filename='css/custom.css', v=cache_timestamp|default('')) }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/medical_terminology_ui.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/loading-states.css') }}">
 
     {% block extra_css %}{% endblock %}
 </head>
@@ -188,6 +189,9 @@
 
     <!-- Configuration -->
     <script src="{{ url_for('static', filename='js/config.js', v=cache_timestamp|default('')) }}"></script>
+
+    <!-- Loading State Manager -->
+    <script src="{{ url_for('static', filename='js/loading-state-manager.js', v=cache_timestamp|default('')) }}"></script>
 
     <!-- Main JavaScript -->
     <script src="{{ url_for('static', filename='js/main.js', v=cache_timestamp|default('')) }}"></script>

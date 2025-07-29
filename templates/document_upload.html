@@ -1,3 +1,36 @@
+
+<script>
+function handleFileSelection(input) {
+    const file = input.files[0];
+    const progressDiv = document.getElementById('file-upload-progress');
+    
+    if (file) {
+        progressDiv.style.display = 'block';
+        progressDiv.innerHTML = `
+            <div class="upload-progress">
+                <div class="upload-file-info">
+                    <i class="fas fa-file upload-file-icon"></i>
+                    <span class="upload-file-name">${file.name}</span>
+                    <span class="upload-file-size">${formatFileSize(file.size)}</span>
+                </div>
+                <small class="text-muted">Ready to upload</small>
+            </div>
+        `;
+    } else {
+        progressDiv.style.display = 'none';
+    }
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+</script>
+
+
 {% extends 'base_demo.html' %}
 
 {% block title %}HealthPrep - {{ title | default('Upload Document') }}{% endblock %}
@@ -46,7 +79,7 @@
                     
                     <div class="mb-3">
                         <label for="file" class="form-label">{{ form.file.label }}</label>
-                        {{ form.file(class="form-control") }}
+                        {{ form.file(class="form-control", onchange="handleFileSelection(this)") }}
                         {% if form.file.errors %}
                             {% for error in form.file.errors %}
                             <div class="text-danger mt-1">{{ error }}</div>
@@ -55,6 +88,7 @@
                         <div class="form-text">
                             Optional: Upload text documents from EMR systems. You can create document entries without attaching files if needed.
                         </div>
+                        <div id="file-upload-progress" style="display: none;"></div>
                     </div>
                     
                     {% if unified_upload %}
