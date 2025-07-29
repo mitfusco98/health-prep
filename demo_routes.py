@@ -1341,9 +1341,9 @@ def add_screening_type():
         for field, errors in form.errors.items():
             flash(f"{form[field].label.text}: {', '.join(errors)}", "danger")
 
-    # Redirect back to screening list with 'types' tab active and timestamp for cache busting
+    # Redirect back to screening types page with timestamp for cache busting
     timestamp = int(time_module.time())
-    return redirect(url_for("screening_list", tab="types", _t=timestamp))
+    return redirect(url_for("screenings_types", _t=timestamp))
 
 
 @app.route("/screening-types/<int:screening_type_id>/edit", methods=["GET", "POST"])
@@ -1805,7 +1805,7 @@ def edit_screening_type(screening_type_id):
 
         # Redirect back to screening list with 'types' tab active and timestamp for cache busting
         timestamp = int(time_module.time())
-        return redirect(url_for("screening_list", tab="types", t=timestamp))
+        return redirect(url_for("screenings_types", t=timestamp))
 
     # For GET requests or if validation fails, render the form page
     timestamp = int(time_module.time())
@@ -1953,7 +1953,7 @@ def delete_screening_type(screening_type_id):
 
     # Redirect back to screening list with 'types' tab active and timestamp for cache busting
     timestamp = int(time_module.time())
-    return redirect(url_for("screening_list", tab="types", _t=timestamp))
+    return redirect(url_for("screenings_types", _t=timestamp))
 
 
 @app.route("/patients/<int:patient_id>/download_prep_sheet")
@@ -3672,10 +3672,18 @@ def page_not_found(e):
     return render_template("404.html"), 404
 
 
-@app.route("/screenings")
-def screening_list():
-    """High-performance screening list with optimized database queries and caching"""
+# ============================================================================
+# CLEAN URL ROUTES - New path-based routing structure
+# ============================================================================
 
+@app.route("/screenings/list")
+def screenings_list():
+    """Clean URL for screening list - redirects to main screening route"""
+    return redirect(url_for("screening_list"))
+
+@app.route("/screenings/types")
+def screenings_types():
+    """Clean URL for screening types management"""
     # Import datetime at the function level to avoid naming conflicts
     from datetime import datetime as dt_module
     
@@ -3686,8 +3694,71 @@ def screening_list():
     # Define today at the start to ensure it's always available
     today = dt_module.now().date()
 
-    # Get the tab parameter (screenings or types)
+    # Force tab to "types" for this clean URL
+    tab = "types"
+    
+    # Continue with the same logic as original screening_list but with forced tab
+    return _screening_list_logic(tab=tab, today=today, now=now)
+
+@app.route("/screenings/settings")
+def screenings_settings():
+    """Clean URL for screening settings (checklist configuration)"""
+    # Import datetime at the function level to avoid naming conflicts
+    from datetime import datetime as dt_module
+    
+    # Define now() function to use in templates for date comparisons
+    def now():
+        return dt_module.now()
+
+    # Define today at the start to ensure it's always available
+    today = dt_module.now().date()
+
+    # Force tab to "checklist" for this clean URL
+    tab = "checklist"
+    
+    # Continue with the same logic as original screening_list but with forced tab
+    return _screening_list_logic(tab=tab, today=today, now=now)
+
+# ============================================================================
+# LEGACY ROUTE WITH BACKWARD COMPATIBILITY
+# ============================================================================
+
+@app.route("/screenings")
+def screening_list():
+    """Legacy screening list route with tab parameter support and backward compatibility"""
+    
+    # Check for clean URL redirects
     tab = request.args.get("tab", "screenings")
+    
+    # Redirect to clean URLs if tab parameter is used
+    if tab == "types":
+        return redirect(url_for("screenings_types"))
+    elif tab == "checklist":
+        return redirect(url_for("screenings_settings"))
+    
+    # Import datetime at the function level to avoid naming conflicts
+    from datetime import datetime as dt_module
+    
+    # Define now() function to use in templates for date comparisons
+    def now():
+        return dt_module.now()
+
+    # Define today at the start to ensure it's always available
+    today = dt_module.now().date()
+    
+    # Continue with the same logic
+    return _screening_list_logic(tab=tab, today=today, now=now)
+
+def _screening_list_logic(tab="screenings", today=None, now=None):
+    """Shared logic for all screening list routes"""
+    
+    # Import datetime at the function level if not provided
+    if not today or not now:
+        from datetime import datetime as dt_module
+        if not now:
+            now = lambda: dt_module.now()
+        if not today:
+            today = dt_module.now().date()
     
     # Performance optimization: Use intelligent caching for expensive queries
     from intelligent_cache_manager import get_cache_manager
@@ -3803,20 +3874,50 @@ def screening_list():
             if error_message:
                 flash(f"Smart refresh partially completed: updated {success_count} patients. {error_message}", "warning")
             else:
-                flash(f"Smart refresh completed successfully: updated screenings for {success_count} of {total_patients} patients", "success")
+                flash(f"Smart refresh completed successfully. Updated {success_count} out of {total_patients} patients.", "success")
+        except Exception as e:
+            flash(f"Error during smart refresh: {str(e)}", "danger")
+    
+    # Variables for checklist tab
+    active_screening_types = []
+    if tab == "checklist":
+        # Debug: Check what settings we're sending to template
+        print(f"=== CHECKLIST TAB DEBUG ===")
+        print(f"Settings object: {settings}")
+        print(f"Status options list (property): {settings.status_options_list}")
+        print(f"Prep sheet content: Controlled by screening engine")
+        print(f"=== END DEBUG ===")
+        # Get active screening types for interface display
+        # Get active screening types using cache
+        try:
+            from intelligent_cache_manager import get_cache_manager
+            cache_mgr = get_cache_manager()
+            active_screening_types_data = cache_mgr.cache_screening_types(active_only=True)
             
-            # Redirect back to remove the regenerate parameter from URL while preserving search
-            redirect_params = {'tab': tab}
-            if search_query:
-                redirect_params['search'] = search_query
-            return redirect(url_for('screening_list', **redirect_params))
+            # Convert cached data back to model-like objects for template compatibility
+            class ScreeningTypeProxy:
+                def __init__(self, data):
+                    for key, value in data.items():
+                        setattr(self, key, value)
+            
+            active_screening_types = [ScreeningTypeProxy(st_data) for st_data in active_screening_types_data]
             
         except Exception as e:
-            app.logger.error(f"Error in timeout-safe refresh: {e}")
-            import traceback
-            traceback.print_exc()
-            flash("Smart refresh system error. Please try again.", "danger")
+            print(f"Cache error for active screening types, falling back to database: {e}")
+            active_screening_types = ScreeningType.query.filter_by(is_active=True).order_by(ScreeningType.name).all()
 
+    # Create forms for screening type management
+    from forms import ScreeningTypeForm
+
+    add_form = ScreeningTypeForm()
+    edit_form = ScreeningTypeForm()
+
+    # If we're on the screening types tab
+    screening_types = []
+    if tab == "types":
+        # Get all screening types
+        screening_types_query = ScreeningType.query.order_by(ScreeningType.name)
+        screening_types = screening_types_query.all()
     
     # For the screenings tab, load existing screenings from database
     screenings = []

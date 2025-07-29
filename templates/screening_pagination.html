@@ -26,7 +26,7 @@
             <ul class="pagination justify-content-end mb-0 pagination-dark">
                 <!-- Previous Page -->
                 <li class="page-item {{ 'disabled' if not pagination.has_prev else '' }}">
-                    <a class="page-link bg-dark text-light border-secondary" href="{{ url_for('screening_list', 
+                    <a class="page-link bg-dark text-light border-secondary" href="{{ url_for('screenings_list', 
                         page=pagination.prev_page, 
                         page_size=page_size, 
                         status=status_filter, 
@@ -43,9 +43,9 @@
 
                 {% if start_page > 1 %}
                     <li class="page-item">
-                        <a class="page-link bg-dark text-light border-secondary" href="{{ url_for('screening_list', 
+                        <a class="page-link bg-dark text-light border-secondary" href="{{ url_for('screenings_list', 
                             page=1, page_size=page_size, status=status_filter, 
-                            screening_type=screening_type_filter, search=search_query, tab='screenings') }}">1</a>
+                            screening_type=screening_type_filter, search=search_query }}">1</a>
                     </li>
                     {% if start_page > 2 %}
                         <li class="page-item disabled"><span class="page-link bg-dark text-muted border-secondary">...</span></li>
@@ -54,9 +54,9 @@
 
                 {% for page_num in range(start_page, end_page + 1) %}
                     <li class="page-item {{ 'active' if page_num == pagination.current_page else '' }}">
-                        <a class="page-link {{ 'bg-primary text-white' if page_num == pagination.current_page else 'bg-dark text-light' }} border-secondary" href="{{ url_for('screening_list', 
+                        <a class="page-link {{ 'bg-primary text-white' if page_num == pagination.current_page else 'bg-dark text-light' }} border-secondary" href="{{ url_for('screenings_list', 
                             page=page_num, page_size=page_size, status=status_filter, 
-                            screening_type=screening_type_filter, search=search_query, tab='screenings') }}">
+                            screening_type=screening_type_filter, search=search_query }}">
                             {{ page_num }}
                         </a>
                     </li>
@@ -67,9 +67,9 @@
                         <li class="page-item disabled"><span class="page-link bg-dark text-muted border-secondary">...</span></li>
                     {% endif %}
                     <li class="page-item">
-                        <a class="page-link bg-dark text-light border-secondary" href="{{ url_for('screening_list', 
+                        <a class="page-link bg-dark text-light border-secondary" href="{{ url_for('screenings_list', 
                             page=pagination.total_pages, page_size=page_size, status=status_filter, 
-                            screening_type=screening_type_filter, search=search_query, tab='screenings') }}">
+                            screening_type=screening_type_filter, search=search_query }}">
                             {{ pagination.total_pages }}
                         </a>
                     </li>
@@ -77,7 +77,7 @@
 
                 <!-- Next Page -->
                 <li class="page-item {{ 'disabled' if not pagination.has_next else '' }}">
-                    <a class="page-link bg-dark text-light border-secondary" href="{{ url_for('screening_list', 
+                    <a class="page-link bg-dark text-light border-secondary" href="{{ url_for('screenings_list', 
                         page=pagination.next_page, 
                         page_size=page_size, 
                         status=status_filter, 
@@ -140,13 +140,12 @@ document.getElementById('pageSizeSelect').addEventListener('change', function() 
 // Preload next page for better UX (if exists)
 {% if pagination.has_next %}
 document.addEventListener('DOMContentLoaded', function() {
-    const nextPageUrl = "{{ url_for('screening_list', 
+    const nextPageUrl = "{{ url_for('screenings_list', 
         page=pagination.next_page, 
         page_size=page_size, 
         status=status_filter, 
         screening_type=screening_type_filter, 
-        search=search_query, 
-        tab='screenings') }}";
+        search=search_query) }}";
     
     // Preload next page after a delay
     setTimeout(() => {

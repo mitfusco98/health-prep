@@ -35,20 +35,101 @@ class LoadingStateManager {
 
     showLoading(options = {}) {
         const {
-            message = 'Loading...',
+            message = null,
             showProgress = false,
             preventInteraction = true,
             target = null,
             id = 'default'
         } = options;
 
+        // Auto-detect loading message based on destination URL if not provided
+        const finalMessage = message || this.getLoadingMessageForDestination();
+
         this.activeLoadings.add(id);
 
         if (target) {
-            this.showTargetedLoading(target, message, showProgress);
+            this.showTargetedLoading(target, finalMessage, showProgress);
         } else {
-            this.showGlobalLoading(message, showProgress, preventInteraction);
+            this.showGlobalLoading(finalMessage, showProgress, preventInteraction);
         }
+    }
+
+    /**
+     * Automatically detect appropriate loading message based on destination URL
+     */
+    getLoadingMessageForDestination(url = null) {
+        // Use provided URL or detect from current navigation context
+        const targetUrl = url || this.detectNavigationDestination();
+        
+        if (!targetUrl) return 'Loading...';
+
+        // Define loading messages for different URL patterns
+        const urlPatterns = {
+            '/screenings/types': 'Loading screening types...',
+            '/screenings/settings': 'Loading screening settings...',
+            '/screenings/list': 'Loading screening data...',
+            '/screenings': 'Loading screening data...',
+            '/patients': 'Loading patient records...',
+            '/patients/add': 'Loading patient form...',
+            '/patients/\\d+': 'Loading patient details...',
+            '/patients/\\d+/edit': 'Loading patient edit form...',
+            '/documents': 'Loading document repository...',
+            '/documents/add': 'Loading document upload...',
+            '/documents/\\d+': 'Loading document details...',
+            '/admin': 'Loading admin dashboard...',
+            '/screening-types/\\d+/edit': 'Validating screening type...',
+            '/api/': 'Processing API request...'
+        };
+
+        // Check each pattern
+        for (const [pattern, message] of Object.entries(urlPatterns)) {
+            const regex = new RegExp(pattern);
+            if (regex.test(targetUrl)) {
+                return message;
+            }
+        }
+
+        // Default fallback
+        return 'Loading...';
+    }
+
+    /**
+     * Detect navigation destination from various sources
+     */
+    detectNavigationDestination() {
+        // Check for form action attributes
+        const activeForm = document.querySelector('form[data-loading-processed="true"]');
+        if (activeForm && activeForm.action) {
+            try {
+                const url = new URL(activeForm.action);
+                return url.pathname;
+            } catch (e) {
+                // Handle relative URLs
+                return activeForm.action;
+            }
+        }
+
+        // Check for clicked links
+        const activeLink = document.querySelector('a[data-navigation-active]');
+        if (activeLink && activeLink.href) {
+            try {
+                const url = new URL(activeLink.href);
+                return url.pathname;
+            } catch (e) {
+                return activeLink.href;
+            }
+        }
+
+        // Check current pathname for context
+        const currentPath = window.location.pathname;
+        
+        // If we're on a form page, assume we're staying on the same page
+        if (currentPath.includes('/edit') || currentPath.includes('/add')) {
+            return currentPath;
+        }
+
+        // Default to current path
+        return currentPath;
     }
 
     showGlobalLoading(message, showProgress, preventInteraction) {
@@ -191,12 +272,23 @@ class LoadingStateManager {
 
             const href = link.getAttribute('href');
             
-            // Check for specific slow navigation patterns
+            // Mark this link as active for destination detection
+            document.querySelectorAll('a[data-navigation-active]').forEach(el => {
+                el.removeAttribute('data-navigation-active');
+            });
+            link.setAttribute('data-navigation-active', 'true');
+            
+            // Check for specific slow navigation patterns (updated for clean URLs)
             const slowNavigationPatterns = [
                 // Home to screenings
                 { from: '/', to: '/screenings', message: 'Loading screening list...' },
-                // Screenings tab switching  
+                // Clean URL navigation patterns
+                { to: '/screenings/types', message: 'Loading screening types...' },
+                { to: '/screenings/settings', message: 'Loading screening settings...' },
+                { to: '/screenings/list', message: 'Loading screening data...' },
+                // Legacy tab switching (backward compatibility)
                 { from: '/screenings', to: '/screenings?tab=types', message: 'Loading screening types...' },
+                { from: '/screenings', to: '/screenings?tab=checklist', message: 'Loading screening settings...' },
                 { from: '/screenings', to: '/screenings?tab=screenings', message: 'Loading screenings...' },
                 // Any navigation to screenings
                 { to: '/screenings', message: 'Loading screening data...' }
