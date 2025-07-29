@@ -260,20 +260,41 @@ class LoadingStateManager {
             this.updateProgress(100, 'screening-form');
             this.updateMessage('Finalizing changes...', 'screening-form');
             
-            // Re-enable the form temporarily for submission
-            const submitButton = form.querySelector('input[type="submit"], button[type="submit"]');
-            if (submitButton) {
-                submitButton.disabled = false;
-            }
+            // Create a new form submission using FormData and fetch API
+            const submitUrl = form.action || window.location.pathname;
+            const submitMethod = form.method || 'POST';
             
-            // Submit the form naturally (don't prevent default on next submit)
-            form.removeEventListener('submit', this.handleFormSubmission);
-            form.submit();
+            console.log('Submitting form to:', submitUrl, 'via', submitMethod);
+            console.log('Form data:', Object.fromEntries(formData.entries()));
+            
+            // Submit using fetch to avoid form.submit() issues
+            const response = await fetch(submitUrl, {
+                method: submitMethod,
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            if (response.ok) {
+                // If successful, redirect or reload
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    window.location.reload();
+                }
+            } else {
+                const errorText = await response.text();
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
+            }
             
         } catch (error) {
             console.error('Error processing screening type form:', error);
             this.hideLoading('screening-form');
             alert(`Error processing form: ${error.message}. Please try again.`);
+            
+            // Reset the form processing flag so user can try again
+            form.dataset.loadingProcessed = 'false';
         }
     }
 
