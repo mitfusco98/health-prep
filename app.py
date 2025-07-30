@@ -357,23 +357,24 @@ def handle_rate_limit(error):
 
 @app.errorhandler(Exception)
 def handle_unexpected_error(e):
-    """Handle all unhandled exceptions with reduced console noise"""
+    """Handle all unhandled exceptions with enhanced recovery"""
     import traceback
     import uuid
+    import time
 
     # Generate a unique error ID
     error_id = str(uuid.uuid4())[:8]
 
     # Check if this is a database SSL connection error
     if "SSL connection has been closed unexpectedly" in str(e):
-        # Log database connection errors less verbosely
         app.logger.warning(
             f"Database connection lost [{error_id}]: Attempting to reconnect"
         )
         try:
             db.session.rollback()
-            # Try to re-establish connection by creating a new session
             db.session.remove()
+            # Force engine disposal to create fresh connections
+            db.engine.dispose()
         except:
             pass
         return (
@@ -381,24 +382,47 @@ def handle_unexpected_error(e):
                 "500.html",
                 error_id=error_id,
                 message="Database connection issue - please try again",
+                retry_suggested=True,
             ),
             500,
         )
 
-    # For other errors, log with full detail but less duplicated output
+    # Handle memory/timeout related errors
+    if any(keyword in str(e).lower() for keyword in ['timeout', 'memory', 'overflow', 'too many']):
+        app.logger.warning(f"Resource constraint error [{error_id}]: {type(e).__name__}")
+        try:
+            db.session.rollback()
+            db.session.remove()
+            # Clear any cached data that might be consuming memory
+            if hasattr(app, '_request_tracker'):
+                # Clean old tracking data
+                current_time = time.time()
+                app._request_tracker = {
+                    ip: [ts for ts in timestamps if current_time - ts < 60]
+                    for ip, timestamps in app._request_tracker.items()
+                }
+        except:
+            pass
+        return (
+            render_template(
+                "500.html",
+                error_id=error_id,
+                message="System temporarily busy - please try again",
+                retry_suggested=True,
+            ),
+            500,
+        )
+
+    # For other errors, log with full detail
     app.logger.error(f"Unexpected Error [{error_id}]: {type(e).__name__} - {str(e)}")
     app.logger.debug(f"Full traceback for [{error_id}]:\n{traceback.format_exc()}")
 
-    # For database errors, try to recover
-    if (
-        "database" in str(e).lower()
-        or "sql" in str(e).lower()
-        or "psycopg2" in str(e).lower()
-    ):
-        try:
-            db.session.rollback()
-        except:
-            pass
+    # Always attempt database cleanup for any error
+    try:
+        db.session.rollback()
+        db.session.remove()
+    except Exception as cleanup_error:
+        app.logger.debug(f"Error during cleanup [{error_id}]: {str(cleanup_error)}")
 
     # Return a user-friendly error page
     return render_template("500.html", error_id=error_id), 500
