@@ -54,14 +54,14 @@
     <div class="card-body p-0">
         <form method="POST" action="{{ url_for('delete_patient', patient_id=0) }}" id="deleteForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
+            
             <div class="mb-3 p-3 border-bottom">
                 <button type="button" id="deleteButton" class="btn btn-sm btn-danger" disabled>
                     <i class="fas fa-trash me-2"></i> Delete Selected Patients
                 </button>
                 <span id="selectedCount" class="badge bg-secondary ms-2">0 selected</span>
             </div>
-
+            
             <div class="table-responsive">
                 <table class="table table-hover">
                     <thead>
@@ -202,10 +202,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateDeleteButton() {
         const checkedBoxes = document.querySelectorAll('input[name="selected_patients[]"]:checked');
         const count = checkedBoxes.length;
-
+        
         selectedCount.textContent = `${count} selected`;
         deleteButton.disabled = count === 0;
-
+        
         // Update select all checkbox state
         if (selectAllCheckbox) {
             selectAllCheckbox.checked = count === patientCheckboxes.length;
@@ -217,44 +217,44 @@ document.addEventListener('DOMContentLoaded', function() {
     if (deleteButton) {
         deleteButton.addEventListener('click', function(e) {
             e.preventDefault();
-
+            
             const checkedBoxes = document.querySelectorAll('input[name="selected_patients[]"]:checked');
             if (checkedBoxes.length === 0) {
                 alert('Please select at least one patient to delete.');
                 return;
             }
-
+            
             const count = checkedBoxes.length;
             const confirmMessage = count === 1 
                 ? 'Are you sure you want to delete 1 patient and all associated records?' 
                 : `Are you sure you want to delete ${count} patients and all associated records?`;
-
+            
             if (confirm(confirmMessage)) {
                 // Get selected patient IDs
                 const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
                 console.log('Submitting patient deletion for IDs:', selectedIds);
-
+                
                 // Clear any existing hidden inputs for patient IDs and uncheck all checkboxes to avoid conflicts
                 const existingInputs = deleteForm.querySelectorAll('input[name="patient_ids"]');
                 existingInputs.forEach(input => input.remove());
-
+                
                 // Uncheck all the checkboxes to prevent them from being submitted
                 checkedBoxes.forEach(cb => cb.checked = false);
-
+                
                 // Add selected patient IDs as a comma-separated hidden input
                 const patientIdsInput = document.createElement('input');
                 patientIdsInput.type = 'hidden';
                 patientIdsInput.name = 'patient_ids';
                 patientIdsInput.value = selectedIds.join(',');
                 deleteForm.appendChild(patientIdsInput);
-
+                
                 console.log('Form action:', deleteForm.action);
                 console.log('Added patient_ids input with value:', patientIdsInput.value);
                 console.log('Unchecked all checkboxes to avoid duplicate submission');
-
+                
                 // Ensure form is set to POST method
                 deleteForm.method = 'POST';
-
+                
                 // Submit the form
                 deleteForm.submit();
             }

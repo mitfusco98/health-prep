@@ -1,47 +1,3 @@
-/* Custom styles for HealthPrep */
-
-/* Universal Navigation Controls */
-.universal-nav-controls {
-    order: -1; /* Ensure they appear first in the navbar */
-    margin-right: 1rem !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-/* Universal Navigation Buttons */
-#universal-back-btn,
-#universal-forward-btn {
-    border-radius: 0.25rem;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    background-color: rgba(33, 37, 41, 0.8);
-}
-
-#universal-back-btn:hover:not(:disabled),
-#universal-forward-btn:hover:not(:disabled) {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: scale(1.05);
-}
-
-#universal-back-btn:disabled,
-#universal-forward-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-#universal-back-btn:active:not(:disabled),
-#universal-forward-btn:active:not(:disabled) {
-    transform: scale(0.95);
-}
-
 /* 
  * Custom CSS for HealthPrep
  * Contains styling for specialized components
@@ -482,17 +438,4 @@
 .form-select.bg-dark option {
     background-color: #343a40;
     color: #e9ecef;
-}
-
-/* Override for buttons - added May 18, 2025 */
-.btn .fas, .btn .fa {
-    display: none !important;
-}
-
-/* Exception for universal navigation buttons */
-#universal-back-btn .fas,
-#universal-back-btn .fa,
-#universal-forward-btn .fas,
-#universal-forward-btn .fa {
-    display: inline-block !important;
 }

@@ -3,9 +3,16 @@
 {% block title %}HealthPrep - Add Screening Type{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <h1>Add Screening Type</h1>
-    <p class="lead">Add a new screening type definition</p>
+<div class="row mb-4">
+    <div class="col-md-9">
+        <h1>Add Screening Type</h1>
+        <p class="lead">Add a new screening type definition</p>
+    </div>
+    <div class="col-md-3 text-md-end">
+        <a href="{{ url_for('screening_list', tab='types') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Types
+        </a>
+    </div>
 </div>
 
 <div class="card">
