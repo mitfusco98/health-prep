@@ -1,6 +1,6 @@
 /* Custom styles for HealthPrep */
 
-/* Universal Navigation Controls - Simplified and consistent */
+/* Universal Navigation Controls - Consolidated styling for both base templates */
 .universal-nav-controls {
     order: -999 !important;
     margin-right: 1rem !important;
@@ -12,19 +12,14 @@
     flex-shrink: 0 !important;
 }
 
-/* Universal Navigation Buttons - Force exact same styling everywhere */
-html body .navbar .universal-nav-controls #universal-back-btn,
-html body .navbar .universal-nav-controls #universal-forward-btn,
-html body .universal-nav-controls #universal-back-btn,
-html body .universal-nav-controls #universal-forward-btn,
-html body #universal-back-btn,
-html body #universal-forward-btn,
-#universal-back-btn,
-#universal-forward-btn {
-    /* Reset all possible inherited styles first */
+/* Universal Navigation Buttons - Unified styling that works identically in both base.html and base_demo.html */
+.navbar .universal-nav-controls button[id^="universal-"],
+.universal-nav-controls button[id^="universal-"],
+button[id^="universal-"] {
+    /* Completely reset all styles to ensure consistency */
     all: unset !important;
     
-    /* Force exact same size everywhere */
+    /* Exact same dimensions everywhere */
     width: 36px !important;
     height: 36px !important;
     min-width: 36px !important;
@@ -32,79 +27,72 @@ html body #universal-forward-btn,
     max-width: 36px !important;
     max-height: 36px !important;
     
-    /* Force exact same display properties */
+    /* Consistent layout */
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    flex-shrink: 0 !important;
     
-    /* Force exact same visual appearance */
+    /* Unified appearance - works in both templates */
     background-color: transparent !important;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
     border-radius: 0.25rem !important;
     color: #fff !important;
     
-    /* Force exact same typography */
+    /* Typography consistency */
     font-size: 14px !important;
-    font-family: "Font Awesome 6 Free" !important;
-    font-weight: 900 !important;
+    font-family: inherit !important;
+    font-weight: normal !important;
     line-height: 1 !important;
     text-align: center !important;
     text-decoration: none !important;
     
-    /* Force exact same spacing */
+    /* Spacing reset */
     padding: 0 !important;
     margin: 0 !important;
     
-    /* Force exact same behavior */
+    /* Behavior standardization */
     cursor: pointer !important;
     transition: all 0.15s ease-in-out !important;
     box-sizing: border-box !important;
-    
-    /* Override any possible framework interference */
-    float: none !important;
     position: relative !important;
-    z-index: auto !important;
+    z-index: 1 !important;
     outline: none !important;
     box-shadow: none !important;
 }
 
-/* Hover states */
-#universal-back-btn:hover:not(:disabled),
-#universal-forward-btn:hover:not(:disabled) {
+/* Hover states - consistent across both templates */
+button[id^="universal-"]:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.1) !important;
     border-color: rgba(255, 255, 255, 0.75) !important;
     transform: scale(1.05) !important;
 }
 
 /* Disabled states */
-#universal-back-btn:disabled,
-#universal-forward-btn:disabled {
+button[id^="universal-"]:disabled {
     opacity: 0.4 !important;
     cursor: not-allowed !important;
 }
 
 /* Active states */
-#universal-back-btn:active:not(:disabled),
-#universal-forward-btn:active:not(:disabled) {
+button[id^="universal-"]:active:not(:disabled) {
     transform: scale(0.95) !important;
     background-color: rgba(255, 255, 255, 0.2) !important;
 }
 
 /* Focus states */
-#universal-back-btn:focus,
-#universal-forward-btn:focus {
+button[id^="universal-"]:focus {
     outline: 2px solid rgba(255, 255, 255, 0.5) !important;
     outline-offset: 2px !important;
 }
 
-/* Icon styling */
-#universal-back-btn .fas,
-#universal-back-btn .fa,
-#universal-forward-btn .fas,
-#universal-forward-btn .fa {
+/* Icon styling - works with both Font Awesome versions */
+button[id^="universal-"] .fas,
+button[id^="universal-"] .fa {
     font-size: 14px !important;
     color: #fff !important;
     line-height: 1 !important;
+    display: inline-block !important;
 }
 
 /* 
