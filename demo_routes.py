@@ -2750,6 +2750,11 @@ def add_document_unified():
                     }
         else:
             # No file uploaded - create a reference-only document entry
+            filename = None
+            content = None
+            binary_content = None
+            is_binary = False
+            mime_type = None
             document_metadata = {
                 "is_reference_only": True,
                 "manual_entry": True,
