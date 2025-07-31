@@ -2,15 +2,12 @@
 
 /* Universal Navigation Controls */
 .universal-nav-controls {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
+    order: -1; /* Ensure they appear first in the navbar */
+    margin-right: 1rem !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center;
     gap: 0.5rem;
-    z-index: 1000;
 }
 
 /* Universal Navigation Buttons */
