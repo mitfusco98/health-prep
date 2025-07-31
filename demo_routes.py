@@ -830,12 +830,32 @@ def edit_patient(patient_id):
 @app.route("/patients/<int:patient_id>/prep_sheet", defaults={"cache_buster": None})
 @app.route("/patients/<int:patient_id>/prep_sheet/<int:cache_buster>")
 def generate_patient_prep_sheet(patient_id, cache_buster=None):
-    """Generate a preparation sheet for the patient"""
+    """Generate a preparation sheet for the patient - CACHED"""
 
     def now():
         return datetime.now()
 
     patient = Patient.query.get_or_404(patient_id)
+    
+    # Try to get cached prep sheet first (expensive operation caching)
+    if cache_buster is None:  # Only use cache when no cache_buster specified
+        try:
+            from cached_operations import get_cached_prep_sheet_data
+            
+            cached_prep = get_cached_prep_sheet_data(patient_id, include_documents=True)
+            if cached_prep:
+                app.logger.info(f"📄 Using cached prep sheet for patient {patient_id}")
+                
+                # Render template with cached data
+                return render_template(
+                    "prep_sheet.html",
+                    patient=patient,
+                    **cached_prep  # Unpack all the cached prep sheet data
+                )
+        except Exception as cache_error:
+            app.logger.warning(f"Prep sheet cache miss/error for patient {patient_id}: {cache_error}")
+    else:
+        app.logger.info(f"🔄 Cache buster active for patient {patient_id}, generating fresh prep sheet")
 
     # Get the date of the last visit
     last_visit = (
@@ -1056,38 +1076,46 @@ def generate_patient_prep_sheet(patient_id, cache_buster=None):
     # Get checklist settings for display options (if not already loaded)
     if not "checklist_settings" in locals():
         from checklist_routes import get_or_create_settings
-
         checklist_settings = get_or_create_settings()
+
+    # Prepare all template data for caching
+    template_data = {
+        'prep_sheet': prep_sheet_data,
+        'recent_vitals': recent_vitals[0] if recent_vitals else None,
+        'recent_labs': recent_labs,
+        'recent_imaging': recent_imaging,
+        'recent_consults': recent_consults,
+        'recent_hospital': recent_hospital,
+        'settings': checklist_settings,
+        'active_conditions': active_conditions,
+        'screenings': screenings,
+        'immunizations': immunizations,
+        'last_visit_date': last_visit_date,
+        'past_appointments': past_appointments,
+        'today': datetime.now(),
+        'cache_timestamp': cache_timestamp,
+        'checklist_settings': checklist_settings,
+        'document_screening_data': document_screening_data,
+        'screening_document_matches': screening_document_matches,
+        'filtered_medical_data': filtered_medical_data,
+        'other_documents': other_documents,
+    }
+
+    # Cache the expensive prep sheet data for future requests
+    if cache_buster is None:  # Only cache when no cache_buster
+        try:
+            from cached_operations import cache_prep_sheet_data
+            cache_prep_sheet_data(patient_id, template_data, include_documents=True)
+            app.logger.info(f"📄 Cached prep sheet data for patient {patient_id}")
+        except Exception as cache_error:
+            app.logger.warning(f"Failed to cache prep sheet for patient {patient_id}: {cache_error}")
 
     # Response with cache-control headers to prevent caching
     response = make_response(
         render_template(
             "prep_sheet.html",
             patient=patient,
-            prep_sheet=prep_sheet_data,
-            recent_vitals=recent_vitals[0] if recent_vitals else None,
-            recent_labs=recent_labs,
-            recent_imaging=recent_imaging,
-            recent_consults=recent_consults,
-            recent_hospital=recent_hospital,
-            settings=checklist_settings,
-            active_conditions=active_conditions,
-            screenings=screenings,
-            immunizations=immunizations,
-
-            last_visit_date=last_visit_date,
-            past_appointments=past_appointments,
-            today=datetime.now(),
-            cache_timestamp=cache_timestamp,
-            checklist_settings=checklist_settings,
-            # Prep sheet content is now controlled by screening engine, no filtering needed
-            # Enhanced document matching data
-            document_screening_data=document_screening_data,
-            screening_document_matches=screening_document_matches,
-            # Enhanced medical data with documents and cutoff filtering
-            filtered_medical_data=filtered_medical_data,
-            # Other documents for miscellaneous section
-            other_documents=other_documents,
+            **template_data
         )
     )
 
@@ -2206,6 +2234,14 @@ def save_prep_sheet(patient_id):
         db.session.add(document)
         db.session.commit()
 
+        # CACHE INVALIDATION: Clear related caches when prep sheet document is created
+        try:
+            from cached_operations import invalidate_patient_cache
+            invalidate_patient_cache(patient_id)
+            app.logger.info(f"🔄 Invalidated caches for patient {patient_id} after prep sheet creation")
+        except Exception as cache_error:
+            app.logger.warning(f"Cache invalidation error during prep sheet creation: {cache_error}")
+
         return jsonify(
             {"status": "success", "message": "Prep sheet saved successfully"}
         )
@@ -2735,12 +2771,34 @@ def add_document_unified():
             db.session.add(document)
             db.session.commit()
 
-            # ENHANCED: Trigger OCR processing if needed
+            # CACHE INVALIDATION: Clear related caches when document is uploaded
+            try:
+                from cached_operations import invalidate_patient_cache
+                invalidate_patient_cache(patient_id)
+                app.logger.info(f"🔄 Invalidated caches for patient {patient_id} after document upload")
+            except Exception as cache_error:
+                app.logger.warning(f"Cache invalidation error during document upload: {cache_error}")
+
+            # ENHANCED: Trigger OCR processing if needed with caching
             try:
                 from ocr_document_processor import ocr_processor
+                from cached_operations import cache_ocr_processing_result
                 
                 # Check if document needs OCR and process it
                 ocr_result = ocr_processor.process_document_ocr(document.id)
+                
+                # Cache OCR results if successful
+                if ocr_result['success'] and ocr_result.get('extracted_text'):
+                    cache_ocr_processing_result(
+                        document.id, 
+                        ocr_result['extracted_text'],
+                        {
+                            'confidence_score': ocr_result.get('confidence_score', 0),
+                            'processing_method': ocr_result.get('processing_method', 'unknown'),
+                            'processed_at': datetime.now().isoformat()
+                        }
+                    )
+                    app.logger.info(f"🔍 Cached OCR results for document {document.id}")
                 
                 if ocr_result['success'] and ocr_result['ocr_applied']:
                     print(f"🔍 OCR processed document {document.id}: {ocr_result['extracted_text_length']} characters extracted with {ocr_result['confidence_score']}% confidence")
@@ -2982,7 +3040,7 @@ def document_image(document_id):
 
 @app.route("/documents/repository")
 def document_repository():
-    """Display all documents in the repository with patient information"""
+    """Display all documents in the repository with patient information - CACHED"""
     # Get search query parameter
     search_query = request.args.get("search", "")
 
@@ -2993,32 +3051,103 @@ def document_repository():
     else:
         selected_patient_id = None
 
-    # Create query with eager loading of patient relationship
-    query = MedicalDocument.query.join(Patient).options(
-        db.joinedload(MedicalDocument.patient)
-    )
-
-    # Apply patient filter if provided
-    if selected_patient_id:
-        query = query.filter(MedicalDocument.patient_id == selected_patient_id)
-
-    # Apply search filter if provided
-    if search_query:
-        query = query.filter(
-            db.or_(
-                MedicalDocument.document_name.ilike(f"%{search_query}%"),
-                MedicalDocument.document_type.ilike(f"%{search_query}%"),
-                MedicalDocument.source_system.ilike(f"%{search_query}%"),
-                Patient.first_name.ilike(f"%{search_query}%"),
-                Patient.last_name.ilike(f"%{search_query}%"),
-            )
+    # Try to get cached results first (addresses 1313ms slow query)
+    try:
+        from cached_operations import get_cached_all_documents_repository
+        
+        # Use page size of 1000 to get most documents (can be adjusted)
+        cached_result = get_cached_all_documents_repository(
+            page=1, per_page=1000, search_query=search_query
+        )
+        
+        if 'documents' in cached_result and not cached_result.get('error'):
+            # Filter by patient if needed (cached results may include all patients)
+            all_documents_data = cached_result['documents']
+            if selected_patient_id:
+                all_documents_data = [doc for doc in all_documents_data if doc['patient_id'] == selected_patient_id]
+            
+            # Convert cached data back to objects for template compatibility
+            all_documents = []
+            for doc_data in all_documents_data:
+                # Create a document proxy object with all required attributes
+                doc_attrs = dict(doc_data)
+                
+                # Ensure datetime fields are converted back from ISO strings if needed
+                if doc_attrs.get('created_at') and isinstance(doc_attrs['created_at'], str):
+                    from datetime import datetime
+                    try:
+                        doc_attrs['created_at'] = datetime.fromisoformat(doc_attrs['created_at'])
+                    except:
+                        doc_attrs['created_at'] = None
+                
+                if doc_attrs.get('document_date') and isinstance(doc_attrs['document_date'], str):
+                    from datetime import datetime
+                    try:
+                        doc_attrs['document_date'] = datetime.fromisoformat(doc_attrs['document_date'])
+                    except:
+                        doc_attrs['document_date'] = None
+                
+                doc_obj = type('DocumentProxy', (), doc_attrs)()
+                
+                # Create a patient proxy object that the template expects
+                patient_proxy = type('PatientProxy', (), {
+                    'id': doc_data.get('patient_id'),
+                    'first_name': doc_data.get('patient_first_name', 'Unknown'),
+                    'last_name': doc_data.get('patient_last_name', 'Patient'),
+                    'full_name': doc_data.get('patient_name', 'Unknown Patient')
+                })()
+                doc_obj.patient = patient_proxy
+                
+                all_documents.append(doc_obj)
+            
+            app.logger.info(f"📋 Using cached documents: {len(all_documents)} documents (filtered from {len(cached_result['documents'])}) ")
+        else:
+            # Fallback to regular query if cache failed
+            raise Exception("Cache miss or error")
+            
+    except Exception as cache_error:
+        app.logger.warning(f"Document repository cache miss/error: {cache_error}")
+        
+        # Fallback to regular query (original expensive operation)
+        query = MedicalDocument.query.join(Patient).options(
+            db.joinedload(MedicalDocument.patient)
         )
 
-    # Sort by most recent first
-    all_documents = query.order_by(MedicalDocument.created_at.desc()).all()
+        # Apply patient filter if provided
+        if selected_patient_id:
+            query = query.filter(MedicalDocument.patient_id == selected_patient_id)
 
-    # Get all patients for the dropdown filter
-    all_patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
+        # Apply search filter if provided
+        if search_query:
+            query = query.filter(
+                db.or_(
+                    MedicalDocument.document_name.ilike(f"%{search_query}%"),
+                    MedicalDocument.document_type.ilike(f"%{search_query}%"),
+                    MedicalDocument.source_system.ilike(f"%{search_query}%"),
+                    Patient.first_name.ilike(f"%{search_query}%"),
+                    Patient.last_name.ilike(f"%{search_query}%"),
+                )
+            )
+
+        # Sort by most recent first
+        all_documents = query.order_by(MedicalDocument.created_at.desc()).all()
+
+    # Get all patients for the dropdown filter (this could also be cached)
+    try:
+        from cached_operations import get_healthcare_cache_service
+        cache_service = get_healthcare_cache_service()
+        cached_patients = cache_service.cache_manager.get("all_patients_list")
+        
+        if cached_patients:
+            all_patients = cached_patients
+        else:
+            all_patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
+            # Cache for 1 hour
+            cache_service.cache_manager.set("all_patients_list", all_patients, ttl=3600, tags={'patients'})
+            
+    except:
+        # Fallback
+        all_patients = Patient.query.order_by(Patient.last_name, Patient.first_name).all()
 
     app.logger.info(f"Found {len(all_documents)} documents in repository")
 
@@ -3061,6 +3190,21 @@ def delete_document_from_repository(document_id):
         
         db.session.delete(document)
         db.session.commit()
+        
+        # CACHE INVALIDATION: Clear related caches when document is deleted
+        try:
+            from cached_operations import invalidate_document_cache, invalidate_patient_cache
+            
+            # Invalidate document-specific caches
+            invalidate_document_cache(document_id)
+            
+            # Invalidate patient-specific caches (prep sheets, screening summaries, etc.)
+            invalidate_patient_cache(patient_id)
+            
+            app.logger.info(f"🔄 Invalidated caches for document {document_id} and patient {patient_id}")
+            
+        except Exception as cache_invalidation_error:
+            app.logger.warning(f"Cache invalidation error during document deletion: {cache_invalidation_error}")
         
         # ENHANCED: Trigger selective refresh for document deletion
         try:
@@ -3198,6 +3342,14 @@ def import_from_url():
 
         db.session.add(document)
         db.session.commit()
+
+        # CACHE INVALIDATION: Clear related caches when document is imported from URL
+        try:
+            from cached_operations import invalidate_patient_cache
+            invalidate_patient_cache(int(patient_id))
+            app.logger.info(f"🔄 Invalidated caches for patient {patient_id} after URL import")
+        except Exception as cache_error:
+            app.logger.warning(f"Cache invalidation error during URL import: {cache_error}")
 
         return jsonify(
             {
