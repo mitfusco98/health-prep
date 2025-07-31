@@ -27,12 +27,13 @@ if __name__ != "__main__":
     try:
         from cache_initialization import initialize_healthcare_caches, add_cache_invalidation_middleware, monitor_cache_performance
         
-        # Initialize caching system on startup  
-        cache_init_results = initialize_healthcare_caches()
-        print(f"🚀 Healthcare cache system initialized in {cache_init_results.get('initialization_time_ms', 0)}ms")
-        
-        if cache_init_results.get('cache_warmed'):
-            print(f"🔥 Cache warming completed successfully")
+        # Initialize caching system on startup with app context
+        with app.app_context():
+            cache_init_results = initialize_healthcare_caches()
+            print(f"🚀 Healthcare cache system initialized in {cache_init_results.get('initialization_time_ms', 0)}ms")
+            
+            if cache_init_results.get('cache_warmed'):
+                print(f"🔥 Cache warming completed successfully")
         
         # Add cache invalidation middleware
         add_cache_invalidation_middleware(app)

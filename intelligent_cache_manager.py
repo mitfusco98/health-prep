@@ -512,29 +512,35 @@ def cached(ttl: int = 3600, tags: Set[str] = None, key_prefix: str = ""):
 def integrate_cache_with_auto_refresh_manager():
     """Integrate cache manager with auto refresh manager"""
     try:
-        from automated_edge_case_handler import AutomatedScreeningRefreshManager
-        
-        # Add cache invalidation to refresh manager
-        original_refresh = AutomatedScreeningRefreshManager.refresh_patient_screenings
-        
-        def enhanced_refresh(self, patient_id: int, trigger_source: str = "unknown"):
-            # Invalidate patient-specific caches before refresh
-            cache_mgr = get_cache_manager()
-            cache_mgr.trigger_invalidation('patient_demographic_change', {'patient_id': patient_id})
+        # Check if the automated_edge_case_handler module exists
+        try:
+            from automated_edge_case_handler import AutomatedScreeningRefreshManager
             
-            # Call original refresh
-            result = original_refresh(self, patient_id, trigger_source)
+            # Add cache invalidation to refresh manager
+            original_refresh = AutomatedScreeningRefreshManager.refresh_patient_screenings
             
-            # Invalidate related caches after refresh
-            cache_mgr.trigger_invalidation('medical_data_subsection_update', {'patient_id': patient_id})
+            def enhanced_refresh(self, patient_id: int, trigger_source: str = "unknown"):
+                # Invalidate patient-specific caches before refresh
+                cache_mgr = get_cache_manager()
+                cache_mgr.trigger_invalidation('patient_demographic_change', {'patient_id': patient_id})
+                
+                # Call original refresh
+                result = original_refresh(self, patient_id, trigger_source)
+                
+                # Invalidate related caches after refresh
+                cache_mgr.trigger_invalidation('medical_data_subsection_update', {'patient_id': patient_id})
+                
+                return result
+                
+            # Replace method with enhanced version
+            AutomatedScreeningRefreshManager.refresh_patient_screenings = enhanced_refresh
             
-            return result
+            logger.info("✅ Cache manager integrated with auto refresh manager")
+            return True
             
-        # Replace method with enhanced version
-        AutomatedScreeningRefreshManager.refresh_patient_screenings = enhanced_refresh
-        
-        logger.info("✅ Cache manager integrated with auto refresh manager")
-        return True
+        except ImportError:
+            logger.info("📝 automated_edge_case_handler module not found, skipping integration")
+            return True  # Not an error, just not available
         
     except Exception as e:
         logger.error(f"❌ Cache integration error: {e}")

@@ -34,27 +34,28 @@ def initialize_healthcare_caches() -> Dict[str, Any]:
         startup_stats['cache_service_initialized'] = True
         logger.info("✅ Healthcare cache service initialized")
         
-        # Warm up frequently accessed caches
-        from cached_operations import warm_frequently_accessed_caches
-        warm_results = warm_frequently_accessed_caches()
-        startup_stats['cache_warmed'] = len([k for k, v in warm_results.items() if v]) > 0
-        startup_stats['warm_results'] = warm_results
-        
-        if startup_stats['cache_warmed']:
-            logger.info(f"🔥 Cache warmed successfully: {len([k for k, v in warm_results.items() if v])} caches ready")
-        else:
-            logger.warning("⚠️ Cache warming had limited success")
+        # Warm up frequently accessed caches within app context
+        with app.app_context():
+            from cached_operations import warm_frequently_accessed_caches
+            warm_results = warm_frequently_accessed_caches()
+            startup_stats['cache_warmed'] = len([k for k, v in warm_results.items() if v]) > 0
+            startup_stats['warm_results'] = warm_results
+            
+            if startup_stats['cache_warmed']:
+                logger.info(f"🔥 Cache warmed successfully: {len([k for k, v in warm_results.items() if v])} caches ready")
+            else:
+                logger.warning("⚠️ Cache warming had limited success")
         
         # Get initial cache statistics
         startup_stats['cache_stats'] = cache_service.get_cache_statistics()
         
         # Integration with existing intelligent cache manager
         try:
-            from intelligent_cache_manager import integrate_cache_with_auto_refresh_manager, warm_cache_on_startup
+            from intelligent_cache_manager import warm_cache_on_startup
             
-            # Integrate with existing systems
-            integrate_cache_with_auto_refresh_manager()
-            warm_cache_on_startup()
+            # Warm cache within app context
+            with app.app_context():
+                warm_cache_on_startup()
             
             logger.info("✅ Integrated with existing cache management systems")
             startup_stats['existing_integrations'] = True
