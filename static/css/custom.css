@@ -4,6 +4,9 @@
 .universal-nav-controls {
     order: -1; /* Ensure they appear first in the navbar */
     margin-right: 1rem !important;
+    display: flex !important;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 /* Universal Navigation Buttons */

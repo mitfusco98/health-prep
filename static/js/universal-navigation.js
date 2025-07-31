@@ -108,18 +108,24 @@ document.addEventListener('DOMContentLoaded', function() {
 function shouldShowNavigation() {
     const currentPath = window.location.pathname;
     
-    // Hide navigation on login/register pages
+    // Hide navigation on login/register pages only
     const hideOnPages = ['/login', '/register'];
     
-    return !hideOnPages.some(page => currentPath.includes(page));
+    return !hideOnPages.some(page => currentPath === page || currentPath.startsWith(page + '?'));
 }
 
-// Hide navigation buttons on certain pages
+// Hide navigation buttons only on login/register pages
 document.addEventListener('DOMContentLoaded', function() {
     if (!shouldShowNavigation()) {
         const navControls = document.querySelector('.universal-nav-controls');
         if (navControls) {
             navControls.style.display = 'none';
+        }
+    } else {
+        // Ensure navigation is visible on all other pages
+        const navControls = document.querySelector('.universal-nav-controls');
+        if (navControls) {
+            navControls.style.display = 'flex';
         }
     }
 });
