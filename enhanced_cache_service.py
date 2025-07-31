@@ -311,11 +311,6 @@ class HealthcareCacheService:
         Cache active screening types using LRU cache (frequently accessed)
         """
         try:
-            # Ensure we're in an application context
-            if not app.app_context:
-                logger.warning("No Flask application context available for screening types cache")
-                return []
-                
             screening_types = ScreeningType.query.filter_by(is_active=True, status='active').all()
             return [
                 {

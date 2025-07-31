@@ -7,7 +7,6 @@ Initializes and warms up caches on application startup
 import logging
 from datetime import datetime
 from typing import Dict, Any
-from flask import current_app
 
 logger = logging.getLogger(__name__)
 
@@ -36,29 +35,25 @@ def initialize_healthcare_caches() -> Dict[str, Any]:
         logger.info("✅ Healthcare cache service initialized")
         
         # Warm up frequently accessed caches
-        try:
-            from cached_operations import warm_frequently_accessed_caches
-            warm_results = warm_frequently_accessed_caches()
-            startup_stats['cache_warmed'] = len([k for k, v in warm_results.items() if v]) > 0
-            startup_stats['warm_results'] = warm_results
-            
-            if startup_stats['cache_warmed']:
-                logger.info(f"🔥 Cache warmed successfully: {len([k for k, v in warm_results.items() if v])} caches ready")
-            else:
-                logger.warning("⚠️ Cache warming had limited success")
-        except Exception as warm_error:
-            logger.warning(f"⚠️ Cache warming failed: {warm_error}")
-            startup_stats['cache_warmed'] = False
-            startup_stats['errors'].append(f"Cache warming error: {str(warm_error)}")
+        from cached_operations import warm_frequently_accessed_caches
+        warm_results = warm_frequently_accessed_caches()
+        startup_stats['cache_warmed'] = len([k for k, v in warm_results.items() if v]) > 0
+        startup_stats['warm_results'] = warm_results
+        
+        if startup_stats['cache_warmed']:
+            logger.info(f"🔥 Cache warmed successfully: {len([k for k, v in warm_results.items() if v])} caches ready")
+        else:
+            logger.warning("⚠️ Cache warming had limited success")
         
         # Get initial cache statistics
         startup_stats['cache_stats'] = cache_service.get_cache_statistics()
         
         # Integration with existing intelligent cache manager
         try:
-            from intelligent_cache_manager import warm_cache_on_startup
+            from intelligent_cache_manager import integrate_cache_with_auto_refresh_manager, warm_cache_on_startup
             
-            # Warm cache - this should be called from within an app context already
+            # Integrate with existing systems
+            integrate_cache_with_auto_refresh_manager()
             warm_cache_on_startup()
             
             logger.info("✅ Integrated with existing cache management systems")

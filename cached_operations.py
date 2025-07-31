@@ -410,8 +410,8 @@ def warm_frequently_accessed_caches() -> Dict[str, bool]:
         active_types = cache_service.get_active_screening_types()
         results['active_screening_types'] = len(active_types) > 0
         
-        # Pre-load recent patients with documents (limit to avoid long startup times)
-        recent_patients = Patient.query.limit(5).all()  # Reduced from 10 to 5
+        # Pre-load recent patients with documents
+        recent_patients = Patient.query.limit(10).all()
         for patient in recent_patients:
             try:
                 docs = get_cached_documents_for_patient(patient.id)
@@ -420,13 +420,10 @@ def warm_frequently_accessed_caches() -> Dict[str, bool]:
                 logger.debug(f"Could not warm cache for patient {patient.id}: {e}")
                 results[f'patient_{patient.id}_documents'] = False
         
-        warmed_count = len([k for k, v in results.items() if v])
-        logger.info(f"🔥 Warmed {warmed_count} caches successfully")
+        logger.info(f"🔥 Warmed {len([k for k, v in results.items() if v])} caches successfully")
         
     except Exception as e:
         logger.error(f"Error warming frequently accessed caches: {e}")
-        # Return partial results even if some warming failed
-        results['warming_error'] = str(e)
     
     return results
 
