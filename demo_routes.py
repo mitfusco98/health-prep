@@ -2813,9 +2813,6 @@ def add_document_unified():
                 ocr_info = ""
             
             # Success message and redirect
-            try:</old_str>
-            
-            # Success message and redirect
             try:
                 subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
             except:
