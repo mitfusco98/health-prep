@@ -564,7 +564,16 @@ class LoadingStateManager {
         }
         
         // Submit the form
-        form.submit();
+        // Use HTMLFormElement.submit() method directly
+        if (form && typeof form.submit === 'function') {
+            form.submit();
+        } else {
+            // Fallback: create and click a submit button
+            const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+            if (submitBtn) {
+                submitBtn.click();
+            }
+        }
     }
 
     handleFileUpload(event) {

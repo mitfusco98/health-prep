@@ -182,7 +182,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Add to document and submit
             document.body.appendChild(form);
-            form.submit();
+            // Use HTMLFormElement.submit() method directly
+            if (form && typeof form.submit === 'function') {
+                form.submit();
+            } else {
+                // Fallback: create and click a submit button
+                const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.click();
+                }
+            }
         });
     }
 });

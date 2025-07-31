@@ -401,7 +401,16 @@ document.addEventListener('DOMContentLoaded', function() {
             if (validation.isValid) {
                 // Allow form submission
                 form.removeEventListener('submit', arguments.callee);
-                form.submit();
+                // Use HTMLFormElement.submit() method directly
+                if (form && typeof form.submit === 'function') {
+                    form.submit();
+                } else {
+                    // Fallback: create and click a submit button
+                    const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.click();
+                    }
+                }
             } else {
                 // Show errors
                 const errorContainer = form.querySelector('.terminology-errors') || 
