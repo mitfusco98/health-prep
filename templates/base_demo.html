@@ -106,6 +106,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link text-info {% if '/background-tasks' in request.path %}active{% endif %}" href="{{ url_for('background_tasks_dashboard') }}">
+                            <i class="fas fa-tasks me-1"></i> Background Tasks
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <span class="nav-link text-light">
                             <i class="fas fa-user me-1"></i> {{ session.get('username', 'Admin') }}
                         </span>

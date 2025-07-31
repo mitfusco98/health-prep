@@ -18,6 +18,9 @@ import screening_keyword_routes  # noqa: F401
 from routes import patient_routes  # noqa: F401
 from routes import appointment_routes  # noqa: F401
 
+# Import background task routes
+import background_task_routes  # noqa: F401
+
 # Import service layers for dependency injection
 from services import patient_service, appointment_service  # noqa: F401
 import logging
@@ -44,7 +47,20 @@ if __name__ != "__main__":
     except Exception as e:
         print(f"⚠️ Cache initialization warning: {e}")
         # Continue without cache optimization if initialization fails
-        # Continue without cache optimization if initialization fails
+
+# Initialize background processing systems
+if __name__ != "__main__":
+    try:
+        from background_ocr_processor import get_background_ocr_processor
+        
+        with app.app_context():
+            # Start background OCR processor
+            get_background_ocr_processor()
+            print("🚀 Background OCR processor initialized")
+            
+    except Exception as bg_error:
+        print(f"⚠️ Background processor initialization warning: {bg_error}")
+        # Continue without background processing if initialization fails
 
 # Initialize EHR connections
 if __name__ != "__main__":

@@ -2779,71 +2779,54 @@ def add_document_unified():
             except Exception as cache_error:
                 app.logger.warning(f"Cache invalidation error during document upload: {cache_error}")
 
-            # ENHANCED: Trigger OCR processing if needed with caching
+            # BACKGROUND OCR: Queue OCR processing to run in background (non-blocking)
             try:
-                from ocr_document_processor import ocr_processor
-                from cached_operations import cache_ocr_processing_result
+                from background_ocr_processor import get_background_ocr_processor, TaskPriority
                 
-                # Check if document needs OCR and process it
-                ocr_result = ocr_processor.process_document_ocr(document.id)
+                ocr_processor = get_background_ocr_processor()
                 
-                # Cache OCR results if successful
-                if ocr_result['success'] and ocr_result.get('extracted_text'):
-                    cache_ocr_processing_result(
-                        document.id, 
-                        ocr_result['extracted_text'],
-                        {
-                            'confidence_score': ocr_result.get('confidence_score', 0),
-                            'processing_method': ocr_result.get('processing_method', 'unknown'),
-                            'processed_at': datetime.now().isoformat()
-                        }
-                    )
-                    app.logger.info(f"🔍 Cached OCR results for document {document.id}")
+                # Queue OCR task in background (returns immediately)
+                task_id = ocr_processor.queue_document_ocr(
+                    document_id=document.id,
+                    patient_id=patient_id,
+                    priority=TaskPriority.NORMAL,
+                    context={
+                        'upload_source': 'web_form',
+                        'user_id': session.get('user_id'),
+                        'timestamp': datetime.now().isoformat()
+                    }
+                )
                 
-                if ocr_result['success'] and ocr_result['ocr_applied']:
-                    print(f"🔍 OCR processed document {document.id}: {ocr_result['extracted_text_length']} characters extracted with {ocr_result['confidence_score']}% confidence")
-                    
-                    # Trigger selective refresh for documents with new OCR content
-                    from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
-                    
-                    # Mark all screening types as potentially affected by new document content
-                    from models import ScreeningType
-                    active_screening_types = ScreeningType.query.filter_by(is_active=True).all()
-                    
-                    for screening_type in active_screening_types:
-                        selective_refresh_manager.mark_screening_type_dirty(
-                            screening_type.id, 
-                            ChangeType.KEYWORDS,  # New document content affects keyword matching
-                            "no_ocr_content", 
-                            f"new_document_{document.id}_with_ocr",
-                            affected_criteria={"patient_id": patient_id}
-                        )
-                    
-                    # Process selective refresh for affected patient
-                    refresh_stats = selective_refresh_manager.process_selective_refresh()
-                    print(f"📊 OCR triggered selective refresh: {refresh_stats.screenings_updated} screenings updated")
-                    
-                    # Enhanced success message with OCR info
-                    ocr_info = ""
-                    if ocr_result['confidence_score'] >= 80:
-                        ocr_info = " (High-quality text extraction completed)"
-                    elif ocr_result['confidence_score'] >= 60:
-                        ocr_info = " (Text extraction completed)"
-                    else:
-                        ocr_info = " (Text extraction completed with low confidence)"
-                        
-                elif ocr_result['success'] and not ocr_result['ocr_applied']:
-                    print(f"✅ Text-based document uploaded for patient {patient_id} - no OCR needed")
-                    ocr_info = ""
-                    
+                app.logger.info(f"🔄 Queued background OCR task {task_id} for document {document.id}")
+                
+                # Check if document needs OCR for user feedback
+                from ocr_document_processor import OCRDocumentProcessor
+                quick_processor = OCRDocumentProcessor()
+                filename = document.filename or document.document_name or ""
+                needs_ocr = quick_processor.is_image_based_document(filename, document.binary_content)
+                
+                if needs_ocr:
+                    ocr_info = f" (Text extraction running in background - <a href='#' onclick='checkOCRStatus(\"{task_id}\")'>check status</a>)"
                 else:
-                    print(f"⚠️ OCR processing failed for document {document.id}: {ocr_result.get('error', 'Unknown error')}")
-                    ocr_info = " (Note: Text extraction failed - document uploaded successfully)"
-                    
+                    ocr_info = " (Text-based document, no OCR needed)"
+                
+                # Store task ID in session for status checking
+                if 'ocr_tasks' not in session:
+                    session['ocr_tasks'] = []
+                session['ocr_tasks'].append({
+                    'task_id': task_id,
+                    'document_id': document.id,
+                    'document_name': document.document_name,
+                    'started_at': datetime.now().isoformat()
+                })
+                
+                # Keep only last 10 tasks in session
+                session['ocr_tasks'] = session['ocr_tasks'][-10:]
+                        
             except Exception as ocr_error:
-                print(f"⚠️ OCR processing error for document {document.id}: {ocr_error}")
-                ocr_info = ""
-                # Continue with successful upload even if OCR fails
+                app.logger.error(f"❌ Background OCR queue error for document {document.id}: {ocr_error}")
+                ocr_info = " (Note: Background text extraction could not be queued)"
+                # Continue with successful upload even if OCR queueing fails
             
             # Success message and redirect
             subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
