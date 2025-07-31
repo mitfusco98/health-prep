@@ -2779,26 +2779,9 @@ def add_document_unified():
             except Exception as cache_error:
                 app.logger.warning(f"Cache invalidation error during document upload: {cache_error}")
 
-            # BACKGROUND OCR: Queue OCR processing to run in background (non-blocking)
+            # BACKGROUND OCR: Simplified OCR integration without blocking
+            ocr_info = ""
             try:
-                from background_ocr_processor import get_background_ocr_processor, TaskPriority
-                
-                ocr_processor = get_background_ocr_processor()
-                
-                # Queue OCR task in background (returns immediately)
-                task_id = ocr_processor.queue_document_ocr(
-                    document_id=document.id,
-                    patient_id=patient_id,
-                    priority=TaskPriority.NORMAL,
-                    context={
-                        'upload_source': 'web_form',
-                        'user_id': session.get('user_id'),
-                        'timestamp': datetime.now().isoformat()
-                    }
-                )
-                
-                app.logger.info(f"🔄 Queued background OCR task {task_id} for document {document.id}")
-                
                 # Check if document needs OCR for user feedback
                 filename = document.filename or document.document_name or ""
                 mime_type = document.mime_type or ""
@@ -2808,45 +2791,61 @@ def add_document_unified():
                 )
                 
                 if needs_ocr:
-                    ocr_info = f" (Text extraction running in background - <a href='#' onclick='checkOCRStatus(\"{task_id}\")'>check status</a>)"
+                    # Queue OCR processing in background
+                    try:
+                        from background_ocr_processor import get_background_ocr_processor, TaskPriority
+                        ocr_processor = get_background_ocr_processor()
+                        task_id = ocr_processor.queue_document_ocr(
+                            document_id=document.id,
+                            patient_id=patient_id,
+                            priority=TaskPriority.NORMAL
+                        )
+                        ocr_info = f" (Text extraction queued in background)"
+                        app.logger.info(f"🔄 Queued background OCR task {task_id} for document {document.id}")
+                    except Exception as queue_error:
+                        app.logger.warning(f"OCR queue error: {queue_error}")
+                        ocr_info = " (Text extraction will be processed later)"
                 else:
                     ocr_info = " (Text-based document, no OCR needed)"
-                
-                # Store task ID in session for status checking
-                if 'ocr_tasks' not in session:
-                    session['ocr_tasks'] = []
-                session['ocr_tasks'].append({
-                    'task_id': task_id,
-                    'document_id': document.id,
-                    'document_name': document.document_name,
-                    'started_at': datetime.now().isoformat()
-                })
-                
-                # Keep only last 10 tasks in session
-                session['ocr_tasks'] = session['ocr_tasks'][-10:]
                         
             except Exception as ocr_error:
-                app.logger.error(f"❌ Background OCR queue error for document {document.id}: {ocr_error}")
-                ocr_info = " (Note: Background text extraction could not be queued)"
-                # Continue with successful upload even if OCR queueing fails
+                app.logger.warning(f"OCR check error: {ocr_error}")
+                ocr_info = ""
             
             # Success message and redirect
             try:
                 subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
             except:
                 subsection_name = "Document"
-            flash(f"{subsection_name} document '{form.document_name.data}' uploaded successfully for {patient.full_name}!{ocr_info}", "success")
             
-            print(f"✅ Document uploaded for patient {patient_id} with OCR processing")
-            logger.info(f"Document uploaded for patient {patient_id} with OCR integration")
+            success_message = f"{subsection_name} document '{form.document_name.data}' uploaded successfully for {patient.full_name}!{ocr_info}"
+            flash(success_message, "success")
+            
+            print(f"✅ Document uploaded for patient {patient_id}: {document.document_name} (ID: {document.id})")
+            app.logger.info(f"Document upload success: patient_id={patient_id}, document_id={document.id}, name='{document.document_name}'")
+            
+            # SCREENING ENGINE: Trigger screening refresh after document upload
+            try:
+                from unified_screening_engine import UnifiedScreeningEngine
+                engine = UnifiedScreeningEngine()
+                screenings_updated = engine.generate_patient_screenings(patient_id)
+                app.logger.info(f"Screening refresh after document upload: {len(screenings_updated)} screenings updated")
+                print(f"🔄 Screening engine updated {len(screenings_updated)} screenings for patient {patient_id}")
+            except Exception as screening_error:
+                app.logger.warning(f"Screening refresh failed after document upload: {screening_error}")
+                print(f"⚠️ Screening refresh error: {screening_error}")
             
             # Redirect to patient detail page
             return redirect(url_for("patient_detail", patient_id=patient_id))
 
         except Exception as e:
             db.session.rollback()
-            flash(f"Error uploading document: {str(e)}", "error")
+            error_message = f"Error uploading document: {str(e)}"
+            flash(error_message, "error")
             app.logger.error(f"Document upload error: {str(e)}")
+            print(f"❌ Document upload failed for patient {patient_id}: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
     # Set title and determine if we have defaults
     title = "Upload Medical Document"
