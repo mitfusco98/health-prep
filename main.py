@@ -44,6 +44,7 @@ if __name__ != "__main__":
     except Exception as e:
         print(f"⚠️ Cache initialization warning: {e}")
         # Continue without cache optimization if initialization fails
+        # Continue without cache optimization if initialization fails
 
 # Initialize EHR connections
 if __name__ != "__main__":
