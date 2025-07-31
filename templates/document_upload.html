@@ -28,6 +28,64 @@ function formatFileSize(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+// Add form submission handler to show loading state
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[enctype="multipart/form-data"]');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+            
+            // Show upload progress
+            const progressDiv = document.getElementById('file-upload-progress');
+            if (progressDiv) {
+                progressDiv.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-upload me-2"></i>Uploading document and queuing background processing...
+                    </div>
+                `;
+            }
+        });
+    }
+});
+
+// Background task status checking function (for OCR status links)
+function checkOCRStatus(taskId) {
+    fetch(`/api/ocr/status/${taskId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const task = data.task;
+                const progress = Math.round(task.progress * 100);
+                
+                let statusMessage = `OCR Task Status: ${task.status} (${progress}%)`;
+                
+                if (task.status === 'completed') {
+                    if (task.result && task.result.success) {
+                        statusMessage = `✅ OCR completed successfully! Extracted ${task.result.text_length || 0} characters.`;
+                    } else {
+                        statusMessage = `❌ OCR failed: ${task.error_message || 'Unknown error'}`;
+                    }
+                } else if (task.status === 'running') {
+                    statusMessage = `🔄 OCR in progress... (${progress}%)`;
+                } else if (task.status === 'pending') {
+                    statusMessage = `⏳ OCR queued and waiting to start...`;
+                }
+                
+                alert(statusMessage);
+            } else {
+                alert(`❌ Could not get task status: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking OCR status:', error);
+            alert('❌ Error checking OCR status. Please try again.');
+        });
+}
 </script>
 
 
@@ -147,7 +205,7 @@ function formatFileSize(bytes) {
                     
                     
                     <div class="d-grid gap-2">
-                        {{ form.submit(class="btn btn-primary") }}
+                        {{ form.submit(class="btn btn-primary", id="submit-btn") }}
                     </div>
                 </form>
             </div>

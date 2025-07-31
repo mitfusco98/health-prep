@@ -2800,10 +2800,12 @@ def add_document_unified():
                 app.logger.info(f"🔄 Queued background OCR task {task_id} for document {document.id}")
                 
                 # Check if document needs OCR for user feedback
-                from ocr_document_processor import OCRDocumentProcessor
-                quick_processor = OCRDocumentProcessor()
                 filename = document.filename or document.document_name or ""
-                needs_ocr = quick_processor.is_image_based_document(filename, document.binary_content)
+                mime_type = document.mime_type or ""
+                needs_ocr = (
+                    document.binary_content is not None and 
+                    (mime_type.startswith("image/") or filename.lower().endswith(('.png', '.jpg', '.jpeg', '.pdf')))
+                )
                 
                 if needs_ocr:
                     ocr_info = f" (Text extraction running in background - <a href='#' onclick='checkOCRStatus(\"{task_id}\")'>check status</a>)"
@@ -2829,7 +2831,10 @@ def add_document_unified():
                 # Continue with successful upload even if OCR queueing fails
             
             # Success message and redirect
-            subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
+            try:
+                subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
+            except:
+                subsection_name = "Document"
             flash(f"{subsection_name} document '{form.document_name.data}' uploaded successfully for {patient.full_name}!{ocr_info}", "success")
             
             print(f"✅ Document uploaded for patient {patient_id} with OCR processing")
@@ -2846,9 +2851,12 @@ def add_document_unified():
     # Set title and determine if we have defaults
     title = "Upload Medical Document"
     if default_patient_id:
-        patient = Patient.query.get(default_patient_id)
-        if patient:
-            title = f"Upload Document for {patient.full_name}"
+        try:
+            patient = Patient.query.get(default_patient_id)
+            if patient:
+                title = f"Upload Document for {patient.full_name}"
+        except Exception:
+            pass
     
     return render_template(
         "document_upload.html",
