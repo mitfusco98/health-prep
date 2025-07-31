@@ -483,3 +483,16 @@
     background-color: #343a40;
     color: #e9ecef;
 }
+
+/* Override for buttons - added May 18, 2025 */
+.btn .fas, .btn .fa {
+    display: none !important;
+}
+
+/* Exception for universal navigation buttons */
+#universal-back-btn .fas,
+#universal-back-btn .fa,
+#universal-forward-btn .fas,
+#universal-forward-btn .fa {
+    display: inline-block !important;
+}
