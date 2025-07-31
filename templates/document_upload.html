@@ -58,12 +58,12 @@ function formatFileSize(bytes) {
 
 // Add form submission handler to show loading state
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form[enctype="multipart/form-data"]');
+    const formElement = document.querySelector('form[enctype="multipart/form-data"]');
     const submitBtn = document.getElementById('submit-btn');
     const progressDiv = document.getElementById('file-upload-progress');
 
-    if (form && submitBtn) {
-        form.addEventListener('submit', function(e) {
+    if (formElement && submitBtn) {
+        formElement.addEventListener('submit', function(e) {
             // Show loading state
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
@@ -95,10 +95,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, 30000); // 30 second timeout
 
-            // Clear timeout when form actually submits successfully
-            form.addEventListener('submit', function() {
-                clearTimeout(uploadTimeout);
-            });
+            // Clear timeout when form submits
+            clearTimeout(uploadTimeout);
         });
     }
 });
