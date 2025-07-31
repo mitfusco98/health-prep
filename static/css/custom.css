@@ -1,3 +1,36 @@
+/* Custom styles for HealthPrep */
+
+/* Universal Navigation Buttons */
+#universal-back-btn,
+#universal-forward-btn {
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#universal-back-btn:hover:not(:disabled),
+#universal-forward-btn:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.05);
+}
+
+#universal-back-btn:disabled,
+#universal-forward-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+#universal-back-btn:active:not(:disabled),
+#universal-forward-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
 /* 
  * Custom CSS for HealthPrep
  * Contains styling for specialized components

@@ -32,6 +32,18 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <!-- Universal Navigation Controls -->
+                <div class="navbar-nav me-3">
+                    <button type="button" class="btn btn-outline-light btn-sm me-2" id="universal-back-btn" title="Go Back">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-light btn-sm" id="universal-forward-btn" title="Go Forward">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+                
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0"></ul>
+            <div class="navbar-nav me-auto mb-2 mb-lg-0"></div>
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
                         <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{{ url_for('index') }}">
@@ -140,6 +152,9 @@
 
     <!-- Button Performance Optimization -->
     <script src="{{ url_for('static', filename='js/button-performance.js') }}"></script>
+    
+    <!-- Universal Navigation System -->
+    <script src="{{ url_for('static', filename='js/universal-navigation.js') }}"></script>
 
     {% block extra_js %}{% endblock %}
 
