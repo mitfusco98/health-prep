@@ -2810,7 +2810,7 @@ def add_document_unified():
                         
             except Exception as ocr_error:
                 app.logger.warning(f"OCR check error: {ocr_error}")
-                ocr_info = ""
+                ocr_info = ""</old_str>
             
             # Success message and redirect
             try:
