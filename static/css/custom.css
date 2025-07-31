@@ -2,11 +2,15 @@
 
 /* Universal Navigation Controls */
 .universal-nav-controls {
-    order: -1; /* Ensure they appear first in the navbar */
-    margin-right: 1rem !important;
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
     display: flex !important;
+    flex-direction: row !important;
     align-items: center;
     gap: 0.5rem;
+    z-index: 1000;
 }
 
 /* Universal Navigation Buttons */
@@ -20,6 +24,7 @@
     justify-content: center;
     transition: all 0.2s ease;
     border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(33, 37, 41, 0.8);
 }
 
 #universal-back-btn:hover:not(:disabled),
