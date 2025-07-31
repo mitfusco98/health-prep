@@ -72,15 +72,7 @@ def upload_document(patient_id):
         if file and allowed_file(file.filename):
             try:
                 filename = secure_filename(file.filename)
-                
-                # Reset file pointer to beginning before reading
-                file.seek(0)
                 file_data = file.read()
-                
-                # Validate file data was actually read
-                if not file_data:
-                    flash("Error: File appears to be empty or could not be read", "error")
-                    return redirect(request.url)
 
                 document = MedicalDocument(
                     patient_id=patient_id,
@@ -120,11 +112,6 @@ def upload_document(patient_id):
                 return redirect(
                     url_for("document.patient_documents", patient_id=patient_id)
                 )
-
-            except Exception as e:
-                db.session.rollback()
-                flash(f"Error uploading document: {str(e)}", "error")
-                return redirect(request.url)
 
             except Exception as e:
                 db.session.rollback()

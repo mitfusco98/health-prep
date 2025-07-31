@@ -2779,86 +2779,93 @@ def add_document_unified():
             except Exception as cache_error:
                 app.logger.warning(f"Cache invalidation error during document upload: {cache_error}")
 
-            # BACKGROUND OCR: Simplified OCR integration without blocking
-            ocr_info = ""
+            # ENHANCED: Trigger OCR processing if needed with caching
             try:
-                # Check if document needs OCR for user feedback
-                filename = document.filename or document.document_name or ""
-                mime_type = document.mime_type or ""
-                needs_ocr = (
-                    document.binary_content is not None and 
-                    (mime_type.startswith("image/") or filename.lower().endswith(('.png', '.jpg', '.jpeg', '.pdf')))
-                )
+                from ocr_document_processor import ocr_processor
+                from cached_operations import cache_ocr_processing_result
                 
-                if needs_ocr:
-                    # Queue OCR processing in background
-                    try:
-                        from background_ocr_processor import get_background_ocr_processor, TaskPriority
-                        ocr_processor = get_background_ocr_processor()
-                        task_id = ocr_processor.queue_document_ocr(
-                            document_id=document.id,
-                            patient_id=patient_id,
-                            priority=TaskPriority.NORMAL
+                # Check if document needs OCR and process it
+                ocr_result = ocr_processor.process_document_ocr(document.id)
+                
+                # Cache OCR results if successful
+                if ocr_result['success'] and ocr_result.get('extracted_text'):
+                    cache_ocr_processing_result(
+                        document.id, 
+                        ocr_result['extracted_text'],
+                        {
+                            'confidence_score': ocr_result.get('confidence_score', 0),
+                            'processing_method': ocr_result.get('processing_method', 'unknown'),
+                            'processed_at': datetime.now().isoformat()
+                        }
+                    )
+                    app.logger.info(f"🔍 Cached OCR results for document {document.id}")
+                
+                if ocr_result['success'] and ocr_result['ocr_applied']:
+                    print(f"🔍 OCR processed document {document.id}: {ocr_result['extracted_text_length']} characters extracted with {ocr_result['confidence_score']}% confidence")
+                    
+                    # Trigger selective refresh for documents with new OCR content
+                    from selective_screening_refresh_manager import selective_refresh_manager, ChangeType
+                    
+                    # Mark all screening types as potentially affected by new document content
+                    from models import ScreeningType
+                    active_screening_types = ScreeningType.query.filter_by(is_active=True).all()
+                    
+                    for screening_type in active_screening_types:
+                        selective_refresh_manager.mark_screening_type_dirty(
+                            screening_type.id, 
+                            ChangeType.KEYWORDS,  # New document content affects keyword matching
+                            "no_ocr_content", 
+                            f"new_document_{document.id}_with_ocr",
+                            affected_criteria={"patient_id": patient_id}
                         )
-                        ocr_info = f" (Text extraction queued in background)"
-                        app.logger.info(f"🔄 Queued background OCR task {task_id} for document {document.id}")
-                    except Exception as queue_error:
-                        app.logger.warning(f"OCR queue error: {queue_error}")
-                        ocr_info = " (Text extraction will be processed later)"
-                else:
-                    ocr_info = " (Text-based document, no OCR needed)"
+                    
+                    # Process selective refresh for affected patient
+                    refresh_stats = selective_refresh_manager.process_selective_refresh()
+                    print(f"📊 OCR triggered selective refresh: {refresh_stats.screenings_updated} screenings updated")
+                    
+                    # Enhanced success message with OCR info
+                    ocr_info = ""
+                    if ocr_result['confidence_score'] >= 80:
+                        ocr_info = " (High-quality text extraction completed)"
+                    elif ocr_result['confidence_score'] >= 60:
+                        ocr_info = " (Text extraction completed)"
+                    else:
+                        ocr_info = " (Text extraction completed with low confidence)"
                         
+                elif ocr_result['success'] and not ocr_result['ocr_applied']:
+                    print(f"✅ Text-based document uploaded for patient {patient_id} - no OCR needed")
+                    ocr_info = ""
+                    
+                else:
+                    print(f"⚠️ OCR processing failed for document {document.id}: {ocr_result.get('error', 'Unknown error')}")
+                    ocr_info = " (Note: Text extraction failed - document uploaded successfully)"
+                    
             except Exception as ocr_error:
-                app.logger.warning(f"OCR check error: {ocr_error}")
+                print(f"⚠️ OCR processing error for document {document.id}: {ocr_error}")
                 ocr_info = ""
+                # Continue with successful upload even if OCR fails
             
             # Success message and redirect
-            try:</old_str>
+            subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
+            flash(f"{subsection_name} document '{form.document_name.data}' uploaded successfully for {patient.full_name}!{ocr_info}", "success")
             
-            # Success message and redirect
-            try:
-                subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
-            except:
-                subsection_name = "Document"
-            
-            success_message = f"{subsection_name} document '{form.document_name.data}' uploaded successfully for {patient.full_name}!{ocr_info}"
-            flash(success_message, "success")
-            
-            print(f"✅ Document uploaded for patient {patient_id}: {document.document_name} (ID: {document.id})")
-            app.logger.info(f"Document upload success: patient_id={patient_id}, document_id={document.id}, name='{document.document_name}'")
-            
-            # SCREENING ENGINE: Trigger screening refresh after document upload
-            try:
-                from unified_screening_engine import UnifiedScreeningEngine
-                engine = UnifiedScreeningEngine()
-                screenings_updated = engine.generate_patient_screenings(patient_id)
-                app.logger.info(f"Screening refresh after document upload: {len(screenings_updated)} screenings updated")
-                print(f"🔄 Screening engine updated {len(screenings_updated)} screenings for patient {patient_id}")
-            except Exception as screening_error:
-                app.logger.warning(f"Screening refresh failed after document upload: {screening_error}")
-                print(f"⚠️ Screening refresh error: {screening_error}")
+            print(f"✅ Document uploaded for patient {patient_id} with OCR processing")
+            logger.info(f"Document uploaded for patient {patient_id} with OCR integration")
             
             # Redirect to patient detail page
             return redirect(url_for("patient_detail", patient_id=patient_id))
 
         except Exception as e:
             db.session.rollback()
-            error_message = f"Error uploading document: {str(e)}"
-            flash(error_message, "error")
+            flash(f"Error uploading document: {str(e)}", "error")
             app.logger.error(f"Document upload error: {str(e)}")
-            print(f"❌ Document upload failed for patient {patient_id}: {str(e)}")
-            import traceback
-            traceback.print_exc()
 
     # Set title and determine if we have defaults
     title = "Upload Medical Document"
     if default_patient_id:
-        try:
-            patient = Patient.query.get(default_patient_id)
-            if patient:
-                title = f"Upload Document for {patient.full_name}"
-        except Exception:
-            pass
+        patient = Patient.query.get(default_patient_id)
+        if patient:
+            title = f"Upload Document for {patient.full_name}"
     
     return render_template(
         "document_upload.html",

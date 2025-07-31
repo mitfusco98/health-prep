@@ -1,50 +1,23 @@
+
 <script>
 function handleFileSelection(input) {
     const file = input.files[0];
-    const fileInfo = document.getElementById('file-info');
-
+    const progressDiv = document.getElementById('file-upload-progress');
+    
     if (file) {
-        const maxSize = 10 * 1024 * 1024; // 10MB
-        if (file.size > maxSize) {
-            alert('File size must be less than 10MB');
-            input.value = '';
-            if (fileInfo) {
-                fileInfo.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>File too large (${(file.size / 1024 / 1024).toFixed(2)} MB). Maximum size is 10MB.
-                    </div>
-                `;
-            }
-            return;
-        }
-
-        // Check file type
-        const allowedTypes = ['application/pdf', 'text/plain', 'image/jpeg', 'image/png', 'image/jpg'];
-        if (!allowedTypes.includes(file.type) && !file.name.match(/\.(pdf|txt|jpg|jpeg|png)$/i)) {
-            alert('Please select a valid file type (PDF, TXT, JPG, PNG)');
-            input.value = '';
-            if (fileInfo) {
-                fileInfo.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Invalid file type. Please select PDF, TXT, JPG, or PNG files.
-                    </div>
-                `;
-            }
-            return;
-        }
-
-        // Update UI to show file selected
-        if (fileInfo) {
-            fileInfo.innerHTML = `
-                <div class="alert alert-success">
-                    <i class="fas fa-file me-2"></i>Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)
+        progressDiv.style.display = 'block';
+        progressDiv.innerHTML = `
+            <div class="upload-progress">
+                <div class="upload-file-info">
+                    <i class="fas fa-file upload-file-icon"></i>
+                    <span class="upload-file-name">${file.name}</span>
+                    <span class="upload-file-size">${formatFileSize(file.size)}</span>
                 </div>
-            `;
-        }
+                <small class="text-muted">Ready to upload</small>
+            </div>
+        `;
     } else {
-        if (fileInfo) {
-            fileInfo.innerHTML = '';
-        }
+        progressDiv.style.display = 'none';
     }
 }
 
@@ -54,87 +27,6 @@ function formatFileSize(bytes) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// Add form submission handler to show loading state
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form[enctype="multipart/form-data"]');
-    const submitBtn = document.getElementById('submit-btn');
-    const progressDiv = document.getElementById('file-upload-progress');
-
-    if (form && submitBtn) {
-        form.addEventListener('submit', function(e) {
-            // Show loading state
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
-
-            if (progressDiv) {
-                progressDiv.innerHTML = `
-                    <div class="alert alert-info">
-                        <i class="fas fa-upload me-2"></i>Uploading document...
-                    </div>
-                `;
-            }
-
-            // Track upload start time
-            const uploadStartTime = Date.now();
-
-            // Set a timeout to re-enable button if something goes wrong
-            const uploadTimeout = setTimeout(function() {
-                if (submitBtn.disabled) {
-                    const elapsedTime = Math.round((Date.now() - uploadStartTime) / 1000);
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Upload Document';
-                    if (progressDiv) {
-                        progressDiv.innerHTML = `
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>Upload timed out after ${elapsedTime} seconds. Please check your file and try again.
-                            </div>
-                        `;
-                    }
-                }
-            }, 30000); // 30 second timeout
-
-            // Clear timeout when form actually submits successfully
-            form.addEventListener('submit', function() {
-                clearTimeout(uploadTimeout);
-            });
-        });
-    }
-});
-
-// Background task status checking function (for OCR status links)
-function checkOCRStatus(taskId) {
-    fetch(`/api/ocr/status/${taskId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const task = data.task;
-                const progress = Math.round(task.progress * 100);
-
-                let statusMessage = `OCR Task Status: ${task.status} (${progress}%)`;
-
-                if (task.status === 'completed') {
-                    if (task.result && task.result.success) {
-                        statusMessage = `✅ OCR completed successfully! Extracted ${task.result.text_length || 0} characters.`;
-                    } else {
-                        statusMessage = `❌ OCR failed: ${task.error_message || 'Unknown error'}`;
-                    }
-                } else if (task.status === 'running') {
-                    statusMessage = `🔄 OCR in progress... (${progress}%)`;
-                } else if (task.status === 'pending') {
-                    statusMessage = `⏳ OCR queued and waiting to start...`;
-                }
-
-                alert(statusMessage);
-            } else {
-                alert(`❌ Could not get task status: ${data.error}`);
-            }
-        })
-        .catch(error => {
-            console.error('Error checking OCR status:', error);
-            alert('❌ Error checking OCR status. Please try again.');
-        });
 }
 </script>
 
@@ -165,7 +57,7 @@ function checkOCRStatus(taskId) {
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">
                     {{ form.hidden_tag() }}
-
+                    
                     <div class="mb-3">
                         <label for="file" class="form-label">{{ form.file.label }}</label>
                         {{ form.file(class="form-control", onchange="handleFileSelection(this)") }}
@@ -178,9 +70,8 @@ function checkOCRStatus(taskId) {
                             Optional: Upload text documents from EMR systems. You can create document entries without attaching files if needed.
                         </div>
                         <div id="file-upload-progress" style="display: none;"></div>
-                        <div id="file-info"></div>
                     </div>
-
+                    
                     {% if unified_upload %}
                     <div class="mb-3">
                         <label for="patient_id" class="form-label">{{ form.patient_id.label }}</label>
@@ -195,7 +86,7 @@ function checkOCRStatus(taskId) {
                         {% endif %}
                     </div>
                     {% endif %}
-
+                    
                     <div class="mb-3">
                         <label for="document_name" class="form-label">{{ form.document_name.label }}</label>
                         {{ form.document_name(class="form-control") }}
@@ -208,7 +99,7 @@ function checkOCRStatus(taskId) {
                             <div class="form-text">{{ form.document_name.description }}</div>
                         {% endif %}
                     </div>
-
+                    
                     <div class="mb-3">
                         <label for="document_type" class="form-label">{{ form.document_type.label }}</label>
                         {{ form.document_type(class="form-select") }}
@@ -221,7 +112,7 @@ function checkOCRStatus(taskId) {
                             <div class="form-text">{{ form.document_type.description }}</div>
                         {% endif %}
                     </div>
-
+                    
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -252,11 +143,11 @@ function checkOCRStatus(taskId) {
                             </div>
                         </div>
                     </div>
-
-
-
+                    
+                    
+                    
                     <div class="d-grid gap-2">
-                        {{ form.submit(class="btn btn-primary", id="submit-btn") }}
+                        {{ form.submit(class="btn btn-primary") }}
                     </div>
                 </form>
             </div>
