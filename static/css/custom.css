@@ -1,9 +1,11 @@
 /* Custom styles for HealthPrep */
 
-/* Universal Navigation Controls - Forced consistent positioning and styling */
+/* Universal Navigation Controls - Comprehensive cross-page styling */
 .navbar .universal-nav-controls,
 .navbar-nav .universal-nav-controls,
-.container .universal-nav-controls {
+.container .universal-nav-controls,
+div.universal-nav-controls,
+.universal-nav-controls {
     order: -999 !important; /* Ensure they appear first in the navbar */
     margin-right: 1rem !important;
     margin-left: 0 !important;
@@ -15,11 +17,22 @@
     flex-shrink: 0 !important;
     position: relative !important;
     z-index: 1000 !important;
+    /* Ensure consistent placement across all templates */
+    width: auto !important;
+    height: auto !important;
 }
 
-/* Universal Navigation Buttons - Force exact same appearance everywhere */
+/* Universal Navigation Buttons - Comprehensive selectors for all page contexts */
 .navbar #universal-back-btn,
 .navbar #universal-forward-btn,
+.navbar-nav #universal-back-btn,
+.navbar-nav #universal-forward-btn,
+.container #universal-back-btn,
+.container #universal-forward-btn,
+div.universal-nav-controls #universal-back-btn,
+div.universal-nav-controls #universal-forward-btn,
+body #universal-back-btn,
+body #universal-forward-btn,
 #universal-back-btn,
 #universal-forward-btn {
     /* Size specifications - exact same everywhere */
@@ -63,9 +76,17 @@
     vertical-align: middle !important;
 }
 
-/* Hover states - consistent across all pages */
+/* Hover states - comprehensive selectors for all page contexts */
 .navbar #universal-back-btn:hover:not(:disabled),
 .navbar #universal-forward-btn:hover:not(:disabled),
+.navbar-nav #universal-back-btn:hover:not(:disabled),
+.navbar-nav #universal-forward-btn:hover:not(:disabled),
+.container #universal-back-btn:hover:not(:disabled),
+.container #universal-forward-btn:hover:not(:disabled),
+div.universal-nav-controls #universal-back-btn:hover:not(:disabled),
+div.universal-nav-controls #universal-forward-btn:hover:not(:disabled),
+body #universal-back-btn:hover:not(:disabled),
+body #universal-forward-btn:hover:not(:disabled),
 #universal-back-btn:hover:not(:disabled),
 #universal-forward-btn:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.1) !important;
@@ -75,9 +96,17 @@
     text-decoration: none !important;
 }
 
-/* Disabled states */
+/* Disabled states - comprehensive selectors for all page contexts */
 .navbar #universal-back-btn:disabled,
 .navbar #universal-forward-btn:disabled,
+.navbar-nav #universal-back-btn:disabled,
+.navbar-nav #universal-forward-btn:disabled,
+.container #universal-back-btn:disabled,
+.container #universal-forward-btn:disabled,
+div.universal-nav-controls #universal-back-btn:disabled,
+div.universal-nav-controls #universal-forward-btn:disabled,
+body #universal-back-btn:disabled,
+body #universal-forward-btn:disabled,
 #universal-back-btn:disabled,
 #universal-forward-btn:disabled {
     opacity: 0.4 !important;
@@ -85,17 +114,33 @@
     background-color: rgba(33, 37, 41, 0.4) !important;
 }
 
-/* Active states */
+/* Active states - comprehensive selectors for all page contexts */
 .navbar #universal-back-btn:active:not(:disabled),
 .navbar #universal-forward-btn:active:not(:disabled),
+.navbar-nav #universal-back-btn:active:not(:disabled),
+.navbar-nav #universal-forward-btn:active:not(:disabled),
+.container #universal-back-btn:active:not(:disabled),
+.container #universal-forward-btn:active:not(:disabled),
+div.universal-nav-controls #universal-back-btn:active:not(:disabled),
+div.universal-nav-controls #universal-forward-btn:active:not(:disabled),
+body #universal-back-btn:active:not(:disabled),
+body #universal-forward-btn:active:not(:disabled),
 #universal-back-btn:active:not(:disabled),
 #universal-forward-btn:active:not(:disabled) {
     transform: scale(0.95) !important;
 }
 
-/* Focus states */
+/* Focus states - comprehensive selectors for all page contexts */
 .navbar #universal-back-btn:focus,
 .navbar #universal-forward-btn:focus,
+.navbar-nav #universal-back-btn:focus,
+.navbar-nav #universal-forward-btn:focus,
+.container #universal-back-btn:focus,
+.container #universal-forward-btn:focus,
+div.universal-nav-controls #universal-back-btn:focus,
+div.universal-nav-controls #universal-forward-btn:focus,
+body #universal-back-btn:focus,
+body #universal-forward-btn:focus,
 #universal-back-btn:focus,
 #universal-forward-btn:focus {
     outline: none !important;
@@ -103,11 +148,27 @@
     z-index: 1001 !important;
 }
 
-/* Icon styling - ensure visibility and consistency */
+/* Icon styling - comprehensive selectors for all page contexts */
 .navbar #universal-back-btn .fas,
 .navbar #universal-back-btn .fa,
 .navbar #universal-forward-btn .fas,
 .navbar #universal-forward-btn .fa,
+.navbar-nav #universal-back-btn .fas,
+.navbar-nav #universal-back-btn .fa,
+.navbar-nav #universal-forward-btn .fas,
+.navbar-nav #universal-forward-btn .fa,
+.container #universal-back-btn .fas,
+.container #universal-back-btn .fa,
+.container #universal-forward-btn .fas,
+.container #universal-forward-btn .fa,
+div.universal-nav-controls #universal-back-btn .fas,
+div.universal-nav-controls #universal-back-btn .fa,
+div.universal-nav-controls #universal-forward-btn .fas,
+div.universal-nav-controls #universal-forward-btn .fa,
+body #universal-back-btn .fas,
+body #universal-back-btn .fa,
+body #universal-forward-btn .fas,
+body #universal-forward-btn .fa,
 #universal-back-btn .fas,
 #universal-back-btn .fa,
 #universal-forward-btn .fas,
@@ -127,9 +188,17 @@
     margin-left: 1rem !important;
 }
 
-/* Override any btn-outline-light styles that might conflict */
+/* Override any btn-outline-light styles - comprehensive selectors */
 .navbar #universal-back-btn.btn-outline-light,
 .navbar #universal-forward-btn.btn-outline-light,
+.navbar-nav #universal-back-btn.btn-outline-light,
+.navbar-nav #universal-forward-btn.btn-outline-light,
+.container #universal-back-btn.btn-outline-light,
+.container #universal-forward-btn.btn-outline-light,
+div.universal-nav-controls #universal-back-btn.btn-outline-light,
+div.universal-nav-controls #universal-forward-btn.btn-outline-light,
+body #universal-back-btn.btn-outline-light,
+body #universal-forward-btn.btn-outline-light,
 #universal-back-btn.btn-outline-light,
 #universal-forward-btn.btn-outline-light {
     border-color: rgba(255, 255, 255, 0.3) !important;
@@ -138,6 +207,14 @@
 
 .navbar #universal-back-btn.btn-outline-light:hover,
 .navbar #universal-forward-btn.btn-outline-light:hover,
+.navbar-nav #universal-back-btn.btn-outline-light:hover,
+.navbar-nav #universal-forward-btn.btn-outline-light:hover,
+.container #universal-back-btn.btn-outline-light:hover,
+.container #universal-forward-btn.btn-outline-light:hover,
+div.universal-nav-controls #universal-back-btn.btn-outline-light:hover,
+div.universal-nav-controls #universal-forward-btn.btn-outline-light:hover,
+body #universal-back-btn.btn-outline-light:hover,
+body #universal-forward-btn.btn-outline-light:hover,
 #universal-back-btn.btn-outline-light:hover,
 #universal-forward-btn.btn-outline-light:hover {
     background-color: rgba(255, 255, 255, 0.1) !important;
