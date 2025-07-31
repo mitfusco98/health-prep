@@ -2813,6 +2813,9 @@ def add_document_unified():
                 ocr_info = ""
             
             # Success message and redirect
+            try:</old_str>
+            
+            # Success message and redirect
             try:
                 subsection_name = dict(form.document_type.choices).get(form.document_type.data, "Document")
             except:
@@ -2865,36 +2868,26 @@ def add_document_unified():
     )
 
 
-@app.route("/patients/document/add", methods=["GET", "POST"])
 @app.route("/patients/<int:patient_id>/document/add", methods=["GET", "POST"])
-def add_document(patient_id=None):
-    """Add a document for a specific patient or redirect to unified upload"""
-    # If no patient_id in URL, check query parameters
-    if patient_id is None:
-        patient_id = request.args.get("patient_id", type=int)
+def add_document(patient_id):
+    """Add a document for a specific patient (redirects to unified upload)"""
+    # Get query parameters to preserve
+    subsection = request.args.get("type")
     
-    # If we have a patient_id, redirect to unified upload with parameters
-    if patient_id:
-        # Get query parameters to preserve
-        subsection = request.args.get("type") or request.args.get("subsection")
-        
-        # Build redirect URL with smart defaults
-        redirect_params = {"patient_id": patient_id}
-        if subsection:
-            # Map old type parameter to new subsection format
-            type_mapping = {
-                "lab": "LABORATORIES",
-                "imaging": "IMAGING", 
-                "consult": "CONSULTS",
-                "hospital": "HOSPITAL_RECORDS",
-                "other": "OTHER"
-            }
-            redirect_params["subsection"] = type_mapping.get(subsection.lower(), subsection)
-        
-        return redirect(url_for("add_document_unified", **redirect_params))
+    # Build redirect URL with smart defaults
+    redirect_params = {"patient_id": patient_id}
+    if subsection:
+        # Map old type parameter to new subsection format
+        type_mapping = {
+            "lab": "LABORATORIES",
+            "imaging": "IMAGING", 
+            "consult": "CONSULTS",
+            "hospital": "HOSPITAL_RECORDS",
+            "other": "OTHER"
+        }
+        redirect_params["subsection"] = type_mapping.get(subsection.lower(), "OTHER")
     
-    # If no patient_id, redirect to unified upload without parameters
-    return redirect(url_for("add_document_unified"))
+    return redirect(url_for("add_document_unified", **redirect_params))
 
 
 @app.route('/documents/<int:document_id>/process-ocr', methods=['POST'])

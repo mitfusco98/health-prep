@@ -1,7 +1,3 @@
-` tags.
-
-```
-<replit_final_file>
 // main.js - Core JavaScript for HealthPrep application
 
 // Configuration will be loaded from AppConfig
@@ -197,24 +193,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-
-    // Handle form submissions with better error handling
-    document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', function(e) {
-            const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
-            if (submitBtn && !submitBtn.disabled) {
-                // Disable submit button to prevent double submission
-                submitBtn.disabled = true;
-
-                // Re-enable after a short delay if form doesn't actually submit
-                setTimeout(() => {
-                    if (submitBtn.disabled) {
-                        submitBtn.disabled = false;
-                    }
-                }, 5000);
-            }
-        });
-    });
 });
 
 // Helper function to format dates consistently throughout the application
