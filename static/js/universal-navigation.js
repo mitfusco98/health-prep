@@ -117,7 +117,7 @@ function shouldShowNavigation() {
 // Hide navigation buttons on certain pages
 document.addEventListener('DOMContentLoaded', function() {
     if (!shouldShowNavigation()) {
-        const navControls = document.querySelector('.navbar-nav');
+        const navControls = document.querySelector('.universal-nav-controls');
         if (navControls) {
             navControls.style.display = 'none';
         }

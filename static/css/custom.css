@@ -1,5 +1,11 @@
 /* Custom styles for HealthPrep */
 
+/* Universal Navigation Controls */
+.universal-nav-controls {
+    order: -1; /* Ensure they appear first in the navbar */
+    margin-right: 1rem !important;
+}
+
 /* Universal Navigation Buttons */
 #universal-back-btn,
 #universal-forward-btn {
