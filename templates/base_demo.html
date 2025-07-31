@@ -27,12 +27,23 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
+            <!-- Universal Navigation Controls - Always visible in top left -->
+            <div class="universal-nav-controls">
+                <button type="button" class="btn btn-outline-light btn-sm" id="universal-back-btn" title="Go Back">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <button type="button" class="btn btn-outline-light btn-sm" id="universal-forward-btn" title="Go Forward">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+
             <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-notes-medical me-2"></i>HealthPrep Demo
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
+
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
@@ -201,6 +212,9 @@
 
     <!-- Medical Terminology UI -->
     <script src="{{ url_for('static', filename='js/medical_terminology_ui.js') }}"></script>
+
+    <!-- Universal Navigation -->
+    <script src="{{ url_for('static', filename='js/universal-navigation.js', v=cache_timestamp|default('')) }}"></script>
 
     {% block scripts %}{% endblock %}
 
