@@ -1,49 +1,30 @@
 /* Custom styles for HealthPrep */
 
-/* Universal Navigation Controls - Bulletproof cross-page styling */
-.navbar .universal-nav-controls,
-.navbar-nav .universal-nav-controls,
-.container .universal-nav-controls,
-.container-fluid .universal-nav-controls,
-div.universal-nav-controls,
-.universal-nav-controls,
-body .universal-nav-controls,
-html .universal-nav-controls {
-    order: -999 !important; /* Ensure they appear first in the navbar */
+/* Universal Navigation Controls - Simplified and consistent */
+.universal-nav-controls {
+    order: -999 !important;
     margin-right: 1rem !important;
     margin-left: 0 !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    justify-content: flex-start !important;
     gap: 0.5rem !important;
     flex-shrink: 0 !important;
-    position: relative !important;
-    z-index: 1000 !important;
-    /* Ensure consistent placement across all templates */
-    width: auto !important;
-    height: auto !important;
-    /* Override any potential float or positioning conflicts */
-    float: none !important;
-    clear: none !important;
 }
 
-/* Universal Navigation Buttons - Comprehensive selectors for all page contexts */
-.navbar #universal-back-btn,
-.navbar #universal-forward-btn,
-.navbar-nav #universal-back-btn,
-.navbar-nav #universal-forward-btn,
-.container #universal-back-btn,
-.container #universal-forward-btn,
-div.universal-nav-controls #universal-back-btn,
-div.universal-nav-controls #universal-forward-btn,
-body #universal-back-btn,
-body #universal-forward-btn,
+/* Universal Navigation Buttons - Force exact same styling everywhere */
+html body .navbar .universal-nav-controls #universal-back-btn,
+html body .navbar .universal-nav-controls #universal-forward-btn,
+html body .universal-nav-controls #universal-back-btn,
+html body .universal-nav-controls #universal-forward-btn,
+html body #universal-back-btn,
+html body #universal-forward-btn,
 #universal-back-btn,
 #universal-forward-btn {
-    /* Size specifications - exact same everywhere */
+    /* Reset all possible inherited styles first */
+    all: unset !important;
+    
+    /* Force exact same size everywhere */
     width: 36px !important;
     height: 36px !important;
     min-width: 36px !important;
@@ -51,230 +32,79 @@ body #universal-forward-btn,
     max-width: 36px !important;
     max-height: 36px !important;
     
-    /* Layout and positioning */
-    display: flex !important;
+    /* Force exact same display properties */
+    display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    flex-shrink: 0 !important;
     
-    /* Styling - force consistent appearance */
+    /* Force exact same visual appearance */
+    background-color: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
     border-radius: 0.25rem !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    background-color: rgba(33, 37, 41, 0.8) !important;
     color: #fff !important;
     
-    /* Typography */
+    /* Force exact same typography */
     font-size: 14px !important;
+    font-family: "Font Awesome 6 Free" !important;
+    font-weight: 900 !important;
     line-height: 1 !important;
     text-align: center !important;
     text-decoration: none !important;
     
-    /* Spacing */
+    /* Force exact same spacing */
     padding: 0 !important;
     margin: 0 !important;
     
-    /* Behavior */
-    box-sizing: border-box !important;
+    /* Force exact same behavior */
     cursor: pointer !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.15s ease-in-out !important;
+    box-sizing: border-box !important;
     
-    /* Override any bootstrap or other framework styles */
-    font-weight: normal !important;
-    font-family: inherit !important;
-    vertical-align: middle !important;
+    /* Override any possible framework interference */
+    float: none !important;
+    position: relative !important;
+    z-index: auto !important;
+    outline: none !important;
+    box-shadow: none !important;
 }
 
-/* Hover states - comprehensive selectors for all page contexts */
-.navbar #universal-back-btn:hover:not(:disabled),
-.navbar #universal-forward-btn:hover:not(:disabled),
-.navbar-nav #universal-back-btn:hover:not(:disabled),
-.navbar-nav #universal-forward-btn:hover:not(:disabled),
-.container #universal-back-btn:hover:not(:disabled),
-.container #universal-forward-btn:hover:not(:disabled),
-div.universal-nav-controls #universal-back-btn:hover:not(:disabled),
-div.universal-nav-controls #universal-forward-btn:hover:not(:disabled),
-body #universal-back-btn:hover:not(:disabled),
-body #universal-forward-btn:hover:not(:disabled),
+/* Hover states */
 #universal-back-btn:hover:not(:disabled),
 #universal-forward-btn:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(255, 255, 255, 0.5) !important;
+    border-color: rgba(255, 255, 255, 0.75) !important;
     transform: scale(1.05) !important;
-    color: #fff !important;
-    text-decoration: none !important;
 }
 
-/* Disabled states - comprehensive selectors for all page contexts */
-.navbar #universal-back-btn:disabled,
-.navbar #universal-forward-btn:disabled,
-.navbar-nav #universal-back-btn:disabled,
-.navbar-nav #universal-forward-btn:disabled,
-.container #universal-back-btn:disabled,
-.container #universal-forward-btn:disabled,
-div.universal-nav-controls #universal-back-btn:disabled,
-div.universal-nav-controls #universal-forward-btn:disabled,
-body #universal-back-btn:disabled,
-body #universal-forward-btn:disabled,
+/* Disabled states */
 #universal-back-btn:disabled,
 #universal-forward-btn:disabled {
     opacity: 0.4 !important;
     cursor: not-allowed !important;
-    background-color: rgba(33, 37, 41, 0.4) !important;
 }
 
-/* Active states - comprehensive selectors for all page contexts */
-.navbar #universal-back-btn:active:not(:disabled),
-.navbar #universal-forward-btn:active:not(:disabled),
-.navbar-nav #universal-back-btn:active:not(:disabled),
-.navbar-nav #universal-forward-btn:active:not(:disabled),
-.container #universal-back-btn:active:not(:disabled),
-.container #universal-forward-btn:active:not(:disabled),
-div.universal-nav-controls #universal-back-btn:active:not(:disabled),
-div.universal-nav-controls #universal-forward-btn:active:not(:disabled),
-body #universal-back-btn:active:not(:disabled),
-body #universal-forward-btn:active:not(:disabled),
+/* Active states */
 #universal-back-btn:active:not(:disabled),
 #universal-forward-btn:active:not(:disabled) {
     transform: scale(0.95) !important;
+    background-color: rgba(255, 255, 255, 0.2) !important;
 }
 
-/* Focus states - comprehensive selectors for all page contexts */
-.navbar #universal-back-btn:focus,
-.navbar #universal-forward-btn:focus,
-.navbar-nav #universal-back-btn:focus,
-.navbar-nav #universal-forward-btn:focus,
-.container #universal-back-btn:focus,
-.container #universal-forward-btn:focus,
-div.universal-nav-controls #universal-back-btn:focus,
-div.universal-nav-controls #universal-forward-btn:focus,
-body #universal-back-btn:focus,
-body #universal-forward-btn:focus,
+/* Focus states */
 #universal-back-btn:focus,
 #universal-forward-btn:focus {
-    outline: none !important;
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25) !important;
-    z-index: 1001 !important;
+    outline: 2px solid rgba(255, 255, 255, 0.5) !important;
+    outline-offset: 2px !important;
 }
 
-/* Icon styling - comprehensive selectors for all page contexts */
-.navbar #universal-back-btn .fas,
-.navbar #universal-back-btn .fa,
-.navbar #universal-forward-btn .fas,
-.navbar #universal-forward-btn .fa,
-.navbar-nav #universal-back-btn .fas,
-.navbar-nav #universal-back-btn .fa,
-.navbar-nav #universal-forward-btn .fas,
-.navbar-nav #universal-forward-btn .fa,
-.container #universal-back-btn .fas,
-.container #universal-back-btn .fa,
-.container #universal-forward-btn .fas,
-.container #universal-forward-btn .fa,
-div.universal-nav-controls #universal-back-btn .fas,
-div.universal-nav-controls #universal-back-btn .fa,
-div.universal-nav-controls #universal-forward-btn .fas,
-div.universal-nav-controls #universal-forward-btn .fa,
-body #universal-back-btn .fas,
-body #universal-back-btn .fa,
-body #universal-forward-btn .fas,
-body #universal-forward-btn .fa,
+/* Icon styling */
 #universal-back-btn .fas,
 #universal-back-btn .fa,
 #universal-forward-btn .fas,
 #universal-forward-btn .fa {
-    display: inline-block !important;
     font-size: 14px !important;
-    color: inherit !important;
-    width: auto !important;
-    height: auto !important;
+    color: #fff !important;
     line-height: 1 !important;
-    vertical-align: middle !important;
-}
-
-/* Ensure buttons work within Bootstrap navbar structure */
-.navbar-brand + .universal-nav-controls,
-.navbar .container .universal-nav-controls {
-    margin-left: 1rem !important;
-}
-
-/* Override any btn-outline-light styles - comprehensive selectors */
-.navbar #universal-back-btn.btn-outline-light,
-.navbar #universal-forward-btn.btn-outline-light,
-.navbar-nav #universal-back-btn.btn-outline-light,
-.navbar-nav #universal-forward-btn.btn-outline-light,
-.container #universal-back-btn.btn-outline-light,
-.container #universal-forward-btn.btn-outline-light,
-.container-fluid #universal-back-btn.btn-outline-light,
-.container-fluid #universal-forward-btn.btn-outline-light,
-div.universal-nav-controls #universal-back-btn.btn-outline-light,
-div.universal-nav-controls #universal-forward-btn.btn-outline-light,
-body #universal-back-btn.btn-outline-light,
-body #universal-forward-btn.btn-outline-light,
-html #universal-back-btn.btn-outline-light,
-html #universal-forward-btn.btn-outline-light,
-#universal-back-btn.btn-outline-light,
-#universal-forward-btn.btn-outline-light {
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    color: #fff !important;
-}
-
-.navbar #universal-back-btn.btn-outline-light:hover,
-.navbar #universal-forward-btn.btn-outline-light:hover,
-.navbar-nav #universal-back-btn.btn-outline-light:hover,
-.navbar-nav #universal-forward-btn.btn-outline-light:hover,
-.container #universal-back-btn.btn-outline-light:hover,
-.container #universal-forward-btn.btn-outline-light:hover,
-.container-fluid #universal-back-btn.btn-outline-light:hover,
-.container-fluid #universal-forward-btn.btn-outline-light:hover,
-div.universal-nav-controls #universal-back-btn.btn-outline-light:hover,
-div.universal-nav-controls #universal-forward-btn.btn-outline-light:hover,
-body #universal-back-btn.btn-outline-light:hover,
-body #universal-forward-btn.btn-outline-light:hover,
-html #universal-back-btn.btn-outline-light:hover,
-html #universal-forward-btn.btn-outline-light:hover,
-#universal-back-btn.btn-outline-light:hover,
-#universal-forward-btn.btn-outline-light:hover {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(255, 255, 255, 0.5) !important;
-    color: #fff !important;
-}
-
-/* Template-specific overrides to ensure consistency */
-/* Force same appearance regardless of which base template is used */
-.navbar-dark .universal-nav-controls #universal-back-btn,
-.navbar-dark .universal-nav-controls #universal-forward-btn,
-.navbar-light .universal-nav-controls #universal-back-btn,
-.navbar-light .universal-nav-controls #universal-forward-btn,
-.bg-dark .universal-nav-controls #universal-back-btn,
-.bg-dark .universal-nav-controls #universal-forward-btn,
-.bg-light .universal-nav-controls #universal-back-btn,
-.bg-light .universal-nav-controls #universal-forward-btn {
-    /* Force exact same styling regardless of navbar context */
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 0.25rem !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    background-color: rgba(33, 37, 41, 0.8) !important;
-    color: #fff !important;
-    font-size: 14px !important;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
-/* Override any page-specific button classes that might interfere */
-#universal-back-btn.btn,
-#universal-forward-btn.btn,
-#universal-back-btn.btn-sm,
-#universal-forward-btn.btn-sm,
-#universal-back-btn.btn-lg,
-#universal-forward-btn.btn-lg {
-    width: 36px !important;
-    height: 36px !important;
-    min-width: 36px !important;
-    min-height: 36px !important;
-    max-width: 36px !important;
-    max-height: 36px !important;
-    font-size: 14px !important;
-    padding: 0 !important;
 }
 
 /* 
