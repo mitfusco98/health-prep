@@ -1,9 +1,8 @@
-
 <script>
 function handleFileSelection(input) {
     const file = input.files[0];
     const progressDiv = document.getElementById('file-upload-progress');
-    
+
     if (file) {
         progressDiv.style.display = 'block';
         progressDiv.innerHTML = `
@@ -55,9 +54,9 @@ function formatFileSize(bytes) {
                 </h5>
             </div>
             <div class="card-body">
-                <form method="POST" enctype="multipart/form-data">
+                <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate id="document-upload-form">
                     {{ form.hidden_tag() }}
-                    
+
                     <div class="mb-3">
                         <label for="file" class="form-label">{{ form.file.label }}</label>
                         {{ form.file(class="form-control", onchange="handleFileSelection(this)") }}
@@ -71,7 +70,7 @@ function formatFileSize(bytes) {
                         </div>
                         <div id="file-upload-progress" style="display: none;"></div>
                     </div>
-                    
+
                     {% if unified_upload %}
                     <div class="mb-3">
                         <label for="patient_id" class="form-label">{{ form.patient_id.label }}</label>
@@ -86,7 +85,7 @@ function formatFileSize(bytes) {
                         {% endif %}
                     </div>
                     {% endif %}
-                    
+
                     <div class="mb-3">
                         <label for="document_name" class="form-label">{{ form.document_name.label }}</label>
                         {{ form.document_name(class="form-control") }}
@@ -99,7 +98,7 @@ function formatFileSize(bytes) {
                             <div class="form-text">{{ form.document_name.description }}</div>
                         {% endif %}
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="document_type" class="form-label">{{ form.document_type.label }}</label>
                         {{ form.document_type(class="form-select") }}
@@ -112,7 +111,7 @@ function formatFileSize(bytes) {
                             <div class="form-text">{{ form.document_type.description }}</div>
                         {% endif %}
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -143,9 +142,9 @@ function formatFileSize(bytes) {
                             </div>
                         </div>
                     </div>
-                    
-                    
-                    
+
+
+
                     <div class="d-grid gap-2">
                         {{ form.submit(class="btn btn-primary") }}
                     </div>
