@@ -16,7 +16,7 @@
 /* Universal Navigation Buttons */
 #universal-back-btn,
 #universal-forward-btn {
-    border-radius: 50%;
+    border-radius: 0.25rem;
     width: 36px;
     height: 36px;
     display: flex;
