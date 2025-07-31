@@ -2759,6 +2759,7 @@ def add_document_unified():
                 "is_reference_only": True,
                 "manual_entry": True,
             }
+            }
 
         try:
             # Create the medical document record
