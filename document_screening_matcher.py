@@ -11,16 +11,16 @@ import json
 from models import ScreeningType, Patient, MedicalDocument, Screening
 from app import db
 
+# Import shared utilities to eliminate duplicate logic
+from shared_screening_utilities import PatientDemographicsMixin, DocumentMatchingMixin, ScreeningUtilities
 
-class DocumentScreeningMatcher:
+
+class DocumentScreeningMatcher(PatientDemographicsMixin, DocumentMatchingMixin):
     """Matches documents to screening types based on content, keywords, and patient criteria"""
     
     def __init__(self):
-        self.screening_types = self._load_screening_types()
-    
-    def _load_screening_types(self) -> List[ScreeningType]:
-        """Load all active screening types"""
-        return ScreeningType.query.filter_by(is_active=True, status='active').all()
+        # Use shared utility function instead of duplicate logic
+        self.screening_types = ScreeningUtilities.get_active_screening_types()
     
     def match_document_to_screening(
         self, 
@@ -52,43 +52,21 @@ class DocumentScreeningMatcher:
             'status': 'no_match'
         }
         
-        # Step 1: Use conditions, gender, and age to filter applicable screenings
-        demographic_match, demographic_notes = self._check_patient_demographics(screening_type, patient)
+        # Step 1: Use inherited demographic filtering (eliminates duplicate logic)
+        demographic_match, demographic_notes = self.is_patient_eligible(patient, screening_type)
         if not demographic_match:
             result['notes'] = demographic_notes
             result['status'] = 'demographic_mismatch'
             return result
         
-        # Step 2: Match documents based on filename_keywords in document name
-        filename_match, filename_notes = self._check_filename_keywords(screening_type, document)
-        if filename_match:
+        # Step 2-4: Use inherited document matching logic (eliminates duplicate logic)
+        document_match, match_method, match_notes = self.match_document_keywords(screening_type, document)
+        if document_match:
             result.update({
                 'matched': True,
-                'match_method': 'filename',
-                'notes': f"Demographics OK. {filename_notes}",
-                'status': 'matched_filename'
-            })
-            return result
-        
-        # Step 3: Match documents based on keywords in content  
-        content_match, content_notes = self._check_content_keywords(screening_type, document)
-        if content_match:
-            result.update({
-                'matched': True,
-                'match_method': 'content',
-                'notes': f"Demographics OK. {content_notes}",
-                'status': 'matched_content'
-            })
-            return result
-        
-        # Step 4: Match document.section (or existing equivalent) matches screening_type.section
-        section_match, section_notes = self._check_document_section_keywords(screening_type, document)
-        if section_match:
-            result.update({
-                'matched': True,
-                'match_method': 'keywords',
-                'notes': f"Demographics OK. {section_notes}",
-                'status': 'matched_section'
+                'match_method': match_method,
+                'notes': f"Demographics OK. {match_notes}",
+                'status': f'matched_{match_method}'
             })
             return result
         
@@ -96,135 +74,6 @@ class DocumentScreeningMatcher:
         result['notes'] = f"Demographics OK but no content/filename/section matches for {screening_type.name}"
         result['status'] = 'no_keyword_match'
         return result
-    
-    def _check_patient_demographics(
-        self, 
-        screening_type: ScreeningType, 
-        patient: Patient
-    ) -> Tuple[bool, str]:
-        """Check if patient demographics match screening criteria"""
-        notes = []
-        
-        # Check age criteria
-        patient_age = patient.age
-        if screening_type.min_age is not None and patient_age < screening_type.min_age:
-            return False, f"Patient age {patient_age} below minimum {screening_type.min_age}"
-        
-        if screening_type.max_age is not None and patient_age > screening_type.max_age:
-            return False, f"Patient age {patient_age} above maximum {screening_type.max_age}"
-        
-        # Check gender criteria
-        if screening_type.gender_specific:
-            if patient.sex.lower() != screening_type.gender_specific.lower():
-                return False, f"Patient gender {patient.sex} doesn't match required {screening_type.gender_specific}"
-        
-        # Demographics match
-        age_note = f"age {patient_age}"
-        if screening_type.min_age or screening_type.max_age:
-            age_range = f"{screening_type.min_age or 0}-{screening_type.max_age or '∞'}"
-            age_note += f" (range: {age_range})"
-        
-        gender_note = f"gender {patient.sex}"
-        if screening_type.gender_specific:
-            gender_note += f" (required: {screening_type.gender_specific})"
-        
-        return True, f"Demographics match: {age_note}, {gender_note}"
-    
-    def _check_filename_keywords(
-        self, 
-        screening_type: ScreeningType, 
-        document: MedicalDocument
-    ) -> Tuple[bool, str]:
-        """Check if document filename matches screening filename keywords"""
-        filename_keywords = screening_type.get_all_keywords()
-        if not filename_keywords:
-            return False, "No filename keywords defined"
-        
-        filename = document.filename.lower() if document.filename else ""
-        matched_keywords = []
-        
-        for keyword in filename_keywords:
-            if keyword.lower() in filename:
-                matched_keywords.append(keyword)
-        
-        if matched_keywords:
-            return True, f"Filename keywords matched: {', '.join(matched_keywords)}"
-        
-        return False, f"No filename keyword matches in '{document.filename}'"
-    
-    def _check_content_keywords(
-        self, 
-        screening_type: ScreeningType, 
-        document: MedicalDocument
-    ) -> Tuple[bool, str]:
-        """Check if document content matches screening content keywords"""
-        content_keywords = screening_type.get_all_keywords()
-        if not content_keywords:
-            return False, "No content keywords defined"
-        
-        # Combine searchable text from document
-        searchable_text = ""
-        if document.content:
-            searchable_text += document.content.lower()
-        
-        if not searchable_text.strip():
-            return False, "No document content available for matching"
-        
-        matched_keywords = []
-        for keyword in content_keywords:
-            if keyword.lower() in searchable_text:
-                matched_keywords.append(keyword)
-        
-        if matched_keywords:
-            return True, f"Content keywords matched: {', '.join(matched_keywords)}"
-        
-        return False, f"No content keyword matches found"
-    
-    def _check_document_section_keywords(
-        self, 
-        screening_type: ScreeningType, 
-        document: MedicalDocument
-    ) -> Tuple[bool, str]:
-        """Check if document.section matches screening_type document keywords"""
-        document_keywords = screening_type.get_all_keywords()
-        if not document_keywords:
-            return False, "No document section keywords defined"
-        
-        # Get document section - check metadata first, then document_type
-        document_section = ""
-        
-        # Try to extract section from metadata
-        if document.doc_metadata:
-            try:
-                import json
-                metadata = json.loads(document.doc_metadata)
-                if 'section' in metadata:
-                    document_section = metadata['section'].lower()
-                elif 'category' in metadata:
-                    document_section = metadata['category'].lower()
-            except (json.JSONDecodeError, AttributeError):
-                pass
-        
-        # Fallback to document_type if no section found
-        if not document_section and document.document_type:
-            document_section = document.document_type.lower()
-        
-        if not document_section:
-            return False, "No document section available for matching"
-        
-        matched_keywords = []
-        for keyword in document_keywords:
-            keyword_lower = keyword.lower()
-            # Check exact match or contains match
-            if (keyword_lower == document_section or 
-                keyword_lower in document_section or
-                document_section in keyword_lower):
-                matched_keywords.append(keyword)
-        
-        if matched_keywords:
-            return True, f"Section keywords matched: {', '.join(matched_keywords)} (document section: '{document_section}')"
-        
-        return False, f"No section keyword matches for document section '{document_section}'"
     
     def find_matching_screenings(
         self, 

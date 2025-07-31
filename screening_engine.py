@@ -12,6 +12,9 @@ from dataclasses import dataclass
 from models import Patient, ScreeningType, Screening, Condition, db
 from app import app
 
+# Import shared utilities to eliminate duplicate logic
+from shared_screening_utilities import BaseScreeningEngine, ScreeningUtilities
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -31,13 +34,33 @@ class ScreeningRecommendation:
     notes: str = ""
 
 
-class ScreeningEngine:
+class ScreeningEngine(BaseScreeningEngine):
     """
     Main screening engine that evaluates patient conditions and triggers screenings
     """
     
     def __init__(self):
+        super().__init__()  # Initialize the base class
         self.app = app
+    
+    def process_patient_screenings(self, patient_id: int) -> List[Dict[str, Any]]:
+        """
+        Implementation of abstract method from BaseScreeningEngine
+        Generate screening recommendations based on patient conditions
+        """
+        recommendations = self.evaluate_patient_conditions(patient_id)
+        return [
+            {
+                'patient_id': rec.patient_id,
+                'screening_type_id': rec.screening_type_id,
+                'screening_type_name': rec.screening_type_name,
+                'triggered_by_condition': rec.triggered_by_condition,
+                'condition_code': rec.condition_code,
+                'priority': rec.priority,
+                'due_date': rec.due_date,
+                'notes': rec.notes
+            } for rec in recommendations
+        ]
         
     def evaluate_patient_conditions(self, patient_id: int) -> List[ScreeningRecommendation]:
         """

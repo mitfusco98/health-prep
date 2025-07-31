@@ -13,92 +13,32 @@ from app import app, db
 from models import Patient, ScreeningType, Screening, MedicalDocument
 import logging
 
+# Import the shared utilities to eliminate duplicate logic
+from shared_screening_utilities import BaseScreeningEngine, ScreeningUtilities
+
 logger = logging.getLogger(__name__)
 
-class UnifiedScreeningEngine:
+class UnifiedScreeningEngine(BaseScreeningEngine):
     """
     Single, authoritative screening engine that handles:
     - Consistent keyword matching (no fallback to screening names)
-    - Centralized demographic filtering
-    - Reliable status determination
+    - Centralized demographic filtering (inherited from BaseScreeningEngine)
+    - Reliable status determination (inherited from BaseScreeningEngine)
     - Proper document-screening relationships
     """
     
-    # Status Constants
-    STATUS_DUE = "Due"
-    STATUS_DUE_SOON = "Due Soon"
-    STATUS_INCOMPLETE = "Incomplete"
-    STATUS_COMPLETE = "Complete"
-    
     # Configuration
-    DUE_SOON_THRESHOLD_DAYS = 30
     MIN_KEYWORD_CONFIDENCE = 0.5  # Lowered threshold for better matching sensitivity
     
     def __init__(self):
-        self.debug_mode = False
+        super().__init__()  # Initialize the base class
     
-    # =============================================================================
-    # CENTRALIZED DEMOGRAPHIC FILTERING
-    # =============================================================================
-    
-    def is_patient_eligible(self, patient: Patient, screening_type: ScreeningType) -> Tuple[bool, str]:
+    def process_patient_screenings(self, patient_id: int) -> List[Dict[str, Any]]:
         """
-        Centralized demographic filtering - single source of truth
-        
-        Args:
-            patient: Patient object
-            screening_type: ScreeningType object
-            
-        Returns:
-            Tuple of (is_eligible, reason)
+        Implementation of abstract method from BaseScreeningEngine
+        Generate screenings for a patient using the unified logic
         """
-        # Age filtering
-        if screening_type.min_age is not None:
-            if patient.age < screening_type.min_age:
-                return False, f"Patient age {patient.age} below minimum {screening_type.min_age}"
-        
-        if screening_type.max_age is not None:
-            if patient.age > screening_type.max_age:
-                return False, f"Patient age {patient.age} above maximum {screening_type.max_age}"
-        
-        # Gender filtering
-        if screening_type.gender_specific and screening_type.gender_specific.strip():
-            expected_gender = screening_type.gender_specific.strip().lower()
-            patient_gender = patient.sex.lower() if patient.sex else ""
-            
-            if expected_gender not in ["", "both", "all"] and expected_gender != patient_gender:
-                return False, f"Gender mismatch: requires {expected_gender}, patient is {patient_gender}"
-        
-        # Trigger conditions (for variants)
-        trigger_conditions = self._get_trigger_conditions(screening_type)
-        if trigger_conditions:
-            has_conditions = self._patient_has_trigger_conditions(patient, trigger_conditions)
-            if not has_conditions:
-                return False, f"Patient lacks required trigger conditions: {trigger_conditions}"
-        
-        return True, "Eligible"
-    
-    def _get_trigger_conditions(self, screening_type: ScreeningType) -> List[Dict]:
-        """Get trigger conditions from screening type"""
-        if not screening_type.trigger_conditions:
-            return []
-        
-        try:
-            # Handle HTML entities in JSON
-            clean_json = html.unescape(screening_type.trigger_conditions)
-            conditions = json.loads(clean_json)
-            return conditions if isinstance(conditions, list) else []
-        except (json.JSONDecodeError, TypeError):
-            logger.warning(f"Invalid trigger conditions JSON for {screening_type.name}")
-            return []
-    
-    def _patient_has_trigger_conditions(self, patient: Patient, trigger_conditions: List[Dict]) -> bool:
-        """
-        Check if patient has any of the required trigger conditions
-        Fixed to properly handle SNOMED codes and condition matching
-        """
-        if not trigger_conditions:
-            return True
+        return self.generate_patient_screenings(patient_id)
         
         # Get patient conditions with proper attributes
         patient_conditions = patient.conditions
