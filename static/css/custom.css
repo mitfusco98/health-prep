@@ -1,14 +1,19 @@
 /* Custom styles for HealthPrep */
 
-/* Universal Navigation Controls - Comprehensive cross-page styling */
+/* Universal Navigation Controls - Bulletproof cross-page styling */
 .navbar .universal-nav-controls,
 .navbar-nav .universal-nav-controls,
 .container .universal-nav-controls,
+.container-fluid .universal-nav-controls,
 div.universal-nav-controls,
-.universal-nav-controls {
+.universal-nav-controls,
+body .universal-nav-controls,
+html .universal-nav-controls {
     order: -999 !important; /* Ensure they appear first in the navbar */
     margin-right: 1rem !important;
     margin-left: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
@@ -20,6 +25,9 @@ div.universal-nav-controls,
     /* Ensure consistent placement across all templates */
     width: auto !important;
     height: auto !important;
+    /* Override any potential float or positioning conflicts */
+    float: none !important;
+    clear: none !important;
 }
 
 /* Universal Navigation Buttons - Comprehensive selectors for all page contexts */
@@ -195,10 +203,14 @@ body #universal-forward-btn .fa,
 .navbar-nav #universal-forward-btn.btn-outline-light,
 .container #universal-back-btn.btn-outline-light,
 .container #universal-forward-btn.btn-outline-light,
+.container-fluid #universal-back-btn.btn-outline-light,
+.container-fluid #universal-forward-btn.btn-outline-light,
 div.universal-nav-controls #universal-back-btn.btn-outline-light,
 div.universal-nav-controls #universal-forward-btn.btn-outline-light,
 body #universal-back-btn.btn-outline-light,
 body #universal-forward-btn.btn-outline-light,
+html #universal-back-btn.btn-outline-light,
+html #universal-forward-btn.btn-outline-light,
 #universal-back-btn.btn-outline-light,
 #universal-forward-btn.btn-outline-light {
     border-color: rgba(255, 255, 255, 0.3) !important;
@@ -211,15 +223,58 @@ body #universal-forward-btn.btn-outline-light,
 .navbar-nav #universal-forward-btn.btn-outline-light:hover,
 .container #universal-back-btn.btn-outline-light:hover,
 .container #universal-forward-btn.btn-outline-light:hover,
+.container-fluid #universal-back-btn.btn-outline-light:hover,
+.container-fluid #universal-forward-btn.btn-outline-light:hover,
 div.universal-nav-controls #universal-back-btn.btn-outline-light:hover,
 div.universal-nav-controls #universal-forward-btn.btn-outline-light:hover,
 body #universal-back-btn.btn-outline-light:hover,
 body #universal-forward-btn.btn-outline-light:hover,
+html #universal-back-btn.btn-outline-light:hover,
+html #universal-forward-btn.btn-outline-light:hover,
 #universal-back-btn.btn-outline-light:hover,
 #universal-forward-btn.btn-outline-light:hover {
     background-color: rgba(255, 255, 255, 0.1) !important;
     border-color: rgba(255, 255, 255, 0.5) !important;
     color: #fff !important;
+}
+
+/* Template-specific overrides to ensure consistency */
+/* Force same appearance regardless of which base template is used */
+.navbar-dark .universal-nav-controls #universal-back-btn,
+.navbar-dark .universal-nav-controls #universal-forward-btn,
+.navbar-light .universal-nav-controls #universal-back-btn,
+.navbar-light .universal-nav-controls #universal-forward-btn,
+.bg-dark .universal-nav-controls #universal-back-btn,
+.bg-dark .universal-nav-controls #universal-forward-btn,
+.bg-light .universal-nav-controls #universal-back-btn,
+.bg-light .universal-nav-controls #universal-forward-btn {
+    /* Force exact same styling regardless of navbar context */
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 0.25rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    background-color: rgba(33, 37, 41, 0.8) !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Override any page-specific button classes that might interfere */
+#universal-back-btn.btn,
+#universal-forward-btn.btn,
+#universal-back-btn.btn-sm,
+#universal-forward-btn.btn-sm,
+#universal-back-btn.btn-lg,
+#universal-forward-btn.btn-lg {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
+    font-size: 14px !important;
+    padding: 0 !important;
 }
 
 /* 
