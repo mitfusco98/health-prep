@@ -1,40 +1,71 @@
 /* Custom styles for HealthPrep */
 
-/* Universal Navigation Controls */
-.universal-nav-controls {
-    order: -1 !important; /* Ensure they appear first in the navbar */
+/* Universal Navigation Controls - Forced consistent positioning and styling */
+.navbar .universal-nav-controls,
+.navbar-nav .universal-nav-controls,
+.container .universal-nav-controls {
+    order: -999 !important; /* Ensure they appear first in the navbar */
     margin-right: 1rem !important;
+    margin-left: 0 !important;
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
+    justify-content: flex-start !important;
     gap: 0.5rem !important;
     flex-shrink: 0 !important;
+    position: relative !important;
+    z-index: 1000 !important;
 }
 
-/* Universal Navigation Buttons - Force consistent styling */
+/* Universal Navigation Buttons - Force exact same appearance everywhere */
+.navbar #universal-back-btn,
+.navbar #universal-forward-btn,
 #universal-back-btn,
 #universal-forward-btn {
-    border-radius: 0.25rem !important;
+    /* Size specifications - exact same everywhere */
     width: 36px !important;
     height: 36px !important;
     min-width: 36px !important;
     min-height: 36px !important;
     max-width: 36px !important;
     max-height: 36px !important;
+    
+    /* Layout and positioning */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: all 0.2s ease !important;
+    flex-shrink: 0 !important;
+    
+    /* Styling - force consistent appearance */
+    border-radius: 0.25rem !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
     background-color: rgba(33, 37, 41, 0.8) !important;
     color: #fff !important;
+    
+    /* Typography */
     font-size: 14px !important;
+    line-height: 1 !important;
+    text-align: center !important;
+    text-decoration: none !important;
+    
+    /* Spacing */
     padding: 0 !important;
     margin: 0 !important;
-    text-decoration: none !important;
+    
+    /* Behavior */
     box-sizing: border-box !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    
+    /* Override any bootstrap or other framework styles */
+    font-weight: normal !important;
+    font-family: inherit !important;
+    vertical-align: middle !important;
 }
 
+/* Hover states - consistent across all pages */
+.navbar #universal-back-btn:hover:not(:disabled),
+.navbar #universal-forward-btn:hover:not(:disabled),
 #universal-back-btn:hover:not(:disabled),
 #universal-forward-btn:hover:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.1) !important;
@@ -44,24 +75,39 @@
     text-decoration: none !important;
 }
 
+/* Disabled states */
+.navbar #universal-back-btn:disabled,
+.navbar #universal-forward-btn:disabled,
 #universal-back-btn:disabled,
 #universal-forward-btn:disabled {
     opacity: 0.4 !important;
     cursor: not-allowed !important;
+    background-color: rgba(33, 37, 41, 0.4) !important;
 }
 
+/* Active states */
+.navbar #universal-back-btn:active:not(:disabled),
+.navbar #universal-forward-btn:active:not(:disabled),
 #universal-back-btn:active:not(:disabled),
 #universal-forward-btn:active:not(:disabled) {
     transform: scale(0.95) !important;
 }
 
+/* Focus states */
+.navbar #universal-back-btn:focus,
+.navbar #universal-forward-btn:focus,
 #universal-back-btn:focus,
 #universal-forward-btn:focus {
     outline: none !important;
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25) !important;
+    z-index: 1001 !important;
 }
 
-/* Ensure icons within navigation buttons are visible and properly sized */
+/* Icon styling - ensure visibility and consistency */
+.navbar #universal-back-btn .fas,
+.navbar #universal-back-btn .fa,
+.navbar #universal-forward-btn .fas,
+.navbar #universal-forward-btn .fa,
 #universal-back-btn .fas,
 #universal-back-btn .fa,
 #universal-forward-btn .fas,
@@ -69,6 +115,34 @@
     display: inline-block !important;
     font-size: 14px !important;
     color: inherit !important;
+    width: auto !important;
+    height: auto !important;
+    line-height: 1 !important;
+    vertical-align: middle !important;
+}
+
+/* Ensure buttons work within Bootstrap navbar structure */
+.navbar-brand + .universal-nav-controls,
+.navbar .container .universal-nav-controls {
+    margin-left: 1rem !important;
+}
+
+/* Override any btn-outline-light styles that might conflict */
+.navbar #universal-back-btn.btn-outline-light,
+.navbar #universal-forward-btn.btn-outline-light,
+#universal-back-btn.btn-outline-light,
+#universal-forward-btn.btn-outline-light {
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: #fff !important;
+}
+
+.navbar #universal-back-btn.btn-outline-light:hover,
+.navbar #universal-forward-btn.btn-outline-light:hover,
+#universal-back-btn.btn-outline-light:hover,
+#universal-forward-btn.btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    color: #fff !important;
 }
 
 /* 
