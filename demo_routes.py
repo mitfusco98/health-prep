@@ -2679,19 +2679,16 @@ def add_document_unified():
             if default_subsection in valid_choices:
                 form.document_type.data = default_subsection
 
-    if request.method == "POST":
-        # Manual validation to provide better error handling
-        try:
-            if form.validate():
-                # Get the selected patient
-                patient_id = form.patient_id.data
-                patient = Patient.query.get_or_404(patient_id)
-                
-                # Initialize variables with default values
-                content = None
-                binary_content = None
-                is_binary = False
-                mime_type = Nonee = None
+    if form.validate_on_submit():
+        # Get the selected patient
+        patient_id = form.patient_id.data
+        patient = Patient.query.get_or_404(patient_id)
+        
+        # Initialize variables with default values
+        content = None
+        binary_content = None
+        is_binary = False
+        mime_type = None
         filename = None
         document_metadata = {}
 
@@ -2750,15 +2747,9 @@ def add_document_unified():
                     }
         else:
             # No file uploaded - create a reference-only document entry
-            filename = None
-            content = None
-            binary_content = None
-            is_binary = False
-            mime_type = None
             document_metadata = {
                 "is_reference_only": True,
                 "manual_entry": True,
-            }
             }
 
         try:

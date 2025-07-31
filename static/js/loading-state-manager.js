@@ -244,28 +244,6 @@ class LoadingStateManager {
                 this.handleFileUpload(e);
             }
         });
-
-        // Clear any stuck loading states on page load
-        window.addEventListener('load', () => {
-            // Clear all loading states that might be stuck
-            this.hideLoading('document-upload');
-            this.hideLoading('screening-form');
-            this.hideLoading('navigation');
-            this.hideLoading('slow-navigation');
-        });
-
-        // Also clear loading states when page becomes visible (e.g., after navigation)
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                // Page became visible, clear any stuck loading states
-                setTimeout(() => {
-                    this.hideLoading('document-upload');
-                    this.hideLoading('screening-form');
-                    this.hideLoading('navigation');
-                    this.hideLoading('slow-navigation');
-                }, 1000);
-            }
-        });
     }
 
     handleNavigation(url) {
@@ -457,18 +435,12 @@ class LoadingStateManager {
             return;
         }
         
-        // Document upload form - be more specific about when to intercept
-        if ((currentPath.includes('/patients/document/add') || currentPath.includes('/document/add')) && 
-            form.querySelector('input[type="file"]')) {
-            
-            // Only intercept if there are validation issues or we need special handling
-            const fileInput = form.querySelector('input[type="file"]');
-            const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
-            
-            // Let the form submit normally for document uploads
-            // Just show loading state without preventing submission
-            this.showDocumentUploadLoading(form, hasFile);
-            return; // Don't prevent default - let normal form submission proceed
+        // Document upload form
+        if (currentPath.includes('/document/add') || form.querySelector('input[type="file"]')) {
+            event.preventDefault();
+            form.dataset.loadingProcessed = 'true';
+            this.handleDocumentUpload(form);
+            return;
         }
     }
 
@@ -564,27 +536,35 @@ class LoadingStateManager {
         }
     }
 
-    showDocumentUploadLoading(form, hasFile) {
-        if (hasFile) {
-            const fileInput = form.querySelector('input[type="file"]');
-            const file = fileInput?.files[0];
-            
+    async handleDocumentUpload(form) {
+        const fileInput = form.querySelector('input[type="file"]');
+        const file = fileInput?.files[0];
+        
+        if (file) {
             this.showLoading({
                 message: `Uploading ${file.name}...`,
-                showProgress: false, // Don't show fake progress
+                showProgress: true,
                 id: 'document-upload'
             });
+            
+            // Simulate upload progress
+            for (let i = 0; i <= 100; i += 10) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                this.updateProgress(i, 'document-upload');
+                
+                if (i === 30) this.updateMessage('Processing file...', 'document-upload');
+                if (i === 70) this.updateMessage('Saving to database...', 'document-upload');
+                if (i === 90) this.updateMessage('Finalizing upload...', 'document-upload');
+            }
         } else {
             this.showLoading({
-                message: 'Saving document...',
+                message: 'Creating document entry...',
                 id: 'document-upload'
             });
         }
         
-        // Auto-hide loading state after reasonable time since we're not preventing submission
-        setTimeout(() => {
-            this.hideLoading('document-upload');
-        }, 10000); // 10 second timeout
+        // Submit the form
+        form.submit();
     }
 
     handleFileUpload(event) {
