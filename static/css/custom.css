@@ -2,44 +2,73 @@
 
 /* Universal Navigation Controls */
 .universal-nav-controls {
-    order: -1; /* Ensure they appear first in the navbar */
+    order: -1 !important; /* Ensure they appear first in the navbar */
     margin-right: 1rem !important;
     display: flex !important;
     flex-direction: row !important;
-    align-items: center;
-    gap: 0.5rem;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    flex-shrink: 0 !important;
 }
 
-/* Universal Navigation Buttons */
+/* Universal Navigation Buttons - Force consistent styling */
 #universal-back-btn,
 #universal-forward-btn {
-    border-radius: 0.25rem;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    background-color: rgba(33, 37, 41, 0.8);
+    border-radius: 0.25rem !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    background-color: rgba(33, 37, 41, 0.8) !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    text-decoration: none !important;
+    box-sizing: border-box !important;
 }
 
 #universal-back-btn:hover:not(:disabled),
 #universal-forward-btn:hover:not(:disabled) {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: scale(1.05);
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    transform: scale(1.05) !important;
+    color: #fff !important;
+    text-decoration: none !important;
 }
 
 #universal-back-btn:disabled,
 #universal-forward-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
 }
 
 #universal-back-btn:active:not(:disabled),
 #universal-forward-btn:active:not(:disabled) {
-    transform: scale(0.95);
+    transform: scale(0.95) !important;
+}
+
+#universal-back-btn:focus,
+#universal-forward-btn:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Ensure icons within navigation buttons are visible and properly sized */
+#universal-back-btn .fas,
+#universal-back-btn .fa,
+#universal-forward-btn .fas,
+#universal-forward-btn .fa {
+    display: inline-block !important;
+    font-size: 14px !important;
+    color: inherit !important;
 }
 
 /* 
